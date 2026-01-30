@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 210 40% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 40% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 15%;
+    
+    /* Mundo Digital Primary Colors */
+    --primary: 211 37% 27%; /* #2B3E5C */
+    --primary-foreground: 0 0% 100%;
+    
+    /* Mundo Digital Secondary Colors */
+    --secondary: 211 30% 50%; /* #5B7FA6 */
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 211 30% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 211 37% 27%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 211 37% 10%;
+    --foreground: 210 40% 98%;
+    --card: 211 37% 15%;
+    --card-foreground: 210 40% 98%;
+    --popover: 211 37% 15%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* Mundo Digital Primary - Dark Mode */
+    --primary: 211 30% 50%; /* Lighter blue for dark mode */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 211 37% 27%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 211 37% 20%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 211 30% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 211 37% 25%;
+    --input: 211 37% 25%;
+    --ring: 211 30% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

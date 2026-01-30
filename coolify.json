@@ -1,0 +1,31 @@
+{
+  "name": "MDS CRM SaaS",
+  "description": "Sistema completo de CRM com integração Chatwoot",
+  "repository": "https://github.com/SEU-USUARIO/mds-crm-saas.git",
+  "branch": "main",
+  "buildPack": "nixpacks",
+  "framework": "nextjs",
+  "port": 3000,
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "startCommand": "npm run start",
+  "healthCheckPath": "/",
+  "domains": [
+    "crm.mundodigitalsolucoes.com.br"
+  ],
+  "environmentVariables": {
+    "NODE_ENV": "production",
+    "DATABASE_URL": "postgresql://mdscrm:SENHA@mds-crm-postgres:5432/mds_crm",
+    "NEXTAUTH_SECRET": "GERAR_COM_OPENSSL",
+    "NEXTAUTH_URL": "https://crm.mundodigitalsolucoes.com.br",
+    "CHATWOOT_API_URL": "https://app.mundodigitalsolucoes.com.br/api/v1",
+    "CHATWOOT_API_KEY": "SUA_CHATWOOT_KEY",
+    "CHATWOOT_ACCOUNT_ID": "1"
+  },
+  "postgres": {
+    "version": "15",
+    "database": "mds_crm",
+    "username": "mdscrm",
+    "password": "GERAR_SENHA_FORTE"
+  }
+}

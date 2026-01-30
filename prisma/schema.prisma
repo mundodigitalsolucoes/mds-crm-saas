@@ -1,0 +1,292 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// SAAS MULTI-TENANT MODELS
+// ============================================
+
+model Organization {
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  domain          String?   @unique
+  logo            String?
+  settings        Json      @default("{}")
+  
+  // Subscription info
+  plan            String    @default("trial") // trial, starter, professional, enterprise
+  planStatus      String    @default("active") @map("plan_status") // active, cancelled, past_due
+  trialEndsAt     DateTime? @map("trial_ends_at")
+  subscriptionId  String?   @map("subscription_id") // Stripe subscription ID
+  
+  // Limits
+  maxUsers        Int       @default(5) @map("max_users")
+  maxLeads        Int       @default(100) @map("max_leads")
+  maxProjects     Int       @default(10) @map("max_projects")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  users           User[]
+  leads           Lead[]
+  projects        MarketingProject[]
+  kanbanBoards    KanbanBoard[]
+  invitations     Invitation[]
+
+  @@map("organizations")
+}
+
+model Invitation {
+  id              String    @id @default(uuid())
+  email           String
+  role            String    @default("user")
+  token           String    @unique
+  expiresAt       DateTime  @map("expires_at")
+  acceptedAt      DateTime? @map("accepted_at")
+  
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  invitedById     String?   @map("invited_by")
+  invitedBy       User?     @relation("InvitationsSent", fields: [invitedById], references: [id])
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([organizationId])
+  @@index([token])
+  @@map("invitations")
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  name            String
+  passwordHash    String    @map("password_hash")
+  avatarUrl       String?   @map("avatar_url")
+  
+  // Multi-tenant
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  role            String    @default("user") // owner, admin, manager, user
+  
+  // Settings
+  emailVerified   DateTime? @map("email_verified")
+  onboardingCompleted Boolean @default(false) @map("onboarding_completed")
+  preferences     Json      @default("{}") // UI preferences, notifications, etc
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  leadsAssigned         Lead[]              @relation("AssignedLeads")
+  leadsCreated          Lead[]              @relation("CreatedLeads")
+  projectsOwned         MarketingProject[]  @relation("ProjectOwner")
+  tasksAssigned         Task[]              @relation("AssignedTasks")
+  tasksCreated          Task[]              @relation("CreatedTasks")
+  activities            Activity[]
+  kanbanBoardsCreated   KanbanBoard[]
+  kanbanCardsAssigned   KanbanCard[]
+  invitationsSent       Invitation[]        @relation("InvitationsSent")
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+model Lead {
+  id                    String    @id @default(uuid())
+  
+  // Multi-tenant
+  organizationId        String    @map("organization_id")
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name                  String
+  email                 String?
+  phone                 String?
+  company               String?
+  position              String?
+  source                String?   // chatwoot, website, manual, referral, etc
+  status                String    @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
+  score                 Int       @default(0)
+  value                 Decimal?  @db.Decimal(15, 2) // Expected deal value
+  
+  // Chatwoot integration
+  chatwootContactId     Int?      @map("chatwoot_contact_id")
+  chatwootConversationId Int?     @map("chatwoot_conversation_id")
+  
+  customFields          Json      @default("{}") @map("custom_fields")
+  notes                 String?   @db.Text
+  
+  assignedToId          String?   @map("assigned_to")
+  assignedTo            User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  
+  createdById           String?   @map("created_by")
+  createdBy             User?     @relation("CreatedLeads", fields: [createdById], references: [id])
+  
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tasks                 Task[]
+  activities            Activity[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([chatwootContactId])
+  @@map("leads")
+}
+
+model MarketingProject {
+  id            String    @id @default(uuid())
+  
+  // Multi-tenant
+  organizationId String   @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?   @db.Text
+  status        String    @default("planning") // planning, active, completed, cancelled
+  budget        Decimal   @db.Decimal(15, 2)
+  spent         Decimal   @default(0) @db.Decimal(15, 2)
+  startDate     DateTime? @map("start_date")
+  endDate       DateTime? @map("end_date")
+  
+  ownerId       String    @map("owner_id")
+  owner         User      @relation("ProjectOwner", fields: [ownerId], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  kanbanBoards  KanbanBoard[]
+  tasks         Task[]
+  activities    Activity[]
+
+  @@index([organizationId])
+  @@index([status])
+  @@map("marketing_projects")
+}
+
+model KanbanBoard {
+  id            String    @id @default(uuid())
+  
+  // Multi-tenant
+  organizationId String   @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?   @db.Text
+  
+  projectId     String?   @map("project_id")
+  project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdById   String    @map("created_by")
+  createdBy     User      @relation(fields: [createdById], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  columns       KanbanColumn[]
+
+  @@index([organizationId])
+  @@map("kanban_boards")
+}
+
+model KanbanColumn {
+  id            String    @id @default(uuid())
+  title         String
+  position      Int
+  color         String    @default("#3b82f6")
+  
+  boardId       String    @map("board_id")
+  board         KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  // Relations
+  cards         KanbanCard[]
+
+  @@map("kanban_columns")
+}
+
+model KanbanCard {
+  id            String    @id @default(uuid())
+  title         String
+  description   String?   @db.Text
+  position      Int
+  labels        Json      @default("[]")
+  dueDate       DateTime? @map("due_date")
+  
+  columnId      String    @map("column_id")
+  column        KanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  
+  assignedToId  String?   @map("assigned_to")
+  assignedTo    User?     @relation(fields: [assignedToId], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([columnId])
+  @@map("kanban_cards")
+}
+
+model Task {
+  id            String    @id @default(uuid())
+  title         String
+  description   String?   @db.Text
+  status        String    @default("todo") // todo, in_progress, done, cancelled
+  priority      String    @default("medium") // low, medium, high, urgent
+  dueDate       DateTime? @map("due_date")
+  
+  projectId     String?   @map("project_id")
+  project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  leadId        String?   @map("lead_id")
+  lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  
+  assignedToId  String?   @map("assigned_to")
+  assignedTo    User?     @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  
+  createdById   String?   @map("created_by")
+  createdBy     User?     @relation("CreatedTasks", fields: [createdById], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([assignedToId])
+  @@map("tasks")
+}
+
+model Activity {
+  id            String    @id @default(uuid())
+  entityType    String    @map("entity_type") // lead, task, project, etc
+  entityId      String    @map("entity_id")
+  action        String    // created, updated, status_changed, etc
+  description   String?   @db.Text
+  metadata      Json      @default("{}")
+  
+  userId        String?   @map("user_id")
+  user          User?     @relation(fields: [userId], references: [id])
+  
+  leadId        String?   @map("lead_id")
+  lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  projectId     String?   @map("project_id")
+  project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@map("activities")
+}
