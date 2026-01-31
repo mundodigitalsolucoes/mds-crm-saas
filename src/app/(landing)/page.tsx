@@ -1,8 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
-import { CheckCircle2, Users, TrendingUp, Calendar, MessageSquare, BarChart3, Zap, Shield, Globe } from 'lucide-react'
+import { CheckCircle2, Users, TrendingUp, Calendar, MessageSquare, BarChart3, Zap } from 'lucide-react'
 
 export default function LandingPage() {
   return (
