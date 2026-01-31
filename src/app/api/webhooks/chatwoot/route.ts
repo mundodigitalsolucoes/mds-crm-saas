@@ -94,8 +94,7 @@ async function handleMessageCreated(webhook: ChatwootWebhook) {
     await prisma.lead.update({
       where: { id: lead.id },
       data: { 
-        updatedAt: new Date(),
-        lastActivityAt: new Date()
+        updatedAt: new Date()
       }
     })
   }
