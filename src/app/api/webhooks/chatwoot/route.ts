@@ -76,77 +76,42 @@ async function handleConversationCreated(webhook: ChatwootWebhook) {
         customFields: contact.custom_attributes || {},
       }
     })
-
-    console.log('New lead created from Chatwoot:', contact.name)
-  } else {
-    // Update existing lead with conversation ID
-    await prisma.lead.update({
-      where: { id: existingLead.id },
-      data: {
-        chatwootConversationId: conversation.id,
-      }
-    })
-
-    console.log('Lead updated with conversation:', existingLead.name)
-  }
-
-  // Log activity
-  const lead = await prisma.lead.findFirst({
-    where: { chatwootContactId: contact.id }
-  })
-
-  if (lead) {
-    await prisma.activity.create({
-      data: {
-        entityType: 'lead',
-        entityId: lead.id,
-        action: 'conversation_started',
-        description: 'Nova conversa iniciada no Chatwoot',
-        leadId: lead.id,
-      }
-    })
   }
 }
 
 async function handleMessageCreated(webhook: ChatwootWebhook) {
-  const { message, conversation, contact } = webhook.data
-
-  // Find lead by Chatwoot contact ID
+  const { conversation, message } = webhook.data
+  
+  // Find lead by conversation
   const lead = await prisma.lead.findFirst({
-    where: { chatwootContactId: contact.id }
+    where: {
+      chatwootConversationId: conversation.id
+    }
   })
 
   if (lead) {
-    // Log message activity
-    await prisma.activity.create({
-      data: {
-        entityType: 'lead',
-        entityId: lead.id,
-        action: 'message_received',
-        description: `Mensagem: ${message.content.substring(0, 100)}...`,
-        metadata: {
-          messageId: message.id,
-          messageType: message.message_type,
-          sender: message.sender?.name
-        },
-        leadId: lead.id,
+    // Update lead activity
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { 
+        updatedAt: new Date(),
+        lastActivityAt: new Date()
       }
     })
   }
 }
 
 async function handleContactCreated(webhook: ChatwootWebhook) {
-  const contact = webhook.data
-
-  // Get first organization
+  const { contact } = webhook.data
+  
   const organization = await prisma.organization.findFirst()
   
   if (!organization) {
-    console.error('No organization found. Please create an organization first.')
+    console.error('No organization found')
     return
   }
 
-  // Check if lead already exists
+  // Check if contact already exists
   const existingLead = await prisma.lead.findFirst({
     where: {
       OR: [
@@ -157,11 +122,10 @@ async function handleContactCreated(webhook: ChatwootWebhook) {
   })
 
   if (!existingLead) {
-    // Create new lead
     await prisma.lead.create({
       data: {
         organizationId: organization.id,
-        name: contact.name || 'Lead sem nome',
+        name: contact.name || 'Contato sem nome',
         email: contact.email,
         phone: contact.phone_number,
         source: 'chatwoot',
@@ -170,45 +134,33 @@ async function handleContactCreated(webhook: ChatwootWebhook) {
         customFields: contact.custom_attributes || {},
       }
     })
-
-    console.log('New lead created from contact:', contact.name)
   }
 }
 
 async function handleStatusChanged(webhook: ChatwootWebhook) {
   const { conversation } = webhook.data
-
-  // Find lead by conversation ID
+  
   const lead = await prisma.lead.findFirst({
-    where: { chatwootConversationId: conversation.id }
+    where: {
+      chatwootConversationId: conversation.id
+    }
   })
 
   if (lead) {
-    // Map Chatwoot status to Lead status
-    const statusMap: Record<string, string> = {
-      'open': 'contacted',
-      'resolved': 'qualified',
-      'pending': 'contacted',
+    // Map Chatwoot status to lead status
+    let status = lead.status
+    if (conversation.status === 'resolved') {
+      status = 'qualified'
+    } else if (conversation.status === 'open') {
+      status = 'contacted'
     }
 
-    const newStatus = statusMap[conversation.status] || lead.status
-
-    if (newStatus !== lead.status) {
-      await prisma.lead.update({
-        where: { id: lead.id },
-        data: { status: newStatus }
-      })
-
-      // Log activity
-      await prisma.activity.create({
-        data: {
-          entityType: 'lead',
-          entityId: lead.id,
-          action: 'status_changed',
-          description: `Status alterado de ${lead.status} para ${newStatus}`,
-          leadId: lead.id,
-        }
-      })
-    }
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { 
+        status,
+        updatedAt: new Date()
+      }
+    })
   }
 }
