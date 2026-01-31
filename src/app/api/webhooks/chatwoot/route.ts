@@ -43,6 +43,14 @@ export async function POST(req: NextRequest) {
 async function handleConversationCreated(webhook: ChatwootWebhook) {
   const { conversation, contact } = webhook.data
 
+  // Get first organization (for now, you can improve this later)
+  const organization = await prisma.organization.findFirst()
+  
+  if (!organization) {
+    console.error('No organization found. Please create an organization first.')
+    return
+  }
+
   // Check if lead already exists
   const existingLead = await prisma.lead.findFirst({
     where: {
@@ -57,6 +65,7 @@ async function handleConversationCreated(webhook: ChatwootWebhook) {
     // Create new lead from Chatwoot conversation
     await prisma.lead.create({
       data: {
+        organizationId: organization.id,
         name: contact.name || 'Lead sem nome',
         email: contact.email,
         phone: contact.phone_number,
@@ -129,6 +138,14 @@ async function handleMessageCreated(webhook: ChatwootWebhook) {
 async function handleContactCreated(webhook: ChatwootWebhook) {
   const contact = webhook.data
 
+  // Get first organization
+  const organization = await prisma.organization.findFirst()
+  
+  if (!organization) {
+    console.error('No organization found. Please create an organization first.')
+    return
+  }
+
   // Check if lead already exists
   const existingLead = await prisma.lead.findFirst({
     where: {
@@ -143,6 +160,7 @@ async function handleContactCreated(webhook: ChatwootWebhook) {
     // Create new lead
     await prisma.lead.create({
       data: {
+        organizationId: organization.id,
         name: contact.name || 'Lead sem nome',
         email: contact.email,
         phone: contact.phone_number,
