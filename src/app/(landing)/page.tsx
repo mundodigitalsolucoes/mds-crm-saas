@@ -1,8 +1,7 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
-import { CheckCircle2, Users, TrendingUp, Calendar, MessageSquare, BarChart3, Zap, Shield, Globe } from 'lucide-react'
+import { CheckCircle2, Users, TrendingUp, Calendar, MessageSquare, BarChart3, Zap } from 'lucide-react'
 
 export default function LandingPage() {
   return (
@@ -12,13 +11,9 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3">
-              <Image 
-                src="/images/favicon.png" 
-                alt="Mundo Digital" 
-                width={40} 
-                height={40}
-                className="w-10 h-10"
-              />
+              <div className="w-10 h-10 bg-md-primary rounded-lg flex items-center justify-center text-white font-bold">
+                MD
+              </div>
               <div>
                 <div className="text-xl font-bold text-md-primary-800">MUNDO DIGITAL</div>
                 <div className="text-xs text-md-secondary-600">Soluções em Marketing e Vendas</div>
@@ -329,7 +324,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Image src="/images/logo-light.png" alt="Mundo Digital" width={150} height={40} />
+                <div className="text-2xl font-bold">MUNDO DIGITAL</div>
               </div>
               <p className="text-md-primary-200 text-sm">
                 Soluções completas em Marketing e Vendas
