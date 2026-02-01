@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -20,7 +20,7 @@ model Organization {
   slug            String    @unique
   domain          String?   @unique
   logo            String?
-  settings        Json      @default("{}")
+  settings        String    @default("{}")
   
   // Subscription info
   plan            String    @default("trial") // trial, starter, professional, enterprise
@@ -83,7 +83,7 @@ model User {
   // Settings
   emailVerified   DateTime? @map("email_verified")
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
-  preferences     Json      @default("{}") // UI preferences, notifications, etc
+  preferences     String      @default("{}") // UI preferences, notifications, etc
   
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -119,14 +119,14 @@ model Lead {
   source                String?   // chatwoot, website, manual, referral, etc
   status                String    @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
   score                 Int       @default(0)
-  value                 Decimal?  @db.Decimal(15, 2) // Expected deal value
+  value                 Decimal?   // Expected deal value
   
   // Chatwoot integration
   chatwootContactId     Int?      @map("chatwoot_contact_id")
   chatwootConversationId Int?     @map("chatwoot_conversation_id")
   
-  customFields          Json      @default("{}") @map("custom_fields")
-  notes                 String?   @db.Text
+  customFields          String      @default("{}") @map("custom_fields")
+  notes                 String?   
   
   assignedToId          String?   @map("assigned_to")
   assignedTo            User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
@@ -156,10 +156,10 @@ model MarketingProject {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
   title         String
-  description   String?   @db.Text
+  description   String?   
   status        String    @default("planning") // planning, active, completed, cancelled
-  budget        Decimal   @db.Decimal(15, 2)
-  spent         Decimal   @default(0) @db.Decimal(15, 2)
+  budget        Decimal   
+  spent         Decimal   @default(0) 
   startDate     DateTime? @map("start_date")
   endDate       DateTime? @map("end_date")
   
@@ -187,7 +187,7 @@ model KanbanBoard {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
   title         String
-  description   String?   @db.Text
+  description   String?   
   
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -222,9 +222,9 @@ model KanbanColumn {
 model KanbanCard {
   id            String    @id @default(uuid())
   title         String
-  description   String?   @db.Text
+  description   String?   
   position      Int
-  labels        Json      @default("[]")
+  labels        String    @default("[]")
   dueDate       DateTime? @map("due_date")
   
   columnId      String    @map("column_id")
@@ -243,7 +243,7 @@ model KanbanCard {
 model Task {
   id            String    @id @default(uuid())
   title         String
-  description   String?   @db.Text
+  description   String?   
   status        String    @default("todo") // todo, in_progress, done, cancelled
   priority      String    @default("medium") // low, medium, high, urgent
   dueDate       DateTime? @map("due_date")
@@ -273,8 +273,8 @@ model Activity {
   entityType    String    @map("entity_type") // lead, task, project, etc
   entityId      String    @map("entity_id")
   action        String    // created, updated, status_changed, etc
-  description   String?   @db.Text
-  metadata      Json      @default("{}")
+  description   String?   
+  metadata      String    @default("{}")
   
   userId        String?   @map("user_id")
   user          User?     @relation(fields: [userId], references: [id])

@@ -1,30 +1,27 @@
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-import { Providers } from '@/components/providers'
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'MDS CRM - Inteligência em Marketing e Vendas',
-  description: 'Sistema completo de CRM para gestão de leads, projetos de marketing e vendas',
-  icons: {
-    icon: '/images/favicon.png',
-  },
-}
+  title: "MDS CRM - Mundo Digital",
+  description: "Sistema de Gestão de Leads e Projetos",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+      <body className={inter.className} suppressHydrationWarning>
+        {children}
       </body>
     </html>
-  )
+  );
 }
