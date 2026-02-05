@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+
+const prisma = new PrismaClient()
 
 function slugify(input: string) {
   return input
@@ -50,8 +52,8 @@ export async function POST(request: Request) {
         data: {
           name: companyName,
           slug,
-          plan: 'starter',
-          planStatus: 'trial', // ✅ Campo correto: planStatus (não "status")
+          // Usando o plano padrão do schema: "trial"
+          plan: 'trial',
         },
       })
 
@@ -59,8 +61,9 @@ export async function POST(request: Request) {
         data: {
           name,
           email: normalizedEmail,
-          passwordHash: hashedPassword, // ✅ Campo correto: passwordHash
-          role: 'admin',
+          passwordHash: hashedPassword,
+          // Colocando owner como first user da org (recomendado no multi-tenant SaaS)
+          role: 'owner',
           organizationId: organization.id,
         },
       })
@@ -84,5 +87,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Erro ao criar conta:', error)
     return NextResponse.json({ error: 'Erro ao criar conta. Tente novamente.' }, { status: 500 })
+  } finally {
+    await prisma.$disconnect()
   }
 }
