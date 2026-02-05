@@ -1,107 +1,91 @@
 'use client';
 
-import { useState } from 'react';
 import { signIn } from 'next-auth/react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react'; // 👈 Importe os ícones de olho
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false); // 👈 Novo estado para controlar a visibilidade da senha
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError(null);
 
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
+    const res = await signIn('credentials', {
+      email,
+      password,
+      redirect: false,
+      callbackUrl: '/dashboard',
+    });
 
-      if (result?.error) {
-        setError('Email ou senha inválidos');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      setError('Erro ao fazer login');
-    } finally {
-      setLoading(false);
+    setLoading(false);
+
+    if (res?.error) {
+      setError('Email ou senha inválidos.');
+      return;
     }
-  };
+
+    router.push('/dashboard');
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
-        <div>
-          <h2 className="text-center text-3xl font-bold text-gray-900">
-            Login
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Acesse sua conta
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <form onSubmit={onSubmit} className="w-full max-w-sm bg-white p-6 rounded-lg shadow">
+        <h1 className="text-xl font-bold mb-4">Entrar</h1>
+
+        <label className="block text-sm mb-1">Email</label>
+        <input
+          className="w-full border rounded px-3 py-2 mb-3"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          required
+        />
+
+        <label className="block text-sm mb-1">Senha</label>
+        <div className="relative mb-3"> {/* 👈 Adicione um div relativo para posicionar o ícone */}
+          <input
+            className="w-full border rounded px-3 py-2 pr-10" // 👈 Adicione padding-right para o ícone
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            type={showPassword ? 'text' : 'password'} // 👈 Altera o tipo do input
+            required
+          />
+          <button
+            type="button" // 👈 Importante: o type 'button' evita que o clique dispare o submit do formulário
+            onClick={() => setShowPassword(!showPassword)} // 👈 Alterna o estado showPassword
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+            aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
+          >
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />} {/* 👈 Ícone dinâmico */}
+          </button>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-              {error}
-            </div>
-          )}
+        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="seu@email.com"
-              />
-            </div>
+        <button
+          disabled={loading}
+          className="w-full bg-indigo-600 text-white rounded px-3 py-2 disabled:opacity-60"
+          type="submit"
+        >
+          {loading ? 'Entrando...' : 'Entrar'}
+        </button>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </button>
-
-          <div className="text-center">
-            <Link href="/auth/register" className="text-sm text-blue-600 hover:text-blue-500">
-              Não tem conta? Cadastre-se
-            </Link>
-          </div>
-        </form>
-      </div>
+        <p className="text-center text-sm mt-4">
+          Não tem uma conta?{' '}
+          <Link href="/auth/signup" className="text-indigo-600 hover:underline">
+            Cadastre-se
+          </Link>
+        </p>
+      </form>
     </div>
   );
 }

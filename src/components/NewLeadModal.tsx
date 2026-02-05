@@ -1,15 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 
 interface NewLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (lead: any) => void;
+
+  // ✅ novos (para edição)
+  mode?: 'create' | 'edit';
+  initialData?: any | null;
 }
 
-export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModalProps) {
+export default function NewLeadModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  mode = 'create',
+  initialData = null,
+}: NewLeadModalProps) {
   const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
@@ -25,11 +35,25 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
     origem: '',
   });
 
-  if (!isOpen) return null;
+  // ✅ ao abrir: preenche no modo edit / reseta no modo create
+  useEffect(() => {
+    if (!isOpen) return;
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
+    if (mode === 'edit' && initialData) {
+      setActiveTab('manual');
+      setFormData({
+        nome: initialData.nome ?? '',
+        email: initialData.email ?? '',
+        telefone: initialData.telefone ?? '',
+        empresa: initialData.empresa ?? '',
+        status: initialData.status ?? 'novo',
+        origem: initialData.origem ?? '',
+      });
+      return;
+    }
+
+    // create
+    setActiveTab('manual');
     setFormData({
       nome: '',
       email: '',
@@ -38,6 +62,17 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
       status: 'novo',
       origem: '',
     });
+    setCsvFile(null);
+    setCsvData([]);
+    setImportStatus('idle');
+    setImportResults({ success: 0, errors: 0, total: 0 });
+  }, [isOpen, mode, initialData]);
+
+  if (!isOpen) return null;
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
     onClose();
   };
 
@@ -53,25 +88,24 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
+      const lines = text.split('\n').filter((line) => line.trim());
+
       if (lines.length < 2) {
         alert('CSV inválido! Deve conter pelo menos o cabeçalho e uma linha de dados.');
         return;
       }
 
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const data = [];
+      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
+      const data: any[] = [];
 
       for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',').map(v => v.trim());
+        const values = lines[i].split(',').map((v) => v.trim());
         const row: any = {};
 
         headers.forEach((header, index) => {
           row[header] = values[index] || '';
         });
 
-        // Validação básica
         if (row.nome && row.email) {
           data.push({
             nome: row.nome,
@@ -94,7 +128,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
 
   const handleCsvImport = () => {
     setImportStatus('importing');
-    
+
     let successCount = 0;
     let errorCount = 0;
 
@@ -102,7 +136,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
       try {
         onSubmit(lead);
         successCount++;
-      } catch (error) {
+      } catch {
         errorCount++;
       }
     });
@@ -124,7 +158,8 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
   };
 
   const downloadTemplate = () => {
-    const template = 'nome,email,telefone,empresa,status,origem\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,novo,site\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contato,indicacao';
+    const template =
+      'nome,email,telefone,empresa,status,origem\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,novo,site\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contato,indicacao';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -138,11 +173,10 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600">
-          <h2 className="text-xl font-bold text-white">Adicionar Leads</h2>
-          <button
-            onClick={onClose}
-            className="text-white hover:bg-white/20 p-1 rounded-lg transition-colors"
-          >
+          <h2 className="text-xl font-bold text-white">
+            {mode === 'edit' ? 'Editar Lead' : 'Adicionar Leads'}
+          </h2>
+          <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-lg transition-colors">
             <X size={24} />
           </button>
         </div>
@@ -160,12 +194,16 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
             <FileText className="inline mr-2" size={18} />
             Manual
           </button>
+
           <button
-            onClick={() => setActiveTab('csv')}
+            disabled={mode === 'edit'}
+            onClick={() => (mode === 'edit' ? null : setActiveTab('csv'))}
             className={`flex-1 px-6 py-3 font-medium transition-colors ${
-              activeTab === 'csv'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
-                : 'text-gray-600 hover:bg-gray-50'
+              mode === 'edit'
+                ? 'text-gray-300 bg-gray-50 cursor-not-allowed'
+                : activeTab === 'csv'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             <Upload className="inline mr-2" size={18} />
@@ -179,9 +217,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
             <form onSubmit={handleManualSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome Completo *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
                   <input
                     type="text"
                     required
@@ -193,9 +229,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    E-mail *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
                   <input
                     type="email"
                     required
@@ -207,9 +241,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                   <input
                     type="tel"
                     value={formData.telefone}
@@ -220,9 +252,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Empresa
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
                   <input
                     type="text"
                     value={formData.empresa}
@@ -233,9 +263,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -251,9 +279,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Origem
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
                   <input
                     type="text"
                     value={formData.origem}
@@ -276,7 +302,7 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                   type="submit"
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
-                  Adicionar Lead
+                  {mode === 'edit' ? 'Salvar Alterações' : 'Adicionar Lead'}
                 </button>
               </div>
             </form>
@@ -306,20 +332,11 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
                   <Upload className="mx-auto text-gray-400 mb-4" size={48} />
                   <label className="cursor-pointer">
-                    <span className="text-indigo-600 hover:text-indigo-700 font-medium">
-                      Clique para selecionar
-                    </span>
+                    <span className="text-indigo-600 hover:text-indigo-700 font-medium">Clique para selecionar</span>
                     <span className="text-gray-600"> ou arraste o arquivo CSV aqui</span>
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
+                    <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
                   </label>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Formatos aceitos: CSV (máx. 10MB)
-                  </p>
+                  <p className="text-sm text-gray-500 mt-2">Formatos aceitos: CSV (máx. 10MB)</p>
                 </div>
               )}
 
@@ -390,13 +407,9 @@ export default function NewLeadModal({ isOpen, onClose, onSubmit }: NewLeadModal
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                   <CheckCircle2 className="mx-auto text-green-600 mb-4" size={48} />
                   <h3 className="font-medium text-green-900 mb-2">Importação Concluída!</h3>
-                  <p className="text-sm text-green-700">
-                    {importResults.success} lead(s) importado(s) com sucesso!
-                  </p>
+                  <p className="text-sm text-green-700">{importResults.success} lead(s) importado(s) com sucesso!</p>
                   {importResults.errors > 0 && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {importResults.errors} erro(s) encontrado(s)
-                    </p>
+                    <p className="text-sm text-red-600 mt-1">{importResults.errors} erro(s) encontrado(s)</p>
                   )}
                 </div>
               )}

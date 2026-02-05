@@ -8,13 +8,13 @@ import { useState } from 'react';
 
 const menuItems = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { name: 'Leads', icon: Users, path: '/dashboard/leads' },
-  { name: 'Projetos', icon: FolderKanban, path: '/dashboard/projects' },
-  { name: 'Kanban', icon: Kanban, path: '/dashboard/kanban' },
-  { name: 'OS', icon: FileText, path: '/dashboard/os' },
-  { name: 'Tarefas', icon: CheckSquare, path: '/dashboard/tasks' },
-  { name: 'Agenda', icon: Calendar, path: '/dashboard/agenda' },
-  { name: 'Relatórios', icon: BarChart3, path: '/dashboard/reports' },
+  { name: 'Leads', icon: Users, path: '/leads' },
+  { name: 'Kanban', icon: Kanban, path: '/kanban' },
+  { name: 'Projetos', icon: FolderKanban, path: '/projects' },
+  { name: 'OS', icon: FileText, path: '/os' },
+  { name: 'Tarefas', icon: CheckSquare, path: '/tasks' },
+  { name: 'Agenda', icon: Calendar, path: '/agenda' },
+  { name: 'Relatórios', icon: BarChart3, path: '/reports' },
 ];
 
 export default function Sidebar() {
