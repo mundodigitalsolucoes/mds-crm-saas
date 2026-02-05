@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -42,6 +42,9 @@ model Organization {
   projects        MarketingProject[]
   kanbanBoards    KanbanBoard[]
   invitations     Invitation[]
+
+  // Integrations (OAuth connections)
+  connectedAccounts ConnectedAccount[]
 
   @@map("organizations")
 }
@@ -98,6 +101,9 @@ model User {
   kanbanBoardsCreated   KanbanBoard[]
   kanbanCardsAssigned   KanbanCard[]
   invitationsSent       Invitation[]        @relation("InvitationsSent")
+
+  // Integrations (audit: who connected for the org)
+  connectedAccountsConnected ConnectedAccount[] @relation("ConnectedAccountsConnectedBy")
 
   @@index([organizationId])
   @@index([email])
@@ -289,4 +295,33 @@ model Activity {
 
   @@index([entityType, entityId])
   @@map("activities")
+}
+
+// ============================================
+// INTEGRATIONS / OAUTH CONNECTIONS (PER ORG)
+// ============================================
+
+model ConnectedAccount {
+  id              String   @id @default(uuid())
+  provider        String
+
+  // Multi-tenant: por organização
+  organizationId  String   @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Auditoria: quem conectou
+  connectedById   String?  @map("connected_by_id")
+  connectedBy     User?    @relation("ConnectedAccountsConnectedBy", fields: [connectedById], references: [id], onDelete: SetNull)
+
+  // Token criptografado (AES-GCM) via TOKENS_SECRET
+  accessTokenEnc  String   @map("access_token_enc")
+  expiresAt       DateTime?
+  data            String   @default("{}") // JSON: selectedAdAccountId, selectedAdAccountName, currency etc.
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, organizationId], name: "provider_organizationId")
+  @@index([organizationId])
+  @@map("connected_accounts")
 }
