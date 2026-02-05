@@ -18,6 +18,7 @@ import {
   Settings,
   CheckCircle,
   XCircle,
+  LucideIcon,
 } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -50,7 +51,7 @@ function KpiCard({
   title: string;
   value: string;
   subtitle?: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
 }) {
   return (
     <div className="bg-white border rounded-xl p-5 flex items-start justify-between">
@@ -442,7 +443,7 @@ export default function ReportsPage() {
                         />
                         <span className="font-medium text-gray-800">{stage.title}</span>
                         <span className="text-xs text-gray-500">
-                          ({stageStats.rows.find(r => r.stageId === stage.id)?.count || 0} leads)
+                          ({stageStats.rows.find(r => r.stageId === stage.id)?.count ?? 0} leads)
                         </span>
                       </div>
 
@@ -484,13 +485,13 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <KpiCard
               title="Leads no funil"
-              value={String(stageStats.total)}
+              value={String(stageStats.total ?? 0)}
               subtitle={`Filtrado por data de criação (${periodHuman})`}
               icon={Users}
             />
             <KpiCard
               title="Oportunidades"
-              value={String(stageStats.total)}
+              value={String(stageStats.total ?? 0)}
               subtitle="(Por enquanto: 1 lead = 1 oportunidade)"
               icon={BarChart3}
             />
