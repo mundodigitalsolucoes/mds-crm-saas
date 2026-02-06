@@ -548,8 +548,8 @@ export default function ReportsPage() {
                     <div className="w-40 min-w-40">
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-gray-800 truncate">{row.title}</div>
-                        {row.isWon && <CheckCircle size={14} className="text-green-600" title="Estágio de ganho" />}
-                        {row.isLost && <XCircle size={14} className="text-red-600" title="Estágio de perda" />}
+                        {row.isWon && <span title="Estágio de ganho"><CheckCircle size={14} className="text-green-600" /></span>}
+                        {row.isLost && <span title="Estágio de perda"><XCircle size={14} className="text-red-600" /></span>}
                       </div>
                       <div className="text-xs text-gray-500">{row.count} lead(s) • {row.pct.toFixed(1)}%</div>
                     </div>
