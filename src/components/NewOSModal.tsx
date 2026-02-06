@@ -103,10 +103,18 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     }
 
     if (name.startsWith('objetivos.')) {
-      const key = name.split('.')[1] as keyof NonNullable<OS['objetivos']>;
-      setFormData((prev) => ({ ...prev, objetivos: { ...prev.objetivos, [key]: value } }));
-      return;
-    }
+  const key = name.split('.')[1] as keyof NonNullable<OS['objetivos']>;
+  setFormData((prev) => ({
+    ...prev,
+    objetivos: {
+      principal12m: prev.objetivos?.principal12m ?? '',
+      quadrantes: prev.objetivos?.quadrantes ?? [],
+      metasAlvo: prev.objetivos?.metasAlvo ?? {},
+      [key]: value,
+    },
+  }));
+  return;
+}
 
     if (name.startsWith('orcamento.')) {
       const key = name.split('.')[1] as keyof NonNullable<OS['orcamento']>;
