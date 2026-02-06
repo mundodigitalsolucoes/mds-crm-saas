@@ -89,7 +89,16 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
     if (name.startsWith('datas.')) {
       const key = name.split('.')[1] as keyof NonNullable<OS['datas']>;
-      setFormData((prev) => ({ ...prev, datas: { ...prev.datas, [key]: value } }));
+      setFormData((prev) => ({
+  ...prev,
+  datas: {
+    abertura: prev.datas?.abertura ?? '',
+    inicio: prev.datas?.inicio ?? '',
+    prazo: prev.datas?.prazo ?? '',
+    conclusao: prev.datas?.conclusao ?? '',
+    [key]: value,
+  },
+}));
       return;
     }
 
