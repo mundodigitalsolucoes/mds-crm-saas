@@ -11,6 +11,52 @@ datasource db {
 }
 
 // ============================================
+// SUPER ADMIN (SEPARADO DO MULTI-TENANT)
+// ============================================
+
+model SuperAdmin {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String    @map("password_hash")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  @@map("super_admins")
+}
+
+// ============================================
+// PLANOS (PARA O SUPER ADMIN GERENCIAR)
+// ============================================
+
+model Plan {
+  id            String    @id @default(uuid())
+  
+  name          String    @unique // trial, starter, professional, enterprise
+  displayName   String    @map("display_name")
+  description   String?
+  
+  price         Decimal   @default(0)
+  interval      String    @default("month") // month, year
+  
+  // Limites
+  maxUsers      Int       @map("max_users")
+  maxLeads      Int       @map("max_leads")
+  maxProjects   Int       @map("max_projects")
+  
+  // Features habilitadas
+  features      String    @default("[]") // JSON: ["whatsapp", "meta_ads", "google_ads", "ai_assistant"]
+  
+  isActive      Boolean   @default(true) @map("is_active")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  @@map("plans")
+}
+
+// ============================================
 // SAAS MULTI-TENANT MODELS
 // ============================================
 
@@ -19,32 +65,39 @@ model Organization {
   name            String
   slug            String    @unique
   domain          String?   @unique
-  logo            String?
-  settings        String    @default("{}")
   
+  // White Label
+  logo            String?
+  favicon         String?
+  primaryColor    String    @default("#6366f1") @map("primary_color")
+  secondaryColor  String    @default("#4f46e5") @map("secondary_color")
+  
+  settings        String    @default("{}")
+  features        String    @default("[]") // JSON: features habilitadas para esta org
+
   // Subscription info
   plan            String    @default("trial") // trial, starter, professional, enterprise
   planStatus      String    @default("active") @map("plan_status") // active, cancelled, past_due
   trialEndsAt     DateTime? @map("trial_ends_at")
-  subscriptionId  String?   @map("subscription_id") // Stripe subscription ID
-  
+  subscriptionId  String?   @map("subscription_id") // Stripe/Asaas subscription ID
+
   // Limits
   maxUsers        Int       @default(5) @map("max_users")
   maxLeads        Int       @default(100) @map("max_leads")
   maxProjects     Int       @default(10) @map("max_projects")
-  
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  users           User[]
-  leads           Lead[]
-  projects        MarketingProject[]
-  kanbanBoards    KanbanBoard[]
-  invitations     Invitation[]
-
-  // Integrations (OAuth connections)
+  users             User[]
+  leads             Lead[]
+  projects          MarketingProject[]
+  kanbanBoards      KanbanBoard[]
+  invitations       Invitation[]
   connectedAccounts ConnectedAccount[]
+  goals             Goal[]
+  webhooks          Webhook[]
 
   @@map("organizations")
 }
@@ -56,13 +109,13 @@ model Invitation {
   token           String    @unique
   expiresAt       DateTime  @map("expires_at")
   acceptedAt      DateTime? @map("accepted_at")
-  
+
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   invitedById     String?   @map("invited_by")
   invitedBy       User?     @relation("InvitationsSent", fields: [invitedById], references: [id])
-  
+
   createdAt       DateTime  @default(now()) @map("created_at")
 
   @@index([organizationId])
@@ -76,18 +129,21 @@ model User {
   name            String
   passwordHash    String    @map("password_hash")
   avatarUrl       String?   @map("avatar_url")
-  
+
   // Multi-tenant
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   role            String    @default("user") // owner, admin, manager, user
   
+  // Permissões específicas (para agentes)
+  permissions     String    @default("[]") // JSON: ["sales", "marketing", "reports"]
+
   // Settings
   emailVerified   DateTime? @map("email_verified")
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
-  preferences     String      @default("{}") // UI preferences, notifications, etc
-  
+  preferences     String    @default("{}") // UI preferences, notifications, etc
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -101,45 +157,61 @@ model User {
   kanbanBoardsCreated   KanbanBoard[]
   kanbanCardsAssigned   KanbanCard[]
   invitationsSent       Invitation[]        @relation("InvitationsSent")
-
-  // Integrations (audit: who connected for the org)
   connectedAccountsConnected ConnectedAccount[] @relation("ConnectedAccountsConnectedBy")
+  
+  // Novos
+  goalsCreated          Goal[]              @relation("CreatedGoals")
+  notifications         Notification[]
+  attachmentsUploaded   Attachment[]
+  comments              Comment[]
 
   @@index([organizationId])
   @@index([email])
   @@map("users")
 }
 
+// ============================================
+// LEADS
+// ============================================
+
 model Lead {
   id                    String    @id @default(uuid())
-  
+
   // Multi-tenant
   organizationId        String    @map("organization_id")
   organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   name                  String
   email                 String?
   phone                 String?
   company               String?
   position              String?
-  source                String?   // chatwoot, website, manual, referral, etc
+  source                String?   // chatwoot, website, manual, referral, meta_ads, google_ads
   status                String    @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
   score                 Int       @default(0)
-  value                 Decimal?   // Expected deal value
-  
+  value                 Decimal?  // Expected deal value
+
   // Chatwoot integration
   chatwootContactId     Int?      @map("chatwoot_contact_id")
   chatwootConversationId Int?     @map("chatwoot_conversation_id")
-  
-  customFields          String      @default("{}") @map("custom_fields")
-  notes                 String?   
-  
+  chatwootInboxId       Int?      @map("chatwoot_inbox_id")
+
+  // Ads tracking
+  utmSource             String?   @map("utm_source")
+  utmMedium             String?   @map("utm_medium")
+  utmCampaign           String?   @map("utm_campaign")
+  utmContent            String?   @map("utm_content")
+  utmTerm               String?   @map("utm_term")
+
+  customFields          String    @default("{}") @map("custom_fields")
+  notes                 String?
+
   assignedToId          String?   @map("assigned_to")
   assignedTo            User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
-  
+
   createdById           String?   @map("created_by")
   createdBy             User?     @relation("CreatedLeads", fields: [createdById], references: [id])
-  
+
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -154,24 +226,28 @@ model Lead {
   @@map("leads")
 }
 
+// ============================================
+// MARKETING PROJECTS
+// ============================================
+
 model MarketingProject {
   id            String    @id @default(uuid())
-  
+
   // Multi-tenant
   organizationId String   @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   title         String
-  description   String?   
+  description   String?
   status        String    @default("planning") // planning, active, completed, cancelled
-  budget        Decimal   
-  spent         Decimal   @default(0) 
+  budget        Decimal
+  spent         Decimal   @default(0)
   startDate     DateTime? @map("start_date")
   endDate       DateTime? @map("end_date")
-  
+
   ownerId       String    @map("owner_id")
   owner         User      @relation("ProjectOwner", fields: [ownerId], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -185,22 +261,27 @@ model MarketingProject {
   @@map("marketing_projects")
 }
 
+// ============================================
+// KANBAN
+// ============================================
+
 model KanbanBoard {
   id            String    @id @default(uuid())
-  
+
   // Multi-tenant
   organizationId String   @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   title         String
-  description   String?   
-  
+  description   String?
+  type          String    @default("custom") // leads, tasks, custom
+
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
   createdById   String    @map("created_by")
   createdBy     User      @relation(fields: [createdById], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
 
   // Relations
@@ -215,30 +296,31 @@ model KanbanColumn {
   title         String
   position      Int
   color         String    @default("#3b82f6")
-  
+
   boardId       String    @map("board_id")
   board         KanbanBoard @relation(fields: [boardId], references: [id], onDelete: Cascade)
 
   // Relations
   cards         KanbanCard[]
 
+  @@index([boardId])
   @@map("kanban_columns")
 }
 
 model KanbanCard {
   id            String    @id @default(uuid())
   title         String
-  description   String?   
+  description   String?
   position      Int
   labels        String    @default("[]")
   dueDate       DateTime? @map("due_date")
-  
+
   columnId      String    @map("column_id")
   column        KanbanColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
-  
+
   assignedToId  String?   @map("assigned_to")
   assignedTo    User?     @relation(fields: [assignedToId], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -246,54 +328,309 @@ model KanbanCard {
   @@map("kanban_cards")
 }
 
+// ============================================
+// TASKS (EXPANDIDO)
+// ============================================
+
 model Task {
   id            String    @id @default(uuid())
   title         String
-  description   String?   
+  description   String?
   status        String    @default("todo") // todo, in_progress, done, cancelled
   priority      String    @default("medium") // low, medium, high, urgent
-  dueDate       DateTime? @map("due_date")
   
+  // Datas
+  dueDate       DateTime? @map("due_date")
+  startDate     DateTime? @map("start_date")
+  completedAt   DateTime? @map("completed_at")
+  
+  // Recorrência (para tarefas recorrentes)
+  isRecurring   Boolean   @default(false) @map("is_recurring")
+  recurrenceRule String?  @map("recurrence_rule") // RRULE format (iCal)
+  
+  // Estimativa
+  estimatedMinutes Int?   @map("estimated_minutes")
+  actualMinutes    Int?   @map("actual_minutes")
+
+  // Relations
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  
+
   leadId        String?   @map("lead_id")
   lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  
+
   assignedToId  String?   @map("assigned_to")
   assignedTo    User?     @relation("AssignedTasks", fields: [assignedToId], references: [id])
-  
+
   createdById   String?   @map("created_by")
   createdBy     User?     @relation("CreatedTasks", fields: [createdById], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
+  // Relations
+  subtasks      Subtask[]
+
   @@index([status])
   @@index([assignedToId])
+  @@index([dueDate])
   @@map("tasks")
 }
 
+model Subtask {
+  id          String    @id @default(uuid())
+  
+  taskId      String    @map("task_id")
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  title       String
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  position    Int       @default(0)
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@index([taskId])
+  @@map("subtasks")
+}
+
+// ============================================
+// GOALS (METAS)
+// ============================================
+
+model Goal {
+  id              String    @id @default(uuid())
+  
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  title           String
+  description     String?
+  type            String    @default("short") // short (curto), medium (médio), long (longo)
+  category        String    @default("general") // sales, marketing, general
+  status          String    @default("active") // active, completed, cancelled
+  
+  // Métricas
+  targetValue     Decimal?  @map("target_value")
+  currentValue    Decimal   @default(0) @map("current_value")
+  unit            String?   // leads, revenue, tasks, conversions, etc
+  
+  // Datas
+  startDate       DateTime? @map("start_date")
+  deadline        DateTime?
+  completedAt     DateTime? @map("completed_at")
+  
+  createdById     String?   @map("created_by")
+  createdBy       User?     @relation("CreatedGoals", fields: [createdById], references: [id])
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  actions         GoalAction[]
+  
+  @@index([organizationId])
+  @@index([type])
+  @@index([status])
+  @@map("goals")
+}
+
+model GoalAction {
+  id          String    @id @default(uuid())
+  
+  goalId      String    @map("goal_id")
+  goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?
+  completed   Boolean   @default(false)
+  completedAt DateTime? @map("completed_at")
+  position    Int       @default(0)
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@index([goalId])
+  @@map("goal_actions")
+}
+
+// ============================================
+// ATTACHMENTS (ANEXOS GENÉRICOS)
+// ============================================
+
+model Attachment {
+  id            String    @id @default(uuid())
+  
+  organizationId String   @map("organization_id")
+  
+  entityType    String    @map("entity_type") // lead, task, kanban_card, goal, comment
+  entityId      String    @map("entity_id")
+  
+  filename      String
+  originalName  String    @map("original_name")
+  mimeType      String    @map("mime_type")
+  size          Int       // bytes
+  url           String
+  
+  uploadedById  String?   @map("uploaded_by")
+  uploadedBy    User?     @relation(fields: [uploadedById], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  @@index([entityType, entityId])
+  @@index([organizationId])
+  @@map("attachments")
+}
+
+// ============================================
+// COMMENTS (COMENTÁRIOS GENÉRICOS)
+// ============================================
+
+model Comment {
+  id            String    @id @default(uuid())
+  
+  organizationId String   @map("organization_id")
+  
+  entityType    String    @map("entity_type") // lead, task, kanban_card, goal
+  entityId      String    @map("entity_id")
+  
+  content       String
+  
+  // Para respostas/threads
+  parentId      String?   @map("parent_id")
+  
+  authorId      String    @map("author_id")
+  author        User      @relation(fields: [authorId], references: [id])
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  @@index([entityType, entityId])
+  @@index([organizationId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String    @id @default(uuid())
+  
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String    // task_assigned, task_due, task_completed, lead_assigned, goal_completed, mention, etc
+  title       String
+  message     String?
+  
+  // Link para a entidade relacionada
+  entityType  String?   @map("entity_type")
+  entityId    String?   @map("entity_id")
+  
+  // Status
+  read        Boolean   @default(false)
+  readAt      DateTime? @map("read_at")
+  
+  // Configurações de envio
+  emailSent   Boolean   @default(false) @map("email_sent")
+  pushSent    Boolean   @default(false) @map("push_sent")
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// ============================================
+// WEBHOOKS (API PARA INTEGRAÇÕES EXTERNAS)
+// ============================================
+
+model Webhook {
+  id              String    @id @default(uuid())
+  
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  name            String
+  url             String
+  secret          String    // Para validar assinatura HMAC
+  
+  // Eventos que disparam o webhook
+  events          String    @default("[]") // JSON: ["lead.created", "lead.updated", "task.completed", "deal.won"]
+  
+  // Headers customizados (opcional)
+  headers         String    @default("{}") // JSON: {"Authorization": "Bearer xxx"}
+  
+  isActive        Boolean   @default(true) @map("is_active")
+  
+  // Stats
+  lastTriggeredAt DateTime? @map("last_triggered_at")
+  successCount    Int       @default(0) @map("success_count")
+  failCount       Int       @default(0) @map("fail_count")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  // Relations
+  logs            WebhookLog[]
+  
+  @@index([organizationId])
+  @@index([isActive])
+  @@map("webhooks")
+}
+
+model WebhookLog {
+  id          String    @id @default(uuid())
+  
+  webhookId   String    @map("webhook_id")
+  webhook     Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  
+  event       String
+  payload     String    // JSON enviado
+  
+  // Response
+  statusCode  Int?      @map("status_code")
+  response    String?   // Response body (truncado)
+  duration    Int?      // ms
+  
+  success     Boolean
+  error       String?   // Mensagem de erro se falhou
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  @@index([webhookId])
+  @@index([createdAt])
+  @@map("webhook_logs")
+}
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
 model Activity {
   id            String    @id @default(uuid())
-  entityType    String    @map("entity_type") // lead, task, project, etc
+  entityType    String    @map("entity_type") // lead, task, project, goal, etc
   entityId      String    @map("entity_id")
-  action        String    // created, updated, status_changed, etc
-  description   String?   
-  metadata      String    @default("{}")
-  
+  action        String    // created, updated, deleted, status_changed, assigned, etc
+  description   String?
+  metadata      String    @default("{}") // JSON com dados adicionais (old_value, new_value, etc)
+
   userId        String?   @map("user_id")
   user          User?     @relation(fields: [userId], references: [id])
-  
+
   leadId        String?   @map("lead_id")
   lead          Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  
+
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
 
   @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
   @@map("activities")
 }
 
@@ -303,7 +640,7 @@ model Activity {
 
 model ConnectedAccount {
   id              String   @id @default(uuid())
-  provider        String
+  provider        String   // meta_ads, google_ads, google_business, chatwoot, n8n
 
   // Multi-tenant: por organização
   organizationId  String   @map("organization_id")
@@ -315,8 +652,16 @@ model ConnectedAccount {
 
   // Token criptografado (AES-GCM) via TOKENS_SECRET
   accessTokenEnc  String   @map("access_token_enc")
+  refreshTokenEnc String?  @map("refresh_token_enc")
   expiresAt       DateTime?
-  data            String   @default("{}") // JSON: selectedAdAccountId, selectedAdAccountName, currency etc.
+  
+  // Dados específicos do provider
+  data            String   @default("{}") // JSON: selectedAdAccountId, chatwootAccountId, etc.
+  
+  // Status
+  isActive        Boolean  @default(true) @map("is_active")
+  lastSyncAt      DateTime? @map("last_sync_at")
+  lastError       String?  @map("last_error")
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -324,4 +669,153 @@ model ConnectedAccount {
   @@unique([provider, organizationId], name: "provider_organizationId")
   @@index([organizationId])
   @@map("connected_accounts")
+}
+
+// ============================================
+// CHATWOOT SYNC (CACHE LOCAL)
+// ============================================
+
+model ChatwootConversation {
+  id                  String    @id @default(uuid())
+  
+  organizationId      String    @map("organization_id")
+  
+  chatwootId          Int       @map("chatwoot_id")
+  chatwootAccountId   Int       @map("chatwoot_account_id")
+  chatwootInboxId     Int       @map("chatwoot_inbox_id")
+  chatwootContactId   Int       @map("chatwoot_contact_id")
+  
+  status              String    // open, resolved, pending
+  assigneeId          Int?      @map("assignee_id")
+  
+  // Metadata
+  contactName         String?   @map("contact_name")
+  contactPhone        String?   @map("contact_phone")
+  contactEmail        String?   @map("contact_email")
+  lastMessageAt       DateTime? @map("last_message_at")
+  messagesCount       Int       @default(0) @map("messages_count")
+  
+  // Link com Lead do CRM
+  leadId              String?   @map("lead_id")
+  
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  
+  @@unique([organizationId, chatwootId])
+  @@index([organizationId])
+  @@index([chatwootContactId])
+  @@index([leadId])
+  @@map("chatwoot_conversations")
+}
+
+// ============================================
+// ADS METRICS CACHE (META, GOOGLE)
+// ============================================
+
+model AdsCampaignMetric {
+  id                String    @id @default(uuid())
+  
+  organizationId    String    @map("organization_id")
+  
+  provider          String    // meta_ads, google_ads
+  accountId         String    @map("account_id")
+  campaignId        String    @map("campaign_id")
+  campaignName      String    @map("campaign_name")
+  
+  // Período
+  date              DateTime  @db.Date
+  
+  // Métricas comuns
+  impressions       Int       @default(0)
+  clicks            Int       @default(0)
+  spend             Decimal   @default(0)
+  conversions       Int       @default(0)
+  revenue           Decimal   @default(0)
+  
+  // Métricas calculadas (guardadas para performance)
+  ctr               Decimal?  // Click-through rate
+  cpc               Decimal?  // Cost per click
+  cpa               Decimal?  // Cost per acquisition
+  roas              Decimal?  // Return on ad spend
+  
+  // Dados brutos do provider
+  rawData           String    @default("{}") @map("raw_data")
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@unique([organizationId, provider, campaignId, date])
+  @@index([organizationId, provider])
+  @@index([date])
+  @@map("ads_campaign_metrics")
+}
+
+// ============================================
+// GOOGLE BUSINESS PROFILE METRICS
+// ============================================
+
+model GoogleBusinessMetric {
+  id                String    @id @default(uuid())
+  
+  organizationId    String    @map("organization_id")
+  
+  locationId        String    @map("location_id")
+  locationName      String    @map("location_name")
+  
+  // Período
+  date              DateTime  @db.Date
+  
+  // Métricas
+  searchViews       Int       @default(0) @map("search_views")
+  mapsViews         Int       @default(0) @map("maps_views")
+  websiteClicks     Int       @default(0) @map("website_clicks")
+  phoneClicks       Int       @default(0) @map("phone_clicks")
+  directionClicks   Int       @default(0) @map("direction_clicks")
+  messageClicks     Int       @default(0) @map("message_clicks")
+  bookingClicks     Int       @default(0) @map("booking_clicks")
+  
+  // Reviews
+  totalReviews      Int       @default(0) @map("total_reviews")
+  averageRating     Decimal?  @map("average_rating")
+  newReviews        Int       @default(0) @map("new_reviews")
+  
+  // Dados brutos
+  rawData           String    @default("{}") @map("raw_data")
+  
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  
+  @@unique([organizationId, locationId, date])
+  @@index([organizationId])
+  @@index([date])
+  @@map("google_business_metrics")
+}
+
+// ============================================
+// AI ASSISTANT USAGE (GEMINI/CHATGPT)
+// ============================================
+
+model AIUsage {
+  id              String    @id @default(uuid())
+  
+  organizationId  String    @map("organization_id")
+  userId          String    @map("user_id")
+  
+  provider        String    // gemini, openai
+  model           String    // gpt-4, gemini-pro, etc
+  
+  feature         String    // lead_summary, email_draft, task_suggest, etc
+  
+  promptTokens    Int       @map("prompt_tokens")
+  completionTokens Int      @map("completion_tokens")
+  totalTokens     Int       @map("total_tokens")
+  
+  cost            Decimal?  // Custo estimado em USD
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_usage")
 }
