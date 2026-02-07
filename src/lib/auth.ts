@@ -18,14 +18,14 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { tenant: true },
+          include: { organization: true },
         });
 
-        if (!user || !user.password) {
+        if (!user || !user.passwordHash) {
           throw new Error('Usuário não encontrado');
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
 
         if (!isValid) {
           throw new Error('Senha incorreta');
@@ -35,7 +35,8 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          tenantId: user.tenantId,
+          organizationId: user.organizationId,
+          role: user.role,
         };
       },
     }),
@@ -47,14 +48,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.tenantId = (user as any).tenantId;
+        token.organizationId = (user as any).organizationId;
+        token.role = (user as any).role;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
-        (session.user as any).tenantId = token.tenantId;
+        (session.user as any).organizationId = token.organizationId;
+        (session.user as any).role = token.role;
       }
       return session;
     },
