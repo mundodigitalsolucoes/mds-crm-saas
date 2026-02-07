@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import Image from 'next/image';
-import { LayoutDashboard, Users, FolderKanban, Kanban, FileText, CheckSquare, Calendar, BarChart3, Menu, X } from 'lucide-react';
+import { signOut } from 'next-auth/react';
+import { LayoutDashboard, Users, FolderKanban, Kanban, FileText, CheckSquare, Calendar, BarChart3, Menu, X, LogOut } from 'lucide-react';
 import { useState } from 'react';
 
 const menuItems = [
@@ -20,6 +20,10 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: '/auth/login' });
+  };
 
   return (
     <>
@@ -52,9 +56,9 @@ export default function Sidebar() {
         <div className="p-6 border-b border-indigo-700">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex-shrink-0">
-              <img 
-                src="/images/logo-fundo-escuro.png" 
-                alt="Mundo Digital Logo" 
+              <img
+                src="/images/logo-fundo-escuro.png"
+                alt="Mundo Digital Logo"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -106,6 +110,15 @@ export default function Sidebar() {
               <p className="text-xs text-indigo-300">Usuário</p>
             </div>
           </div>
+          
+          {/* Botão de Logout */}
+          <button
+            onClick={handleLogout}
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+          >
+            <LogOut size={18} />
+            <span>Sair</span>
+          </button>
         </div>
       </aside>
     </>
