@@ -3,7 +3,21 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LayoutDashboard, Users, FolderKanban, Kanban, FileText, CheckSquare, Calendar, BarChart3, Menu, X, LogOut } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FolderKanban, 
+  Kanban, 
+  FileText, 
+  CheckSquare, 
+  Calendar, 
+  BarChart3, 
+  Menu, 
+  X, 
+  LogOut,
+  Settings,
+  Plug
+} from 'lucide-react';
 import { useState } from 'react';
 
 const menuItems = [
@@ -15,6 +29,10 @@ const menuItems = [
   { name: 'Tarefas', icon: CheckSquare, path: '/tasks' },
   { name: 'Agenda', icon: Calendar, path: '/agenda' },
   { name: 'Relatórios', icon: BarChart3, path: '/reports' },
+];
+
+const settingsItems = [
+  { name: 'Integrações', icon: Plug, path: '/settings/integrations' },
 ];
 
 export default function Sidebar() {
@@ -97,6 +115,32 @@ export default function Sidebar() {
               );
             })}
           </ul>
+
+          {/* Configurações */}
+          <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+          <ul className="space-y-1">
+            {settingsItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
+
+              return (
+                <li key={item.path}>
+                  <Link
+                    href={item.path}
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-indigo-700 text-white font-medium'
+                        : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span>{item.name}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
         {/* User Profile */}
@@ -110,7 +154,7 @@ export default function Sidebar() {
               <p className="text-xs text-indigo-300">Usuário</p>
             </div>
           </div>
-          
+
           {/* Botão de Logout */}
           <button
             onClick={handleLogout}

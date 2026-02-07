@@ -1,33 +1,40 @@
-// src/lib/crypto.ts
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
-const SECRET_HEX = process.env.TOKENS_SECRET;
-if (!SECRET_HEX) throw new Error('TOKENS_SECRET não definido no .env');
+const ALGORITHM = 'aes-256-gcm';
 
-const KEY = Buffer.from(SECRET_HEX, 'hex'); // 32 bytes (64 chars em hex)
-if (KEY.length !== 32) {
-  throw new Error('TOKENS_SECRET deve ter 32 bytes (64 chars em hex) para AES-256-GCM');
+function getKey(): Buffer {
+  const secret = process.env.TOKENS_SECRET;
+  if (!secret) {
+    throw new Error('TOKENS_SECRET não configurado');
+  }
+  return Buffer.from(secret, 'base64').subarray(0, 32);
 }
 
-// Retorna string no formato: ivBase64.tagBase64.cipherBase64
-export function encrypt(plain: string): string {
-  const iv = randomBytes(12); // recomendado p/ GCM
-  const cipher = createCipheriv('aes-256-gcm', KEY, iv);
-  const ciphertext = Buffer.concat([cipher.update(plain, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return `${iv.toString('base64')}.${tag.toString('base64')}.${ciphertext.toString('base64')}`;
+export function encryptToken(plainText: string): string {
+  const key = getKey();
+  const iv = randomBytes(16);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+  
+  let encrypted = cipher.update(plainText, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  
+  const authTag = cipher.getAuthTag();
+  
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
 }
 
-export function decrypt(payload: string): string {
-  const [ivB64, tagB64, dataB64] = payload.split('.');
-  if (!ivB64 || !tagB64 || !dataB64) throw new Error('Token criptografado inválido');
-
-  const iv = Buffer.from(ivB64, 'base64');
-  const tag = Buffer.from(tagB64, 'base64');
-  const data = Buffer.from(dataB64, 'base64');
-
-  const decipher = createDecipheriv('aes-256-gcm', KEY, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(data), decipher.final()]);
-  return plain.toString('utf8');
+export function decryptToken(encryptedData: string): string {
+  const key = getKey();
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+  
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  return decrypted;
 }
