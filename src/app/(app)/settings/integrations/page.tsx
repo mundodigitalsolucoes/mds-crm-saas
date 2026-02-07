@@ -253,7 +253,7 @@ export default function IntegrationsPage() {
       {/* Outras integrações futuras */}
       <div className="mt-6 p-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
         <p className="text-center text-gray-500">
-          ��� Mais integrações em breve: Email Marketing, Gateway de Pagamento, CRM externo...
+          🚀 Mais integrações em breve: Email Marketing, Gateway de Pagamento, CRM externo...
         </p>
       </div>
     </div>
