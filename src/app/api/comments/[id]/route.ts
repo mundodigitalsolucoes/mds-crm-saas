@@ -9,13 +9,14 @@ const updateCommentSchema = z.object({
   content: z.string().min(1),
 });
 
-interface RouteParams {
-  params: { id: string };
-}
-
 // PUT /api/comments/[id]
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -24,9 +25,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const data = updateCommentSchema.parse(body);
 
-    // Verificar se o comentário pertence ao usuário
     const existingComment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingComment) {
@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const comment = await prisma.comment.update({
-      where: { id: params.id },
+      where: { id },
       data: { content: data.content },
       include: {
         author: {
@@ -71,28 +71,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/comments/[id]
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const existingComment = await prisma.comment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existingComment) {
       return NextResponse.json({ error: 'Comentário não encontrado' }, { status: 404 });
     }
 
-    // Permitir delete se for autor ou admin
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true },
     });
 
-    if (existingComment.authorId !== session.user.id && 
+    if (existingComment.authorId !== session.user.id &&
         !['owner', 'admin'].includes(user?.role || '')) {
       return NextResponse.json(
         { error: 'Sem permissão para deletar este comentário' },
@@ -100,14 +104,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Deletar replies primeiro
     await prisma.comment.deleteMany({
-      where: { parentId: params.id },
+      where: { parentId: id },
     });
 
-    // Deletar comentário
     await prisma.comment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

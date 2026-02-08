@@ -21,20 +21,21 @@ const updateTaskSchema = z.object({
   assignedToId: z.string().uuid().optional().nullable(),
 });
 
-interface RouteParams {
-  params: { id: string };
-}
-
-// GET /api/tasks/[id] - Buscar task por ID
-export async function GET(request: NextRequest, { params }: RouteParams) {
+// GET /api/tasks/[id]
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         project: { select: { id: true, title: true } },
         lead: { select: { id: true, name: true } },
@@ -48,7 +49,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    // Buscar attachments e comments
     const [attachments, comments] = await Promise.all([
       prisma.attachment.findMany({
         where: { entityType: 'task', entityId: task.id },
@@ -66,7 +66,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }),
     ]);
 
-    // Buscar replies dos comments
     const commentIds = comments.map(c => c.id);
     const replies = await prisma.comment.findMany({
       where: { parentId: { in: commentIds } },
@@ -76,7 +75,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Agrupar replies por parentId
     const repliesMap = new Map<string, typeof replies>();
     replies.forEach(reply => {
       if (!repliesMap.has(reply.parentId!)) {
@@ -123,9 +121,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/tasks/[id] - Atualizar task
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+// PUT /api/tasks/[id]
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -134,19 +137,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const data = updateTaskSchema.parse(body);
 
-    // Buscar task atual para comparar mudanças
     const currentTask = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!currentTask) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    // Preparar dados de atualização
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
 
-    // Converter datas
     if (data.dueDate !== undefined) {
       updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     }
@@ -154,7 +154,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     }
 
-    // Se mudou para 'done', registrar completedAt
     if (data.status === 'done' && currentTask.status !== 'done') {
       updateData.completedAt = new Date();
     } else if (data.status && data.status !== 'done' && currentTask.status === 'done') {
@@ -162,7 +161,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const task = await prisma.task.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         project: { select: { id: true, title: true } },
@@ -173,8 +172,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    // Notificar se atribuiu a outra pessoa
-    if (data.assignedToId && 
+    if (data.assignedToId &&
         data.assignedToId !== currentTask.assignedToId &&
         data.assignedToId !== session.user.id) {
       await prisma.notification.create({
@@ -189,9 +187,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Notificar conclusão ao criador
-    if (data.status === 'done' && 
-        currentTask.status !== 'done' && 
+    if (data.status === 'done' &&
+        currentTask.status !== 'done' &&
         currentTask.createdById &&
         currentTask.createdById !== session.user.id) {
       await prisma.notification.create({
@@ -206,13 +203,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    // Registrar atividade
     await prisma.activity.create({
       data: {
         entityType: 'task',
         entityId: task.id,
         action: data.status === 'done' ? 'completed' : 'updated',
-        description: data.status === 'done' 
+        description: data.status === 'done'
           ? `Tarefa "${task.title}" concluída`
           : `Tarefa "${task.title}" atualizada`,
         userId: session.user.id,
@@ -243,45 +239,44 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/tasks/[id] - Deletar task
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+// DELETE /api/tasks/[id]
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    // Deletar attachments do storage (se houver)
-    // TODO: Implementar deleção de arquivos do storage
-
-    // Deletar task (cascade deleta subtasks)
     await prisma.task.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
-    // Deletar attachments e comments relacionados
     await Promise.all([
       prisma.attachment.deleteMany({
-        where: { entityType: 'task', entityId: params.id },
+        where: { entityType: 'task', entityId: id },
       }),
       prisma.comment.deleteMany({
-        where: { entityType: 'task', entityId: params.id },
+        where: { entityType: 'task', entityId: id },
       }),
     ]);
 
-    // Registrar atividade
     await prisma.activity.create({
       data: {
         entityType: 'task',
-        entityId: params.id,
+        entityId: id,
         action: 'deleted',
         description: `Tarefa "${task.title}" excluída`,
         userId: session.user.id,

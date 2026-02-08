@@ -6,20 +6,21 @@ import { authOptions } from '@/lib/auth';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
 
-interface RouteParams {
-  params: { id: string };
-}
-
 // DELETE /api/attachments/[id]
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+    
     const session = await getServerSession(authOptions);
     if (!session?.user?.id || !session.user.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const attachment = await prisma.attachment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!attachment) {
@@ -37,7 +38,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       select: { role: true },
     });
 
-    if (attachment.uploadedById !== session.user.id && 
+    if (attachment.uploadedById !== session.user.id &&
         !['owner', 'admin'].includes(user?.role || '')) {
       return NextResponse.json(
         { error: 'Sem permissão para deletar este anexo' },
@@ -55,7 +56,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Deletar registro
     await prisma.attachment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

@@ -10,20 +10,21 @@ const createSubtaskSchema = z.object({
   position: z.number().optional(),
 });
 
-interface RouteParams {
-  params: { id: string };
-}
-
-// GET /api/tasks/[id]/subtasks - Listar subtasks
-export async function GET(request: NextRequest, { params }: RouteParams) {
+// GET /api/tasks/[id]/subtasks
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const subtasks = await prisma.subtask.findMany({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { position: 'asc' },
     });
 
@@ -43,9 +44,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// POST /api/tasks/[id]/subtasks - Criar subtask
-export async function POST(request: NextRequest, { params }: RouteParams) {
+// POST /api/tasks/[id]/subtasks
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -54,18 +60,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const data = createSubtaskSchema.parse(body);
 
-    // Verificar se task existe
     const task = await prisma.task.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    // Pegar a maior posição atual
     const lastSubtask = await prisma.subtask.findFirst({
-      where: { taskId: params.id },
+      where: { taskId: id },
       orderBy: { position: 'desc' },
     });
 
@@ -73,7 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const subtask = await prisma.subtask.create({
       data: {
-        taskId: params.id,
+        taskId: id,
         title: data.title,
         position,
       },
