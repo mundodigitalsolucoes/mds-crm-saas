@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { OS, OSStage } from '@/types/os';
-import { useTaskStore } from '@/store/taskStore';
+
 
 interface OSStore {
   // OS
@@ -385,17 +385,8 @@ export const useOSStore = create<OSStore>((set, get) => ({
   },
 
   recalculateAndSetOSProgress: (osId: number) => {
-    const { getTasksByOS } = useTaskStore.getState();
-    const tasks = getTasksByOS(osId);
-
-    let progress = 0;
-    if (tasks.length > 0) {
-      const completed = tasks.filter((t) => t.status === 'concluida').length;
-      progress = Math.round((completed / tasks.length) * 100);
-    }
-
-    set((state) => ({
-      ordens: state.ordens.map((o) => (o.id === osId ? { ...o, progresso: progress } : o)),
-    }));
+    // Progresso agora é gerenciado manualmente ou via API
+    // Esta função é mantida por compatibilidade mas não faz cálculo automático
+    console.log('recalculateAndSetOSProgress called for OS:', osId);
   },
 }));
