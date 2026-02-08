@@ -11,13 +11,14 @@ const updateSubtaskSchema = z.object({
   position: z.number().optional(),
 });
 
-interface RouteParams {
-  params: { id: string; subtaskId: string };
-}
-
-// PUT /api/tasks/[id]/subtasks/[subtaskId] - Atualizar subtask
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+// PUT /api/tasks/[id]/subtasks/[subtaskId]
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; subtaskId: string }> }
+) {
   try {
+    const { id, subtaskId } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -27,16 +28,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const data = updateSubtaskSchema.parse(body);
 
     const currentSubtask = await prisma.subtask.findUnique({
-      where: { id: params.subtaskId },
+      where: { id: subtaskId },
     });
 
-    if (!currentSubtask || currentSubtask.taskId !== params.id) {
+    if (!currentSubtask || currentSubtask.taskId !== id) {
       return NextResponse.json({ error: 'Subtarefa não encontrada' }, { status: 404 });
     }
 
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
 
-    // Se mudou completed, atualizar completedAt
     if (data.completed !== undefined) {
       if (data.completed && !currentSubtask.completed) {
         updateData.completedAt = new Date();
@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const subtask = await prisma.subtask.update({
-      where: { id: params.subtaskId },
+      where: { id: subtaskId },
       data: updateData,
     });
 
@@ -70,24 +70,29 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/tasks/[id]/subtasks/[subtaskId] - Deletar subtask
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+// DELETE /api/tasks/[id]/subtasks/[subtaskId]
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; subtaskId: string }> }
+) {
   try {
+    const { id, subtaskId } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const subtask = await prisma.subtask.findUnique({
-      where: { id: params.subtaskId },
+      where: { id: subtaskId },
     });
 
-    if (!subtask || subtask.taskId !== params.id) {
+    if (!subtask || subtask.taskId !== id) {
       return NextResponse.json({ error: 'Subtarefa não encontrada' }, { status: 404 });
     }
 
     await prisma.subtask.delete({
-      where: { id: params.subtaskId },
+      where: { id: subtaskId },
     });
 
     return NextResponse.json({ success: true });
