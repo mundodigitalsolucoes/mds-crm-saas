@@ -1,4 +1,4 @@
-// src/store/taskStore.ts
+// src/store/taskStore.ts        
 import { create } from 'zustand';
 import type {
   Task,
@@ -11,16 +11,12 @@ import type {
   SubtaskUpdate,
   TaskStatus,
   TaskPriority,
-  TASK_STATUS_LABELS,
-  TASK_STATUS_COLORS,
-  TASK_PRIORITY_LABELS,
-  TASK_PRIORITY_COLORS,
 } from '@/types/task';
 
 interface TaskStore {
   // State
   tasks: Task[];
-  currentTask: Task | null;
+  currentTask: Task | null;      
   isLoading: boolean;
   error: string | null;
   filters: TaskFilters;
@@ -256,7 +252,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
 
       const subtask: Subtask = await response.json();
 
-      // Atualizar task local
       set((state) => ({
         tasks: state.tasks.map((t) => {
           if (t.id !== taskId) return t;
@@ -264,8 +259,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             ...t,
             subtasks: [...(t.subtasks || []), subtask],
             _count: {
-              ...t._count,
               subtasks: (t._count?.subtasks || 0) + 1,
+              attachments: t._count?.attachments || 0,
+              comments: t._count?.comments || 0,
             },
           };
         }),
@@ -341,10 +337,13 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           return {
             ...t,
             subtasks: t.subtasks?.filter((st) => st.id !== subtaskId),
+
             _count: {
-              ...t._count,
               subtasks: Math.max(0, (t._count?.subtasks || 0) - 1),
+              attachments: t._count?.attachments || 0,
+              comments: t._count?.comments || 0,
             },
+           
           };
         }),
         currentTask:
