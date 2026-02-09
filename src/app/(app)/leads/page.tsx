@@ -2,14 +2,10 @@
 
 import { useMemo, useState } from 'react';
 import { Search, Plus, Upload, Edit, Trash2 } from 'lucide-react';
-import ImportCSV from '@/components/ImportCSV';
+import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
 import { useLeadsStore } from '@/store/leadsStore';
 
-const CSV_TEMPLATE = `nome,email,telefone,empresa,status,origem
-João Silva,joao@email.com,(19) 99999-9999,Empresa A,lead,site
-Maria Santos,maria@email.com,(19) 98888-8888,Empresa B,lead,indicação
-Pedro Oliveira,pedro@email.com,(19) 97777-7777,Empresa C,lead,google`;
 
 export default function LeadsPage() {
   const { 
@@ -78,20 +74,23 @@ export default function LeadsPage() {
     });
   };
 
-  const handleImport = async (data: any[]): Promise<{ success: number; errors: string[] }> => {
+  const handleImport = async (data: any[]): Promise<{ success: number; failed: number; errors: string[] }> => {
     const errors: string[] = [];
     let success = 0;
+    let failed = 0;
 
     const defaultStatus = stages[0]?.id || 'lead';
 
     data.forEach((row, index) => {
       if (!row.nome || !row.email) {
         errors.push(`Linha ${index + 2}: Nome e email são obrigatórios`);
+        failed++;
         return;
       }
 
       if (!row.email.includes('@')) {
         errors.push(`Linha ${index + 2}: Email inválido - ${row.email}`);
+        failed++;
         return;
       }
 
@@ -107,7 +106,7 @@ export default function LeadsPage() {
       });
     });
 
-    return { success, errors };
+    return { success, failed, errors };
   };
 
   const getStatusDisplay = (status: string) => {
@@ -255,11 +254,13 @@ export default function LeadsPage() {
 
       {/* Import Modal */}
       {showImport && (
-        <ImportCSV
+        <CSVImport
+          isOpen={true}
+          entityName="Leads"
+          templateFields={['nome', 'email', 'telefone', 'empresa', 'status', 'origem']}
+          requiredFields={['nome', 'email']}
           onImport={handleImport}
           onClose={() => setShowImport(false)}
-          template={CSV_TEMPLATE}
-          templateName="template-leads.csv"
         />
       )}
 
