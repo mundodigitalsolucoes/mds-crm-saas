@@ -29,7 +29,7 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
   if (!isOpen || !os) return null;
 
   const canLaunchTasks = Boolean(os.projetoId);
-  const projectName = os.projetoId ? getProjectById(os.projetoId)?.nome || 'Projeto' : 'Projeto';
+  const projectName = os.projetoId ? getProjectById(String(os.projetoId))?.title || 'Projeto' : 'Projeto';
   const currentStage = osStages.find(s => s.id === os.status);
 
   return (

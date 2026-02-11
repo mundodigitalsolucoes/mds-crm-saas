@@ -22,7 +22,7 @@ interface OSStore {
   moveOSInColumns: (osId: number, fromStage: string, toStage: string, newIndex: number) => void;
 
   // Helpers
-  getOSByProject: (projectId: number) => OS[];
+  getOSByProject: (projectId: number | string) => OS[];
   calculateProgress: (osId: number) => number;
 
   // NOVO: progresso baseado em tarefas vinculadas (usado no taskStore)
@@ -182,7 +182,7 @@ export const useOSStore = create<OSStore>((set, get) => ({
       id: 1,
       codigo: 'OS-2026-0001',
       titulo: 'Implantação Método MDS - Empresa Tech',
-      projetoId: 1,
+      projetoId: 'demo-project-1',
       leadId: 1,
       cliente: 'João Silva',
       tipo: 'implantacao_mds',
@@ -358,8 +358,8 @@ export const useOSStore = create<OSStore>((set, get) => ({
 
   // Helpers
   getOSByProject: (projectId) => {
-    return get().ordens.filter(o => o.projetoId === projectId);
-  },
+  return get().ordens.filter(o => String(o.projetoId) === String(projectId));
+},
 
   calculateProgress: (osId) => {
     const os = get().ordens.find(o => o.id === osId);

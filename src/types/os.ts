@@ -95,7 +95,7 @@ export interface OS {
   id: number;
   codigo: string;
   titulo: string;
-  projetoId: number;
+  projetoId: number | string;
   leadId?: number;
   cliente?: string;
   tipo: OSTipo;
