@@ -41,9 +41,9 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
   // ✅ hooks sempre rodam
   const projectOptions = useMemo(
-    () => projects.map((p) => ({ value: p.id, label: `${p.nome} (${p.cliente})` })),
-    [projects]
-  );
+  () => projects.map((p) => ({ value: p.id, label: `${p.title} (${p.client || 'Sem cliente'})` })),
+  [projects]
+);
 
   const statusOptions = useMemo(
     () => osStages.map((s) => ({ value: s.id, label: s.title })),
@@ -132,21 +132,20 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
       return null;
     }
 
-    const projetoIdNum = Number(formData.projetoId);
-    const project = projects.find((p) => p.id === projetoIdNum);
+    const projetoId = String(formData.projetoId);
+const project = projects.find((p) => p.id === projetoId);
 
-    if (!project) {
-      alert('Projeto não encontrado. Selecione um projeto válido.');
-      return null;
-    }
+if (!project) {
+  alert('Projeto não encontrado. Selecione um projeto válido.');
+  return null;
+}
 
-    const payload: Omit<OS, 'id'> = {
-      // updateOS usa id; addOS no store gera id/codigo (você já tem isso no store)
-      codigo: initialData?.codigo || '',
-      titulo: formData.titulo,
-      projetoId: projetoIdNum,
-      leadId: formData.leadId,
-      cliente: project.cliente,
+const payload: Omit<OS, 'id'> = {
+  codigo: initialData?.codigo || '',
+  titulo: formData.titulo,
+  projetoId: projetoId,
+  leadId: formData.leadId,
+  cliente: project.client || '',
       tipo: (formData.tipo || 'implantacao_mds') as OS['tipo'],
       status: String(formData.status),
       prioridade: (formData.prioridade || 'media') as OS['prioridade'],
@@ -197,11 +196,11 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     }
   };
 
-  const currentProjectId = formData.projetoId ? Number(formData.projetoId) : null;
-  const canLaunchTasks = Boolean(savedOSId && currentProjectId);
+  const currentProjectId = formData.projetoId ? String(formData.projetoId) : null;
+const canLaunchTasks = Boolean(savedOSId && currentProjectId);
 
-  const currentProjectName =
-    (currentProjectId ? getProjectById(currentProjectId)?.nome : undefined) || 'Projeto';
+const currentProjectName =
+  (currentProjectId ? getProjectById(currentProjectId)?.title : undefined) || 'Projeto';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

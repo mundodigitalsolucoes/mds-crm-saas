@@ -230,6 +230,10 @@ model Lead {
 // MARKETING PROJECTS
 // ============================================
 
+// ============================================
+// MARKETING PROJECTS
+// ============================================
+
 model MarketingProject {
   id            String    @id @default(uuid())
 
@@ -239,9 +243,13 @@ model MarketingProject {
 
   title         String
   description   String?
-  status        String    @default("planning") // planning, active, completed, cancelled
-  budget        Decimal
+  client        String?   // Nome do cliente vinculado ao projeto
+  status        String    @default("planning") // planning, active, paused, completed, cancelled
+  priority      String    @default("medium") // low, medium, high, urgent
+  budget        Decimal   @default(0)
   spent         Decimal   @default(0)
+  progress      Int       @default(0) // 0-100
+
   startDate     DateTime? @map("start_date")
   endDate       DateTime? @map("end_date")
 
