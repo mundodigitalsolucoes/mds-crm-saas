@@ -177,23 +177,20 @@ const payload: Omit<OS, 'id'> = {
     const { payload } = result;
 
     if (initialData) {
-      updateOS(initialData.id, payload as OS);
-      setSavedOSId(initialData.id);
-      // Mantém aberto (você pode lançar tarefas em seguida)
-      return;
-    }
+  updateOS(initialData.id, payload as OS);
+  setSavedOSId(initialData.id);
+  onClose();
+  return;
+}
 
-    // IMPORTANTE: para lançar tarefas, precisamos do id gerado.
-    // Seu store precisa retornar a OS criada: addOS(...) => OS
-    const created = addOS(payload as OS) as unknown as OS;
+const created = addOS(payload as OS) as unknown as OS;
 
-    // Se o seu addOS ainda não retorna a OS criada com id, me avise que eu ajusto o store.
-    if (created?.id) {
-      setSavedOSId(created.id);
-    } else {
-      // fallback (não quebra)
-      setSavedOSId(null);
-    }
+if (created?.id) {
+  setSavedOSId(created.id);
+}
+
+// Fecha o modal após criar
+onClose();
   };
 
   const currentProjectId = formData.projetoId ? String(formData.projetoId) : null;
