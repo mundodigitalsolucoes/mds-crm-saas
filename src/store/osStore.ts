@@ -177,49 +177,7 @@ const createMDSTemplate = (): OS['pilares'] => ({
 
 export const useOSStore = create<OSStore>((set, get) => ({
   // Initial data
-  ordens: [
-    {
-      id: 1,
-      codigo: 'OS-2026-0001',
-      titulo: 'Implantação Método MDS - Empresa Tech',
-      projetoId: 'demo-project-1',
-      leadId: 1,
-      cliente: 'João Silva',
-      tipo: 'implantacao_mds',
-      status: 'em_planejamento',
-      prioridade: 'alta',
-      responsavel: 'Fábio Alves',
-      participantes: ['Fábio Alves'],
-      datas: {
-        abertura: '2026-02-03',
-        inicio: '2026-02-10',
-        prazo: '2026-05-10',
-      },
-      objetivos: {
-        principal12m: 'Aumentar leads qualificados em 200% e receita em 150%',
-        quadrantes: [
-          { q: 1, meta: 'Organizar presença digital e cadastro de leads' },
-          { q: 2, meta: 'Organizar processo de vendas' },
-          { q: 3, meta: 'Implementar automação e segmentação' },
-          { q: 4, meta: 'Otimizar e escalar resultados' },
-        ],
-        metasAlvo: {
-          leads: 500,
-          ctr: 2.5,
-          cpa: 25,
-          roas: 4,
-          receita: 150000,
-        },
-      },
-      orcamento: {
-        verbaMidia: 5000,
-        honorarios: 8000,
-        moeda: 'BRL',
-      },
-      pilares: createMDSTemplate(),
-      progresso: 15,
-    },
-  ],
+  ordens: [],
 
   osStages: [
     { id: 'em_planejamento', title: 'Em Planejamento', order: 0, color: 'blue' },
@@ -229,11 +187,11 @@ export const useOSStore = create<OSStore>((set, get) => ({
   ],
 
   osColumnOrder: {
-    em_planejamento: [1],
-    em_execucao: [],
-    aguardando_cliente: [],
-    concluida: [],
-  },
+  em_planejamento: [],
+  em_execucao: [],
+  aguardando_cliente: [],
+  concluida: [],
+},
 
   // OS actions
   addOS: (osData) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Calendar, Clock, Users, DollarSign, Loader2 } from 'lucide-react';
+import { Search, Plus, Calendar, Clock, Users, DollarSign, Loader2, Edit, Trash2 } from 'lucide-react';
 import { useProjectStore, ProjectStatus, ProjectPriority } from '@/store/projectStore';
 import NewProjectModal from '@/components/NewProjectModal';
 
@@ -50,7 +50,6 @@ export default function ProjectsPage() {
   };
 
   const handleModalSubmit = async (formData: any) => {
-    // Mapear dados do formulário para a API
     const apiData = {
       title: formData.nome,
       client: formData.cliente || null,
@@ -70,7 +69,7 @@ export default function ProjectsPage() {
     }
   };
 
-  // Mapear status PT-BR → API (inglês)
+  // Mapear status PT-BR → API
   const mapStatusToApi = (status: string): ProjectStatus => {
     const map: Record<string, ProjectStatus> = {
       'planejamento': 'planning',
@@ -82,7 +81,6 @@ export default function ProjectsPage() {
     return map[status] || 'planning';
   };
 
-  // Mapear status API → PT-BR (para exibição)
   const mapStatusToLabel = (status: string): string => {
     const map: Record<string, string> = {
       'planning': 'Planejamento',
@@ -94,7 +92,6 @@ export default function ProjectsPage() {
     return map[status] || status;
   };
 
-  // Mapear prioridade PT-BR → API
   const mapPriorityToApi = (priority: string): ProjectPriority => {
     const map: Record<string, ProjectPriority> = {
       'baixa': 'low',
@@ -105,7 +102,6 @@ export default function ProjectsPage() {
     return map[priority] || 'medium';
   };
 
-  // Mapear prioridade API → PT-BR
   const mapPriorityToLabel = (priority: string): string => {
     const map: Record<string, string> = {
       'low': 'Baixa',
@@ -154,21 +150,21 @@ export default function ProjectsPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      planning: 'bg-gray-700/50 text-gray-300 border border-gray-600',
-      active: 'bg-blue-900/50 text-blue-300 border border-blue-700',
-      paused: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
-      completed: 'bg-green-900/50 text-green-300 border border-green-700',
-      cancelled: 'bg-red-900/50 text-red-300 border border-red-700',
+      planning: 'bg-yellow-100 text-yellow-800',
+      active: 'bg-blue-100 text-blue-800',
+      paused: 'bg-gray-100 text-gray-800',
+      completed: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800',
     };
     return colors[status] || colors.planning;
   };
 
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
-      low: 'bg-green-900/50 text-green-300 border border-green-700',
-      medium: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
-      high: 'bg-orange-900/50 text-orange-300 border border-orange-700',
-      urgent: 'bg-red-900/50 text-red-300 border border-red-700',
+      low: 'bg-green-100 text-green-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-orange-100 text-orange-800',
+      urgent: 'bg-red-100 text-red-800',
     };
     return colors[priority] || colors.medium;
   };
@@ -191,11 +187,11 @@ export default function ProjectsPage() {
   }), [projects]);
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Projetos</h1>
-        <p className="text-gray-400">Gerencie seus projetos e acompanhe o progresso</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Projetos</h1>
+        <p className="text-gray-600">Gerencie seus projetos e acompanhe o progresso</p>
       </div>
 
       {/* Actions Bar */}
@@ -208,7 +204,7 @@ export default function ProjectsPage() {
               placeholder="Buscar projetos..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -226,63 +222,63 @@ export default function ProjectsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-900/50 rounded-lg">
-              <Users className="text-indigo-400" size={24} />
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <Users className="text-indigo-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Total</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
+              <p className="text-sm text-gray-600">Total</p>
+              <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-900/50 rounded-lg">
-              <Clock className="text-blue-400" size={24} />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Clock className="text-blue-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Em Andamento</p>
-              <p className="text-2xl font-bold text-blue-400">{stats.active}</p>
+              <p className="text-sm text-gray-600">Em Andamento</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.active}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-900/50 rounded-lg">
-              <Calendar className="text-green-400" size={24} />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Calendar className="text-green-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Concluídos</p>
-              <p className="text-2xl font-bold text-green-400">{stats.completed}</p>
+              <p className="text-sm text-gray-600">Concluídos</p>
+              <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-900/50 rounded-lg">
-              <Clock className="text-yellow-400" size={24} />
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Clock className="text-yellow-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Planejamento</p>
-              <p className="text-2xl font-bold text-yellow-400">{stats.planning}</p>
+              <p className="text-sm text-gray-600">Planejamento</p>
+              <p className="text-2xl font-bold text-yellow-600">{stats.planning}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-900/50 rounded-lg">
-              <DollarSign className="text-purple-400" size={24} />
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <DollarSign className="text-purple-600" size={24} />
             </div>
             <div>
-              <p className="text-sm text-gray-400">Orçamento Total</p>
-              <p className="text-2xl font-bold text-purple-400">
-                R$ {stats.totalBudget.toLocaleString('pt-BR')}
+              <p className="text-sm text-gray-600">Orçamento Total</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {stats.totalBudget.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
             </div>
           </div>
@@ -293,36 +289,36 @@ export default function ProjectsPage() {
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="animate-spin text-indigo-500" size={32} />
-          <span className="ml-3 text-gray-400">Carregando projetos...</span>
+          <span className="ml-3 text-gray-500">Carregando projetos...</span>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6">
-          <p className="text-red-400">Erro: {error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-600">Erro: {error}</p>
         </div>
       )}
 
       {/* Projects Table */}
       {!loading && (
-        <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-900/50 border-b border-gray-700">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Projeto</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Cliente</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Prioridade</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Progresso</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Prazo</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Orçamento</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Responsável</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Projeto</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Cliente</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Prioridade</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Progresso</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Prazo</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Orçamento</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Responsável</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 {projects.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
@@ -331,14 +327,16 @@ export default function ProjectsPage() {
                   </tr>
                 ) : (
                   projects.map((project) => (
-                    <tr key={project.id} className="hover:bg-gray-700/30 transition-colors">
+                    <tr key={project.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
                         <div>
-                          <div className="text-sm font-medium text-white">{project.title}</div>
-                          <div className="text-sm text-gray-500 max-w-xs truncate">{project.description}</div>
+                          <div className="text-sm font-medium text-gray-800">{project.title}</div>
+                          {project.description && (
+                            <div className="text-sm text-gray-500 max-w-xs truncate">{project.description}</div>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{project.client || '—'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{project.client || '—'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(project.status)}`}>
                           {mapStatusToLabel(project.status)}
@@ -351,36 +349,38 @@ export default function ProjectsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-700 rounded-full h-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${getProgressColor(project.progress)}`}
                               style={{ width: `${project.progress}%` }}
-                            ></div>
+                            />
                           </div>
-                          <span className="text-xs text-gray-400 min-w-[35px]">{project.progress}%</span>
+                          <span className="text-xs text-gray-600 min-w-[35px]">{project.progress}%</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">
+                      <td className="px-6 py-4 text-sm text-gray-600">
                         {project.endDate
                           ? new Date(project.endDate).toLocaleDateString('pt-BR')
                           : '—'}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">
-                        R$ {Number(project.budget).toLocaleString('pt-BR')}
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {Number(project.budget).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-300">{project.owner?.name || '—'}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{project.owner?.name || '—'}</td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button
                             onClick={() => openEditModal(mapProjectToModal(project))}
-                            className="px-3 py-1 text-sm rounded-md border border-gray-600 text-gray-300 hover:bg-gray-700 transition"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
                           >
+                            <Edit size={14} />
                             Editar
                           </button>
                           <button
                             onClick={() => handleDeleteProject(project.id)}
-                            className="px-3 py-1 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 transition"
+                            className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
                           >
+                            <Trash2 size={14} />
                             Excluir
                           </button>
                         </div>

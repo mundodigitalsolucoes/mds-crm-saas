@@ -25,7 +25,6 @@ export default function OSPage() {
   // Helper: buscar nome do projeto pelo ID (string ou number)
   const getProjectName = (projetoId: number | string | undefined): string | undefined => {
     if (!projetoId) return undefined;
-    // Tenta buscar no store (IDs agora são string/UUID)
     const project = getProjectById(String(projetoId));
     return project?.title;
   };
@@ -61,15 +60,15 @@ export default function OSPage() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      em_planejamento: 'bg-blue-900/50 text-blue-300 border border-blue-700',
-      em_execucao: 'bg-orange-900/50 text-orange-300 border border-orange-700',
-      aguardando_cliente: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
-      em_aprovacao: 'bg-purple-900/50 text-purple-300 border border-purple-700',
-      pausada: 'bg-gray-700/50 text-gray-300 border border-gray-600',
-      concluida: 'bg-green-900/50 text-green-300 border border-green-700',
-      cancelada: 'bg-red-900/50 text-red-300 border border-red-700',
+      em_planejamento: 'bg-blue-100 text-blue-800',
+      em_execucao: 'bg-orange-100 text-orange-800',
+      aguardando_cliente: 'bg-yellow-100 text-yellow-800',
+      em_aprovacao: 'bg-purple-100 text-purple-800',
+      pausada: 'bg-gray-100 text-gray-800',
+      concluida: 'bg-green-100 text-green-800',
+      cancelada: 'bg-red-100 text-red-800',
     };
-    return colors[status] || 'bg-gray-700/50 text-gray-300 border border-gray-600';
+    return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   const getTipoDisplay = (tipo: string) => {
@@ -89,11 +88,11 @@ export default function OSPage() {
 
   const getPrioridadeColor = (prioridade: string) => {
     const colors: Record<string, string> = {
-      baixa: 'text-green-400',
-      media: 'text-yellow-400',
-      alta: 'text-red-400',
+      baixa: 'text-green-600',
+      media: 'text-yellow-600',
+      alta: 'text-red-600',
     };
-    return colors[prioridade] || 'text-gray-400';
+    return colors[prioridade] || 'text-gray-600';
   };
 
   const formatDate = (dateStr?: string) => {
@@ -122,11 +121,11 @@ export default function OSPage() {
   };
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Ordens de Serviço</h1>
-        <p className="text-gray-400">Gerencie as ordens de serviço dos seus projetos</p>
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">Ordens de Serviço</h1>
+        <p className="text-gray-600">Gerencie as ordens de serviço dos seus projetos</p>
       </div>
 
       {/* Actions Bar */}
@@ -139,7 +138,7 @@ export default function OSPage() {
               placeholder="Buscar OS..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -161,70 +160,70 @@ export default function OSPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-400 mb-1">Total de OS</p>
-          <p className="text-2xl font-bold text-white">{filteredOS.length}</p>
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">Total de OS</p>
+          <p className="text-2xl font-bold text-gray-800">{filteredOS.length}</p>
         </div>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-400 mb-1">Em Planejamento</p>
-          <p className="text-2xl font-bold text-blue-400">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">Em Planejamento</p>
+          <p className="text-2xl font-bold text-blue-600">
             {filteredOS.filter((o) => o.status === 'em_planejamento').length}
           </p>
         </div>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-400 mb-1">Em Execução</p>
-          <p className="text-2xl font-bold text-orange-400">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">Em Execução</p>
+          <p className="text-2xl font-bold text-orange-600">
             {filteredOS.filter((o) => o.status === 'em_execucao').length}
           </p>
         </div>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-400 mb-1">Aguardando</p>
-          <p className="text-2xl font-bold text-yellow-400">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">Aguardando</p>
+          <p className="text-2xl font-bold text-yellow-600">
             {filteredOS.filter((o) => o.status === 'aguardando_cliente').length}
           </p>
         </div>
-        <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-400 mb-1">Concluídas</p>
-          <p className="text-2xl font-bold text-green-400">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <p className="text-sm text-gray-600 mb-1">Concluídas</p>
+          <p className="text-2xl font-bold text-green-600">
             {filteredOS.filter((o) => o.status === 'concluida').length}
           </p>
         </div>
       </div>
 
       {/* OS Table */}
-      <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-900/50 border-b border-gray-700">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Código</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Título</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Projeto/Cliente</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Responsável</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Início</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Prazo</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Progresso</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Ações</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Código</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Título</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Projeto/Cliente</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tipo</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Responsável</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Início</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Prazo</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Progresso</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-gray-700">
+            <tbody className="divide-y divide-gray-200">
               {filteredOS.map((os) => (
-                <tr key={os.id} className="hover:bg-gray-700/30 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-white">{os.codigo}</td>
+                <tr key={os.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-800">{os.codigo}</td>
 
                   <td className="px-6 py-4">
                     <div>
-                      <p className="text-sm font-medium text-white truncate max-w-[200px]">{os.titulo}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate max-w-[200px]">{os.titulo}</p>
                       <p className={`text-xs ${getPrioridadeColor(os.prioridade)} capitalize`}>
                         Prioridade {os.prioridade}
                       </p>
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-gray-300">
+                  <td className="px-6 py-4 text-sm text-gray-600">
                     <div>
                       <p className="font-medium">
                         {getProjectName(os.projetoId) ||
@@ -234,7 +233,7 @@ export default function OSPage() {
                     </div>
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-gray-300">{getTipoDisplay(os.tipo)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{getTipoDisplay(os.tipo)}</td>
 
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(os.status)}`}>
@@ -242,19 +241,19 @@ export default function OSPage() {
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 text-sm text-gray-300">{os.responsavel || '—'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{formatDate(os.datas.inicio)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{formatDate(os.datas.prazo)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{os.responsavel || '—'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatDate(os.datas.inicio)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatDate(os.datas.prazo)}</td>
 
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-700 rounded-full h-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
-                          className="bg-indigo-500 h-2 rounded-full transition-all"
+                          className="bg-indigo-600 h-2 rounded-full transition-all"
                           style={{ width: `${os.progresso || 0}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-400 min-w-[30px]">{os.progresso || 0}%</span>
+                      <span className="text-xs text-gray-600 min-w-[30px]">{os.progresso || 0}%</span>
                     </div>
                   </td>
 
@@ -262,7 +261,7 @@ export default function OSPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleOpenDetailsModal(os)}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
                         title="Ver detalhes"
                         type="button"
                       >
@@ -272,7 +271,7 @@ export default function OSPage() {
 
                       <button
                         onClick={() => handleOpenEditModal(os)}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
                         title="Editar OS"
                         type="button"
                       >
