@@ -1,17 +1,24 @@
 import { create } from 'zustand';
 
-export type LeadStatus = string; // dinâmico
-
+// Interface alinhada com o schema Prisma
 export interface Lead {
-  id: number;
-  nome: string;
-  email: string;
-  telefone: string;
-  empresa: string;
-  status: LeadStatus;
-  origem: string;
-  dataCriacao: string;
-  valor?: number; // NOVO: valor estimado da oportunidade em R$
+  id: string; // UUID do banco
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  position: string | null;
+  source: string | null;
+  status: string;
+  score: number;
+  value: number | null;
+  notes: string | null;
+  assignedToId: string | null;
+  assignedTo?: { id: string; name: string; email: string } | null;
+  createdById: string | null;
+  createdBy?: { id: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Stage {
@@ -22,120 +29,184 @@ export interface Stage {
 }
 
 interface LeadsStore {
-  // Leads
+  // State
   leads: Lead[];
-  addLead: (lead: Omit<Lead, 'id'>) => void;
-  updateLead: (id: number, updates: Partial<Lead>) => void;
-  deleteLead: (id: number) => void;
-  setLeads: (leads: Lead[]) => void;
-
-  // Stages
   stages: Stage[];
+  isLoading: boolean;
+  error: string | null;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+
+  // API actions (assíncronos)
+  fetchLeads: (params?: { search?: string; status?: string; page?: number }) => Promise<void>;
+  addLead: (data: Partial<Lead>) => Promise<Lead | null>;
+  updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
+  deleteLead: (id: string) => Promise<boolean>;
+
+  // Stages (local por enquanto — pode virar API depois)
   addStage: (stage: Omit<Stage, 'id'>) => void;
   updateStage: (id: string, updates: Partial<Stage>) => void;
   deleteStage: (id: string) => void;
   reorderStages: (newOrder: Stage[]) => void;
 
-  // Column order no kanban
-  columnOrder: Record<string, number[]>;
-  setColumnOrder: (order: Record<string, number[]>) => void;
-  moveLeadInColumns: (leadId: number, fromStage: string, toStage: string, newIndex: number) => void;
+  // Kanban column order (derivado do status dos leads)
+  moveLeadInKanban: (leadId: string, toStatus: string) => Promise<Lead | null>;
 }
 
 export const useLeadsStore = create<LeadsStore>((set, get) => ({
-  // Initial data
-  leads: [
-    {
-      id: 1,
-      nome: 'João Silva',
-      email: 'joao@email.com',
-      telefone: '(19) 99999-9999',
-      empresa: 'Empresa Tech',
-      status: 'lead',
-      origem: 'Site',
-      dataCriacao: '2025-02-01',
-      valor: 2500,
-    },
-    {
-      id: 2,
-      nome: 'Carlos Cunha',
-      email: 'carlimcucu@gmail.com',
-      telefone: '17991772563',
-      empresa: 'Caminhões Almiro',
-      status: 'lead',
-      origem: 'Instagram',
-      dataCriacao: '2026-02-01',
-      valor: 5000,
-    },
-  ],
+  // Initial state
+  leads: [],
+  isLoading: false,
+  error: null,
+  pagination: { total: 0, page: 1, limit: 50, totalPages: 0 },
 
   stages: [
-    {
-      id: 'lead',
-      title: 'Lead',
-      order: 0,
-      color: 'blue',
-    },
+    { id: 'new', title: 'Novo', order: 0, color: 'blue' },
+    { id: 'contacted', title: 'Contactado', order: 1, color: 'yellow' },
+    { id: 'qualified', title: 'Qualificado', order: 2, color: 'orange' },
+    { id: 'proposal', title: 'Proposta', order: 3, color: 'purple' },
+    { id: 'negotiation', title: 'Negociação', order: 4, color: 'yellow' },
+    { id: 'won', title: 'Ganho', order: 5, color: 'green' },
+    { id: 'lost', title: 'Perdido', order: 6, color: 'red' },
   ],
 
-  columnOrder: {
-    lead: [1, 2],
-  },
+  // ==================== API ACTIONS ====================
 
-  // Lead actions
-  addLead: (leadData) => {
-    const newLead: Lead = {
-      ...leadData,
-      valor: typeof leadData.valor === 'number' ? leadData.valor : 0,
-      id: Math.max(...get().leads.map((l) => l.id), 0) + 1,
-    };
+  fetchLeads: async (params) => {
+    set({ isLoading: true, error: null });
 
-    set((state) => ({
-      leads: [...state.leads, newLead],
-      columnOrder: {
-        ...state.columnOrder,
-        [newLead.status]: [...(state.columnOrder[newLead.status] || []), newLead.id],
-      },
-    }));
-  },
+    try {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.status) query.set('status', params.status);
+      if (params?.page) query.set('page', String(params.page));
 
-  updateLead: (id, updates) => {
-    const prevLead = get().leads.find((l) => l.id === id);
-    if (!prevLead) return;
+      const res = await fetch(`/api/leads?${query.toString()}`);
 
-    set((state) => {
-      const updatedLeads = state.leads.map((l) => (l.id === id ? { ...l, ...updates } : l));
-
-      // Se mudou status, move no columnOrder
-      let newColumnOrder = { ...state.columnOrder };
-      if (updates.status && updates.status !== prevLead.status) {
-        newColumnOrder[prevLead.status] = (newColumnOrder[prevLead.status] || []).filter((leadId) => leadId !== id);
-        newColumnOrder[updates.status] = [...(newColumnOrder[updates.status] || []), id];
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao buscar leads');
       }
 
-      return {
-        leads: updatedLeads,
-        columnOrder: newColumnOrder,
-      };
-    });
+      const data = await res.json();
+
+      set({
+        leads: data.leads,
+        pagination: data.pagination,
+        isLoading: false,
+      });
+    } catch (error: any) {
+      console.error('Erro ao buscar leads:', error);
+      set({ error: error.message, isLoading: false });
+    }
   },
 
-  deleteLead: (id) => {
-    const lead = get().leads.find((l) => l.id === id);
-    if (!lead) return;
+  addLead: async (data) => {
+    set({ error: null });
 
-    set((state) => ({
-      leads: state.leads.filter((l) => l.id !== id),
-      columnOrder: {
-        ...state.columnOrder,
-        [lead.status]: (state.columnOrder[lead.status] || []).filter((leadId) => leadId !== id),
-      },
-    }));
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao criar lead');
+      }
+
+      const newLead = await res.json();
+
+      // Adiciona no estado local imediatamente (otimista)
+      set((state) => ({
+        leads: [newLead, ...state.leads],
+        pagination: {
+          ...state.pagination,
+          total: state.pagination.total + 1,
+        },
+      }));
+
+      return newLead;
+    } catch (error: any) {
+      console.error('Erro ao criar lead:', error);
+      set({ error: error.message });
+      return null;
+    }
   },
 
-  setLeads: (leads) => set({ leads }),
+  updateLead: async (id, updates) => {
+    set({ error: null });
 
-  // Stage actions
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao atualizar lead');
+      }
+
+      const updatedLead = await res.json();
+
+      // Atualiza no estado local
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
+      }));
+
+      return updatedLead;
+    } catch (error: any) {
+      console.error('Erro ao atualizar lead:', error);
+      set({ error: error.message });
+      return null;
+    }
+  },
+
+  deleteLead: async (id) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao excluir lead');
+      }
+
+      // Remove do estado local
+      set((state) => ({
+        leads: state.leads.filter((l) => l.id !== id),
+        pagination: {
+          ...state.pagination,
+          total: state.pagination.total - 1,
+        },
+      }));
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao excluir lead:', error);
+      set({ error: error.message });
+      return false;
+    }
+  },
+
+  // ==================== KANBAN ====================
+
+  moveLeadInKanban: async (leadId, toStatus) => {
+    return get().updateLead(leadId, { status: toStatus });
+  },
+
+  // ==================== STAGES (local) ====================
+
   addStage: (stageData) => {
     const newStage: Stage = {
       ...stageData,
@@ -143,10 +214,6 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     };
     set((state) => ({
       stages: [...state.stages, newStage].sort((a, b) => a.order - b.order),
-      columnOrder: {
-        ...state.columnOrder,
-        [newStage.id]: [],
-      },
     }));
   },
 
@@ -158,47 +225,20 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
   deleteStage: (id) => {
     const state = get();
-
     if (state.stages.length <= 1) return;
-    if ((state.columnOrder[id] || []).length > 0) {
+
+    const hasLeads = state.leads.some((l) => l.status === id);
+    if (hasLeads) {
       alert('Não é possível excluir um estágio que contém leads. Mova os leads primeiro.');
       return;
     }
 
-    set((state) => {
-      const newColumnOrder = { ...state.columnOrder };
-      delete newColumnOrder[id];
-
-      return {
-        stages: state.stages.filter((s) => s.id !== id),
-        columnOrder: newColumnOrder,
-      };
-    });
+    set((state) => ({
+      stages: state.stages.filter((s) => s.id !== id),
+    }));
   },
 
   reorderStages: (newOrder) => {
     set({ stages: newOrder.map((stage, index) => ({ ...stage, order: index })) });
-  },
-
-  setColumnOrder: (order) => set({ columnOrder: order }),
-
-  moveLeadInColumns: (leadId, fromStage, toStage, newIndex) => {
-    set((state) => {
-      const newColumnOrder = { ...state.columnOrder };
-
-      newColumnOrder[fromStage] = (newColumnOrder[fromStage] || []).filter((id) => id !== leadId);
-
-      const destColumn = [...(newColumnOrder[toStage] || [])];
-      destColumn.splice(newIndex, 0, leadId);
-      newColumnOrder[toStage] = destColumn;
-
-      return {
-        columnOrder: newColumnOrder,
-        leads:
-          fromStage !== toStage
-            ? state.leads.map((l) => (l.id === leadId ? { ...l, status: toStage } : l))
-            : state.leads,
-      };
-    });
   },
 }));

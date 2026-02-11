@@ -18,6 +18,7 @@ import {
   Settings,
   CheckCircle,
   XCircle,
+  Loader2,
   LucideIcon,
 } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
@@ -25,7 +26,6 @@ import { ptBR } from 'date-fns/locale';
 import { useLeadsStore } from '@/store/leadsStore';
 
 type TabKey = 'sales' | 'marketing';
-
 type PeriodPreset = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
 
 interface ReportsConfig {
@@ -96,7 +96,7 @@ function withinRange(isoDate: string, fromISO: string, toISO: string) {
   }
 }
 
-// Hook personalizado para configuração de relatórios por usuário
+// Hook para configuração de relatórios (localStorage por enquanto)
 function useReportsConfig(userKey = 'default'): [ReportsConfig, (config: ReportsConfig) => void] {
   const [config, setConfig] = useState<ReportsConfig>({
     wonStageIds: [],
@@ -133,8 +133,6 @@ export default function ReportsPage() {
   const [tab, setTab] = useState<TabKey>('sales');
   const [showMetricsConfig, setShowMetricsConfig] = useState(false);
 
-  // Configuração por usuário (localStorage por enquanto)
-  // TODO: quando NextAuth estiver configurado, usar session.user.email como userKey
   const [reportsConfig, setReportsConfig] = useReportsConfig('default');
 
   // ======= PERÍODO (global) =======
@@ -176,13 +174,19 @@ export default function ReportsPage() {
     return { from: defaultFrom, to: defaultTo, label: 'Este mês' };
   }, [periodPreset, customFrom, customTo, defaultFrom, defaultTo, today]);
 
-  // ======= VENDAS (integrado ao pipeline via useLeadsStore) =======
-  const { leads, stages, columnOrder } = useLeadsStore();
+  // ======= DADOS DA STORE =======
+  const { leads, stages, isLoading, fetchLeads } = useLeadsStore();
 
+  // Busca leads ao montar
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Filtra por período usando createdAt (campo do Prisma)
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
-      if (!l.dataCriacao) return true;
-      return withinRange(l.dataCriacao, period.from, period.to);
+      if (!l.createdAt) return true;
+      return withinRange(l.createdAt, period.from, period.to);
     });
   }, [leads, period.from, period.to]);
 
@@ -201,12 +205,12 @@ export default function ReportsPage() {
 
     const total = filteredLeads.length;
     const max = Math.max(1, ...Object.values(countsByStageId));
-    
+
     const rows = stagesSorted.map((st) => {
       const count = countsByStageId[st.id] || 0;
       const isWon = reportsConfig.wonStageIds.includes(st.id);
       const isLost = reportsConfig.lostStageIds.includes(st.id);
-      
+
       return {
         stageId: st.id,
         title: st.title,
@@ -228,10 +232,9 @@ export default function ReportsPage() {
     const total = filteredLeads.length;
     const wonCount = wonLeads.length;
     const lostCount = lostLeads.length;
-    
-    // Conversão A: Ganho / Total de leads no período
+
     const conversionRate = total > 0 ? (wonCount / total) * 100 : 0;
-    
+
     return {
       wonCount,
       lostCount,
@@ -241,16 +244,20 @@ export default function ReportsPage() {
     };
   }, [filteredLeads, reportsConfig]);
 
+  // Usa l.value (campo Prisma) em vez de l.valor
   const revenue = useMemo(() => {
-    const totalPipeline = filteredLeads.reduce((acc, l) => acc + (typeof l.valor === 'number' ? l.valor : 0), 0);
+    const totalPipeline = filteredLeads.reduce(
+      (acc, l) => acc + safeNumber(l.value),
+      0
+    );
 
     const wonRevenue = filteredLeads
       .filter((l) => reportsConfig.wonStageIds.includes(l.status))
-      .reduce((acc, l) => acc + (typeof l.valor === 'number' ? l.valor : 0), 0);
+      .reduce((acc, l) => acc + safeNumber(l.value), 0);
 
     const lostRevenue = filteredLeads
       .filter((l) => reportsConfig.lostStageIds.includes(l.status))
-      .reduce((acc, l) => acc + (typeof l.valor === 'number' ? l.valor : 0), 0);
+      .reduce((acc, l) => acc + safeNumber(l.value), 0);
 
     return { totalPipeline, wonRevenue, lostRevenue };
   }, [filteredLeads, reportsConfig]);
@@ -258,26 +265,20 @@ export default function ReportsPage() {
   const handleStageConfigToggle = (stageId: string, type: 'won' | 'lost') => {
     if (type === 'won') {
       const newWonIds = reportsConfig.wonStageIds.includes(stageId)
-        ? reportsConfig.wonStageIds.filter(id => id !== stageId)
+        ? reportsConfig.wonStageIds.filter((id) => id !== stageId)
         : [...reportsConfig.wonStageIds, stageId];
-      
-      setReportsConfig({
-        ...reportsConfig,
-        wonStageIds: newWonIds,
-      });
+
+      setReportsConfig({ ...reportsConfig, wonStageIds: newWonIds });
     } else {
       const newLostIds = reportsConfig.lostStageIds.includes(stageId)
-        ? reportsConfig.lostStageIds.filter(id => id !== stageId)
+        ? reportsConfig.lostStageIds.filter((id) => id !== stageId)
         : [...reportsConfig.lostStageIds, stageId];
-      
-      setReportsConfig({
-        ...reportsConfig,
-        lostStageIds: newLostIds,
-      });
+
+      setReportsConfig({ ...reportsConfig, lostStageIds: newLostIds });
     }
   };
 
-  // ======= MARKETING (manual por enquanto, com seletor de período já na tela) =======
+  // ======= MARKETING (manual por enquanto) =======
   const [marketingInvestment, setMarketingInvestment] = useState<string>('0');
   const [marketingMetrics, setMarketingMetrics] = useState({
     leads: 0,
@@ -309,11 +310,27 @@ export default function ReportsPage() {
     try {
       const from = parseISO(period.from);
       const to = parseISO(period.to);
-      return `${format(from, "dd/MM/yyyy", { locale: ptBR })} → ${format(to, "dd/MM/yyyy", { locale: ptBR })}`;
+      return `${format(from, 'dd/MM/yyyy', { locale: ptBR })} → ${format(to, 'dd/MM/yyyy', { locale: ptBR })}`;
     } catch {
       return `${period.from} → ${period.to}`;
     }
   }, [period.from, period.to]);
+
+  // ======= LOADING =======
+  if (isLoading && leads.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
+          <p className="text-sm text-gray-500">Acompanhe performance de vendas e marketing.</p>
+        </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="animate-spin text-indigo-600 mr-3" size={28} />
+          <span className="text-gray-600 text-lg">Carregando dados...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -380,7 +397,7 @@ export default function ReportsPage() {
               <option value="custom">Personalizado</option>
             </select>
 
-            {periodPreset === 'custom' ? (
+            {periodPreset === 'custom' && (
               <div className="flex items-center gap-2">
                 <input
                   type="date"
@@ -396,20 +413,20 @@ export default function ReportsPage() {
                   className="px-3 py-2 border rounded-lg text-sm"
                 />
               </div>
-            ) : null}
+            )}
           </div>
         </div>
       </div>
 
-      {/* SALES TAB */}
-      {tab === 'sales' ? (
+      {/* ==================== SALES TAB ==================== */}
+      {tab === 'sales' && (
         <div className="space-y-8">
           <div className="flex items-center justify-between">
             <SectionTitle
               title="Relatório de Vendas"
-              description="Integrado ao seu Kanban (Pipeline) via useLeadsStore - Configuração por usuário."
+              description="Integrado ao seu Pipeline — dados em tempo real do banco de dados."
             />
-            
+
             <button
               onClick={() => setShowMetricsConfig(!showMetricsConfig)}
               className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
@@ -424,7 +441,7 @@ export default function ReportsPage() {
             <div className="bg-white border rounded-xl p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Configurar métricas de conversão</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Marque quais estágios representam <strong>leads ganhos</strong> e <strong>leads perdidos</strong> 
+                Marque quais estágios representam <strong>leads ganhos</strong> e <strong>leads perdidos</strong>{' '}
                 para calcular a taxa de conversão correta do seu pipeline.
               </p>
 
@@ -443,7 +460,7 @@ export default function ReportsPage() {
                         />
                         <span className="font-medium text-gray-800">{stage.title}</span>
                         <span className="text-xs text-gray-500">
-                          ({stageStats.rows.find(r => r.stageId === stage.id)?.count ?? 0} leads)
+                          ({stageStats.rows.find((r) => r.stageId === stage.id)?.count ?? 0} leads)
                         </span>
                       </div>
 
@@ -476,12 +493,12 @@ export default function ReportsPage() {
               )}
 
               <div className="mt-4 text-xs text-gray-500">
-                <strong>Nota:</strong> A configuração é salva por usuário no navegador. 
-                Quando o NextAuth for configurado, será salva por conta de usuário.
+                <strong>Nota:</strong> A configuração é salva por usuário no navegador.
               </div>
             </div>
           )}
 
+          {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <KpiCard
               title="Leads no funil"
@@ -548,10 +565,20 @@ export default function ReportsPage() {
                     <div className="w-40 min-w-40">
                       <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-gray-800 truncate">{row.title}</div>
-                        {row.isWon && <span title="Estágio de ganho"><CheckCircle size={14} className="text-green-600" /></span>}
-                        {row.isLost && <span title="Estágio de perda"><XCircle size={14} className="text-red-600" /></span>}
+                        {row.isWon && (
+                          <span title="Estágio de ganho">
+                            <CheckCircle size={14} className="text-green-600" />
+                          </span>
+                        )}
+                        {row.isLost && (
+                          <span title="Estágio de perda">
+                            <XCircle size={14} className="text-red-600" />
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500">{row.count} lead(s) • {row.pct.toFixed(1)}%</div>
+                      <div className="text-xs text-gray-500">
+                        {row.count} lead(s) • {row.pct.toFixed(1)}%
+                      </div>
                     </div>
 
                     <div className="flex-1">
@@ -565,19 +592,17 @@ export default function ReportsPage() {
                       </div>
                     </div>
 
-                    <div className="w-12 text-right text-sm font-semibold text-gray-900">
-                      {row.count}
-                    </div>
+                    <div className="w-12 text-right text-sm font-semibold text-gray-900">{row.count}</div>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-      ) : null}
+      )}
 
-      {/* MARKETING TAB */}
-      {tab === 'marketing' ? (
+      {/* ==================== MARKETING TAB ==================== */}
+      {tab === 'marketing' && (
         <div className="space-y-8">
           <SectionTitle
             title="Relatório de Marketing"
@@ -627,7 +652,9 @@ export default function ReportsPage() {
                 <input
                   type="number"
                   value={marketingMetrics.whatsappMessages}
-                  onChange={(e) => setMarketingMetrics((s) => ({ ...s, whatsappMessages: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setMarketingMetrics((s) => ({ ...s, whatsappMessages: Number(e.target.value) }))
+                  }
                   className="w-full px-3 py-2 border rounded-lg bg-white"
                 />
               </div>
@@ -707,13 +734,16 @@ export default function ReportsPage() {
                 <input
                   type="number"
                   value={marketingMetrics.seguidoresInstagram}
-                  onChange={(e) => setMarketingMetrics((s) => ({ ...s, seguidoresInstagram: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setMarketingMetrics((s) => ({ ...s, seguidoresInstagram: Number(e.target.value) }))
+                  }
                   className="w-full px-3 py-2 border rounded-lg bg-white"
                 />
               </div>
             </div>
           </div>
 
+          {/* Marketing KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <KpiCard title="Investimento" value={formatBRL(investment)} subtitle="Lançamento manual" icon={DollarSign} />
             <KpiCard
@@ -736,6 +766,7 @@ export default function ReportsPage() {
             />
           </div>
 
+          {/* Próximos passos */}
           <div className="bg-white border rounded-xl p-6">
             <h3 className="font-semibold text-gray-900 mb-2">Integrações nativas (próximo passo)</h3>
             <div className="text-sm text-gray-600 space-y-2">
@@ -751,7 +782,7 @@ export default function ReportsPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

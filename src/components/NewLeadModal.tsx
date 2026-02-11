@@ -1,67 +1,83 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Upload, FileText, AlertCircle, CheckCircle2, Download } from 'lucide-react';
+import { X, Upload, FileText, AlertCircle, CheckCircle2, Download, Loader2 } from 'lucide-react';
+import { useLeadsStore, type Lead, type Stage } from '@/store/leadsStore';
 
 interface NewLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (lead: any) => void;
-
-  // ✅ novos (para edição)
   mode?: 'create' | 'edit';
-  initialData?: any | null;
+  initialData?: Lead | null;
 }
+
+interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  position: string;
+  status: string;
+  source: string;
+  value: string;
+  notes: string;
+}
+
+const emptyForm: FormData = {
+  name: '',
+  email: '',
+  phone: '',
+  company: '',
+  position: '',
+  status: 'new',
+  source: '',
+  value: '',
+  notes: '',
+};
 
 export default function NewLeadModal({
   isOpen,
   onClose,
-  onSubmit,
   mode = 'create',
   initialData = null,
 }: NewLeadModalProps) {
+  const { addLead, updateLead, stages } = useLeadsStore();
+
   const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
+  const [formData, setFormData] = useState<FormData>(emptyForm);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // CSV state
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [importStatus, setImportStatus] = useState<'idle' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [importResults, setImportResults] = useState({ success: 0, errors: 0, total: 0 });
 
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    empresa: '',
-    status: 'novo',
-    origem: '',
-  });
-
-  // ✅ ao abrir: preenche no modo edit / reseta no modo create
+  // Preenche/reseta form ao abrir
   useEffect(() => {
     if (!isOpen) return;
 
     if (mode === 'edit' && initialData) {
       setActiveTab('manual');
       setFormData({
-        nome: initialData.nome ?? '',
+        name: initialData.name ?? '',
         email: initialData.email ?? '',
-        telefone: initialData.telefone ?? '',
-        empresa: initialData.empresa ?? '',
-        status: initialData.status ?? 'novo',
-        origem: initialData.origem ?? '',
+        phone: initialData.phone ?? '',
+        company: initialData.company ?? '',
+        position: initialData.position ?? '',
+        status: initialData.status ?? 'new',
+        source: initialData.source ?? '',
+        value: initialData.value ? String(initialData.value) : '',
+        notes: initialData.notes ?? '',
       });
-      return;
+    } else {
+      setActiveTab('manual');
+      setFormData(emptyForm);
     }
 
-    // create
-    setActiveTab('manual');
-    setFormData({
-      nome: '',
-      email: '',
-      telefone: '',
-      empresa: '',
-      status: 'novo',
-      origem: '',
-    });
+    setFormError(null);
+    setIsSaving(false);
     setCsvFile(null);
     setCsvData([]);
     setImportStatus('idle');
@@ -70,11 +86,50 @@ export default function NewLeadModal({
 
   if (!isOpen) return null;
 
-  const handleManualSubmit = (e: React.FormEvent) => {
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    onClose();
+    setFormError(null);
+
+    if (!formData.name.trim()) {
+      setFormError('Nome é obrigatório');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const payload = {
+        name: formData.name.trim(),
+        email: formData.email.trim() || null,
+        phone: formData.phone.trim() || null,
+        company: formData.company.trim() || null,
+        position: formData.position.trim() || null,
+        status: formData.status,
+        source: formData.source.trim() || 'manual',
+        value: formData.value ? parseFloat(formData.value) : null,
+        notes: formData.notes.trim() || null,
+      };
+
+      let result;
+      if (mode === 'edit' && initialData) {
+        result = await updateLead(initialData.id, payload);
+      } else {
+        result = await addLead(payload);
+      }
+
+      if (result) {
+        onClose();
+      } else {
+        setFormError('Erro ao salvar lead. Tente novamente.');
+      }
+    } catch {
+      setFormError('Erro inesperado ao salvar lead.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  // ==================== CSV ====================
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,19 +156,23 @@ export default function NewLeadModal({
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map((v) => v.trim());
         const row: any = {};
-
         headers.forEach((header, index) => {
           row[header] = values[index] || '';
         });
 
-        if (row.nome && row.email) {
+        // Aceita tanto PT-BR quanto EN nos headers do CSV
+        const name = row.name || row.nome || '';
+        const email = row.email || '';
+
+        if (name) {
           data.push({
-            nome: row.nome,
-            email: row.email,
-            telefone: row.telefone || '',
-            empresa: row.empresa || '',
-            status: row.status || 'novo',
-            origem: row.origem || 'importacao',
+            name,
+            email: email || null,
+            phone: row.phone || row.telefone || null,
+            company: row.company || row.empresa || null,
+            source: row.source || row.origem || 'csv_import',
+            status: row.status || 'new',
+            value: row.value || row.valor || null,
           });
         }
       }
@@ -122,24 +181,22 @@ export default function NewLeadModal({
       setImportStatus('preview');
       setImportResults({ success: 0, errors: 0, total: data.length });
     };
-
     reader.readAsText(file);
   };
 
-  const handleCsvImport = () => {
+  const handleCsvImport = async () => {
     setImportStatus('importing');
-
     let successCount = 0;
     let errorCount = 0;
 
-    csvData.forEach((lead) => {
-      try {
-        onSubmit(lead);
+    for (const lead of csvData) {
+      const result = await addLead(lead);
+      if (result) {
         successCount++;
-      } catch {
+      } else {
         errorCount++;
       }
-    });
+    }
 
     setImportResults({ success: successCount, errors: errorCount, total: csvData.length });
     setImportStatus('success');
@@ -159,7 +216,7 @@ export default function NewLeadModal({
 
   const downloadTemplate = () => {
     const template =
-      'nome,email,telefone,empresa,status,origem\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,novo,site\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contato,indicacao';
+      'name,email,phone,company,status,source,value\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,new,site,2500\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contacted,indicacao,5000';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -194,7 +251,6 @@ export default function NewLeadModal({
             <FileText className="inline mr-2" size={18} />
             Manual
           </button>
-
           <button
             disabled={mode === 'edit'}
             onClick={() => (mode === 'edit' ? null : setActiveTab('csv'))}
@@ -215,24 +271,30 @@ export default function NewLeadModal({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'manual' ? (
             <form onSubmit={handleManualSubmit} className="space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={18} />
+                  {formError}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
                   <input
                     type="text"
                     required
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="João Silva"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">E-mail *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
                   <input
                     type="email"
-                    required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -244,8 +306,8 @@ export default function NewLeadModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                   <input
                     type="tel"
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="(19) 99999-9999"
                   />
@@ -255,10 +317,21 @@ export default function NewLeadModal({
                   <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
                   <input
                     type="text"
-                    value={formData.empresa}
-                    onChange={(e) => setFormData({ ...formData, empresa: e.target.value })}
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Empresa Exemplo"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                  <input
+                    type="text"
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="Diretor Comercial"
                   />
                 </div>
 
@@ -269,44 +342,79 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   >
-                    <option value="novo">Novo</option>
-                    <option value="contato">Em Contato</option>
-                    <option value="qualificado">Qualificado</option>
-                    <option value="negociacao">Negociação</option>
-                    <option value="convertido">Convertido</option>
-                    <option value="perdido">Perdido</option>
+                    {stages.map((stage) => (
+                      <option key={stage.id} value={stage.id}>
+                        {stage.title}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
-                  <input
-                    type="text"
-                    value={formData.origem}
-                    onChange={(e) => setFormData({ ...formData, origem: e.target.value })}
+                  <select
+                    value={formData.source}
+                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                    placeholder="Site, Indicação, etc."
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="manual">Manual</option>
+                    <option value="website">Website</option>
+                    <option value="referral">Indicação</option>
+                    <option value="meta_ads">Meta Ads</option>
+                    <option value="google_ads">Google Ads</option>
+                    <option value="chatwoot">Chatwoot</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="linkedin">LinkedIn</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor Estimado (R$)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.value}
+                    onChange={(e) => setFormData({ ...formData, value: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    placeholder="5000.00"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  placeholder="Notas sobre o lead..."
+                />
               </div>
 
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
+                  {isSaving && <Loader2 size={18} className="animate-spin" />}
                   {mode === 'edit' ? 'Salvar Alterações' : 'Adicionar Lead'}
                 </button>
               </div>
             </form>
           ) : (
+            /* ==================== ABA CSV ==================== */
             <div className="space-y-6">
               {/* Download Template */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -369,10 +477,10 @@ export default function NewLeadModal({
                         <tbody className="divide-y divide-gray-200">
                           {csvData.slice(0, 5).map((lead, index) => (
                             <tr key={index} className="hover:bg-gray-50">
-                              <td className="px-4 py-2">{lead.nome}</td>
+                              <td className="px-4 py-2">{lead.name}</td>
                               <td className="px-4 py-2">{lead.email}</td>
-                              <td className="px-4 py-2">{lead.telefone}</td>
-                              <td className="px-4 py-2">{lead.empresa}</td>
+                              <td className="px-4 py-2">{lead.phone}</td>
+                              <td className="px-4 py-2">{lead.company}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -399,6 +507,14 @@ export default function NewLeadModal({
                       Importar {csvData.length} Lead(s)
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Importing */}
+              {importStatus === 'importing' && (
+                <div className="text-center py-8">
+                  <Loader2 className="mx-auto text-indigo-600 mb-4 animate-spin" size={48} />
+                  <p className="text-gray-700 font-medium">Importando leads...</p>
                 </div>
               )}
 
