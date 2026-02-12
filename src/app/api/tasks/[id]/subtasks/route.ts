@@ -10,6 +10,17 @@ const createSubtaskSchema = z.object({
   position: z.number().optional(),
 });
 
+/**
+ * Verifica se a task pertence à organização do usuário (isolamento multi-tenant)
+ */
+async function validateTaskOwnership(taskId: string, organizationId: string) {
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, organizationId },
+    select: { id: true },
+  });
+  return task;
+}
+
 // GET /api/tasks/[id]/subtasks
 export async function GET(
   request: NextRequest,
@@ -19,8 +30,14 @@ export async function GET(
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    // Multi-tenant: verificar se a task pertence à organização
+    const task = await validateTaskOwnership(id, session.user.organizationId);
+    if (!task) {
+      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
     const subtasks = await prisma.subtask.findMany({
@@ -53,24 +70,24 @@ export async function POST(
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    // Multi-tenant: verificar se a task pertence à organização
+    const task = await validateTaskOwnership(id, session.user.organizationId);
+    if (!task) {
+      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
     const body = await request.json();
     const data = createSubtaskSchema.parse(body);
 
-    const task = await prisma.task.findUnique({
-      where: { id },
-    });
-
-    if (!task) {
-      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
-    }
-
+    // Buscar última posição para auto-incrementar
     const lastSubtask = await prisma.subtask.findFirst({
       where: { taskId: id },
       orderBy: { position: 'desc' },
+      select: { position: true },
     });
 
     const position = data.position ?? (lastSubtask ? lastSubtask.position + 1 : 0);

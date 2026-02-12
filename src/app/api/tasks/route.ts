@@ -37,7 +37,7 @@ const filtersSchema = z.object({
   pageSize: z.string().optional(),
 });
 
-// GET /api/tasks - Listar tasks com filtros
+// GET /api/tasks - Listar tasks com filtros e isolamento multi-tenant
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const organizationId = session.user.organizationId;
     const { searchParams } = new URL(request.url);
     const params = filtersSchema.parse(Object.fromEntries(searchParams));
 
@@ -53,8 +54,10 @@ export async function GET(request: NextRequest) {
     const pageSize = parseInt(params.pageSize || '20');
     const skip = (page - 1) * pageSize;
 
-    // Construir where clause
-    const where: any = {};
+    // Construir where clause — SEMPRE filtrar por organização
+    const where: any = {
+      organizationId,
+    };
 
     // Filtro por status (pode ser múltiplo: "todo,in_progress")
     if (params.status) {
@@ -103,8 +106,8 @@ export async function GET(request: NextRequest) {
     // Filtro: tarefas de hoje
     if (params.isToday === 'true') {
       const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
       where.dueDate = { gte: startOfDay, lte: endOfDay };
     }
 
@@ -155,7 +158,7 @@ export async function GET(request: NextRequest) {
 
     // Buscar contagem de attachments e comments separadamente
     const taskIds = tasks.map(t => t.id);
-    
+
     const [attachmentCounts, commentCounts] = await Promise.all([
       prisma.attachment.groupBy({
         by: ['entityId'],
@@ -209,14 +212,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/tasks - Criar nova task
+// POST /api/tasks - Criar nova task com isolamento multi-tenant
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const organizationId = session.user.organizationId;
     const body = await request.json();
     const data = createTaskSchema.parse(body);
 
@@ -231,10 +235,11 @@ export async function POST(request: NextRequest) {
         isRecurring: data.isRecurring,
         recurrenceRule: data.recurrenceRule,
         estimatedMinutes: data.estimatedMinutes,
-        projectId: data.projectId,
-        leadId: data.leadId,
-        assignedToId: data.assignedToId,
+        projectId: data.projectId || null,
+        leadId: data.leadId || null,
+        assignedToId: data.assignedToId || null,
         createdById: session.user.id,
+        organizationId, // Multi-tenant: SEMPRE associar à organização
       },
       include: {
         project: { select: { id: true, title: true } },
@@ -271,7 +276,25 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(task, { status: 201 });
+    // Formatar resposta
+    return NextResponse.json({
+      ...task,
+      dueDate: task.dueDate?.toISOString(),
+      startDate: task.startDate?.toISOString(),
+      completedAt: task.completedAt?.toISOString(),
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString(),
+      subtasks: task.subtasks.map(st => ({
+        ...st,
+        completedAt: st.completedAt?.toISOString(),
+        createdAt: st.createdAt.toISOString(),
+      })),
+      _count: {
+        subtasks: 0,
+        attachments: 0,
+        comments: 0,
+      },
+    }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

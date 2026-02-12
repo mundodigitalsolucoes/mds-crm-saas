@@ -93,12 +93,12 @@ model Organization {
   users             User[]
   leads             Lead[]
   projects          MarketingProject[]
+  tasks             Task[]
   kanbanBoards      KanbanBoard[]
   invitations       Invitation[]
   connectedAccounts ConnectedAccount[]
   goals             Goal[]
   webhooks          Webhook[]
-
   @@map("organizations")
 }
 
@@ -346,19 +346,23 @@ model Task {
   description   String?
   status        String    @default("todo") // todo, in_progress, done, cancelled
   priority      String    @default("medium") // low, medium, high, urgent
-  
+
   // Datas
   dueDate       DateTime? @map("due_date")
   startDate     DateTime? @map("start_date")
   completedAt   DateTime? @map("completed_at")
-  
+
   // Recorrência (para tarefas recorrentes)
   isRecurring   Boolean   @default(false) @map("is_recurring")
   recurrenceRule String?  @map("recurrence_rule") // RRULE format (iCal)
-  
+
   // Estimativa
   estimatedMinutes Int?   @map("estimated_minutes")
   actualMinutes    Int?   @map("actual_minutes")
+
+  // Multi-tenant
+  organizationId String    @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   // Relations
   projectId     String?   @map("project_id")
@@ -379,9 +383,12 @@ model Task {
   // Relations
   subtasks      Subtask[]
 
+  @@index([organizationId])
   @@index([status])
   @@index([assignedToId])
   @@index([dueDate])
+  @@index([organizationId, status])
+  @@index([organizationId, dueDate])
   @@map("tasks")
 }
 

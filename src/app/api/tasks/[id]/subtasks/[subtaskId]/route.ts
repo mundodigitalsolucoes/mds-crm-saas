@@ -11,6 +11,17 @@ const updateSubtaskSchema = z.object({
   position: z.number().optional(),
 });
 
+/**
+ * Verifica se a task pertence à organização do usuário (isolamento multi-tenant)
+ */
+async function validateTaskOwnership(taskId: string, organizationId: string) {
+  const task = await prisma.task.findFirst({
+    where: { id: taskId, organizationId },
+    select: { id: true },
+  });
+  return task;
+}
+
 // PUT /api/tasks/[id]/subtasks/[subtaskId]
 export async function PUT(
   request: NextRequest,
@@ -20,13 +31,20 @@ export async function PUT(
     const { id, subtaskId } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    // Multi-tenant: verificar se a task pai pertence à organização
+    const task = await validateTaskOwnership(id, session.user.organizationId);
+    if (!task) {
+      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
     const body = await request.json();
     const data = updateSubtaskSchema.parse(body);
 
+    // Verificar se a subtask pertence à task
     const currentSubtask = await prisma.subtask.findUnique({
       where: { id: subtaskId },
     });
@@ -35,9 +53,14 @@ export async function PUT(
       return NextResponse.json({ error: 'Subtarefa não encontrada' }, { status: 404 });
     }
 
-    const updateData: Record<string, unknown> = { ...data };
+    const updateData: Record<string, unknown> = {};
 
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.position !== undefined) updateData.position = data.position;
+
+    // Gerenciar completedAt ao mudar status de conclusão
     if (data.completed !== undefined) {
+      updateData.completed = data.completed;
       if (data.completed && !currentSubtask.completed) {
         updateData.completedAt = new Date();
       } else if (!data.completed && currentSubtask.completed) {
@@ -79,10 +102,17 @@ export async function DELETE(
     const { id, subtaskId } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    // Multi-tenant: verificar se a task pai pertence à organização
+    const task = await validateTaskOwnership(id, session.user.organizationId);
+    if (!task) {
+      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
+    }
+
+    // Verificar se a subtask pertence à task
     const subtask = await prisma.subtask.findUnique({
       where: { id: subtaskId },
     });
