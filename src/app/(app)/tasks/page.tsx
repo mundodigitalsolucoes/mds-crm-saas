@@ -14,7 +14,8 @@ import {
   Clock,
   AlertTriangle,
   ChevronDown,
-  X,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { useTaskStore } from '@/store/taskStore';
 import { TaskDetailModal, TaskFormModal } from '@/components/tasks';
@@ -32,6 +33,8 @@ export default function TasksPage() {
     pagination,
     filters,
     fetchTasks,
+    createTask,
+    updateTask,
     setFilters,
     clearFilters,
     deleteTask,
@@ -61,10 +64,7 @@ export default function TasksPage() {
 
   // Aplicar tab filter
   useEffect(() => {
-    const newFilters: any = { ...filters };
-    delete newFilters.isToday;
-    delete newFilters.isOverdue;
-    delete newFilters.status;
+    const newFilters: Record<string, unknown> = {};
 
     switch (activeTab) {
       case 'today':
@@ -83,7 +83,7 @@ export default function TasksPage() {
 
   // Aplicar filtros avançados
   const handleApplyFilters = () => {
-    const newFilters: any = {};
+    const newFilters: Record<string, unknown> = {};
     if (statusFilter) newFilters.status = statusFilter;
     if (priorityFilter) newFilters.priority = priorityFilter;
     if (searchQuery) newFilters.search = searchQuery;
@@ -95,6 +95,7 @@ export default function TasksPage() {
     setStatusFilter('');
     setPriorityFilter('');
     setSearchQuery('');
+    setActiveTab('all');
     clearFilters();
     setShowFilters(false);
   };
@@ -111,14 +112,33 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (taskId: string) => {
-    if (confirm('Excluir esta tarefa?')) {
+    if (confirm('Tem certeza que deseja excluir esta tarefa?')) {
       await deleteTask(taskId);
+      setSelectedTaskId(null);
     }
   };
 
   const handleNewTask = () => {
     setEditingTask(null);
     setShowFormModal(true);
+  };
+
+  // Usar a store para criar/editar (não fetch direto)
+  const handleFormSubmit = async (data: any) => {
+    try {
+      if (editingTask) {
+        // Editar via store — atualiza a lista automaticamente
+        const result = await updateTask(editingTask.id, data);
+        if (!result) throw new Error('Erro ao atualizar tarefa');
+      } else {
+        // Criar via store — adiciona na lista automaticamente
+        const result = await createTask(data);
+        if (!result) throw new Error('Erro ao criar tarefa');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar tarefa:', error);
+      throw error;
+    }
   };
 
   const getTaskDueStatus = (task: Task) => {
@@ -274,11 +294,15 @@ export default function TasksPage() {
           </div>
         ) : tasks.length === 0 ? (
           <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <CheckCircle2 size={32} className="text-gray-400" />
+            </div>
             <p className="text-gray-500 mb-4">Nenhuma tarefa encontrada</p>
             <button
               onClick={handleNewTask}
-              className="text-indigo-600 hover:text-indigo-700 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
+              <Plus size={18} />
               Criar primeira tarefa
             </button>
           </div>
@@ -290,8 +314,7 @@ export default function TasksPage() {
               return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => setSelectedTaskId(task.id)}
+                  className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors group"
                 >
                   {/* Checkbox */}
                   <button
@@ -306,8 +329,11 @@ export default function TasksPage() {
                     {task.status === 'done' ? <CheckCircle2 size={22} /> : <Circle size={22} />}
                   </button>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  {/* Content - clicável para abrir detalhes */}
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => setSelectedTaskId(task.id)}
+                  >
                     <div className="flex items-center gap-2">
                       <span
                         className={`font-medium ${
@@ -323,8 +349,9 @@ export default function TasksPage() {
                       ) : null}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                      {task.project && <span>{task.project.title}</span>}
-                      {task.assignedTo && <span>@{task.assignedTo.name}</span>}
+                      {task.project && <span>📁 {task.project.title}</span>}
+                      {task.assignedTo && <span>👤 {task.assignedTo.name}</span>}
+                      {task.lead && <span>🎯 {task.lead.name}</span>}
                     </div>
                   </div>
 
@@ -356,6 +383,30 @@ export default function TasksPage() {
                     <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(task.status)}`}>
                       {getStatusLabel(task.status)}
                     </span>
+
+                    {/* Botões Editar e Excluir — SEMPRE visíveis */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(task);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="Editar tarefa"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(task.id);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Excluir tarefa"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -388,7 +439,7 @@ export default function TasksPage() {
         )}
       </div>
 
-       {/* Modals */}
+      {/* Modals */}
       <TaskDetailModal
         taskId={selectedTaskId || ''}
         isOpen={!!selectedTaskId}
@@ -403,35 +454,12 @@ export default function TasksPage() {
           setShowFormModal(false);
           setEditingTask(null);
         }}
-        onSubmit={async (data) => {
-          try {
-            if (editingTask) {
-              // Editar tarefa existente
-              await fetch(`/api/tasks/${editingTask.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-              });
-            } else {
-              // Criar nova tarefa
-              await fetch('/api/tasks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-              });
-            }
-            // Recarregar lista
-            fetchTasks();
-          } catch (error) {
-            console.error('Erro ao salvar tarefa:', error);
-            throw error;
-          }
-        }}
+        onSubmit={handleFormSubmit}
         initialData={editingTask ? {
           title: editingTask.title,
           description: editingTask.description || '',
-          status: editingTask.status,
-          priority: editingTask.priority,
+          status: editingTask.status as any,
+          priority: editingTask.priority as any,
           dueDate: editingTask.dueDate?.split('T')[0] || '',
           startDate: editingTask.startDate?.split('T')[0] || '',
           estimatedMinutes: editingTask.estimatedMinutes || undefined,
@@ -441,4 +469,3 @@ export default function TasksPage() {
     </div>
   );
 }
-     

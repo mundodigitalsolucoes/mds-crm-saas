@@ -30,12 +30,14 @@ export async function GET(
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    if (!session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const task = await prisma.task.findUnique({
-      where: { id },
+    const organizationId = session.user.organizationId;
+
+    const task = await prisma.task.findFirst({
+      where: { id, organizationId }, // Multi-tenant: filtrar por organização
       include: {
         project: { select: { id: true, title: true } },
         lead: { select: { id: true, name: true } },
@@ -67,13 +69,15 @@ export async function GET(
     ]);
 
     const commentIds = comments.map(c => c.id);
-    const replies = await prisma.comment.findMany({
-      where: { parentId: { in: commentIds } },
-      include: {
-        author: { select: { id: true, name: true, avatarUrl: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const replies = commentIds.length > 0
+      ? await prisma.comment.findMany({
+          where: { parentId: { in: commentIds } },
+          include: {
+            author: { select: { id: true, name: true, avatarUrl: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
 
     const repliesMap = new Map<string, typeof replies>();
     replies.forEach(reply => {
@@ -94,6 +98,12 @@ export async function GET(
       })),
     }));
 
+    // Contar attachments e comments
+    const [attachmentCount, commentCount] = await Promise.all([
+      prisma.attachment.count({ where: { entityType: 'task', entityId: task.id } }),
+      prisma.comment.count({ where: { entityType: 'task', entityId: task.id } }),
+    ]);
+
     return NextResponse.json({
       ...task,
       dueDate: task.dueDate?.toISOString(),
@@ -111,6 +121,11 @@ export async function GET(
         createdAt: a.createdAt.toISOString(),
       })),
       comments: commentsWithReplies,
+      _count: {
+        subtasks: task.subtasks.length,
+        attachments: attachmentCount,
+        comments: commentCount,
+      },
     });
   } catch (error) {
     console.error('Erro ao buscar task:', error);
@@ -130,23 +145,39 @@ export async function PUT(
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
+    const organizationId = session.user.organizationId;
     const body = await request.json();
     const data = updateTaskSchema.parse(body);
 
-    const currentTask = await prisma.task.findUnique({
-      where: { id },
+    // Verificar se a task pertence à organização
+    const currentTask = await prisma.task.findFirst({
+      where: { id, organizationId },
     });
 
     if (!currentTask) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    const updateData: Record<string, unknown> = { ...data };
+    const updateData: Record<string, unknown> = {};
 
+    // Copiar campos simples (excluir relações de data que precisam de conversão)
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.priority !== undefined) updateData.priority = data.priority;
+    if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring;
+    if (data.recurrenceRule !== undefined) updateData.recurrenceRule = data.recurrenceRule;
+    if (data.estimatedMinutes !== undefined) updateData.estimatedMinutes = data.estimatedMinutes;
+    if (data.actualMinutes !== undefined) updateData.actualMinutes = data.actualMinutes;
+    if (data.projectId !== undefined) updateData.projectId = data.projectId;
+    if (data.leadId !== undefined) updateData.leadId = data.leadId;
+    if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
+
+    // Converter datas
     if (data.dueDate !== undefined) {
       updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     }
@@ -154,6 +185,7 @@ export async function PUT(
       updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     }
 
+    // Gerenciar completedAt
     if (data.status === 'done' && currentTask.status !== 'done') {
       updateData.completedAt = new Date();
     } else if (data.status && data.status !== 'done' && currentTask.status === 'done') {
@@ -172,6 +204,7 @@ export async function PUT(
       },
     });
 
+    // Notificação se atribuiu a alguém novo
     if (data.assignedToId &&
         data.assignedToId !== currentTask.assignedToId &&
         data.assignedToId !== session.user.id) {
@@ -187,6 +220,7 @@ export async function PUT(
       });
     }
 
+    // Notificação se concluiu
     if (data.status === 'done' &&
         currentTask.status !== 'done' &&
         currentTask.createdById &&
@@ -203,6 +237,7 @@ export async function PUT(
       });
     }
 
+    // Registrar atividade
     await prisma.activity.create({
       data: {
         entityType: 'task',
@@ -223,6 +258,16 @@ export async function PUT(
       completedAt: task.completedAt?.toISOString(),
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString(),
+      subtasks: task.subtasks.map(st => ({
+        ...st,
+        completedAt: st.completedAt?.toISOString(),
+        createdAt: st.createdAt.toISOString(),
+      })),
+      _count: {
+        subtasks: task.subtasks.length,
+        attachments: 0,
+        comments: 0,
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -248,22 +293,22 @@ export async function DELETE(
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.id || !session?.user?.organizationId) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    const task = await prisma.task.findUnique({
-      where: { id },
+    const organizationId = session.user.organizationId;
+
+    // Verificar se a task pertence à organização
+    const task = await prisma.task.findFirst({
+      where: { id, organizationId },
     });
 
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
 
-    await prisma.task.delete({
-      where: { id },
-    });
-
+    // Deletar dependências primeiro, depois a task
     await Promise.all([
       prisma.attachment.deleteMany({
         where: { entityType: 'task', entityId: id },
@@ -271,8 +316,16 @@ export async function DELETE(
       prisma.comment.deleteMany({
         where: { entityType: 'task', entityId: id },
       }),
+      prisma.subtask.deleteMany({
+        where: { taskId: id },
+      }),
     ]);
 
+    await prisma.task.delete({
+      where: { id },
+    });
+
+    // Registrar atividade
     await prisma.activity.create({
       data: {
         entityType: 'task',
