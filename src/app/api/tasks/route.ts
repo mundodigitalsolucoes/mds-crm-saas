@@ -5,20 +5,49 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 
+// Helper: transforma string vazia em undefined (para campos opcionais UUID)
+// Usa preprocess para limpar ANTES da validação UUID
+const optionalUuid = z.preprocess(
+  (val) => {
+    if (typeof val === 'string' && val.trim() === '') return undefined;
+    return val;
+  },
+  z.string().uuid().optional()
+);
+
+// Helper: transforma string vazia em undefined (para campos opcionais string)
+const optionalString = z.preprocess(
+  (val) => {
+    if (typeof val === 'string' && val.trim() === '') return undefined;
+    return val;
+  },
+  z.string().optional()
+);
+
+// Helper: transforma string/number em number ou undefined
+const optionalNumber = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    const num = typeof val === 'string' ? parseInt(val, 10) : val;
+    return typeof num === 'number' && !isNaN(num) ? num : undefined;
+  },
+  z.number().optional()
+);
+
 // Schema de validação para criar task
 const createTaskSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório').max(255),
-  description: z.string().optional(),
+  description: optionalString,
   status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).default('todo'),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  dueDate: z.string().optional(),
-  startDate: z.string().optional(),
+  dueDate: optionalString,
+  startDate: optionalString,
   isRecurring: z.boolean().default(false),
-  recurrenceRule: z.string().optional(),
-  estimatedMinutes: z.number().optional(),
-  projectId: z.string().uuid().optional(),
-  leadId: z.string().uuid().optional(),
-  assignedToId: z.string().uuid().optional(),
+  recurrenceRule: optionalString,
+  estimatedMinutes: optionalNumber,
+  projectId: optionalUuid,
+  leadId: optionalUuid,
+  assignedToId: optionalUuid,
 });
 
 // Schema de filtros
@@ -222,7 +251,13 @@ export async function POST(request: NextRequest) {
 
     const organizationId = session.user.organizationId;
     const body = await request.json();
+
+    // Log para debug (remover após resolver)
+    console.log('[POST /api/tasks] Body recebido:', JSON.stringify(body));
+
     const data = createTaskSchema.parse(body);
+
+    console.log('[POST /api/tasks] Dados validados:', JSON.stringify(data));
 
     const task = await prisma.task.create({
       data: {
@@ -239,7 +274,7 @@ export async function POST(request: NextRequest) {
         leadId: data.leadId || null,
         assignedToId: data.assignedToId || null,
         createdById: session.user.id,
-        organizationId, // Multi-tenant: SEMPRE associar à organização
+        organizationId,
       },
       include: {
         project: { select: { id: true, title: true } },
@@ -297,6 +332,7 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('[POST /api/tasks] Zod validation error:', JSON.stringify(error.errors));
       return NextResponse.json(
         { error: 'Dados inválidos', details: error.errors },
         { status: 400 }

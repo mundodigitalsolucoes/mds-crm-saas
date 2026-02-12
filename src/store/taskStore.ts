@@ -1,4 +1,4 @@
-// src/store/taskStore.ts        
+// src/store/taskStore.ts
 import { create } from 'zustand';
 import type {
   Task,
@@ -16,7 +16,7 @@ import type {
 interface TaskStore {
   // State
   tasks: Task[];
-  currentTask: Task | null;      
+  currentTask: Task | null;
   isLoading: boolean;
   error: string | null;
   filters: TaskFilters;
@@ -59,6 +59,47 @@ interface TaskStore {
 }
 
 const API_BASE = '/api/tasks';
+
+/**
+ * Sanitiza dados da task antes de enviar à API.
+ * Remove strings vazias de campos opcionais para evitar erro Zod UUID.
+ * Campos com "" são removidos do objeto (não enviados no JSON).
+ */
+function sanitizeTaskData(data: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    // Campos UUID opcionais: remover se string vazia
+    if (['projectId', 'leadId', 'assignedToId'].includes(key)) {
+      if (typeof value === 'string' && value.trim() === '') continue;
+    }
+
+    // Campos de data opcionais: remover se string vazia
+    if (['dueDate', 'startDate'].includes(key)) {
+      if (typeof value === 'string' && value.trim() === '') continue;
+    }
+
+    // Campos string opcionais: remover se string vazia
+    if (['description', 'recurrenceRule'].includes(key)) {
+      if (typeof value === 'string' && value.trim() === '') continue;
+    }
+
+    // Campos numéricos: converter string para number ou remover
+    if (['estimatedMinutes', 'actualMinutes'].includes(key)) {
+      if (value === '' || value === null || value === undefined) continue;
+      const num = typeof value === 'string' ? parseInt(value, 10) : value;
+      if (typeof num === 'number' && !isNaN(num)) {
+        cleaned[key] = num;
+        continue;
+      }
+      continue; // NaN → não envia
+    }
+
+    cleaned[key] = value;
+  }
+
+  return cleaned;
+}
 
 export const useTaskStore = create<TaskStore>((set, get) => ({
   // Initial State
@@ -145,15 +186,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  // Create Task
+  // Create Task — sanitiza dados antes de enviar
   createTask: async (data: TaskCreate) => {
     set({ isLoading: true, error: null });
 
     try {
+      const sanitizedData = sanitizeTaskData(data as unknown as Record<string, unknown>);
+
+      console.log('[taskStore.createTask] Dados sanitizados:', sanitizedData);
+
       const response = await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(sanitizedData),
       });
 
       if (!response.ok) {
@@ -175,15 +220,19 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
-  // Update Task
+  // Update Task — sanitiza dados antes de enviar
   updateTask: async (id: string, data: TaskUpdate) => {
     set({ isLoading: true, error: null });
 
     try {
+      const sanitizedData = sanitizeTaskData(data as unknown as Record<string, unknown>);
+
+      console.log('[taskStore.updateTask] Dados sanitizados:', sanitizedData);
+
       const response = await fetch(`${API_BASE}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(sanitizedData),
       });
 
       if (!response.ok) {
@@ -337,13 +386,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
           return {
             ...t,
             subtasks: t.subtasks?.filter((st) => st.id !== subtaskId),
-
             _count: {
               subtasks: Math.max(0, (t._count?.subtasks || 0) - 1),
               attachments: t._count?.attachments || 0,
               comments: t._count?.comments || 0,
             },
-           
           };
         }),
         currentTask:
