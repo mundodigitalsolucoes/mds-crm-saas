@@ -1,5 +1,3 @@
-// src/components/OSDetailsModal.tsx
-
 'use client';
 
 import React, { useState } from 'react';
@@ -29,8 +27,8 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
   if (!isOpen || !os) return null;
 
   const canLaunchTasks = Boolean(os.projetoId);
-  const projectName = os.projetoId ? getProjectById(String(os.projetoId))?.title || 'Projeto' : 'Projeto';
-  const currentStage = osStages.find(s => s.id === os.status);
+  const projectName = os.projeto?.title || (os.projetoId ? getProjectById(String(os.projetoId))?.title : undefined) || 'Projeto';
+  const currentStage = osStages.find((s) => s.id === os.status);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -46,6 +44,9 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
           <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-200">
             <div>
               <h3 className="text-2xl font-bold text-gray-900">{os.titulo}</h3>
+              {os.descricao && (
+                <p className="text-gray-600 mt-1">{os.descricao}</p>
+              )}
               <p className="text-gray-600 mt-1">
                 Cliente: <span className="font-medium">{os.cliente || 'N/A'}</span>
                 {os.projetoId ? (
@@ -57,14 +58,32 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mt-3 text-gray-600">
-                <p><span className="font-semibold">Responsável:</span> {os.responsavel || 'N/A'}</p>
-                <p><span className="font-semibold">Abertura:</span> {formatDate(os.datas?.abertura)}</p>
-                <p><span className="font-semibold">Início:</span> {formatDate(os.datas?.inicio)}</p>
-                <p><span className="font-semibold">Prazo:</span> {formatDate(os.datas?.prazo)}</p>
+                <p>
+                  <span className="font-semibold">Responsável:</span>{' '}
+                  {os.responsavelNome || os.responsavel || 'N/A'}
+                </p>
+                <p>
+                  <span className="font-semibold">Criado por:</span>{' '}
+                  {os.criadoPorNome || 'N/A'}
+                </p>
+                <p>
+                  <span className="font-semibold">Abertura:</span> {formatDate(os.datas?.abertura)}
+                </p>
+                <p>
+                  <span className="font-semibold">Início:</span> {formatDate(os.datas?.inicio)}
+                </p>
+                <p>
+                  <span className="font-semibold">Prazo:</span> {formatDate(os.datas?.prazo)}
+                </p>
+                {os.datas?.conclusao && (
+                  <p>
+                    <span className="font-semibold">Conclusão:</span> {formatDate(os.datas.conclusao)}
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <button
                 onClick={() => {
                   if (!canLaunchTasks) {
@@ -74,7 +93,9 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
                   setIsLaunchTasksOpen(true);
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                  canLaunchTasks ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  canLaunchTasks
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 }`}
                 disabled={!canLaunchTasks}
                 type="button"
@@ -99,14 +120,14 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-gray-800">Status</h3>
-              <span 
+              <span
                 className="px-3 py-1 rounded-full text-sm font-medium"
-                style={{ 
+                style={{
                   backgroundColor: currentStage?.color ? `${currentStage.color}20` : '#f3f4f6',
-                  color: currentStage?.color || '#374151'
+                  color: currentStage?.color || '#374151',
                 }}
               >
-                {currentStage?.title || os.status}
+                {currentStage?.title || os.status.replace(/_/g, ' ')}
               </span>
             </div>
 
@@ -132,14 +153,18 @@ export function OSDetailsModal({ isOpen, onClose, os, onEdit }: OSDetailsModalPr
           {/* Informação sobre tarefas */}
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800">
-              💡 Para gerenciar tarefas desta OS, acesse o módulo de <strong>Tarefas</strong> no menu lateral 
+              💡 Para gerenciar tarefas desta OS, acesse o módulo de <strong>Tarefas</strong> no menu lateral
               ou clique em <strong>Lançar Tarefas</strong> para criar novas tarefas vinculadas a este projeto.
             </p>
           </div>
         </div>
 
         <div className="p-4 border-t border-gray-200 flex justify-end">
-          <button onClick={onClose} className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600" type="button">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
+            type="button"
+          >
             Fechar
           </button>
         </div>

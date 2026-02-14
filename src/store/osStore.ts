@@ -1,36 +1,14 @@
+// src/store/osStore.ts
+// Store de Ordens de Serviço — Zustand com API
 import { create } from 'zustand';
-import { OS, OSStage } from '@/types/os';
+import { OS, OSStage, ServiceOrderAPI, mapApiToOS, mapOSToApi, PilaresMDS, ChecklistItem } from '@/types/os';
+import axios from 'axios';
 
+// ============================================
+// TEMPLATE DE CHECKLIST PARA IMPLANTAÇÃO MDS
+// ============================================
 
-interface OSStore {
-  // OS
-  ordens: OS[];
-  addOS: (os: Omit<OS, 'id'>) => OS; // <- AGORA RETORNA OS
-  updateOS: (id: number, updates: Partial<OS>) => void;
-  deleteOS: (id: number) => void;
-
-  // Stages da OS
-  osStages: OSStage[];
-  addOSStage: (stage: Omit<OSStage, 'id'>) => void;
-  updateOSStage: (id: string, updates: Partial<OSStage>) => void;
-  deleteOSStage: (id: string) => void;
-  reorderOSStages: (newOrder: OSStage[]) => void;
-
-  // Column order no kanban
-  osColumnOrder: Record<string, number[]>;
-  setOSColumnOrder: (order: Record<string, number[]>) => void;
-  moveOSInColumns: (osId: number, fromStage: string, toStage: string, newIndex: number) => void;
-
-  // Helpers
-  getOSByProject: (projectId: number | string) => OS[];
-  calculateProgress: (osId: number) => number;
-
-  // NOVO: progresso baseado em tarefas vinculadas (usado no taskStore)
-  recalculateAndSetOSProgress: (osId: number) => void;
-}
-
-// Template de checklist para Implantação MDS
-const createMDSTemplate = (): OS['pilares'] => ({
+const createMDSTemplate = (): PilaresMDS => ({
   benchmarking: {
     concorrentes: [],
     ambienteLocal: '',
@@ -175,86 +153,235 @@ const createMDSTemplate = (): OS['pilares'] => ({
   },
 });
 
+// ============================================
+// INTERFACE DA STORE
+// ============================================
+
+interface OSStore {
+  // Estado
+  ordens: OS[];
+  loading: boolean;
+  error: string | null;
+
+  // CRUD via API
+  fetchOS: (filters?: { search?: string; status?: string; type?: string }) => Promise<void>;
+  addOS: (os: Omit<OS, 'id' | 'codigo'>) => Promise<OS>;
+  updateOS: (id: number | string, updates: Partial<OS>) => Promise<void>;
+  deleteOS: (id: number | string) => Promise<void>;
+
+  // Stages da OS (local — sem persistência no banco por enquanto)
+  osStages: OSStage[];
+  addOSStage: (stage: Omit<OSStage, 'id'>) => void;
+  updateOSStage: (id: string, updates: Partial<OSStage>) => void;
+  deleteOSStage: (id: string) => void;
+  reorderOSStages: (newOrder: OSStage[]) => void;
+
+  // Column order no kanban (local)
+  osColumnOrder: Record<string, (number | string)[]>;
+  setOSColumnOrder: (order: Record<string, (number | string)[]>) => void;
+  moveOSInColumns: (osId: number | string, fromStage: string, toStage: string, newIndex: number) => void;
+
+  // Helpers
+  getOSByProject: (projectId: number | string) => OS[];
+  calculateProgress: (osId: number | string) => number;
+  recalculateAndSetOSProgress: (osId: number | string) => void;
+
+  // Rebuild column order a partir das OS carregadas
+  rebuildColumnOrder: () => void;
+}
+
+// ============================================
+// STORE
+// ============================================
+
 export const useOSStore = create<OSStore>((set, get) => ({
-  // Initial data
+  // Estado inicial
   ordens: [],
+  loading: false,
+  error: null,
 
   osStages: [
     { id: 'em_planejamento', title: 'Em Planejamento', order: 0, color: 'blue' },
     { id: 'em_execucao', title: 'Em Execução', order: 1, color: 'orange' },
     { id: 'aguardando_cliente', title: 'Aguardando Cliente', order: 2, color: 'yellow' },
     { id: 'concluida', title: 'Concluída', order: 3, color: 'green' },
+    { id: 'cancelada', title: 'Cancelada', order: 4, color: 'red' },
   ],
 
   osColumnOrder: {
-  em_planejamento: [],
-  em_execucao: [],
-  aguardando_cliente: [],
-  concluida: [],
-},
-
-  // OS actions
-  addOS: (osData) => {
-    const nextId = Math.max(...get().ordens.map(o => o.id), 0) + 1;
-
-    const newOS: OS = {
-      ...osData,
-      id: nextId,
-      codigo: `OS-${new Date().getFullYear()}-${String(nextId).padStart(4, '0')}`,
-      pilares: osData.tipo === 'implantacao_mds' ? createMDSTemplate() : osData.pilares,
-    };
-
-    set((state) => ({
-      ordens: [...state.ordens, newOS],
-      osColumnOrder: {
-        ...state.osColumnOrder,
-        [newOS.status]: [...(state.osColumnOrder[newOS.status] || []), newOS.id],
-      },
-    }));
-
-    return newOS; // <- RETORNA
+    em_planejamento: [],
+    em_execucao: [],
+    aguardando_cliente: [],
+    concluida: [],
+    cancelada: [],
   },
 
-  updateOS: (id, updates) => {
-    const prevOS = get().ordens.find(o => o.id === id);
+  // ==========================================
+  // CRUD VIA API
+  // ==========================================
+
+  /**
+   * Buscar ordens de serviço da API
+   */
+  fetchOS: async (filters) => {
+    set({ loading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.status) params.set('status', filters.status);
+      if (filters?.type) params.set('type', filters.type);
+      params.set('limit', '200'); // Buscar todas para o kanban
+
+      const response = await axios.get(`/api/os?${params.toString()}`);
+      const { serviceOrders } = response.data;
+
+      // Mapear API → tipo OS da UI
+      const ordens: OS[] = (serviceOrders || []).map((api: ServiceOrderAPI) => mapApiToOS(api));
+
+      set({ ordens, loading: false });
+
+      // Reconstruir column order para o kanban
+      get().rebuildColumnOrder();
+    } catch (error: any) {
+      console.error('[osStore] Erro ao buscar OS:', error);
+      set({
+        error: error.response?.data?.error || 'Erro ao carregar ordens de serviço',
+        loading: false,
+      });
+    }
+  },
+
+  /**
+   * Criar nova OS via API
+   */
+  addOS: async (osData) => {
+    set({ loading: true, error: null });
+    try {
+      // Se for implantação MDS, aplicar template
+      const pilares = osData.tipo === 'implantacao_mds' ? createMDSTemplate() : osData.pilares;
+
+      // Mapear campos da UI para a API
+      const apiData = mapOSToApi({ ...osData, pilares });
+
+      const response = await axios.post('/api/os', apiData);
+      const newOS = mapApiToOS(response.data);
+
+      set((state) => ({
+        ordens: [newOS, ...state.ordens],
+        loading: false,
+        osColumnOrder: {
+          ...state.osColumnOrder,
+          [newOS.status]: [newOS.id, ...(state.osColumnOrder[newOS.status] || [])],
+        },
+      }));
+
+      return newOS;
+    } catch (error: any) {
+      console.error('[osStore] Erro ao criar OS:', error);
+      set({
+        error: error.response?.data?.error || 'Erro ao criar ordem de serviço',
+        loading: false,
+      });
+      throw error;
+    }
+  },
+
+  /**
+   * Atualizar OS via API
+   */
+  updateOS: async (id, updates) => {
+    const prevOS = get().ordens.find((o) => String(o.id) === String(id));
     if (!prevOS) return;
 
-    set(state => {
-      const updatedOrdens = state.ordens.map(o => o.id === id ? { ...o, ...updates } : o);
+    // Atualização otimista na UI
+    set((state) => ({
+      ordens: state.ordens.map((o) =>
+        String(o.id) === String(id) ? { ...o, ...updates } : o
+      ),
+    }));
 
-      let newColumnOrder = { ...state.osColumnOrder };
-      if (updates.status && updates.status !== prevOS.status) {
-        newColumnOrder[prevOS.status] = (newColumnOrder[prevOS.status] || []).filter(osId => osId !== id);
-        newColumnOrder[updates.status] = [...(newColumnOrder[updates.status] || []), id];
-      }
+    try {
+      const apiData = mapOSToApi(updates);
+      const response = await axios.put(`/api/os/${id}`, apiData);
+      const updatedOS = mapApiToOS(response.data);
 
-      return {
-        ordens: updatedOrdens,
-        osColumnOrder: newColumnOrder,
-      };
-    });
+      set((state) => {
+        let newColumnOrder = { ...state.osColumnOrder };
+
+        // Se mudou de status, atualizar colunas do kanban
+        if (updates.status && updates.status !== prevOS.status) {
+          newColumnOrder[prevOS.status] = (newColumnOrder[prevOS.status] || []).filter(
+            (osId) => String(osId) !== String(id)
+          );
+          newColumnOrder[updates.status] = [
+            ...(newColumnOrder[updates.status] || []),
+            id,
+          ];
+        }
+
+        return {
+          ordens: state.ordens.map((o) =>
+            String(o.id) === String(id) ? updatedOS : o
+          ),
+          osColumnOrder: newColumnOrder,
+        };
+      });
+    } catch (error: any) {
+      console.error('[osStore] Erro ao atualizar OS:', error);
+      // Reverter atualização otimista
+      set((state) => ({
+        ordens: state.ordens.map((o) =>
+          String(o.id) === String(id) ? prevOS : o
+        ),
+        error: error.response?.data?.error || 'Erro ao atualizar ordem de serviço',
+      }));
+    }
   },
 
-  deleteOS: (id) => {
-    const os = get().ordens.find(o => o.id === id);
+  /**
+   * Excluir OS via API
+   */
+  deleteOS: async (id) => {
+    const os = get().ordens.find((o) => String(o.id) === String(id));
     if (!os) return;
 
-    set(state => ({
-      ordens: state.ordens.filter(o => o.id !== id),
+    // Remoção otimista
+    set((state) => ({
+      ordens: state.ordens.filter((o) => String(o.id) !== String(id)),
       osColumnOrder: {
         ...state.osColumnOrder,
-        [os.status]: (state.osColumnOrder[os.status] || []).filter(osId => osId !== id),
+        [os.status]: (state.osColumnOrder[os.status] || []).filter(
+          (osId) => String(osId) !== String(id)
+        ),
       },
     }));
+
+    try {
+      await axios.delete(`/api/os/${id}`);
+    } catch (error: any) {
+      console.error('[osStore] Erro ao excluir OS:', error);
+      // Reverter remoção otimista
+      set((state) => ({
+        ordens: [...state.ordens, os],
+        osColumnOrder: {
+          ...state.osColumnOrder,
+          [os.status]: [...(state.osColumnOrder[os.status] || []), os.id],
+        },
+        error: error.response?.data?.error || 'Erro ao excluir ordem de serviço',
+      }));
+    }
   },
 
-  // OS Stage actions
+  // ==========================================
+  // STAGES (LOCAL)
+  // ==========================================
+
   addOSStage: (stageData) => {
     const newStage: OSStage = {
       ...stageData,
       id: `stage_${Date.now()}`,
     };
-    set(state => ({
+    set((state) => ({
       osStages: [...state.osStages, newStage].sort((a, b) => a.order - b.order),
       osColumnOrder: {
         ...state.osColumnOrder,
@@ -264,26 +391,24 @@ export const useOSStore = create<OSStore>((set, get) => ({
   },
 
   updateOSStage: (id, updates) => {
-    set(state => ({
-      osStages: state.osStages.map(s => s.id === id ? { ...s, ...updates } : s),
+    set((state) => ({
+      osStages: state.osStages.map((s) => (s.id === id ? { ...s, ...updates } : s)),
     }));
   },
 
   deleteOSStage: (id) => {
     const state = get();
-
     if (state.osStages.length <= 1) return;
     if ((state.osColumnOrder[id] || []).length > 0) {
       alert('Não é possível excluir um estágio que contém OS. Mova as OS primeiro.');
       return;
     }
 
-    set(state => {
+    set((state) => {
       const newColumnOrder = { ...state.osColumnOrder };
       delete newColumnOrder[id];
-
       return {
-        osStages: state.osStages.filter(s => s.id !== id),
+        osStages: state.osStages.filter((s) => s.id !== id),
         osColumnOrder: newColumnOrder,
       };
     });
@@ -293,58 +418,117 @@ export const useOSStore = create<OSStore>((set, get) => ({
     set({ osStages: newOrder.map((stage, index) => ({ ...stage, order: index })) });
   },
 
+  // ==========================================
+  // KANBAN COLUMN ORDER
+  // ==========================================
+
   setOSColumnOrder: (order) => set({ osColumnOrder: order }),
 
   moveOSInColumns: (osId, fromStage, toStage, newIndex) => {
-    set(state => {
+    set((state) => {
       const newColumnOrder = { ...state.osColumnOrder };
 
-      newColumnOrder[fromStage] = (newColumnOrder[fromStage] || []).filter(id => id !== osId);
+      // Remover da coluna de origem
+      newColumnOrder[fromStage] = (newColumnOrder[fromStage] || []).filter(
+        (id) => String(id) !== String(osId)
+      );
 
+      // Inserir na coluna de destino
       const destColumn = [...(newColumnOrder[toStage] || [])];
       destColumn.splice(newIndex, 0, osId);
       newColumnOrder[toStage] = destColumn;
 
       return {
         osColumnOrder: newColumnOrder,
-        ordens: fromStage !== toStage
-          ? state.ordens.map(o => o.id === osId ? { ...o, status: toStage } : o)
-          : state.ordens,
+        ordens:
+          fromStage !== toStage
+            ? state.ordens.map((o) =>
+                String(o.id) === String(osId) ? { ...o, status: toStage } : o
+              )
+            : state.ordens,
       };
     });
+
+    // Se mudou de coluna, persistir no banco
+    if (fromStage !== toStage) {
+      axios.put(`/api/os/${osId}`, { status: toStage }).catch((err) => {
+        console.error('[osStore] Erro ao mover OS no kanban:', err);
+      });
+    }
   },
 
-  // Helpers
+  // ==========================================
+  // HELPERS
+  // ==========================================
+
+  /**
+   * Reconstruir order das colunas a partir das OS carregadas
+   */
+  rebuildColumnOrder: () => {
+    const { ordens, osStages } = get();
+    const newColumnOrder: Record<string, (number | string)[]> = {};
+
+    // Inicializar todas as colunas
+    osStages.forEach((stage) => {
+      newColumnOrder[stage.id] = [];
+    });
+
+    // Distribuir OS nas colunas pelo status
+    ordens.forEach((os) => {
+      if (newColumnOrder[os.status]) {
+        newColumnOrder[os.status].push(os.id);
+      } else {
+        // Se o status não tem coluna, colocar na primeira
+        const firstStage = osStages[0]?.id || 'em_planejamento';
+        if (!newColumnOrder[firstStage]) newColumnOrder[firstStage] = [];
+        newColumnOrder[firstStage].push(os.id);
+      }
+    });
+
+    set({ osColumnOrder: newColumnOrder });
+  },
+
   getOSByProject: (projectId) => {
-  return get().ordens.filter(o => String(o.projetoId) === String(projectId));
-},
+    return get().ordens.filter((o) => String(o.projetoId) === String(projectId));
+  },
 
   calculateProgress: (osId) => {
-    const os = get().ordens.find(o => o.id === osId);
-    if (!os) return 0;
+    const os = get().ordens.find((o) => String(o.id) === String(osId));
+    if (!os || !os.pilares) return 0;
 
-    const allChecklists = [
-      ...os.pilares.benchmarking.checklist,
-      ...os.pilares.planejamento.checklist,
-      ...os.pilares.canais.instagram.checklist,
-      ...os.pilares.canais.facebook.checklist,
-      ...os.pilares.canais.gmb.checklist,
-      ...os.pilares.canais.whatsapp.checklist,
-      ...os.pilares.canais.site.checklist,
-      ...os.pilares.canais.metaAds.checklist,
-      ...os.pilares.canais.googleAds.checklist,
-      ...os.pilares.dadosGCAO.checklist,
-      ...os.pilares.segmentacao.checklist,
-      ...os.pilares.fidelizacao.checklist,
-    ];
+    // Coletar todos os checklists de todos os pilares
+    const allChecklists: ChecklistItem[] = [];
 
-    const completed = allChecklists.filter(item => item.done).length;
+    try {
+      if (os.pilares.benchmarking?.checklist) allChecklists.push(...os.pilares.benchmarking.checklist);
+      if (os.pilares.planejamento?.checklist) allChecklists.push(...os.pilares.planejamento.checklist);
+      if (os.pilares.canais?.instagram?.checklist) allChecklists.push(...os.pilares.canais.instagram.checklist);
+      if (os.pilares.canais?.facebook?.checklist) allChecklists.push(...os.pilares.canais.facebook.checklist);
+      if (os.pilares.canais?.gmb?.checklist) allChecklists.push(...os.pilares.canais.gmb.checklist);
+      if (os.pilares.canais?.whatsapp?.checklist) allChecklists.push(...os.pilares.canais.whatsapp.checklist);
+      if (os.pilares.canais?.site?.checklist) allChecklists.push(...os.pilares.canais.site.checklist);
+      if (os.pilares.canais?.metaAds?.checklist) allChecklists.push(...os.pilares.canais.metaAds.checklist);
+      if (os.pilares.canais?.googleAds?.checklist) allChecklists.push(...os.pilares.canais.googleAds.checklist);
+      if (os.pilares.dadosGCAO?.checklist) allChecklists.push(...os.pilares.dadosGCAO.checklist);
+      if (os.pilares.segmentacao?.checklist) allChecklists.push(...os.pilares.segmentacao.checklist);
+      if (os.pilares.fidelizacao?.checklist) allChecklists.push(...os.pilares.fidelizacao.checklist);
+    } catch {
+      return os.progresso || 0;
+    }
+
+    if (allChecklists.length === 0) return os.progresso || 0;
+
+    const completed = allChecklists.filter((item) => item.done).length;
     return Math.round((completed / allChecklists.length) * 100);
   },
 
-  recalculateAndSetOSProgress: (osId: number) => {
-    // Progresso agora é gerenciado manualmente ou via API
-    // Esta função é mantida por compatibilidade mas não faz cálculo automático
-    console.log('recalculateAndSetOSProgress called for OS:', osId);
+  recalculateAndSetOSProgress: (osId) => {
+    const progress = get().calculateProgress(osId);
+    // Atualizar apenas localmente por performance
+    set((state) => ({
+      ordens: state.ordens.map((o) =>
+        String(o.id) === String(osId) ? { ...o, progresso: progress } : o
+      ),
+    }));
   },
 }));

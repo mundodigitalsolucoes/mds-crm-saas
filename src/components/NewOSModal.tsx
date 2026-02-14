@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Loader2 } from 'lucide-react';
 import type { OS, OSTipo } from '@/types/os';
 import { useOSStore } from '@/store/osStore';
 import { useProjectStore } from '@/store/projectStore';
@@ -18,10 +18,11 @@ const getPrioridadeOptions = () =>
     { value: 'baixa', label: 'Baixa' },
     { value: 'media', label: 'Média' },
     { value: 'alta', label: 'Alta' },
+    { value: 'urgente', label: 'Urgente' },
   ] as const;
 
 export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
-  const { addOS, updateOS, osStages } = useOSStore();
+  const { addOS, updateOS, osStages, loading } = useOSStore();
   const { projects, getProjectById } = useProjectStore();
 
   const [formData, setFormData] = useState<Partial<OS>>({
@@ -33,17 +34,19 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     orcamento: {},
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   // Controle do modal de lançar tarefas
   const [isLaunchTasksOpen, setIsLaunchTasksOpen] = useState(false);
 
   // Guardamos o ID da OS (após salvar/criar) para poder lançar tarefas
-  const [savedOSId, setSavedOSId] = useState<number | null>(null);
+  const [savedOSId, setSavedOSId] = useState<number | string | null>(null);
 
   // ✅ hooks sempre rodam
   const projectOptions = useMemo(
-  () => projects.map((p) => ({ value: p.id, label: `${p.title} (${p.client || 'Sem cliente'})` })),
-  [projects]
-);
+    () => projects.map((p) => ({ value: p.id, label: `${p.title} (${p.client || 'Sem cliente'})` })),
+    [projects]
+  );
 
   const statusOptions = useMemo(
     () => osStages.map((s) => ({ value: s.id, label: s.title })),
@@ -54,9 +57,6 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
   useEffect(() => {
     if (!isOpen) return;
 
-    // ao abrir, define o "savedOSId":
-    // - se estiver editando, já temos id
-    // - se for criação, começa null e só vira id depois de salvar
     setSavedOSId(initialData?.id ?? null);
 
     if (initialData) {
@@ -79,7 +79,6 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     });
   }, [isOpen, initialData, osStages]);
 
-  // ✅ só depois de todos os hooks
   if (!isOpen) return null;
 
   const handleChange = (
@@ -90,31 +89,31 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     if (name.startsWith('datas.')) {
       const key = name.split('.')[1] as keyof NonNullable<OS['datas']>;
       setFormData((prev) => ({
-  ...prev,
-  datas: {
-    abertura: prev.datas?.abertura ?? '',
-    inicio: prev.datas?.inicio ?? '',
-    prazo: prev.datas?.prazo ?? '',
-    conclusao: prev.datas?.conclusao ?? '',
-    [key]: value,
-  },
-}));
+        ...prev,
+        datas: {
+          abertura: prev.datas?.abertura ?? '',
+          inicio: prev.datas?.inicio ?? '',
+          prazo: prev.datas?.prazo ?? '',
+          conclusao: prev.datas?.conclusao ?? '',
+          [key]: value,
+        },
+      }));
       return;
     }
 
     if (name.startsWith('objetivos.')) {
-  const key = name.split('.')[1] as keyof NonNullable<OS['objetivos']>;
-  setFormData((prev) => ({
-    ...prev,
-    objetivos: {
-      principal12m: prev.objetivos?.principal12m ?? '',
-      quadrantes: prev.objetivos?.quadrantes ?? [],
-      metasAlvo: prev.objetivos?.metasAlvo ?? {},
-      [key]: value,
-    },
-  }));
-  return;
-}
+      const key = name.split('.')[1] as keyof NonNullable<OS['objetivos']>;
+      setFormData((prev) => ({
+        ...prev,
+        objetivos: {
+          principal12m: prev.objetivos?.principal12m ?? '',
+          quadrantes: prev.objetivos?.quadrantes ?? [],
+          metasAlvo: prev.objetivos?.metasAlvo ?? {},
+          [key]: value,
+        },
+      }));
+      return;
+    }
 
     if (name.startsWith('orcamento.')) {
       const key = name.split('.')[1] as keyof NonNullable<OS['orcamento']>;
@@ -122,7 +121,6 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
       return;
     }
 
-    // projetoId geralmente vem como string do select — manter no formData como está e converter no submit
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -133,19 +131,19 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
     }
 
     const projetoId = String(formData.projetoId);
-const project = projects.find((p) => p.id === projetoId);
+    const project = projects.find((p) => p.id === projetoId);
 
-if (!project) {
-  alert('Projeto não encontrado. Selecione um projeto válido.');
-  return null;
-}
+    if (!project) {
+      alert('Projeto não encontrado. Selecione um projeto válido.');
+      return null;
+    }
 
-const payload: Omit<OS, 'id'> = {
-  codigo: initialData?.codigo || '',
-  titulo: formData.titulo,
-  projetoId: projetoId,
-  leadId: formData.leadId,
-  cliente: project.client || '',
+    const payload: Omit<OS, 'id'> = {
+      codigo: initialData?.codigo || '',
+      titulo: formData.titulo,
+      projetoId: projetoId,
+      leadId: formData.leadId,
+      cliente: project.client || '',
       tipo: (formData.tipo || 'implantacao_mds') as OS['tipo'],
       status: String(formData.status),
       prioridade: (formData.prioridade || 'media') as OS['prioridade'],
@@ -168,7 +166,7 @@ const payload: Omit<OS, 'id'> = {
     return { payload, project };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const result = validateAndBuildPayload();
@@ -176,28 +174,34 @@ const payload: Omit<OS, 'id'> = {
 
     const { payload } = result;
 
-    if (initialData) {
-  updateOS(initialData.id, payload as OS);
-  setSavedOSId(initialData.id);
-  onClose();
-  return;
-}
+    setSubmitting(true);
 
-const created = addOS(payload as OS) as unknown as OS;
-
-if (created?.id) {
-  setSavedOSId(created.id);
-}
-
-// Fecha o modal após criar
-onClose();
+    try {
+      if (initialData) {
+        // Editar OS existente
+        await updateOS(initialData.id, payload as Partial<OS>);
+        setSavedOSId(initialData.id);
+      } else {
+        // Criar nova OS
+        const created = await addOS(payload as Omit<OS, 'id' | 'codigo'>);
+        if (created?.id) {
+          setSavedOSId(created.id);
+        }
+      }
+      onClose();
+    } catch (err) {
+      console.error('[NewOSModal] Erro ao salvar OS:', err);
+      alert('Erro ao salvar a ordem de serviço. Tente novamente.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const currentProjectId = formData.projetoId ? String(formData.projetoId) : null;
-const canLaunchTasks = Boolean(savedOSId && currentProjectId);
+  const canLaunchTasks = Boolean(savedOSId && currentProjectId);
 
-const currentProjectName =
-  (currentProjectId ? getProjectById(currentProjectId)?.title : undefined) || 'Projeto';
+  const currentProjectName =
+    (currentProjectId ? getProjectById(currentProjectId)?.title : undefined) || 'Projeto';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -328,7 +332,7 @@ const currentProjectName =
           </section>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            {/* Botão lançar tarefas: só habilita quando a OS já foi salva (tem id) e tem projeto */}
+            {/* Botão lançar tarefas */}
             <button
               type="button"
               onClick={() => {
@@ -339,7 +343,9 @@ const currentProjectName =
                 setIsLaunchTasksOpen(true);
               }}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                canLaunchTasks ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                canLaunchTasks
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-200 text-gray-500 cursor-not-allowed'
               }`}
               disabled={!canLaunchTasks}
               title={canLaunchTasks ? 'Lançar tarefas vinculadas a esta OS' : 'Salve a OS primeiro'}
@@ -352,7 +358,12 @@ const currentProjectName =
               Cancelar
             </button>
 
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded-lg">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {submitting && <Loader2 size={16} className="animate-spin" />}
               {initialData ? 'Salvar' : 'Criar OS'}
             </button>
           </div>

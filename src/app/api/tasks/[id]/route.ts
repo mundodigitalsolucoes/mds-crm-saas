@@ -5,20 +5,54 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { z } from 'zod';
 
+// Helper: transforma string vazia em null/undefined para campos UUID opcionais
+const optionalUuidNullable = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((val) => {
+    if (val === undefined) return undefined; // campo não enviado
+    if (val === null || val.trim() === '') return null; // campo limpo explicitamente
+    return val;
+  })
+  .pipe(z.string().uuid().optional().nullable());
+
+// Helper: transforma string vazia em null para campos string opcionais
+const optionalStringNullable = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    if (val === null || val.trim() === '') return null;
+    return val;
+  });
+
+// Helper: transforma string/number em number ou null
+const optionalNumberNullable = z
+  .union([z.number(), z.string(), z.null()])
+  .optional()
+  .transform((val) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === '') return null;
+    const num = typeof val === 'string' ? parseInt(val, 10) : val;
+    return isNaN(num as number) ? null : num;
+  });
+
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  description: z.string().optional().nullable(),
+  description: optionalStringNullable,
   status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  dueDate: z.string().optional().nullable(),
-  startDate: z.string().optional().nullable(),
+  dueDate: optionalStringNullable,
+  startDate: optionalStringNullable,
   isRecurring: z.boolean().optional(),
-  recurrenceRule: z.string().optional().nullable(),
-  estimatedMinutes: z.number().optional().nullable(),
-  actualMinutes: z.number().optional().nullable(),
-  projectId: z.string().uuid().optional().nullable(),
-  leadId: z.string().uuid().optional().nullable(),
-  assignedToId: z.string().uuid().optional().nullable(),
+  recurrenceRule: optionalStringNullable,
+  estimatedMinutes: optionalNumberNullable,
+  actualMinutes: optionalNumberNullable,
+  projectId: optionalUuidNullable,
+  leadId: optionalUuidNullable,
+  assignedToId: optionalUuidNullable,
 });
 
 // GET /api/tasks/[id]
@@ -37,7 +71,7 @@ export async function GET(
     const organizationId = session.user.organizationId;
 
     const task = await prisma.task.findFirst({
-      where: { id, organizationId }, // Multi-tenant: filtrar por organização
+      where: { id, organizationId },
       include: {
         project: { select: { id: true, title: true } },
         lead: { select: { id: true, name: true } },
@@ -98,7 +132,6 @@ export async function GET(
       })),
     }));
 
-    // Contar attachments e comments
     const [attachmentCount, commentCount] = await Promise.all([
       prisma.attachment.count({ where: { entityType: 'task', entityId: task.id } }),
       prisma.comment.count({ where: { entityType: 'task', entityId: task.id } }),
@@ -164,7 +197,7 @@ export async function PUT(
 
     const updateData: Record<string, unknown> = {};
 
-    // Copiar campos simples (excluir relações de data que precisam de conversão)
+    // Copiar campos — undefined = não enviado (não altera), null = limpar campo
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.status !== undefined) updateData.status = data.status;
@@ -251,6 +284,12 @@ export async function PUT(
       },
     });
 
+    // Buscar contagens atualizadas
+    const [attachmentCount, commentCount] = await Promise.all([
+      prisma.attachment.count({ where: { entityType: 'task', entityId: task.id } }),
+      prisma.comment.count({ where: { entityType: 'task', entityId: task.id } }),
+    ]);
+
     return NextResponse.json({
       ...task,
       dueDate: task.dueDate?.toISOString(),
@@ -265,8 +304,8 @@ export async function PUT(
       })),
       _count: {
         subtasks: task.subtasks.length,
-        attachments: 0,
-        comments: 0,
+        attachments: attachmentCount,
+        comments: commentCount,
       },
     });
   } catch (error) {
@@ -299,7 +338,6 @@ export async function DELETE(
 
     const organizationId = session.user.organizationId;
 
-    // Verificar se a task pertence à organização
     const task = await prisma.task.findFirst({
       where: { id, organizationId },
     });

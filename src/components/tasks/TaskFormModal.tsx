@@ -1,3 +1,4 @@
+// src/components/tasks/TaskFormModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ export interface TaskFormData {
 
 const priorityOptions = [
   { value: 'low', label: 'Baixa', color: 'bg-gray-100 text-gray-700' },
-  { value: 'medium', label: 'Media', color: 'bg-blue-100 text-blue-700' },
+  { value: 'medium', label: 'Média', color: 'bg-blue-100 text-blue-700' },
   { value: 'high', label: 'Alta', color: 'bg-orange-100 text-orange-700' },
   { value: 'urgent', label: 'Urgente', color: 'bg-red-100 text-red-700' },
 ];
@@ -36,7 +37,7 @@ const priorityOptions = [
 const statusOptions = [
   { value: 'todo', label: 'A Fazer' },
   { value: 'in_progress', label: 'Em Andamento' },
-  { value: 'done', label: 'Concluida' },
+  { value: 'done', label: 'Concluída' },
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
@@ -62,22 +63,40 @@ export function TaskFormModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Resetar form quando o modal abre/fecha ou muda o modo
   useEffect(() => {
-    if (initialData) {
-      setFormData({
-        title: initialData.title || '',
-        description: initialData.description || '',
-        status: initialData.status || 'todo',
-        priority: initialData.priority || 'medium',
-        dueDate: initialData.dueDate || '',
-        startDate: initialData.startDate || '',
-        estimatedMinutes: initialData.estimatedMinutes,
-        projectId: initialData.projectId || '',
-        leadId: initialData.leadId || '',
-        assignedToId: initialData.assignedToId || '',
-      });
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          title: initialData.title || '',
+          description: initialData.description || '',
+          status: initialData.status || 'todo',
+          priority: initialData.priority || 'medium',
+          dueDate: initialData.dueDate || '',
+          startDate: initialData.startDate || '',
+          estimatedMinutes: initialData.estimatedMinutes,
+          projectId: initialData.projectId || '',
+          leadId: initialData.leadId || '',
+          assignedToId: initialData.assignedToId || '',
+        });
+      } else {
+        // Reset completo para nova tarefa
+        setFormData({
+          title: '',
+          description: '',
+          status: 'todo',
+          priority: 'medium',
+          dueDate: '',
+          startDate: '',
+          estimatedMinutes: undefined,
+          projectId: '',
+          leadId: '',
+          assignedToId: '',
+        });
+      }
+      setErrors({});
     }
-  }, [initialData]);
+  }, [isOpen, initialData]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -92,10 +111,30 @@ export function TaskFormModal({
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.title.trim()) {
-      newErrors.title = 'Titulo e obrigatorio';
+      newErrors.title = 'Título é obrigatório';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Limpar campos vazios antes de enviar — evita erro de Zod UUID
+  const cleanFormData = (data: TaskFormData): Record<string, unknown> => {
+    const cleaned: Record<string, unknown> = {
+      title: data.title.trim(),
+      status: data.status,
+      priority: data.priority,
+    };
+
+    // Só enviar campos que têm valor
+    if (data.description?.trim()) cleaned.description = data.description.trim();
+    if (data.dueDate) cleaned.dueDate = data.dueDate;
+    if (data.startDate) cleaned.startDate = data.startDate;
+    if (data.estimatedMinutes) cleaned.estimatedMinutes = Number(data.estimatedMinutes);
+    if (data.projectId) cleaned.projectId = data.projectId;
+    if (data.leadId) cleaned.leadId = data.leadId;
+    if (data.assignedToId) cleaned.assignedToId = data.assignedToId;
+
+    return cleaned;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,22 +143,13 @@ export function TaskFormModal({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // Limpar dados antes de enviar
+      const cleanedData = cleanFormData(formData);
+      await onSubmit(cleanedData as any);
       onClose();
-      setFormData({
-        title: '',
-        description: '',
-        status: 'todo',
-        priority: 'medium',
-        dueDate: '',
-        startDate: '',
-        estimatedMinutes: undefined,
-        projectId: '',
-        leadId: '',
-        assignedToId: '',
-      });
     } catch (error) {
       console.error('Erro ao salvar tarefa:', error);
+      setErrors({ title: 'Erro ao salvar. Tente novamente.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -154,13 +184,13 @@ export function TaskFormModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="p-6">
             <div className="space-y-5">
-              {/* Titulo */}
+              {/* Título */}
               <div>
                 <label
                   htmlFor="title"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Titulo *
+                  Título *
                 </label>
                 <input
                   type="text"
@@ -171,20 +201,21 @@ export function TaskFormModal({
                   className={`w-full rounded-lg border px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     errors.title ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  placeholder="Digite o titulo da tarefa"
+                  placeholder="Digite o título da tarefa"
+                  autoFocus
                 />
                 {errors.title && (
                   <p className="mt-1 text-sm text-red-500">{errors.title}</p>
                 )}
               </div>
 
-              {/* Descricao */}
+              {/* Descrição */}
               <div>
                 <label
                   htmlFor="description"
                   className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  Descricao
+                  Descrição
                 </label>
                 <textarea
                   id="description"
@@ -252,7 +283,7 @@ export function TaskFormModal({
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
                     <Calendar className="inline h-4 w-4 mr-1" />
-                    Data de Inicio
+                    Data de Início
                   </label>
                   <input
                     type="date"
@@ -305,7 +336,7 @@ export function TaskFormModal({
               </div>
             </div>
 
-            {/* Botoes */}
+            {/* Botões */}
             <div className="mt-6 flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
               <button
                 type="button"
