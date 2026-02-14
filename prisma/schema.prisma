@@ -65,6 +65,7 @@ model Organization {
   name            String
   slug            String    @unique
   domain          String?   @unique
+  agendaEvents      AgendaEvent[]
   
   // White Label
   logo            String?
@@ -131,6 +132,8 @@ model User {
   name            String
   passwordHash    String    @map("password_hash")
   avatarUrl       String?   @map("avatar_url")
+  eventsAssigned        AgendaEvent[]       @relation("AssignedEvents")
+  eventsCreated         AgendaEvent[]       @relation("CreatedEvents")
 
   // Multi-tenant
   organizationId  String    @map("organization_id")
@@ -182,6 +185,7 @@ model User {
 
 model Lead {
   id                    String    @id @default(uuid())
+  agendaEvents          AgendaEvent[]
 
   // Multi-tenant
   organizationId        String    @map("organization_id")
@@ -238,6 +242,7 @@ model Lead {
 
 model MarketingProject {
   id            String    @id @default(uuid())
+  agendaEvents          AgendaEvent[]
 
   // Multi-tenant
   organizationId String   @map("organization_id")
@@ -807,6 +812,68 @@ model GoogleBusinessMetric {
   @@index([organizationId])
   @@index([date])
   @@map("google_business_metrics")
+}
+
+// ============================================
+// AGENDA (EVENTOS / COMPROMISSOS)
+// ============================================
+
+model AgendaEvent {
+  id              String    @id @default(uuid())
+
+  // Multi-tenant
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String?
+  
+  // Data e horário
+  date            DateTime  @db.Date
+  startTime       String?   @map("start_time")   // HH:MM
+  endTime         String?   @map("end_time")     // HH:MM
+  allDay          Boolean   @default(false) @map("all_day")
+
+  // Tipo e status
+  type            String    @default("meeting") // meeting, call, follow_up, reminder, deadline, other
+  status          String    @default("agendado") // agendado, concluido, cancelado
+  color           String?   // Cor customizada no calendário
+
+  // Localização
+  location        String?   // Endereço físico ou link (Google Meet, Zoom, etc.)
+
+  // Recorrência
+  isRecurring     Boolean   @default(false) @map("is_recurring")
+  recurrenceRule  String?   @map("recurrence_rule") // RRULE format (iCal)
+
+  // Lembrete (minutos antes do evento)
+  reminderMinutes Int?      @map("reminder_minutes") // 5, 10, 15, 30, 60, 1440(1dia)
+  reminderSent    Boolean   @default(false) @map("reminder_sent")
+
+  // Vínculos opcionais
+  leadId          String?   @map("lead_id")
+  lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  projectId       String?   @map("project_id")
+  project         MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Responsável / criador
+  assignedToId    String?   @map("assigned_to")
+  assignedTo      User?     @relation("AssignedEvents", fields: [assignedToId], references: [id])
+
+  createdById     String?   @map("created_by")
+  createdBy       User?     @relation("CreatedEvents", fields: [createdById], references: [id])
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([organizationId])
+  @@index([date])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([leadId])
+  @@index([organizationId, date])
+  @@map("agenda_events")
 }
 
 // ============================================

@@ -4,7 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Edit, Trash2, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useAgendaStore, type AgendaEvent } from '@/store/agendaStore';
+import { useAgendaStore } from '@/store/agendaStore';
+import type { AgendaEvent } from '@/types/agenda';
 import { AgendaEventModal } from '@/components/AgendaEventModal';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 
@@ -51,7 +52,7 @@ export default function AgendaPage() {
     setIsModalOpen(true);
   };
 
-  const onDelete = (id: number) => {
+  const onDelete = (id: string) => {
     if (window.confirm('Excluir este evento?')) {
       deleteEvent(id);
     }

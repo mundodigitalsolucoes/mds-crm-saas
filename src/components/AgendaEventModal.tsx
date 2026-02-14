@@ -2,38 +2,44 @@
 
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { useAgendaStore, type AgendaEvent, type EventStatus } from '@/store/agendaStore';
+import { useAgendaStore } from '@/store/agendaStore';
+import type { AgendaEvent, EventStatus, EventType } from '@/types/agenda';
 
 interface AgendaEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialData?: AgendaEvent | null; // se vier, é edição
+  initialData?: AgendaEvent | null;
 }
 
 export function AgendaEventModal({ isOpen, onClose, initialData }: AgendaEventModalProps) {
   const { addEvent, updateEvent } = useAgendaStore();
 
-  const [form, setForm] = useState<Omit<AgendaEvent, 'id'>>({
+    const [form, setForm] = useState({
     title: '',
     description: '',
     date: new Date().toISOString().slice(0, 10),
     startTime: '',
     endTime: '',
-    status: 'agendado',
+    status: 'agendado' as EventStatus,
     location: '',
+    type: 'meeting' as EventType,  // ← adiciona "as EventType"
+    allDay: false,
   });
 
   useEffect(() => {
     if (!isOpen) return;
 
     if (initialData) {
-      const { id, ...rest } = initialData;
       setForm({
-        ...rest,
-        description: rest.description || '',
-        startTime: rest.startTime || '',
-        endTime: rest.endTime || '',
-        location: rest.location || '',
+        title: initialData.title || '',
+        description: initialData.description || '',
+        date: initialData.date ? initialData.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        startTime: initialData.startTime || '',
+        endTime: initialData.endTime || '',
+        status: initialData.status || 'agendado',
+        location: initialData.location || '',
+        type: initialData.type || 'meeting',
+        allDay: initialData.allDay || false,
       });
     } else {
       setForm({
@@ -44,6 +50,8 @@ export function AgendaEventModal({ isOpen, onClose, initialData }: AgendaEventMo
         endTime: '',
         status: 'agendado',
         location: '',
+        type: 'meeting',
+        allDay: false,
       });
     }
   }, [isOpen, initialData]);
@@ -57,7 +65,7 @@ export function AgendaEventModal({ isOpen, onClose, initialData }: AgendaEventMo
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.title.trim() || !form.date) {
@@ -65,16 +73,27 @@ export function AgendaEventModal({ isOpen, onClose, initialData }: AgendaEventMo
       return;
     }
 
-    // validação simples de horário (opcional)
     if (form.startTime && form.endTime && form.endTime < form.startTime) {
       alert('Horário final não pode ser menor que o horário inicial.');
       return;
     }
 
+    const payload = {
+      title: form.title.trim(),
+      description: form.description || undefined,
+      date: form.date,
+      startTime: form.startTime || undefined,
+      endTime: form.endTime || undefined,
+      status: form.status,
+      location: form.location || undefined,
+      type: form.type,
+      allDay: form.allDay,
+    };
+
     if (initialData?.id) {
-      updateEvent(initialData.id, form);
+      await updateEvent(initialData.id, payload);
     } else {
-      addEvent(form);
+      await addEvent(payload);
     }
 
     onClose();
