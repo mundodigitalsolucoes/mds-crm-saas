@@ -99,6 +99,8 @@ model Organization {
   connectedAccounts ConnectedAccount[]
   goals             Goal[]
   webhooks          Webhook[]
+  serviceOrders     ServiceOrder[]
+
   @@map("organizations")
 }
 
@@ -165,6 +167,10 @@ model User {
   attachmentsUploaded   Attachment[]
   comments              Comment[]
 
+  // OS
+  osAssigned            ServiceOrder[]      @relation("AssignedOS")
+  osCreated             ServiceOrder[]      @relation("CreatedOS")
+
   @@index([organizationId])
   @@index([email])
   @@map("users")
@@ -230,10 +236,6 @@ model Lead {
 // MARKETING PROJECTS
 // ============================================
 
-// ============================================
-// MARKETING PROJECTS
-// ============================================
-
 model MarketingProject {
   id            String    @id @default(uuid())
 
@@ -263,6 +265,7 @@ model MarketingProject {
   kanbanBoards  KanbanBoard[]
   tasks         Task[]
   activities    Activity[]
+  serviceOrders ServiceOrder[]
 
   @@index([organizationId])
   @@index([status])
@@ -833,4 +836,59 @@ model AIUsage {
   @@index([userId])
   @@index([createdAt])
   @@map("ai_usage")
+}
+
+// ============================================
+// ORDENS DE SERVIÇO (OS)
+// ============================================
+
+model ServiceOrder {
+  id              String    @id @default(uuid())
+
+  // Multi-tenant
+  organizationId  String    @map("organization_id")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Identificação
+  code            String    // OS-2026-0001
+  title           String
+  description     String?
+  type            String    @default("custom") // implantacao_mds, manutencao, custom
+
+  // Status e prioridade
+  status          String    @default("em_planejamento")
+  priority        String    @default("medium")
+  progress        Int       @default(0)
+
+  // Datas
+  startDate       DateTime? @map("start_date")
+  dueDate         DateTime? @map("due_date")
+  completedAt     DateTime? @map("completed_at")
+
+  // Vínculo com projeto
+  projectId       String?   @map("project_id")
+  project         MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // Responsável
+  assignedToId    String?   @map("assigned_to")
+  assignedTo      User?     @relation("AssignedOS", fields: [assignedToId], references: [id])
+
+  createdById     String?   @map("created_by")
+  createdBy       User?     @relation("CreatedOS", fields: [createdById], references: [id])
+
+  // Pilares e checklists (JSON flexível para template MDS)
+  pilares         String    @default("{}")
+
+  notes           String?
+  customFields    String    @default("{}") @map("custom_fields")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@index([status])
+  @@index([projectId])
+  @@index([assignedToId])
+  @@map("service_orders")
 }
