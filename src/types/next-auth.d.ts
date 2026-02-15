@@ -1,3 +1,6 @@
+// src/types/next-auth.d.ts
+// Tipagem estendida do NextAuth para incluir dados multi-tenant e permissões
+
 import { DefaultSession, DefaultUser } from 'next-auth';
 import { JWT, DefaultJWT } from 'next-auth/jwt';
 
@@ -7,6 +10,7 @@ declare module 'next-auth' {
       id: string;
       organizationId: string;
       role: string;
+      permissions: string; // JSON string das permissões
     } & DefaultSession['user'];
   }
 
@@ -14,6 +18,7 @@ declare module 'next-auth' {
     id: string;
     organizationId: string;
     role: string;
+    permissions: string; // JSON string das permissões
   }
 }
 
@@ -22,5 +27,6 @@ declare module 'next-auth/jwt' {
     id: string;
     organizationId: string;
     role: string;
+    permissions: string; // JSON string das permissões
   }
 }
