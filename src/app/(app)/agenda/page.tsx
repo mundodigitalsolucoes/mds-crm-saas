@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus, Edit, Trash2, Calendar, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '@/store/agendaStore';
@@ -9,22 +9,40 @@ import type { AgendaEvent } from '@/types/agenda';
 import { AgendaEventModal } from '@/components/AgendaEventModal';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 
+// Normaliza a data do evento para YYYY-MM-DD (independente se vem ISO ou já formatado)
+function normalizeDate(date: string): string {
+  if (!date) return '';
+  // Se for ISO (2026-02-14T00:00:00.000Z), pega só os primeiros 10 chars
+  return date.substring(0, 10);
+}
+
 export default function AgendaPage() {
-  const { events, deleteEvent } = useAgendaStore();
+  const { events, loading, error, fetchEvents, deleteEvent } = useAgendaStore();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<AgendaEvent | null>(null);
 
-  // Eventos do dia selecionado
+  // ✅ Buscar eventos ao montar a página e quando o mês muda
+  useEffect(() => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+
+    fetchEvents({
+      startDate: format(start, 'yyyy-MM-dd'),
+      endDate: format(end, 'yyyy-MM-dd'),
+    });
+  }, [currentMonth, fetchEvents]);
+
+  // Eventos do dia selecionado (com normalização de data)
   const eventsOfSelectedDay = useMemo(() => {
     const dateString = format(selectedDate, 'yyyy-MM-dd');
     return events
-      .filter(event => event.date === dateString)
+      .filter(event => normalizeDate(event.date) === dateString)
       .sort((a, b) => {
-        const aKey = `${a.startTime || '99:99'}`;
-        const bKey = `${b.startTime || '99:99'}`;
+        const aKey = a.startTime || '99:99';
+        const bKey = b.startTime || '99:99';
         return aKey.localeCompare(bKey);
       });
   }, [events, selectedDate]);
@@ -36,10 +54,10 @@ export default function AgendaPage() {
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
-  // Verifica se um dia tem eventos
+  // Verifica se um dia tem eventos (com normalização)
   const hasEvents = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
-    return events.some(event => event.date === dateString);
+    return events.some(event => normalizeDate(event.date) === dateString);
   };
 
   const openNew = () => {
@@ -52,9 +70,9 @@ export default function AgendaPage() {
     setIsModalOpen(true);
   };
 
-  const onDelete = (id: string) => {
+  const onDelete = async (id: string) => {
     if (window.confirm('Excluir este evento?')) {
-      deleteEvent(id);
+      await deleteEvent(id);
     }
   };
 
@@ -93,6 +111,13 @@ export default function AgendaPage() {
             <p className="text-sm text-gray-500">Eventos, compromissos e foco</p>
           </div>
         </div>
+
+        {/* Mensagem de erro */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Layout Principal - 2 Colunas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -198,12 +223,17 @@ export default function AgendaPage() {
 
               {/* Lista de eventos */}
               <div className="space-y-3">
-                {eventsOfSelectedDay.length === 0 ? (
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="animate-spin text-indigo-500" size={32} />
+                    <span className="ml-3 text-gray-500">Carregando eventos...</span>
+                  </div>
+                ) : eventsOfSelectedDay.length === 0 ? (
                   <div className="text-center py-12">
                     <Calendar className="mx-auto text-gray-300 mb-4" size={48} />
                     <p className="text-gray-500 text-lg mb-2">Nenhum evento neste dia</p>
                     <p className="text-gray-400 text-sm">
-                      Clique em "Novo evento" para adicionar um compromisso
+                      Clique em &quot;Novo evento&quot; para adicionar um compromisso
                     </p>
                   </div>
                 ) : (
