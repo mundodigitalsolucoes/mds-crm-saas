@@ -1,3 +1,5 @@
+// src/lib/auth.ts
+// Configuração do NextAuth.js com permissões na session
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
@@ -37,6 +39,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           organizationId: user.organizationId,
           role: user.role,
+          permissions: user.permissions, // ✅ NOVO: enviar permissions para o JWT
         };
       },
     }),
@@ -45,12 +48,27 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.organizationId = (user as any).organizationId;
         token.role = (user as any).role;
+        token.permissions = (user as any).permissions; // ✅ NOVO
       }
+
+      // ✅ NOVO: Recarregar permissões quando session é atualizada (update trigger)
+      // Isso permite que mudanças de permissão reflitam sem precisar relogar
+      if (trigger === 'update' && token.id) {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, permissions: true },
+        });
+        if (freshUser) {
+          token.role = freshUser.role;
+          token.permissions = freshUser.permissions;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -58,6 +76,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).role = token.role;
+        (session.user as any).permissions = token.permissions; // ✅ NOVO
       }
       return session;
     },
