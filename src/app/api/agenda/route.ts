@@ -19,7 +19,7 @@ const createEventSchema = z.object({
   location: z.string().max(500).optional(),
   isRecurring: z.boolean().optional().default(false),
   recurrenceRule: z.string().max(500).optional(),
-  reminderMinutes: z.number().int().min(0).max(10080).optional(), // Máx 1 semana
+  reminderMinutes: z.number().int().min(0).max(10080).optional(),
   leadId: z.string().uuid().optional(),
   projectId: z.string().uuid().optional(),
   assignedToId: z.string().uuid().optional(),
@@ -42,6 +42,30 @@ const eventIncludes = {
 };
 
 // ============================================
+// HELPER — Normaliza a data do evento para YYYY-MM-DD
+// Evita problemas de timezone (UTC-3 virando dia anterior)
+// ============================================
+function normalizeEventDate(event: any): any {
+  return {
+    ...event,
+    date: event.date instanceof Date
+      ? event.date.toISOString().substring(0, 10)
+      : typeof event.date === 'string'
+        ? event.date.substring(0, 10)
+        : event.date,
+  };
+}
+
+// ============================================
+// HELPER — Cria Date corretamente preservando a data local
+// "2026-02-14" → Date que no banco fica 2026-02-14T12:00:00.000Z
+// Usando meio-dia UTC para nunca cair no dia anterior/posterior
+// ============================================
+function parseDateSafe(dateStr: string): Date {
+  return new Date(`${dateStr}T12:00:00.000Z`);
+}
+
+// ============================================
 // GET /api/agenda — Listar eventos
 // ============================================
 export async function GET(request: NextRequest) {
@@ -56,8 +80,8 @@ export async function GET(request: NextRequest) {
     // Filtros
     const status = searchParams.get('status');
     const type = searchParams.get('type');
-    const startDate = searchParams.get('startDate'); // YYYY-MM-DD
-    const endDate = searchParams.get('endDate');     // YYYY-MM-DD
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const leadId = searchParams.get('leadId');
     const projectId = searchParams.get('projectId');
     const assignedToId = searchParams.get('assignedToId');
@@ -93,14 +117,14 @@ export async function GET(request: NextRequest) {
       where.assignedToId = assignedToId;
     }
 
-    // Filtro por período de datas
+    // Filtro por período de datas (usando início e fim do dia em UTC)
     if (startDate || endDate) {
       where.date = {};
       if (startDate) {
-        where.date.gte = new Date(startDate);
+        where.date.gte = new Date(`${startDate}T00:00:00.000Z`);
       }
       if (endDate) {
-        where.date.lte = new Date(endDate);
+        where.date.lte = new Date(`${endDate}T23:59:59.999Z`);
       }
     }
 
@@ -114,7 +138,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar eventos e total em paralelo
-    const [events, total] = await Promise.all([
+    const [rawEvents, total] = await Promise.all([
       prisma.agendaEvent.findMany({
         where,
         include: eventIncludes,
@@ -127,6 +151,9 @@ export async function GET(request: NextRequest) {
       }),
       prisma.agendaEvent.count({ where }),
     ]);
+
+    // Normalizar datas para YYYY-MM-DD antes de enviar ao client
+    const events = rawEvents.map(normalizeEventDate);
 
     return NextResponse.json({
       events,
@@ -208,7 +235,7 @@ export async function POST(request: NextRequest) {
         organizationId: session.user.organizationId,
         title: data.title,
         description: data.description,
-        date: new Date(data.date),
+        date: parseDateSafe(data.date), // ✅ Usa meio-dia UTC para evitar shift de timezone
         startTime: data.startTime,
         endTime: data.endTime,
         allDay: data.allDay,
@@ -227,7 +254,8 @@ export async function POST(request: NextRequest) {
       include: eventIncludes,
     });
 
-    return NextResponse.json(event, { status: 201 });
+    // ✅ Normalizar data antes de retornar ao client
+    return NextResponse.json(normalizeEventDate(event), { status: 201 });
   } catch (error) {
     console.error('[API] Erro ao criar evento da agenda:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
