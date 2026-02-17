@@ -1,7 +1,8 @@
+// src/app/api/leads/[id]/route.ts
+// Detalhe, atualização e exclusão de lead com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 
 // ==================== GET /api/leads/[id] ====================
 export async function GET(
@@ -9,18 +10,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: leads.view
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
     const lead = await prisma.lead.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
@@ -53,11 +52,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: leads.edit
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
     const body = await req.json();
@@ -66,7 +63,7 @@ export async function PUT(
     const existing = await prisma.lead.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
     });
 
@@ -113,11 +110,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: leads.delete
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'delete');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
@@ -125,7 +120,7 @@ export async function DELETE(
     const existing = await prisma.lead.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
     });
 

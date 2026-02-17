@@ -1,10 +1,9 @@
 // src/app/api/leads/route.ts
-// CRUD de leads com rate limiting e multi-tenant
+// CRUD de leads com rate limiting, permissões granulares e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
+import { checkPermission } from '@/lib/checkPermission';
 
 // GET /api/leads — Lista leads da organização
 export async function GET(req: NextRequest) {
@@ -13,17 +12,11 @@ export async function GET(req: NextRequest) {
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    const session = await getServerSession(authOptions);
+    // ✅ Permissão granular: leads.view
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
+    if (!allowed) return errorResponse!;
 
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const { organizationId } = session.user as any;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 403 });
-    }
+    const organizationId = session!.user.organizationId;
 
     // Query params para filtros
     const { searchParams } = new URL(req.url);
@@ -87,17 +80,12 @@ export async function POST(req: NextRequest) {
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    const session = await getServerSession(authOptions);
+    // ✅ Permissão granular: leads.create
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
+    if (!allowed) return errorResponse!;
 
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
-    const { organizationId, id: userId } = session.user as any;
-
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 403 });
-    }
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const body = await req.json();
 
