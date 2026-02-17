@@ -1,11 +1,18 @@
+// src/app/api/leads/route.ts
+// CRUD de leads com rate limiting e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
 
 // GET /api/leads — Lista leads da organização
 export async function GET(req: NextRequest) {
   try {
+    // Rate limiting: 60 req/min por IP
+    const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
+    if (blocked) return blocked;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
@@ -28,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     // Monta filtro dinâmico
     const where: any = {
-      organizationId, // Multi-tenant: SEMPRE filtra por organização
+      organizationId,
     };
 
     if (status) {
@@ -76,6 +83,10 @@ export async function GET(req: NextRequest) {
 // POST /api/leads — Cria um novo lead
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting: 60 req/min por IP
+    const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
+    if (blocked) return blocked;
+
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
