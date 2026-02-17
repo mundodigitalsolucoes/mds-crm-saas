@@ -4,7 +4,7 @@ import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff } from 'lucide-react'; // 👈 Importe os ícones de olho
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false); // 👈 Novo estado para controlar a visibilidade da senha
+  const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,22 +51,31 @@ export default function LoginPage() {
         />
 
         <label className="block text-sm mb-1">Senha</label>
-        <div className="relative mb-3"> {/* 👈 Adicione um div relativo para posicionar o ícone */}
+        <div className="relative mb-2">
           <input
-            className="w-full border rounded px-3 py-2 pr-10" // 👈 Adicione padding-right para o ícone
+            className="w-full border rounded px-3 py-2 pr-10"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            type={showPassword ? 'text' : 'password'} // 👈 Altera o tipo do input
+            type={showPassword ? 'text' : 'password'}
             required
           />
           <button
-            type="button" // 👈 Importante: o type 'button' evita que o clique dispare o submit do formulário
-            onClick={() => setShowPassword(!showPassword)} // 👈 Alterna o estado showPassword
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
             aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />} {/* 👈 Ícone dinâmico */}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
+        </div>
+
+        <div className="flex justify-end mb-3">
+          <Link
+            href="/auth/forgot-password"
+            className="text-sm text-indigo-600 hover:underline"
+          >
+            Esqueceu sua senha?
+          </Link>
         </div>
 
         {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
