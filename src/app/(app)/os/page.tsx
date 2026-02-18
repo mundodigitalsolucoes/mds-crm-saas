@@ -7,16 +7,22 @@ import { useProjectStore } from '@/store/projectStore';
 import type { OS } from '@/types/os';
 import { NewOSModal } from '@/components/NewOSModal';
 import { OSDetailsModal } from '@/components/OSDetailsModal';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 export default function OSPage() {
   const { ordens, deleteOS, fetchOS, loading, error } = useOSStore();
   const { projects, fetchProjects, getProjectById } = useProjectStore();
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOS, setSelectedOS] = useState<OS | null>(null);
   const [showNewOSModal, setShowNewOSModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('os')) return <AccessDenied module="os" />;
 
   // Carregar OS e projetos do banco ao montar
   useEffect(() => {
