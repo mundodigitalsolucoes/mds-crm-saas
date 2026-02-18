@@ -1,6 +1,6 @@
 // src/app/(app)/settings/members/page.tsx
 // Página de gerenciamento de membros e permissões da organização
-// Acesso: users.view para ver, admin/owner para editar permissões
+// Acesso: admin/owner para gerenciar permissões e convidar membros
 
 'use client';
 
@@ -20,6 +20,9 @@ import {
   ShieldCheck,
   UserCog,
   User as UserIcon,
+  UserPlus,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import {
@@ -92,12 +95,24 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal state
+  // Modal de permissões
   const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
   const [editPermissions, setEditPermissions] = useState<UserPermissions | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+
+  // Modal de convite
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user' as string,
+  });
+  const [inviting, setInviting] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // ============================================
   // FETCH USERS
@@ -128,7 +143,7 @@ export default function MembersPage() {
   }, [fetchUsers, permLoading]);
 
   // ============================================
-  // HANDLERS
+  // PERMISSION HANDLERS
   // ============================================
 
   const canEditUser = (targetUser: OrgUser): boolean => {
@@ -147,7 +162,6 @@ export default function MembersPage() {
     setEditPermissions(parsed);
     setEditingUser(user);
     setSaveMessage(null);
-    // Expandir todos os módulos por padrão
     setExpandedModules(new Set(ALL_MODULES));
   };
 
@@ -166,12 +180,10 @@ export default function MembersPage() {
       const updated = { ...prev };
       updated[module] = { ...updated[module], [action]: !updated[module][action] };
 
-      // Se desativar view, desativar todas as outras ações do módulo
       if (action === 'view' && !updated[module].view) {
         updated[module] = { view: false, create: false, edit: false, delete: false };
       }
 
-      // Se ativar create/edit/delete, ativar view automaticamente
       if (action !== 'view' && updated[module][action] && !updated[module].view) {
         updated[module] = { ...updated[module], view: true };
       }
@@ -186,12 +198,7 @@ export default function MembersPage() {
     setEditPermissions((prev) => {
       if (!prev) return prev;
       const updated = { ...prev };
-      updated[module] = {
-        view: enable,
-        create: enable,
-        edit: enable,
-        delete: enable,
-      };
+      updated[module] = { view: enable, create: enable, edit: enable, delete: enable };
       return updated;
     });
   };
@@ -225,7 +232,6 @@ export default function MembersPage() {
 
       setSaveMessage({ type: 'success', text: data.message || 'Permissões salvas!' });
 
-      // Atualizar lista local
       setUsers((prev) =>
         prev.map((u) =>
           u.id === editingUser.id
@@ -234,7 +240,6 @@ export default function MembersPage() {
         )
       );
 
-      // Fechar modal após 1.5s
       setTimeout(() => {
         handleCloseEdit();
       }, 1500);
@@ -274,6 +279,75 @@ export default function MembersPage() {
   };
 
   // ============================================
+  // INVITE HANDLERS
+  // ============================================
+
+  const handleInvite = async () => {
+    if (!inviteForm.name.trim() || !inviteForm.email.trim() || !inviteForm.password) {
+      setInviteMessage({ type: 'error', text: 'Preencha todos os campos' });
+      return;
+    }
+
+    if (inviteForm.password.length < 8) {
+      setInviteMessage({ type: 'error', text: 'Senha deve ter no mínimo 8 caracteres' });
+      return;
+    }
+
+    setInviting(true);
+    setInviteMessage(null);
+
+    try {
+      const res = await fetch('/api/users/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteForm),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Erro ao convidar membro');
+      }
+
+      setInviteMessage({ type: 'success', text: data.message });
+
+      await fetchUsers();
+
+      setTimeout(() => {
+        setShowInvite(false);
+        setInviteForm({ name: '', email: '', password: '', role: 'user' });
+        setInviteMessage(null);
+        setShowPassword(false);
+      }, 1500);
+    } catch (err) {
+      setInviteMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Erro ao convidar membro',
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const handleCloseInvite = () => {
+    setShowInvite(false);
+    setInviteForm({ name: '', email: '', password: '', role: 'user' });
+    setInviteMessage(null);
+    setShowPassword(false);
+  };
+
+  // Roles que o usuário atual pode atribuir
+  const availableRoles = (): { value: string; label: string }[] => {
+    const roles: { value: string; label: string }[] = [];
+    if (currentRole === 'owner') {
+      roles.push({ value: 'admin', label: 'Administrador' });
+    }
+    roles.push({ value: 'manager', label: 'Gerente' });
+    roles.push({ value: 'user', label: 'Usuário' });
+    return roles;
+  };
+
+  // ============================================
   // RENDER
   // ============================================
 
@@ -299,14 +373,27 @@ export default function MembersPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Users className="w-7 h-7 text-indigo-600" />
-          Membros da Equipe
-        </h1>
-        <p className="text-gray-600 mt-1">
-          Gerencie os membros e suas permissões de acesso
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Users className="w-7 h-7 text-indigo-600" />
+            Membros da Equipe
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Gerencie os membros e suas permissões de acesso
+          </p>
+        </div>
+
+        {/* Botão Convidar */}
+        {isAdmin && (
+          <button
+            onClick={() => setShowInvite(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <UserPlus className="w-4 h-4" />
+            Convidar Membro
+          </button>
+        )}
       </div>
 
       {/* Tabela de Membros */}
@@ -342,7 +429,6 @@ export default function MembersPage() {
                     key={user.id}
                     className="hover:bg-gray-50/50 transition-colors"
                   >
-                    {/* Nome + Email */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -361,7 +447,6 @@ export default function MembersPage() {
                       </div>
                     </td>
 
-                    {/* Role Badge */}
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -373,7 +458,6 @@ export default function MembersPage() {
                       </span>
                     </td>
 
-                    {/* Status das permissões */}
                     <td className="px-6 py-4">
                       {user.role === 'owner' ? (
                         <span className="text-xs text-amber-600 font-medium">
@@ -391,7 +475,6 @@ export default function MembersPage() {
                       )}
                     </td>
 
-                    {/* Ações */}
                     <td className="px-6 py-4 text-right">
                       {canEditUser(user) ? (
                         <button
@@ -422,6 +505,154 @@ export default function MembersPage() {
           </table>
         </div>
       </div>
+
+      {/* ============================================ */}
+      {/* MODAL DE CONVITE */}
+      {/* ============================================ */}
+      {showInvite && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                  <UserPlus className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Convidar Membro</h2>
+                  <p className="text-sm text-gray-500">Adicionar novo membro à equipe</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseInvite}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-4 space-y-4">
+              {/* Nome */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome completo
+                </label>
+                <input
+                  type="text"
+                  value={inviteForm.name}
+                  onChange={(e) => setInviteForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome do membro"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                />
+              </div>
+
+              {/* Senha */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Senha temporária
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={inviteForm.password}
+                    onChange={(e) => setInviteForm((prev) => ({ ...prev, password: e.target.value }))}
+                    placeholder="Mínimo 8 caracteres"
+                    className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Informe essa senha ao membro para o primeiro acesso
+                </p>
+              </div>
+
+              {/* Cargo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cargo
+                </label>
+                <select
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm((prev) => ({ ...prev, role: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors bg-white"
+                >
+                  {availableRoles().map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  {inviteForm.role === 'admin' && 'Acesso quase total — pode gerenciar membros e configurações'}
+                  {inviteForm.role === 'manager' && 'Acesso a leads, projetos, tarefas e relatórios'}
+                  {inviteForm.role === 'user' && 'Acesso básico — visualizar e criar conteúdo'}
+                </p>
+              </div>
+
+              {/* Feedback */}
+              {inviteMessage && (
+                <div
+                  className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+                    inviteMessage.type === 'success'
+                      ? 'bg-green-50 text-green-700 border border-green-200'
+                      : 'bg-red-50 text-red-700 border border-red-200'
+                  }`}
+                >
+                  {inviteMessage.type === 'success' ? (
+                    <Check className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  {inviteMessage.text}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={handleCloseInvite}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleInvite}
+                disabled={inviting}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {inviting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <UserPlus className="w-4 h-4" />
+                )}
+                {inviting ? 'Criando...' : 'Criar Membro'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============================================ */}
       {/* MODAL DE EDIÇÃO DE PERMISSÕES */}
@@ -479,7 +710,6 @@ export default function MembersPage() {
                     key={module}
                     className="border border-gray-200 rounded-lg overflow-hidden"
                   >
-                    {/* Module Header */}
                     <div
                       className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
                       onClick={() => toggleModuleExpand(module)}
@@ -510,7 +740,6 @@ export default function MembersPage() {
                         )}
                       </div>
 
-                      {/* Toggle All */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -528,7 +757,6 @@ export default function MembersPage() {
                       </button>
                     </div>
 
-                    {/* Module Actions */}
                     {isExpanded && (
                       <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {(['view', 'create', 'edit', 'delete'] as PermissionAction[]).map(
@@ -560,7 +788,6 @@ export default function MembersPage() {
 
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between gap-3">
-              {/* Feedback */}
               <div className="flex-1">
                 {saveMessage && (
                   <p
@@ -580,7 +807,6 @@ export default function MembersPage() {
                 )}
               </div>
 
-              {/* Buttons */}
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCloseEdit}
