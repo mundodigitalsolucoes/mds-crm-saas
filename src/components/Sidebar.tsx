@@ -1,8 +1,11 @@
+// src/components/Sidebar.tsx
+// Sidebar com filtragem de menus por permissão do usuário
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   LayoutDashboard,
   Users,
@@ -15,34 +18,83 @@ import {
   Menu,
   X,
   LogOut,
-  Settings,
   Plug,
-  Shield
+  Shield,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { usePermission } from '@/hooks/usePermission';
+import type { PermissionModule } from '@/types/permissions';
 
-const menuItems = [
+// ============================================
+// MENU ITEMS COM MÓDULO DE PERMISSÃO
+// ============================================
+
+interface MenuItem {
+  name: string;
+  icon: React.ComponentType<any>;
+  path: string;
+  module?: PermissionModule;
+}
+
+const menuItems: MenuItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { name: 'Leads', icon: Users, path: '/leads' },
-  { name: 'Kanban', icon: Kanban, path: '/kanban' },
-  { name: 'Projetos', icon: FolderKanban, path: '/projects' },
-  { name: 'OS', icon: FileText, path: '/os' },
-  { name: 'Tarefas', icon: CheckSquare, path: '/tasks' },
-  { name: 'Agenda', icon: Calendar, path: '/agenda' },
-  { name: 'Relatórios', icon: BarChart3, path: '/reports' },
+  { name: 'Leads', icon: Users, path: '/leads', module: 'leads' },
+  { name: 'Kanban', icon: Kanban, path: '/kanban', module: 'kanban' },
+  { name: 'Projetos', icon: FolderKanban, path: '/projects', module: 'projects' },
+  { name: 'OS', icon: FileText, path: '/os', module: 'os' },
+  { name: 'Tarefas', icon: CheckSquare, path: '/tasks', module: 'tasks' },
+  { name: 'Agenda', icon: Calendar, path: '/agenda', module: 'agenda' },
+  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports' },
 ];
 
-const settingsItems = [
-  { name: 'Integrações', icon: Plug, path: '/settings/integrations' },
-  { name: 'Membros', icon: Shield, path: '/settings/members' },
+const settingsItems: MenuItem[] = [
+  { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
+  { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
 ];
+
+// ============================================
+// COMPONENTE
+// ============================================
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const { canAccess, isAdmin, isLoading } = usePermission();
   const [isOpen, setIsOpen] = useState(false);
+
+  // Filtrar menus por permissão
+  const visibleMenu = useMemo(() => {
+    if (isLoading) return []; // Não mostrar nada enquanto carrega
+    return menuItems.filter((item) => {
+      if (!item.module) return true; // Dashboard sempre visível
+      return canAccess(item.module);
+    });
+  }, [canAccess, isLoading]);
+
+  const visibleSettings = useMemo(() => {
+    if (isLoading) return [];
+    return settingsItems.filter((item) => {
+      if (!item.module) return true;
+      // Membros: só admin/owner veem
+      if (item.module === 'users') return isAdmin;
+      return canAccess(item.module);
+    });
+  }, [canAccess, isAdmin, isLoading]);
 
   const handleLogout = () => {
     signOut({ callbackUrl: '/auth/login' });
+  };
+
+  // Dados do usuário da session
+  const userName = session?.user?.name || 'Usuário';
+  const userRole = session?.user?.role || 'user';
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  const ROLE_DISPLAY: Record<string, string> = {
+    owner: 'Proprietário',
+    admin: 'Administrador',
+    manager: 'Gerente',
+    user: 'Usuário',
   };
 
   return (
@@ -93,67 +145,75 @@ export default function Sidebar() {
 
         {/* Menu */}
         <nav className="flex-1 p-4 overflow-y-auto">
-          <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
-          <ul className="space-y-1">
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.path;
+          {visibleMenu.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
+              <ul className="space-y-1">
+                {visibleMenu.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.path;
 
-              return (
-                <li key={item.path}>
-                  <Link
-                    href={item.path}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-indigo-700 text-white font-medium'
-                        : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                    }`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        href={item.path}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-indigo-700 text-white font-medium'
+                            : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                        }`}
+                      >
+                        <Icon size={20} />
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
 
           {/* Configurações */}
-          <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
-          <ul className="space-y-1">
-            {settingsItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
+          {visibleSettings.length > 0 && (
+            <>
+              <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+              <ul className="space-y-1">
+                {visibleSettings.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
 
-              return (
-                <li key={item.path}>
-                  <Link
-                    href={item.path}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-indigo-700 text-white font-medium'
-                        : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                    }`}
-                  >
-                    <Icon size={20} />
-                    <span>{item.name}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        href={item.path}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                          isActive
+                            ? 'bg-indigo-700 text-white font-medium'
+                            : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                        }`}
+                      >
+                        <Icon size={20} />
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </nav>
 
         {/* User Profile */}
         <div className="p-4 border-t border-indigo-700">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-800">
             <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0">
-              F
+              {userInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">Fábio Alves Ramos</p>
-              <p className="text-xs text-indigo-300">Usuário</p>
+              <p className="font-medium text-sm truncate">{userName}</p>
+              <p className="text-xs text-indigo-300">{ROLE_DISPLAY[userRole] || userRole}</p>
             </div>
           </div>
 
