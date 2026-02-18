@@ -3,20 +3,21 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FolderKanban, 
-  Kanban, 
-  FileText, 
-  CheckSquare, 
-  Calendar, 
-  BarChart3, 
-  Menu, 
-  X, 
+import {
+  LayoutDashboard,
+  Users,
+  FolderKanban,
+  Kanban,
+  FileText,
+  CheckSquare,
+  Calendar,
+  BarChart3,
+  Menu,
+  X,
   LogOut,
   Settings,
-  Plug
+  Plug,
+  Shield
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -33,6 +34,7 @@ const menuItems = [
 
 const settingsItems = [
   { name: 'Integrações', icon: Plug, path: '/settings/integrations' },
+  { name: 'Membros', icon: Shield, path: '/settings/members' },
 ];
 
 export default function Sidebar() {
