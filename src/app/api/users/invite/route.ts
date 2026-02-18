@@ -1,6 +1,7 @@
 // src/app/api/users/invite/route.ts
 // API para convidar/criar membro na mesma organização
 // Acesso: owner e admin apenas (via checkAdminAccess)
+// Dispara email de boas-vindas com credenciais via Resend
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -9,6 +10,7 @@ import {
   getDefaultPermissions,
   serializePermissions,
 } from '@/lib/permissions';
+import { sendInviteEmail } from '@/lib/email';
 import bcrypt from 'bcryptjs';
 import type { UserRole } from '@/types/permissions';
 
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
     const { allowed, session, errorResponse } = await checkAdminAccess();
     if (!allowed) return errorResponse!;
 
+    const currentUserId = session!.user.id;
     const currentRole = session!.user.role;
     const organizationId = session!.user.organizationId;
 
@@ -119,7 +122,7 @@ export async function POST(request: NextRequest) {
         passwordHash: hashedPassword,
         role,
         organizationId,
-        permissions: permissionsJson, // ← Salva permissões padrão do role
+        permissions: permissionsJson,
       },
       select: {
         id: true,
@@ -131,8 +134,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 10. Buscar dados para o email (nome de quem convidou + org)
+    const [inviter, organization] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: currentUserId },
+        select: { name: true },
+      }),
+      prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { name: true },
+      }),
+    ]);
+
+    // 11. Disparar email de convite (não bloqueia resposta se falhar)
+    sendInviteEmail({
+      to: normalizedEmail,
+      userName: newUser.name,
+      password, // Senha em texto plano (antes do hash) para o email
+      role,
+      invitedBy: inviter?.name || 'Um administrador',
+      organizationName: organization?.name,
+    }).catch((err) => {
+      console.error('[API INVITE] Falha ao enviar email de convite:', err);
+    });
+
     return NextResponse.json({
-      message: `Membro ${newUser.name} criado com sucesso!`,
+      message: `Membro ${newUser.name} criado com sucesso! Email de boas-vindas enviado.`,
       user: newUser,
     });
   } catch (error) {
