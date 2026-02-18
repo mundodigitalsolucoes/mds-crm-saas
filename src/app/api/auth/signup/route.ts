@@ -1,3 +1,6 @@
+// src/app/api/auth/signup/route.ts
+// API de cadastro com registro de consentimento LGPD
+
 import { NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
@@ -15,7 +18,7 @@ function slugify(input: string) {
 
 export async function POST(request: Request) {
   try {
-    const { name, email, companyName, password } = await request.json()
+    const { name, email, companyName, password, consent } = await request.json()
 
     if (!name || !email || !companyName || !password) {
       return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
@@ -23,6 +26,13 @@ export async function POST(request: Request) {
 
     if (password.length < 8) {
       return NextResponse.json({ error: 'A senha deve ter no mínimo 8 caracteres' }, { status: 400 })
+    }
+
+    if (!consent) {
+      return NextResponse.json(
+        { error: 'É necessário aceitar a Política de Privacidade e os Termos de Uso' },
+        { status: 400 }
+      )
     }
 
     const normalizedEmail = String(email).trim().toLowerCase()
@@ -36,6 +46,10 @@ export async function POST(request: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
+
+    // LGPD: registrar IP do consentimento
+    const forwarded = request.headers.get('x-forwarded-for')
+    const consentIp = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
 
     // Gera slug único para Organization
     const baseSlug = slugify(companyName)
@@ -65,6 +79,9 @@ export async function POST(request: Request) {
           // Colocando owner como first user da org (recomendado no multi-tenant SaaS)
           role: 'owner',
           organizationId: organization.id,
+          // LGPD: registro de consentimento
+          consentAt: new Date(),
+          consentIp,
         },
       })
 

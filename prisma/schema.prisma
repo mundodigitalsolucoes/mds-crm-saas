@@ -152,6 +152,11 @@ model User {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // LGPD
+  consentAt       DateTime? @map("consent_at")
+  consentIp       String?   @map("consent_ip")
+  deletedAt       DateTime? @map("deleted_at")
+
   // Relations
   leadsAssigned         Lead[]              @relation("AssignedLeads")
   leadsCreated          Lead[]              @relation("CreatedLeads")
