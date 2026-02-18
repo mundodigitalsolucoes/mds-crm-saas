@@ -1,12 +1,12 @@
+// src/app/api/import/route.ts
+// Importação de leads via CSV/JSON com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 
 /**
  * Espera payload:
  * {
- *   "organizationId": "uuid-da-org",
  *   "leads": [
  *     {
  *       "nome" | "name": "...",
@@ -21,31 +21,17 @@ const prisma = new PrismaClient();
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { leads, organizationId } = body ?? {};
+    // ✅ Permissão granular: leads.create (importar é criar leads em massa)
+    const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
+    if (!allowed) return errorResponse!;
 
-    if (!organizationId || typeof organizationId !== 'string') {
-      return NextResponse.json(
-        { error: 'organizationId é obrigatório' },
-        { status: 400 }
-      );
-    }
+    const organizationId = session!.user.organizationId;
+
+    const body = await request.json();
+    const { leads } = body ?? {};
 
     if (!leads || !Array.isArray(leads)) {
       return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    }
-
-    // (Opcional) valida se org existe para evitar FK/erro silencioso
-    const org = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { id: true },
-    });
-
-    if (!org) {
-      return NextResponse.json(
-        { error: 'organizationId inválido (organização não encontrada)' },
-        { status: 404 }
-      );
     }
 
     let sucesso = 0;
@@ -94,7 +80,6 @@ export async function POST(request: NextRequest) {
             company,
             source,
             status,
-            // createdAt é automático no schema (@default(now()))
           },
         });
 
@@ -114,9 +99,5 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Erro na importação:', error);
     return NextResponse.json({ error: 'Erro ao importar leads' }, { status: 500 });
-  } finally {
-    // Em serverless, desconectar sempre pode ser ruim, mas no seu caso (Coolify/Node) ok.
-    // Se você tiver muitos requests concorrentes, depois a gente melhora usando singleton.
-    await prisma.$disconnect();
   }
 }

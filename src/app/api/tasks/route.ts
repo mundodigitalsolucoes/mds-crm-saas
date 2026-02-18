@@ -1,12 +1,11 @@
 // src/app/api/tasks/route.ts
+// CRUD de tasks com permissões granulares e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Helper: transforma string vazia em undefined (para campos opcionais UUID)
-// Usa preprocess para limpar ANTES da validação UUID
 const optionalUuid = z.preprocess(
   (val) => {
     if (typeof val === 'string' && val.trim() === '') return undefined;
@@ -69,12 +68,11 @@ const filtersSchema = z.object({
 // GET /api/tasks - Listar tasks com filtros e isolamento multi-tenant
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.view
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'view');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = session.user.organizationId;
+    const organizationId = session!.user.organizationId;
     const { searchParams } = new URL(request.url);
     const params = filtersSchema.parse(Object.fromEntries(searchParams));
 
@@ -244,20 +242,15 @@ export async function GET(request: NextRequest) {
 // POST /api/tasks - Criar nova task com isolamento multi-tenant
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.create
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'create');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = session.user.organizationId;
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
     const body = await request.json();
 
-    // Log para debug (remover após resolver)
-    console.log('[POST /api/tasks] Body recebido:', JSON.stringify(body));
-
     const data = createTaskSchema.parse(body);
-
-    console.log('[POST /api/tasks] Dados validados:', JSON.stringify(data));
 
     const task = await prisma.task.create({
       data: {
@@ -273,7 +266,7 @@ export async function POST(request: NextRequest) {
         projectId: data.projectId || null,
         leadId: data.leadId || null,
         assignedToId: data.assignedToId || null,
-        createdById: session.user.id,
+        createdById: userId,
         organizationId,
       },
       include: {
@@ -286,7 +279,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Criar notificação se atribuiu a alguém
-    if (data.assignedToId && data.assignedToId !== session.user.id) {
+    if (data.assignedToId && data.assignedToId !== userId) {
       await prisma.notification.create({
         data: {
           userId: data.assignedToId,
@@ -306,7 +299,7 @@ export async function POST(request: NextRequest) {
         entityId: task.id,
         action: 'created',
         description: `Tarefa "${task.title}" criada`,
-        userId: session.user.id,
+        userId,
         projectId: task.projectId,
       },
     });
@@ -332,7 +325,6 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error('[POST /api/tasks] Zod validation error:', JSON.stringify(error.errors));
       return NextResponse.json(
         { error: 'Dados inválidos', details: error.errors },
         { status: 400 }

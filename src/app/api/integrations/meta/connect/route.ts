@@ -1,19 +1,16 @@
+// src/app/api/integrations/meta/connect/route.ts
+// Inicia OAuth com Meta/Facebook - requer permissão integrations.edit
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: integrations.edit (conectar = configurar)
+    const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = (session.user as any).organizationId;
-    if (!organizationId) {
-      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 400 });
-    }
+    const organizationId = session!.user.organizationId;
 
     const appId = process.env.META_APP_ID;
     const redirectUri = process.env.META_REDIRECT_URI;
@@ -26,12 +23,12 @@ export async function GET() {
     }
 
     const nonce = randomBytes(16).toString('hex');
-    const stateObj = { organizationId, nonce, odataUserId: (session.user as any).id };
+    const stateObj = { organizationId, nonce, odataUserId: session!.user.id };
     const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
 
     const scopes = [
       'ads_read',
-      'ads_management', 
+      'ads_management',
       'business_management',
       'read_insights',
       'email',

@@ -1,16 +1,16 @@
+// src/app/api/integrations/meta/status/route.ts
+// Verifica status da conexão Meta - requer permissão integrations.view
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: integrations.view (ver status)
+    const { allowed, session, errorResponse } = await checkPermission('integrations', 'view');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = (session.user as any).organizationId;
+    const organizationId = session!.user.organizationId;
 
     const connection = await prisma.connectedAccount.findUnique({
       where: {

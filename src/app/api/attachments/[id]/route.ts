@@ -1,10 +1,20 @@
 // src/app/api/attachments/[id]/route.ts
+// Exclusão de attachment com permissão granular dinâmica por entityType
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { unlink } from 'fs/promises';
 import { join } from 'path';
+import type { PermissionModule } from '@/types/permissions';
+
+// Mapa: entityType → módulo de permissão
+const entityTypeToModule: Record<string, PermissionModule> = {
+  task: 'tasks',
+  lead: 'leads',
+  kanban_card: 'tasks',
+  goal: 'projects',
+  comment: 'tasks',
+};
 
 // DELETE /api/attachments/[id]
 export async function DELETE(
@@ -13,12 +23,8 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
 
+    // Buscar o attachment primeiro para saber o entityType
     const attachment = await prisma.attachment.findUnique({
       where: { id },
     });
@@ -27,23 +33,29 @@ export async function DELETE(
       return NextResponse.json({ error: 'Anexo não encontrado' }, { status: 404 });
     }
 
+    // ✅ Permissão granular dinâmica: entityType → módulo.delete
+    const module = entityTypeToModule[attachment.entityType] || 'tasks';
+    const { allowed, session, errorResponse } = await checkPermission(module, 'delete');
+    if (!allowed) return errorResponse!;
+
     // Verificar se pertence à mesma organização
-    if (attachment.organizationId !== session.user.organizationId) {
+    if (attachment.organizationId !== session!.user.organizationId) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     }
 
-    // Verificar permissão (quem fez upload ou admin)
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
+    // Verificar autoria — autor pode deletar, owner/admin também (via permissão delete já concedida)
+    if (attachment.uploadedById !== session!.user.id) {
+      const user = await prisma.user.findUnique({
+        where: { id: session!.user.id },
+        select: { role: true },
+      });
 
-    if (attachment.uploadedById !== session.user.id &&
-        !['owner', 'admin'].includes(user?.role || '')) {
-      return NextResponse.json(
-        { error: 'Sem permissão para deletar este anexo' },
-        { status: 403 }
-      );
+      if (!['owner', 'admin'].includes(user?.role || '')) {
+        return NextResponse.json(
+          { error: 'Sem permissão para deletar este anexo' },
+          { status: 403 }
+        );
+      }
     }
 
     // Deletar arquivo físico

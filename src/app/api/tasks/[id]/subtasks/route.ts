@@ -1,8 +1,8 @@
 // src/app/api/tasks/[id]/subtasks/route.ts
+// Listagem e criação de subtasks com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 const createSubtaskSchema = z.object({
@@ -29,13 +29,12 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.view
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'view');
+    if (!allowed) return errorResponse!;
 
     // Multi-tenant: verificar se a task pertence à organização
-    const task = await validateTaskOwnership(id, session.user.organizationId);
+    const task = await validateTaskOwnership(id, session!.user.organizationId);
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
@@ -69,13 +68,12 @@ export async function POST(
   try {
     const { id } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.edit (criar subtask = editar a task)
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'edit');
+    if (!allowed) return errorResponse!;
 
     // Multi-tenant: verificar se a task pertence à organização
-    const task = await validateTaskOwnership(id, session.user.organizationId);
+    const task = await validateTaskOwnership(id, session!.user.organizationId);
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }

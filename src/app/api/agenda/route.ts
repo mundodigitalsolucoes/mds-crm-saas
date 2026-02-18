@@ -1,8 +1,8 @@
 // src/app/api/agenda/route.ts
+// API de Agenda — Listagem e Criação com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Schema de validação para criação de evento
@@ -70,10 +70,11 @@ function parseDateSafe(dateStr: string): Date {
 // ============================================
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: agenda.view
+    const { allowed, session, errorResponse } = await checkPermission('agenda', 'view');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
 
     const { searchParams } = new URL(request.url);
 
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     // Montar filtros dinâmicos
     const where: any = {
-      organizationId: session.user.organizationId,
+      organizationId,
     };
 
     if (status) {
@@ -175,10 +176,12 @@ export async function GET(request: NextRequest) {
 // ============================================
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: agenda.create
+    const { allowed, session, errorResponse } = await checkPermission('agenda', 'create');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const body = await request.json();
     const validation = createEventSchema.safeParse(body);
@@ -203,7 +206,7 @@ export async function POST(request: NextRequest) {
     // Validar que leadId pertence à mesma organização (se fornecido)
     if (data.leadId) {
       const lead = await prisma.lead.findFirst({
-        where: { id: data.leadId, organizationId: session.user.organizationId },
+        where: { id: data.leadId, organizationId },
       });
       if (!lead) {
         return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
@@ -213,7 +216,7 @@ export async function POST(request: NextRequest) {
     // Validar que projectId pertence à mesma organização (se fornecido)
     if (data.projectId) {
       const project = await prisma.marketingProject.findFirst({
-        where: { id: data.projectId, organizationId: session.user.organizationId },
+        where: { id: data.projectId, organizationId },
       });
       if (!project) {
         return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 });
@@ -223,7 +226,7 @@ export async function POST(request: NextRequest) {
     // Validar que assignedToId pertence à mesma organização (se fornecido)
     if (data.assignedToId) {
       const user = await prisma.user.findFirst({
-        where: { id: data.assignedToId, organizationId: session.user.organizationId },
+        where: { id: data.assignedToId, organizationId },
       });
       if (!user) {
         return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
@@ -232,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     const event = await prisma.agendaEvent.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId,
         title: data.title,
         description: data.description,
         date: parseDateSafe(data.date), // ✅ Usa meio-dia UTC para evitar shift de timezone
@@ -249,7 +252,7 @@ export async function POST(request: NextRequest) {
         leadId: data.leadId,
         projectId: data.projectId,
         assignedToId: data.assignedToId,
-        createdById: session.user.id,
+        createdById: userId,
       },
       include: eventIncludes,
     });

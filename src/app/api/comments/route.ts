@@ -1,9 +1,18 @@
 // src/app/api/comments/route.ts
+// API de Comments — Listagem e Criação com permissões granulares dinâmicas por entityType
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
+import type { PermissionModule } from '@/types/permissions';
+
+// Mapa: entityType → módulo de permissão
+const entityTypeToModule: Record<string, PermissionModule> = {
+  task: 'tasks',
+  lead: 'leads',
+  kanban_card: 'tasks', // kanban_card vive dentro de tasks
+  goal: 'projects',     // goals vinculados a projetos
+};
 
 const createCommentSchema = z.object({
   content: z.string().min(1, 'Conteúdo é obrigatório'),
@@ -15,11 +24,6 @@ const createCommentSchema = z.object({
 // GET /api/comments?entityType=task&entityId=xxx
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
     const entityId = searchParams.get('entityId');
@@ -31,10 +35,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // ✅ Permissão granular dinâmica: entityType → módulo.view
+    const module = entityTypeToModule[entityType];
+    if (!module) {
+      return NextResponse.json({ error: 'entityType inválido' }, { status: 400 });
+    }
+
+    const { allowed, session, errorResponse } = await checkPermission(module, 'view');
+    if (!allowed) return errorResponse!;
+
     // Buscar comentários principais (sem parentId)
     const comments = await prisma.comment.findMany({
       where: {
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
         entityType,
         entityId,
         parentId: null,
@@ -49,15 +62,17 @@ export async function GET(request: NextRequest) {
 
     // Buscar replies
     const commentIds = comments.map(c => c.id);
-    const replies = await prisma.comment.findMany({
-      where: { parentId: { in: commentIds } },
-      include: {
-        author: {
-          select: { id: true, name: true, avatarUrl: true },
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const replies = commentIds.length > 0
+      ? await prisma.comment.findMany({
+          where: { parentId: { in: commentIds } },
+          include: {
+            author: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        })
+      : [];
 
     // Agrupar replies
     const repliesMap = new Map<string, typeof replies>();
@@ -92,22 +107,27 @@ export async function GET(request: NextRequest) {
 // POST /api/comments
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     const body = await request.json();
     const data = createCommentSchema.parse(body);
 
+    // ✅ Permissão granular dinâmica: entityType → módulo.edit
+    // Criar comment requer permissão de edição no módulo-pai
+    const module = entityTypeToModule[data.entityType];
+    if (!module) {
+      return NextResponse.json({ error: 'entityType inválido' }, { status: 400 });
+    }
+
+    const { allowed, session, errorResponse } = await checkPermission(module, 'edit');
+    if (!allowed) return errorResponse!;
+
     const comment = await prisma.comment.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
         entityType: data.entityType,
         entityId: data.entityId,
         content: data.content,
         parentId: data.parentId,
-        authorId: session.user.id,
+        authorId: session!.user.id,
       },
       include: {
         author: {
@@ -117,7 +137,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Notificar mencionados ou autor da entidade (futuro: implementar @mentions)
-    
+
     return NextResponse.json({
       ...comment,
       createdAt: comment.createdAt.toISOString(),
