@@ -20,6 +20,7 @@ import {
   LogOut,
   Plug,
   Shield,
+  UserCog,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermission } from '@/hooks/usePermission';
@@ -50,6 +51,7 @@ const menuItems: MenuItem[] = [
 const settingsItems: MenuItem[] = [
   { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
+  { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
 ];
 
 // ============================================
@@ -74,7 +76,7 @@ export default function Sidebar() {
   const visibleSettings = useMemo(() => {
     if (isLoading) return [];
     return settingsItems.filter((item) => {
-      if (!item.module) return true;
+      if (!item.module) return true; // Minha Conta: todos veem
       // Membros: só admin/owner veem
       if (item.module === 'users') return isAdmin;
       return canAccess(item.module);

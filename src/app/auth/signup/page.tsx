@@ -1,3 +1,6 @@
+// src/app/auth/signup/page.tsx
+// Página de cadastro com consentimento LGPD
+
 'use client'
 
 import { useState } from 'react'
@@ -12,7 +15,8 @@ export default function SignupPage() {
         email: '',
         companyName: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        consent: false,
     })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
@@ -31,6 +35,11 @@ export default function SignupPage() {
             return
         }
 
+        if (!formData.consent) {
+            setError('Você precisa aceitar a Política de Privacidade e os Termos de Uso para criar uma conta')
+            return
+        }
+
         setLoading(true)
 
         try {
@@ -41,7 +50,8 @@ export default function SignupPage() {
                     name: formData.name,
                     email: formData.email,
                     companyName: formData.companyName,
-                    password: formData.password
+                    password: formData.password,
+                    consent: formData.consent,
                 })
             })
 
@@ -169,6 +179,28 @@ export default function SignupPage() {
                             </div>
                         </div>
 
+                        {/* LGPD — Consentimento explícito */}
+                        <div className="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                id="consent"
+                                checked={formData.consent}
+                                onChange={(e) => setFormData({ ...formData, consent: e.target.checked })}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <label htmlFor="consent" className="text-sm text-gray-600">
+                                Li e aceito a{' '}
+                                <Link href="/privacy" target="_blank" className="text-indigo-600 hover:underline font-medium">
+                                    Política de Privacidade
+                                </Link>{' '}
+                                e os{' '}
+                                <Link href="/terms" target="_blank" className="text-indigo-600 hover:underline font-medium">
+                                    Termos de Uso
+                                </Link>.
+                                Autorizo o tratamento dos meus dados pessoais conforme descrito.
+                            </label>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={loading}
@@ -188,13 +220,9 @@ export default function SignupPage() {
                 </div>
 
                 <p className="text-center text-xs text-gray-500 mt-6">
-                    Ao criar uma conta, você concorda com nossos{' '}
-                    <Link href="#" className="text-md-primary hover:underline">
-                        Termos de Uso
-                    </Link>{' '}
-                    e{' '}
-                    <Link href="#" className="text-md-primary hover:underline">
-                        Política de Privacidade
+                    Protegemos seus dados conforme a{' '}
+                    <Link href="/privacy" className="text-indigo-600 hover:underline">
+                        LGPD (Lei nº 13.709/2018)
                     </Link>
                 </p>
             </div>
