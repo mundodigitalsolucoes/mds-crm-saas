@@ -20,10 +20,12 @@ import {
   XCircle,
   Loader2,
   LucideIcon,
+  ShieldX,
 } from 'lucide-react';
 import { format, parseISO, isAfter, isBefore, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useLeadsStore } from '@/store/leadsStore';
+import { usePermission } from '@/hooks/usePermission';
 
 type TabKey = 'sales' | 'marketing';
 type PeriodPreset = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
@@ -132,6 +134,9 @@ function useReportsConfig(userKey = 'default'): [ReportsConfig, (config: Reports
 export default function ReportsPage() {
   const [tab, setTab] = useState<TabKey>('sales');
   const [showMetricsConfig, setShowMetricsConfig] = useState(false);
+
+  // Guard de permissão
+  const { canAccess, isLoading: permLoading } = usePermission();
 
   const [reportsConfig, setReportsConfig] = useReportsConfig('default');
 
@@ -315,6 +320,35 @@ export default function ReportsPage() {
       return `${period.from} → ${period.to}`;
     }
   }, [period.from, period.to]);
+
+  // ======= GUARD DE PERMISSÃO =======
+  if (permLoading) {
+    return (
+      <div className="p-8">
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="animate-spin text-indigo-600 mr-3" size={28} />
+          <span className="text-gray-600 text-lg">Verificando permissões...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!canAccess('reports')) {
+    return (
+      <div className="p-8">
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+            <ShieldX className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Acesso negado</h2>
+          <p className="text-gray-500 text-center max-w-md">
+            Você não tem permissão para acessar os relatórios.
+            Entre em contato com o administrador da sua organização.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // ======= LOADING =======
   if (isLoading && leads.length === 0) {

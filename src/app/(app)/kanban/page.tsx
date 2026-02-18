@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import { Edit, X, Plus, Settings, Trash2, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { useLeadsStore, type Lead, type Stage } from '@/store/leadsStore';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 // ==================== HELPERS ====================
 
@@ -156,6 +159,11 @@ function LeadEditModal({
     value: '',
     notes: '',
   });
+  
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
 
   useEffect(() => {
     if (!isOpen || !lead) return;

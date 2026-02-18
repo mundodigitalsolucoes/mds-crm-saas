@@ -22,6 +22,9 @@ import { TaskDetailModal, TaskFormModal } from '@/components/tasks';
 import type { Task, TaskStatus, TaskPriority } from '@/types/task';
 import { format, isToday, isPast, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 type ViewMode = 'list' | 'board';
 type FilterTab = 'all' | 'today' | 'overdue' | 'done';
@@ -56,6 +59,10 @@ export default function TasksPage() {
   // Filtros locais
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
 
   // Fetch inicial
   useEffect(() => {

@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Calendar, Clock, Users, DollarSign, Loader2, Edit, Trash2 } from 'lucide-react';
 import { useProjectStore, ProjectStatus, ProjectPriority } from '@/store/projectStore';
 import NewProjectModal from '@/components/NewProjectModal';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 export default function ProjectsPage() {
   const {
@@ -20,6 +23,10 @@ export default function ProjectsPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('projects')) return <AccessDenied module="projects" />;
 
   // Buscar projetos ao montar e quando busca muda
   useEffect(() => {

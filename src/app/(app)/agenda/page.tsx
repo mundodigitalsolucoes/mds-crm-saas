@@ -8,6 +8,9 @@ import { useAgendaStore } from '@/store/agendaStore';
 import type { AgendaEvent } from '@/types/agenda';
 import { AgendaEventModal } from '@/components/AgendaEventModal';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 // Normaliza a data do evento para YYYY-MM-DD (independente se vem ISO ou já formatado)
 function normalizeDate(date: string): string {
@@ -23,6 +26,10 @@ export default function AgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<AgendaEvent | null>(null);
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('agenda')) return <AccessDenied module="agenda" />;
 
   // ✅ Buscar eventos ao montar a página e quando o mês muda
   useEffect(() => {

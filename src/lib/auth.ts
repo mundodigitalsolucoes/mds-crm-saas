@@ -39,7 +39,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           organizationId: user.organizationId,
           role: user.role,
-          permissions: user.permissions, // ✅ NOVO: enviar permissions para o JWT
+          permissions: user.permissions,
         };
       },
     }),
@@ -48,24 +48,22 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session: updateData }) {
+      // Login inicial: gravar dados do user no token
       if (user) {
         token.id = user.id;
         token.organizationId = (user as any).organizationId;
         token.role = (user as any).role;
-        token.permissions = (user as any).permissions; // ✅ NOVO
+        token.permissions = (user as any).permissions;
       }
 
-      // ✅ NOVO: Recarregar permissões quando session é atualizada (update trigger)
-      // Isso permite que mudanças de permissão reflitam sem precisar relogar
-      if (trigger === 'update' && token.id) {
-        const freshUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { role: true, permissions: true },
-        });
-        if (freshUser) {
-          token.role = freshUser.role;
-          token.permissions = freshUser.permissions;
+      // Client chamou update() com dados frescos do /api/auth/me
+      if (trigger === 'update' && updateData) {
+        if ('permissions' in updateData) {
+          token.permissions = updateData.permissions;
+        }
+        if ('role' in updateData) {
+          token.role = updateData.role;
         }
       }
 
@@ -76,7 +74,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         (session.user as any).organizationId = token.organizationId;
         (session.user as any).role = token.role;
-        (session.user as any).permissions = token.permissions; // ✅ NOVO
+        (session.user as any).permissions = token.permissions;
       }
       return session;
     },

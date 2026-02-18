@@ -5,6 +5,9 @@ import { Search, Plus, Upload, Edit, Trash2, Loader2, RefreshCw } from 'lucide-r
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
 import { useLeadsStore, type Lead } from '@/store/leadsStore';
+import { usePermission } from '@/hooks/usePermission';
+import AccessDenied from '@/components/AccessDenied';
+import PermissionLoading from '@/components/PermissionLoading';
 
 export default function LeadsPage() {
   const {
@@ -24,6 +27,10 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { canAccess, isLoading: permLoading } = usePermission();
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('leads')) return <AccessDenied module="leads" />;
 
   // Busca leads ao montar e quando search/page muda
   useEffect(() => {
