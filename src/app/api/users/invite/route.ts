@@ -1,12 +1,16 @@
 // src/app/api/users/invite/route.ts
 // API para convidar/criar membro na mesma organização
-// Acesso: owner e admin apenas
+// Acesso: owner e admin apenas (via checkAdminAccess)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkAdminAccess } from '@/lib/checkPermission';
+import {
+  getDefaultPermissions,
+  serializePermissions,
+} from '@/lib/permissions';
 import bcrypt from 'bcryptjs';
+import type { UserRole } from '@/types/permissions';
 
 const ALLOWED_ROLES = ['admin', 'manager', 'user'] as const;
 type InviteRole = (typeof ALLOWED_ROLES)[number];
@@ -20,26 +24,18 @@ const ROLE_HIERARCHY: Record<string, number> = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // 1. Verificar se é admin/owner via engine de permissões
+    const { allowed, session, errorResponse } = await checkAdminAccess();
+    if (!allowed) return errorResponse!;
 
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const currentRole = session!.user.role;
+    const organizationId = session!.user.organizationId;
 
-    const currentRole = session.user.role;
-
-    // Apenas owner e admin podem convidar
-    if (!['owner', 'admin'].includes(currentRole)) {
-      return NextResponse.json(
-        { error: 'Sem permissão para convidar membros' },
-        { status: 403 }
-      );
-    }
-
+    // 2. Parsear body
     const body = await request.json();
     const { name, email, password, role } = body;
 
-    // Validações
+    // 3. Validações
     if (!name || !email || !password || !role) {
       return NextResponse.json(
         { error: 'Todos os campos são obrigatórios (nome, email, senha, cargo)' },
@@ -47,7 +43,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (password.length < 8) {
+    if (typeof name !== 'string' || name.trim().length < 2) {
+      return NextResponse.json(
+        { error: 'Nome deve ter no mínimo 2 caracteres' },
+        { status: 400 }
+      );
+    }
+
+    if (typeof password !== 'string' || password.length < 8) {
       return NextResponse.json(
         { error: 'A senha deve ter no mínimo 8 caracteres' },
         { status: 400 }
@@ -61,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Admin não pode criar outro admin (apenas owner pode)
+    // 4. Admin não pode criar outro admin (apenas owner pode)
     if (currentRole === 'admin' && role === 'admin') {
       return NextResponse.json(
         { error: 'Apenas o proprietário pode criar administradores' },
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar hierarquia: não pode criar role >= ao próprio
+    // 5. Verificar hierarquia: não pode criar role >= ao próprio
     const currentPower = ROLE_HIERARCHY[currentRole] || 0;
     const targetPower = ROLE_HIERARCHY[role] || 0;
     if (targetPower >= currentPower && currentRole !== 'owner') {
@@ -81,7 +84,16 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = String(email).trim().toLowerCase();
 
-    // Verificar se email já existe
+    // 6. Validação básica de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json(
+        { error: 'Email inválido' },
+        { status: 400 }
+      );
+    }
+
+    // 7. Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -93,9 +105,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar limites da organização (se necessário no futuro)
-    // const orgUsers = await prisma.user.count({ where: { organizationId: session.user.organizationId } });
+    // 8. Gerar permissões padrão do role
+    const defaultPermissions = getDefaultPermissions(role as UserRole);
+    const permissionsJson = serializePermissions(defaultPermissions);
 
+    // 9. Hash da senha e criar usuário
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await prisma.user.create({
@@ -104,13 +118,15 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         passwordHash: hashedPassword,
         role,
-        organizationId: session.user.organizationId,
+        organizationId,
+        permissions: permissionsJson, // ← Salva permissões padrão do role
       },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        permissions: true,
         createdAt: true,
       },
     });
@@ -120,7 +136,7 @@ export async function POST(request: NextRequest) {
       user: newUser,
     });
   } catch (error) {
-    console.error('Erro ao convidar membro:', error);
+    console.error('[API INVITE] Erro ao convidar membro:', error);
     return NextResponse.json(
       { error: 'Erro interno ao criar membro' },
       { status: 500 }
