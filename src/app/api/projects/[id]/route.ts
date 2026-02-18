@@ -1,7 +1,8 @@
+// src/app/api/projects/[id]/route.ts
+// Detalhe, atualização e exclusão de projeto com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Schema de validação para atualizar projeto
@@ -24,17 +25,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: projects.view
+    const { allowed, session, errorResponse } = await checkPermission('projects', 'view');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
     const project = await prisma.marketingProject.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
       include: {
         owner: {
@@ -67,10 +67,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: projects.edit
+    const { allowed, session, errorResponse } = await checkPermission('projects', 'edit');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
     const body = await request.json();
@@ -87,7 +86,7 @@ export async function PUT(
     const existing = await prisma.marketingProject.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
     });
 
@@ -137,10 +136,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: projects.delete
+    const { allowed, session, errorResponse } = await checkPermission('projects', 'delete');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
@@ -148,7 +146,7 @@ export async function DELETE(
     const existing = await prisma.marketingProject.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
     });
 

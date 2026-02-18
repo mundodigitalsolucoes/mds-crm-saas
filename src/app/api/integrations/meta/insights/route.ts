@@ -1,17 +1,17 @@
+// src/app/api/integrations/meta/insights/route.ts
+// Busca métricas/insights do Meta Ads - requer permissão integrations.view
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { prisma } from '@/lib/prisma';
 import { decryptToken } from '@/lib/integrations/crypto';
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: integrations.view (ver métricas)
+    const { allowed, session, errorResponse } = await checkPermission('integrations', 'view');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = (session.user as any).organizationId;
+    const organizationId = session!.user.organizationId;
 
     const connection = await prisma.connectedAccount.findUnique({
       where: {
@@ -27,10 +27,10 @@ export async function GET(req: Request) {
     }
 
     if (connection.expiresAt && new Date() > connection.expiresAt) {
-      return NextResponse.json({ 
-        connected: true, 
+      return NextResponse.json({
+        connected: true,
         expired: true,
-        error: 'Token expirado, reconecte' 
+        error: 'Token expirado, reconecte'
       }, { status: 200 });
     }
 
@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     // Buscar parâmetros de período
     const url = new URL(req.url);
     const datePreset = url.searchParams.get('date_preset') || 'last_30d';
-    
+
     // Se for período customizado
     const timeRangeStart = url.searchParams.get('start');
     const timeRangeEnd = url.searchParams.get('end');
@@ -86,10 +86,10 @@ export async function GET(req: Request) {
 
     const insights = insightsData.data?.[0] || {};
     const actions = insights.actions || [];
-    
+
     // Extrair leads e mensagens
     const leads = actions.find((a: any) => a.action_type === 'lead')?.value || 0;
-    const messages = actions.find((a: any) => 
+    const messages = actions.find((a: any) =>
       a.action_type === 'onsite_conversion.messaging_conversation_started_7d' ||
       a.action_type === 'onsite_conversion.messaging_first_reply'
     )?.value || 0;

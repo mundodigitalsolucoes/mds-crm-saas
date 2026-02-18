@@ -1,4 +1,5 @@
 // src/app/api/notifications/read/route.ts
+// Marcar notificações como lidas — usa session sem permissão de módulo (recurso pessoal do usuário)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';

@@ -1,7 +1,8 @@
+// src/app/api/projects/route.ts
+// CRUD de projetos com permissões granulares e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Schema de validação para criar projeto
@@ -21,10 +22,11 @@ const createProjectSchema = z.object({
 // GET /api/projects — Listar projetos com busca e paginação
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: projects.view
+    const { allowed, session, errorResponse } = await checkPermission('projects', 'view');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
@@ -35,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     // Filtro base: isolamento multi-tenant
     const where: any = {
-      organizationId: session.user.organizationId,
+      organizationId,
     };
 
     // Filtro por busca (título, cliente, descrição)
@@ -89,10 +91,12 @@ export async function GET(request: NextRequest) {
 // POST /api/projects — Criar novo projeto
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: projects.create
+    const { allowed, session, errorResponse } = await checkPermission('projects', 'create');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const body = await request.json();
     const parsed = createProjectSchema.safeParse(body);
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     const project = await prisma.marketingProject.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId,
         title: data.title,
         description: data.description || null,
         client: data.client || null,
@@ -119,7 +123,7 @@ export async function POST(request: NextRequest) {
         progress: data.progress,
         startDate: data.startDate ? new Date(data.startDate) : null,
         endDate: data.endDate ? new Date(data.endDate) : null,
-        ownerId: session.user.id,
+        ownerId: userId,
       },
       include: {
         owner: {

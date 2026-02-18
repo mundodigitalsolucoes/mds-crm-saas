@@ -1,8 +1,8 @@
 // src/app/api/tasks/[id]/route.ts
+// Detalhe, atualização e exclusão de task com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Helper: transforma string vazia em null/undefined para campos UUID opcionais
@@ -63,12 +63,11 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.view
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'view');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = session.user.organizationId;
+    const organizationId = session!.user.organizationId;
 
     const task = await prisma.task.findFirst({
       where: { id, organizationId },
@@ -177,12 +176,12 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.edit
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'edit');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = session.user.organizationId;
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
     const body = await request.json();
     const data = updateTaskSchema.parse(body);
 
@@ -240,7 +239,7 @@ export async function PUT(
     // Notificação se atribuiu a alguém novo
     if (data.assignedToId &&
         data.assignedToId !== currentTask.assignedToId &&
-        data.assignedToId !== session.user.id) {
+        data.assignedToId !== userId) {
       await prisma.notification.create({
         data: {
           userId: data.assignedToId,
@@ -257,7 +256,7 @@ export async function PUT(
     if (data.status === 'done' &&
         currentTask.status !== 'done' &&
         currentTask.createdById &&
-        currentTask.createdById !== session.user.id) {
+        currentTask.createdById !== userId) {
       await prisma.notification.create({
         data: {
           userId: currentTask.createdById,
@@ -279,7 +278,7 @@ export async function PUT(
         description: data.status === 'done'
           ? `Tarefa "${task.title}" concluída`
           : `Tarefa "${task.title}" atualizada`,
-        userId: session.user.id,
+        userId,
         projectId: task.projectId,
       },
     });
@@ -331,12 +330,12 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.delete
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'delete');
+    if (!allowed) return errorResponse!;
 
-    const organizationId = session.user.organizationId;
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const task = await prisma.task.findFirst({
       where: { id, organizationId },
@@ -370,7 +369,7 @@ export async function DELETE(
         entityId: id,
         action: 'deleted',
         description: `Tarefa "${task.title}" excluída`,
-        userId: session.user.id,
+        userId,
         projectId: task.projectId,
       },
     });

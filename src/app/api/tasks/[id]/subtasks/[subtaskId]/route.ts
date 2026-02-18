@@ -1,8 +1,8 @@
 // src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts
+// Atualização e exclusão de subtask com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 const updateSubtaskSchema = z.object({
@@ -30,13 +30,12 @@ export async function PUT(
   try {
     const { id, subtaskId } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.edit
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'edit');
+    if (!allowed) return errorResponse!;
 
     // Multi-tenant: verificar se a task pai pertence à organização
-    const task = await validateTaskOwnership(id, session.user.organizationId);
+    const task = await validateTaskOwnership(id, session!.user.organizationId);
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
@@ -101,13 +100,12 @@ export async function DELETE(
   try {
     const { id, subtaskId } = await params;
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: tasks.delete
+    const { allowed, session, errorResponse } = await checkPermission('tasks', 'delete');
+    if (!allowed) return errorResponse!;
 
     // Multi-tenant: verificar se a task pai pertence à organização
-    const task = await validateTaskOwnership(id, session.user.organizationId);
+    const task = await validateTaskOwnership(id, session!.user.organizationId);
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }

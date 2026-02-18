@@ -1,9 +1,8 @@
 // src/app/api/os/route.ts
-// API de Ordens de Serviço — Listagem e Criação
+// API de Ordens de Serviço — Listagem e Criação com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Schema de validação para criar OS
@@ -51,10 +50,11 @@ async function generateOSCode(organizationId: string): Promise<string> {
 // GET /api/os — Listar ordens de serviço
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: os.view
+    const { allowed, session, errorResponse } = await checkPermission('os', 'view');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
 
     // Filtros com isolamento multi-tenant
     const where: any = {
-      organizationId: session.user.organizationId,
+      organizationId,
     };
 
     // Busca por título, código ou descrição
@@ -119,10 +119,12 @@ export async function GET(request: NextRequest) {
 // POST /api/os — Criar nova OS
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: os.create
+    const { allowed, session, errorResponse } = await checkPermission('os', 'create');
+    if (!allowed) return errorResponse!;
+
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const body = await request.json();
     const parsed = createOSSchema.safeParse(body);
@@ -137,11 +139,11 @@ export async function POST(request: NextRequest) {
     const data = parsed.data;
 
     // Gerar código automático
-    const code = await generateOSCode(session.user.organizationId);
+    const code = await generateOSCode(organizationId);
 
     const serviceOrder = await prisma.serviceOrder.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId,
         code,
         title: data.title,
         description: data.description || null,
@@ -153,7 +155,7 @@ export async function POST(request: NextRequest) {
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         projectId: data.projectId || null,
         assignedToId: data.assignedToId || null,
-        createdById: session.user.id,
+        createdById: userId,
         pilares: typeof data.pilares === 'string' ? data.pilares : JSON.stringify(data.pilares),
         notes: data.notes || null,
       },

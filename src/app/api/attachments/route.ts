@@ -1,20 +1,25 @@
 // src/app/api/attachments/route.ts
+// API de Attachments — Listagem e Upload com permissões granulares dinâmicas por entityType
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkPermission } from '@/lib/checkPermission';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import type { PermissionModule } from '@/types/permissions';
+
+// Mapa: entityType → módulo de permissão
+const entityTypeToModule: Record<string, PermissionModule> = {
+  task: 'tasks',
+  lead: 'leads',
+  kanban_card: 'tasks',
+  goal: 'projects',
+  comment: 'tasks', // attachments em comments herdam permissão de tasks
+};
 
 // GET /api/attachments?entityType=task&entityId=xxx
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
     const entityId = searchParams.get('entityId');
@@ -26,9 +31,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // ✅ Permissão granular dinâmica: entityType → módulo.view
+    const module = entityTypeToModule[entityType];
+    if (!module) {
+      return NextResponse.json({ error: 'entityType inválido' }, { status: 400 });
+    }
+
+    const { allowed, session, errorResponse } = await checkPermission(module, 'view');
+    if (!allowed) return errorResponse!;
+
     const attachments = await prisma.attachment.findMany({
       where: {
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
         entityType,
         entityId,
       },
@@ -58,11 +72,6 @@ export async function GET(request: NextRequest) {
 // POST /api/attachments (multipart/form-data)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || !session.user.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
-
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const entityType = formData.get('entityType') as string;
@@ -84,6 +93,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ Permissão granular dinâmica: entityType → módulo.edit
+    // Upload requer permissão de edição no módulo-pai
+    const module = entityTypeToModule[entityType];
+    if (!module) {
+      return NextResponse.json({ error: 'entityType inválido' }, { status: 400 });
+    }
+
+    const { allowed, session, errorResponse } = await checkPermission(module, 'edit');
+    if (!allowed) return errorResponse!;
+
     // Validar tamanho (max 10MB)
     const MAX_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
@@ -98,7 +117,7 @@ export async function POST(request: NextRequest) {
     const filename = `${randomUUID()}.${ext}`;
 
     // Criar diretório de uploads se não existir
-    const uploadDir = join(process.cwd(), 'public', 'uploads', session.user.organizationId);
+    const uploadDir = join(process.cwd(), 'public', 'uploads', session!.user.organizationId);
     await mkdir(uploadDir, { recursive: true });
 
     // Salvar arquivo
@@ -108,12 +127,12 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     // URL pública
-    const url = `/uploads/${session.user.organizationId}/${filename}`;
+    const url = `/uploads/${session!.user.organizationId}/${filename}`;
 
     // Criar registro no banco
     const attachment = await prisma.attachment.create({
       data: {
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
         entityType,
         entityId,
         filename,
@@ -121,7 +140,7 @@ export async function POST(request: NextRequest) {
         mimeType: file.type || 'application/octet-stream',
         size: file.size,
         url,
-        uploadedById: session.user.id,
+        uploadedById: session!.user.id,
       },
       include: {
         uploadedBy: {

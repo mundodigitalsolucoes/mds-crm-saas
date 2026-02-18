@@ -1,8 +1,8 @@
 // src/app/api/agenda/[id]/route.ts
+// Detalhe, atualização e exclusão de evento com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkPermission } from '@/lib/checkPermission';
 import { z } from 'zod';
 
 // Schema de validação para atualização
@@ -48,17 +48,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: agenda.view
+    const { allowed, session, errorResponse } = await checkPermission('agenda', 'view');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
     const event = await prisma.agendaEvent.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
       include: eventIncludes,
     });
@@ -82,18 +81,18 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: agenda.edit
+    const { allowed, session, errorResponse } = await checkPermission('agenda', 'edit');
+    if (!allowed) return errorResponse!;
 
+    const organizationId = session!.user.organizationId;
     const { id } = await params;
 
     // Verificar se o evento existe e pertence à organização
     const existing = await prisma.agendaEvent.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId,
       },
     });
 
@@ -126,7 +125,7 @@ export async function PUT(
     // Validar leadId se fornecido
     if (data.leadId) {
       const lead = await prisma.lead.findFirst({
-        where: { id: data.leadId, organizationId: session.user.organizationId },
+        where: { id: data.leadId, organizationId },
       });
       if (!lead) {
         return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
@@ -136,7 +135,7 @@ export async function PUT(
     // Validar projectId se fornecido
     if (data.projectId) {
       const project = await prisma.marketingProject.findFirst({
-        where: { id: data.projectId, organizationId: session.user.organizationId },
+        where: { id: data.projectId, organizationId },
       });
       if (!project) {
         return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 });
@@ -146,7 +145,7 @@ export async function PUT(
     // Validar assignedToId se fornecido
     if (data.assignedToId) {
       const user = await prisma.user.findFirst({
-        where: { id: data.assignedToId, organizationId: session.user.organizationId },
+        where: { id: data.assignedToId, organizationId },
       });
       if (!user) {
         return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
@@ -180,10 +179,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    // ✅ Permissão granular: agenda.delete
+    const { allowed, session, errorResponse } = await checkPermission('agenda', 'delete');
+    if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
@@ -191,7 +189,7 @@ export async function DELETE(
     const existing = await prisma.agendaEvent.findFirst({
       where: {
         id,
-        organizationId: session.user.organizationId,
+        organizationId: session!.user.organizationId,
       },
     });
 
