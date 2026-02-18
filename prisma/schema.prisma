@@ -142,7 +142,7 @@ model User {
   role            String    @default("user") // owner, admin, manager, user
   
   // Permissões específicas (para agentes)
-  permissions     String    @default("[]") // JSON: ["sales", "marketing", "reports"]
+  permissions     String    @default("{}") // JSON: ["sales", "marketing", "reports"]
 
   // Settings
   emailVerified   DateTime? @map("email_verified")

@@ -1,5 +1,6 @@
 // src/components/Sidebar.tsx
 // Sidebar com filtragem de menus por permissão do usuário
+// Skeleton loading enquanto carrega permissões (evita flash visual)
 
 'use client';
 
@@ -55,7 +56,40 @@ const settingsItems: MenuItem[] = [
 ];
 
 // ============================================
-// COMPONENTE
+// SKELETON COMPONENT
+// ============================================
+
+function SidebarSkeleton() {
+  return (
+    <div className="animate-pulse">
+      <p className="text-xs font-semibold text-indigo-300/50 mb-3 px-3">MENU PRINCIPAL</p>
+      <ul className="space-y-1">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <li key={i}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <div className="w-5 h-5 bg-indigo-700/50 rounded" />
+              <div className="h-4 bg-indigo-700/50 rounded flex-1" style={{ maxWidth: `${60 + i * 10}px` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs font-semibold text-indigo-300/50 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+      <ul className="space-y-1">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <li key={i}>
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <div className="w-5 h-5 bg-indigo-700/50 rounded" />
+              <div className="h-4 bg-indigo-700/50 rounded flex-1" style={{ maxWidth: `${70 + i * 15}px` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE PRINCIPAL
 // ============================================
 
 export default function Sidebar() {
@@ -66,7 +100,7 @@ export default function Sidebar() {
 
   // Filtrar menus por permissão
   const visibleMenu = useMemo(() => {
-    if (isLoading) return []; // Não mostrar nada enquanto carrega
+    if (isLoading) return [];
     return menuItems.filter((item) => {
       if (!item.module) return true; // Dashboard sempre visível
       return canAccess(item.module);
@@ -147,62 +181,68 @@ export default function Sidebar() {
 
         {/* Menu */}
         <nav className="flex-1 p-4 overflow-y-auto">
-          {visibleMenu.length > 0 && (
+          {isLoading ? (
+            <SidebarSkeleton />
+          ) : (
             <>
-              <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
-              <ul className="space-y-1">
-                {visibleMenu.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.path;
+              {visibleMenu.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
+                  <ul className="space-y-1">
+                    {visibleMenu.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname === item.path;
 
-                  return (
-                    <li key={item.path}>
-                      <Link
-                        href={item.path}
-                        onClick={() => setIsOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-indigo-700 text-white font-medium'
-                            : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={20} />
-                        <span>{item.name}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
+                      return (
+                        <li key={item.path}>
+                          <Link
+                            href={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                              isActive
+                                ? 'bg-indigo-700 text-white font-medium'
+                                : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                            }`}
+                          >
+                            <Icon size={20} />
+                            <span>{item.name}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
 
-          {/* Configurações */}
-          {visibleSettings.length > 0 && (
-            <>
-              <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
-              <ul className="space-y-1">
-                {visibleSettings.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
+              {/* Configurações */}
+              {visibleSettings.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+                  <ul className="space-y-1">
+                    {visibleSettings.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
 
-                  return (
-                    <li key={item.path}>
-                      <Link
-                        href={item.path}
-                        onClick={() => setIsOpen(false)}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                          isActive
-                            ? 'bg-indigo-700 text-white font-medium'
-                            : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                        }`}
-                      >
-                        <Icon size={20} />
-                        <span>{item.name}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                      return (
+                        <li key={item.path}>
+                          <Link
+                            href={item.path}
+                            onClick={() => setIsOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                              isActive
+                                ? 'bg-indigo-700 text-white font-medium'
+                                : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
+                            }`}
+                          >
+                            <Icon size={20} />
+                            <span>{item.name}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
             </>
           )}
         </nav>
