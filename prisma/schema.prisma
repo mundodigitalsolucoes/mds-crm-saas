@@ -77,11 +77,12 @@ model Organization {
   settings        String    @default("{}")
   features        String    @default("[]") // JSON: features habilitadas para esta org
 
-  // Subscription info
+    // Subscription info
   plan            String    @default("trial") // trial, starter, professional, enterprise
   planStatus      String    @default("active") @map("plan_status") // active, cancelled, past_due, trial_expired
   trialEndsAt     DateTime? @map("trial_ends_at")
-  subscriptionId  String?   @map("subscription_id") // Stripe/Asaas subscription ID
+  subscriptionId  String?   @map("subscription_id")
+  asaasCustomerId String?   @map("asaas_customer_id")
 
   // Limits (copiados do Plan, customizáveis por org pelo SuperAdmin)
   maxUsers        Int       @default(5) @map("max_users")

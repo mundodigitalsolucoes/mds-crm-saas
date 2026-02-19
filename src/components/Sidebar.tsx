@@ -23,6 +23,7 @@ import {
   Plug,
   Shield,
   UserCog,
+  CreditCard,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermission } from '@/hooks/usePermission';
@@ -58,6 +59,7 @@ const menuItems: MenuItem[] = [
 const settingsItems: MenuItem[] = [
   { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
+  { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
   { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
 ];
 
