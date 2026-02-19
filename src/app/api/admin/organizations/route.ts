@@ -1,6 +1,9 @@
+// src/app/api/admin/organizations/route.ts
+// API Admin — Listagem e Criação de Organizações
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
+import { parseBody, adminOrgCreateSchema } from '@/lib/validations';
 
 /**
  * GET /api/admin/organizations — Lista todas as organizações com métricas
@@ -110,27 +113,15 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, slug, plan, maxUsers, maxLeads } = body;
 
-    // Validações
-    if (!name || !slug) {
-      return NextResponse.json(
-        { error: 'Nome e slug são obrigatórios' },
-        { status: 400 }
-      );
-    }
-
-    // Normaliza slug
-    const normalizedSlug = slug
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+    // ✅ Validação Zod centralizada (slug já normalizado pelo schema)
+    const parsed = parseBody(adminOrgCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Verifica slug duplicado
     const existing = await prisma.organization.findUnique({
-      where: { slug: normalizedSlug },
+      where: { slug: data.slug },
     });
 
     if (existing) {
@@ -143,11 +134,11 @@ export async function POST(req: NextRequest) {
     // Cria organização
     const org = await prisma.organization.create({
       data: {
-        name: name.trim(),
-        slug: normalizedSlug,
-        plan: plan || 'free',
-        maxUsers: maxUsers || 5,
-        maxLeads: maxLeads || 500,
+        name: data.name,
+        slug: data.slug,
+        plan: data.plan,
+        maxUsers: data.maxUsers,
+        maxLeads: data.maxLeads,
       },
     });
 

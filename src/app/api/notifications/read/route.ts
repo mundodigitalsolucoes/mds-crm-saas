@@ -4,12 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { z } from 'zod';
-
-const markReadSchema = z.object({
-  ids: z.array(z.string().uuid()).optional(),
-  all: z.boolean().optional(),
-});
+import { parseBody, notificationMarkReadSchema } from '@/lib/validations';
 
 // POST /api/notifications/read
 export async function POST(request: NextRequest) {
@@ -20,7 +15,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const data = markReadSchema.parse(body);
+
+    // ✅ Validação Zod centralizada (refine: all=true OU ids[].length > 0)
+    const parsed = parseBody(notificationMarkReadSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const now = new Date();
 
@@ -45,12 +44,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, unreadCount });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao marcar notifications:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
