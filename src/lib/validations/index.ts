@@ -101,3 +101,22 @@ export {
   osCreateSchema,
   osUpdateSchema,
 } from './os';
+
+// Schemas — Comments
+export {
+  commentEntityTypeEnum,
+  commentCreateSchema,
+  commentUpdateSchema,
+} from './comment';
+
+// Schemas — Auth
+export {
+  signupSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from './auth';
+
+// Schemas — Users
+export {
+  userInviteSchema,
+} from './user';

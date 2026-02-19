@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
+import { parseBody, commentUpdateSchema } from '@/lib/validations';
 import type { PermissionModule } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
@@ -13,10 +13,6 @@ const entityTypeToModule: Record<string, PermissionModule> = {
   kanban_card: 'tasks',
   goal: 'projects',
 };
-
-const updateCommentSchema = z.object({
-  content: z.string().min(1),
-});
 
 // PUT /api/comments/[id]
 export async function PUT(
@@ -49,7 +45,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const data = updateCommentSchema.parse(body);
+
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(commentUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const comment = await prisma.comment.update({
       where: { id },
@@ -67,12 +67,6 @@ export async function PUT(
       updatedAt: comment.updatedAt.toISOString(),
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao atualizar comment:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
@@ -104,10 +98,6 @@ export async function DELETE(
     if (!allowed) return errorResponse!;
 
     // Verificar autoria — autor pode deletar, owner/admin também (via permissão delete já concedida)
-    // Se tem permissão de delete no módulo, pode deletar qualquer comment
-    // Se não, verifica se é o autor (mas nesse caso já foi barrado acima)
-    // Lógica extra: se o usuário tem permissão de delete mas não é o autor,
-    // verificar se é owner/admin para deletar comments de outros
     if (existingComment.authorId !== session!.user.id) {
       const user = await prisma.user.findUnique({
         where: { id: session!.user.id },
