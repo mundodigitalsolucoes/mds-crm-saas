@@ -1,10 +1,15 @@
 // src/app/api/admin/plans/[id]/route.ts
+// API Admin — Atualização e Exclusão de Plano
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
+import { parseBody, adminPlanUpdateSchema } from '@/lib/validations';
 
 // PUT - Atualizar plano
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const admin = await verifyAdminToken();
   if (!admin) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
@@ -14,22 +19,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const body = await req.json();
-    const { name, displayName, description, price, interval, maxUsers, maxLeads, maxProjects, features, isActive } = body;
+
+    // ✅ Validação Zod centralizada (coerce automático de números)
+    const parsed = parseBody(adminPlanUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const plan = await prisma.plan.update({
       where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(displayName !== undefined && { displayName }),
-        ...(description !== undefined && { description }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(interval !== undefined && { interval }),
-        ...(maxUsers !== undefined && { maxUsers: parseInt(maxUsers) }),
-        ...(maxLeads !== undefined && { maxLeads: parseInt(maxLeads) }),
-        ...(maxProjects !== undefined && { maxProjects: parseInt(maxProjects) }),
-        ...(features !== undefined && { features }),
-        ...(isActive !== undefined && { isActive }),
-      },
+      data,
     });
 
     return NextResponse.json({ ...plan, price: Number(plan.price) });
@@ -40,7 +38,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 // DELETE - Excluir plano
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const admin = await verifyAdminToken();
   if (!admin) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });

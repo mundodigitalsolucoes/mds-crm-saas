@@ -1,3 +1,5 @@
+// src/app/api/admin/auth/route.ts
+// API de autenticação do SuperAdmin — Login, Verificação e Logout
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
@@ -7,25 +9,23 @@ import {
   clearAdminCookie,
   verifyAdminToken,
 } from '@/lib/admin-auth';
+import { parseBody, adminLoginSchema } from '@/lib/validations';
 
 /**
  * POST /api/admin/auth — Login do SuperAdmin
  */
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
 
-    // Validação básica
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email e senha são obrigatórios' },
-        { status: 400 }
-      );
-    }
+    // ✅ Validação Zod centralizada (email já normalizado)
+    const parsed = parseBody(adminLoginSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Busca o SuperAdmin no banco
     const admin = await prisma.superAdmin.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: data.email },
     });
 
     if (!admin) {
@@ -36,8 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verifica a senha
-    // ✅ CORRETO - campo real do banco
-const passwordValid = await bcrypt.compare(password, admin.passwordHash);
+    const passwordValid = await bcrypt.compare(data.password, admin.passwordHash);
 
     if (!passwordValid) {
       return NextResponse.json(

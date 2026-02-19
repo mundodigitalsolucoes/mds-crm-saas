@@ -3,22 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { parseBody, importLeadsSchema } from '@/lib/validations';
 
-/**
- * Espera payload:
- * {
- *   "leads": [
- *     {
- *       "nome" | "name": "...",
- *       "email": "...",
- *       "telefone" | "phone": "...",
- *       "empresa" | "company": "...",
- *       "status": "new" | "contacted" | ...,
- *       "origem" | "source": "chatwoot" | "website" | ...
- *     }
- *   ]
- * }
- */
 export async function POST(request: NextRequest) {
   try {
     // ✅ Permissão granular: leads.create (importar é criar leads em massa)
@@ -28,11 +14,11 @@ export async function POST(request: NextRequest) {
     const organizationId = session!.user.organizationId;
 
     const body = await request.json();
-    const { leads } = body ?? {};
 
-    if (!leads || !Array.isArray(leads)) {
-      return NextResponse.json({ error: 'Dados inválidos' }, { status: 400 });
-    }
+    // ✅ Validação Zod centralizada (array obrigatório, max 10k)
+    const parsed = parseBody(importLeadsSchema, body);
+    if (!parsed.success) return parsed.response;
+    const { leads } = parsed.data;
 
     let sucesso = 0;
     let falhas = 0;

@@ -1,6 +1,9 @@
+// src/app/api/admin/organizations/[id]/route.ts
+// API Admin — Detalhe, Atualização e Exclusão de Organização
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
+import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
 
 /**
  * GET /api/admin/organizations/:id — Detalhes de uma organização
@@ -73,7 +76,11 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json();
-    const { name, slug, plan, maxUsers, maxLeads } = body;
+
+    // ✅ Validação Zod centralizada (slug já normalizado pelo schema)
+    const parsed = parseBody(adminOrgUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Verifica se existe
     const existing = await prisma.organization.findUnique({ where: { id } });
@@ -85,16 +92,9 @@ export async function PUT(
     }
 
     // Se o slug mudou, verifica duplicidade
-    if (slug && slug !== existing.slug) {
-      const normalizedSlug = slug
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
+    if (data.slug && data.slug !== existing.slug) {
       const slugExists = await prisma.organization.findFirst({
-        where: { slug: normalizedSlug, NOT: { id } },
+        where: { slug: data.slug, NOT: { id } },
       });
 
       if (slugExists) {
@@ -105,24 +105,9 @@ export async function PUT(
       }
     }
 
-    // Monta dados para atualizar (só campos enviados)
-    const updateData: any = {};
-    if (name !== undefined) updateData.name = name.trim();
-    if (slug !== undefined) {
-      updateData.slug = slug
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-    }
-    if (plan !== undefined) updateData.plan = plan;
-    if (maxUsers !== undefined) updateData.maxUsers = maxUsers;
-    if (maxLeads !== undefined) updateData.maxLeads = maxLeads;
-
     const org = await prisma.organization.update({
       where: { id },
-      data: updateData,
+      data,
     });
 
     return NextResponse.json(org);
