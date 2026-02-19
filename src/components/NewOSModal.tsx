@@ -48,7 +48,7 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
   // ✅ Verificar limite (só bloqueia criação, edição sempre OK)
   const isEditMode = Boolean(initialData);
-  const limitReached = !isEditMode && (isAtLimit('serviceOrders') || isPlanInactive());
+  const limitReached = !isEditMode && (isAtLimit('os') || isPlanInactive());
 
   // ✅ hooks sempre rodam
   const projectOptions = useMemo(
@@ -228,7 +228,7 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
           {limitReached && (
             <LimitAlert
               resource="ordens de serviço"
-              usage={formatUsage('serviceOrders')}
+              usage={formatUsage('os')}
               planName={usageData?.plan}
             />
           )}
