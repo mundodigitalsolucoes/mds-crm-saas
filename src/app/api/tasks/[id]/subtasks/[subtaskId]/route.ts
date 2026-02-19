@@ -3,13 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-const updateSubtaskSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  completed: z.boolean().optional(),
-  position: z.number().optional(),
-});
+import { parseBody, subtaskUpdateSchema } from '@/lib/validations';
 
 /**
  * Verifica se a task pertence à organização do usuário (isolamento multi-tenant)
@@ -41,7 +35,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const data = updateSubtaskSchema.parse(body);
+
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(subtaskUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Verificar se a subtask pertence à task
     const currentSubtask = await prisma.subtask.findUnique({
@@ -78,12 +76,6 @@ export async function PUT(
       createdAt: subtask.createdAt.toISOString(),
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao atualizar subtask:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

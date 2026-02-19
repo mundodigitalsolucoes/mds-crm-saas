@@ -3,12 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-const createSubtaskSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório').max(255),
-  position: z.number().optional(),
-});
+import { parseBody, subtaskCreateSchema } from '@/lib/validations';
 
 /**
  * Verifica se a task pertence à organização do usuário (isolamento multi-tenant)
@@ -79,7 +74,11 @@ export async function POST(
     }
 
     const body = await request.json();
-    const data = createSubtaskSchema.parse(body);
+
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(subtaskCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Buscar última posição para auto-incrementar
     const lastSubtask = await prisma.subtask.findFirst({
@@ -104,12 +103,6 @@ export async function POST(
       createdAt: subtask.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao criar subtask:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { parseBody, leadUpdateSchema } from '@/lib/validations';
 
 // ==================== GET /api/leads/[id] ====================
 export async function GET(
@@ -59,6 +60,11 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
+    // ✅ Validação Zod centralizada (.strict() rejeita campos não permitidos)
+    const parsed = parseBody(leadUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
+
     // Verifica se o lead pertence à organização
     const existing = await prisma.lead.findFirst({
       where: {
@@ -71,26 +77,24 @@ export async function PUT(
       return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
     }
 
-    // Campos permitidos para atualização
-    const allowedFields = [
-      'name', 'email', 'phone', 'company', 'position',
-      'source', 'status', 'score', 'value', 'notes', 'assignedToId',
-    ];
+    // Montar objeto de atualização apenas com campos enviados (undefined = não altera)
+    const updateData: Record<string, any> = {};
 
-    const data: Record<string, any> = {};
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        data[field] = body[field];
-      }
-    }
-
-    // Converte tipos quando necessário
-    if (data.score !== undefined) data.score = Number(data.score) || 0;
-    if (data.value !== undefined) data.value = data.value !== null ? Number(data.value) : null;
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.company !== undefined) updateData.company = data.company;
+    if (data.position !== undefined) updateData.position = data.position;
+    if (data.source !== undefined) updateData.source = data.source;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.score !== undefined) updateData.score = data.score ?? 0;
+    if (data.value !== undefined) updateData.value = data.value;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
 
     const updated = await prisma.lead.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },
         createdBy: { select: { id: true, name: true } },

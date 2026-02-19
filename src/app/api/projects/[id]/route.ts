@@ -3,21 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Schema de validação para atualizar projeto
-const updateProjectSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().optional().nullable(),
-  client: z.string().optional().nullable(),
-  status: z.enum(['planning', 'active', 'paused', 'completed', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  budget: z.number().min(0).optional(),
-  spent: z.number().min(0).optional(),
-  progress: z.number().min(0).max(100).optional(),
-  startDate: z.string().optional().nullable(),
-  endDate: z.string().optional().nullable(),
-});
+import { parseBody, projectUpdateSchema } from '@/lib/validations';
 
 // GET /api/projects/[id] — Buscar projeto por ID
 export async function GET(
@@ -73,14 +59,11 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const parsed = updateProjectSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(projectUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Verificar se projeto existe e pertence à organização
     const existing = await prisma.marketingProject.findFirst({
@@ -94,9 +77,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 });
     }
 
-    const data = parsed.data;
-
-    // Montar objeto de atualização
+    // Montar objeto de atualização apenas com campos enviados
     const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;

@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
 import { checkPermission } from '@/lib/checkPermission';
+import { parseBody, leadCreateSchema } from '@/lib/validations';
 
 // GET /api/leads — Lista leads da organização
 export async function GET(req: NextRequest) {
@@ -89,29 +90,31 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    // Validação básica
-    if (!body.name || body.name.trim() === '') {
-      return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
-    }
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(leadCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const lead = await prisma.lead.create({
       data: {
         organizationId,
-        name: body.name.trim(),
-        email: body.email?.trim() || null,
-        phone: body.phone?.trim() || null,
-        company: body.company?.trim() || null,
-        position: body.position?.trim() || null,
-        source: body.source || 'manual',
-        status: body.status || 'new',
-        score: body.score || 0,
-        value: body.value || null,
-        notes: body.notes?.trim() || null,
-        assignedToId: body.assignedToId || null,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        position: data.position,
+        source: data.source,
+        status: data.status,
+        score: data.score as number,
+        value: data.value,
+        notes: data.notes,
+        assignedToId: data.assignedToId,
         createdById: userId,
-        utmSource: body.utmSource || null,
-        utmMedium: body.utmMedium || null,
-        utmCampaign: body.utmCampaign || null,
+        utmSource: data.utmSource ?? null,
+        utmMedium: data.utmMedium ?? null,
+        utmCampaign: data.utmCampaign ?? null,
+        utmContent: data.utmContent ?? null,
+        utmTerm: data.utmTerm ?? null,
       },
       include: {
         assignedTo: { select: { id: true, name: true, email: true } },

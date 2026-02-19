@@ -3,23 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Schema de validação para criar OS
-const createOSSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório'),
-  description: z.string().optional().nullable(),
-  type: z.enum(['implantacao_mds', 'manutencao', 'custom']).default('custom'),
-  status: z.enum(['em_planejamento', 'em_execucao', 'aguardando_cliente', 'concluida', 'cancelada']).default('em_planejamento'),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  progress: z.number().min(0).max(100).default(0),
-  startDate: z.string().optional().nullable(),
-  dueDate: z.string().optional().nullable(),
-  projectId: z.string().optional().nullable(),
-  assignedToId: z.string().optional().nullable(),
-  pilares: z.any().optional().default({}),
-  notes: z.string().optional().nullable(),
-});
+import { parseBody, osCreateSchema } from '@/lib/validations';
 
 // Gerar código sequencial da OS: OS-2026-0001
 async function generateOSCode(organizationId: string): Promise<string> {
@@ -127,15 +111,10 @@ export async function POST(request: NextRequest) {
     const userId = session!.user.id;
 
     const body = await request.json();
-    const parsed = createOSSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
-
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(osCreateSchema, body);
+    if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
     // Gerar código automático
