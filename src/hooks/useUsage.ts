@@ -6,31 +6,25 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
+// ============================================
+// TIPO QUE REFLETE O RETORNO REAL DA API
+// ============================================
+
+interface ResourceInfo {
+  current: number;
+  max: number;
+  percentage: number;
+}
+
 export interface UsageData {
-  organization: {
-    id: string;
-    name: string;
-    plan: string;
-    planStatus: string;
-    trialEndsAt: string | null;
-  };
-  limits: {
-    maxUsers: number;
-    maxLeads: number;
-    maxProjects: number;
-    maxOs: number;
-  };
-  usage: {
-    users: number;
-    leads: number;
-    projects: number;
-    serviceOrders: number;
-  };
-  percentages: {
-    users: number;
-    leads: number;
-    projects: number;
-    serviceOrders: number;
+  plan: string;
+  planStatus: string;
+  trialEndsAt: string | null;
+  resources: {
+    users: ResourceInfo;
+    leads: ResourceInfo;
+    projects: ResourceInfo;
+    os: ResourceInfo;
   };
 }
 
@@ -49,42 +43,24 @@ export function useUsage() {
   });
 
   /** Verifica se um recurso atingiu o limite (-1 = ilimitado) */
-  const isAtLimit = (resource: 'users' | 'leads' | 'projects' | 'serviceOrders'): boolean => {
+  const isAtLimit = (resource: keyof UsageData['resources']): boolean => {
     if (!query.data) return false;
-
-    const limitMap: Record<string, number> = {
-      users: query.data.limits.maxUsers,
-      leads: query.data.limits.maxLeads,
-      projects: query.data.limits.maxProjects,
-      serviceOrders: query.data.limits.maxOs,
-    };
-
-    const limit = limitMap[resource];
-    if (limit === -1) return false; // ilimitado
-    return query.data.usage[resource] >= limit;
+    const r = query.data.resources[resource];
+    if (r.max <= 0) return false; // ilimitado
+    return r.current >= r.max;
   };
 
   /** Verifica se o plano está inativo */
   const isPlanInactive = (): boolean => {
     if (!query.data) return false;
-    return !['active', 'trial'].includes(query.data.organization.planStatus);
+    return !['active', 'trial'].includes(query.data.planStatus);
   };
 
   /** Retorna texto amigável do limite: "45 / 100" ou "45 / ∞" */
-  const formatUsage = (resource: 'users' | 'leads' | 'projects' | 'serviceOrders'): string => {
+  const formatUsage = (resource: keyof UsageData['resources']): string => {
     if (!query.data) return '...';
-
-    const limitMap: Record<string, number> = {
-      users: query.data.limits.maxUsers,
-      leads: query.data.limits.maxLeads,
-      projects: query.data.limits.maxProjects,
-      serviceOrders: query.data.limits.maxOs,
-    };
-
-    const usage = query.data.usage[resource];
-    const limit = limitMap[resource];
-
-    return limit === -1 ? `${usage} / ∞` : `${usage} / ${limit}`;
+    const r = query.data.resources[resource];
+    return r.max <= 0 ? `${r.current} / ∞` : `${r.current} / ${r.max}`;
   };
 
   return {
