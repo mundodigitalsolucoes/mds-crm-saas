@@ -13,26 +13,28 @@ export default function UsageBanner() {
 
   // Encontrar o recurso com maior % de uso
   const resources = [
-    { key: 'leads' as const, label: 'Leads', pct: data.percentages.leads, limit: data.limits.maxLeads },
-    { key: 'projects' as const, label: 'Projetos', pct: data.percentages.projects, limit: data.limits.maxProjects },
-    { key: 'serviceOrders' as const, label: 'OS', pct: data.percentages.serviceOrders, limit: data.limits.maxOs },
-    { key: 'users' as const, label: 'Usuários', pct: data.percentages.users, limit: data.limits.maxUsers },
-  ].filter((r) => r.limit !== -1); // Remove ilimitados
+    { key: 'leads' as const, label: 'Leads' },
+    { key: 'projects' as const, label: 'Projetos' },
+    { key: 'os' as const, label: 'OS' },
+    { key: 'users' as const, label: 'Usuários' },
+  ]
+    .map((r) => ({
+      ...r,
+      ...data.resources[r.key], // current, max, percentage
+    }))
+    .filter((r) => r.max > 0); // Remove ilimitados (max <= 0)
 
   if (resources.length === 0) return null; // Tudo ilimitado
 
   // Ordenar por % decrescente e pegar o mais crítico
-  const sorted = resources.sort((a, b) => b.pct - a.pct);
+  const sorted = resources.sort((a, b) => b.percentage - a.percentage);
   const critical = sorted[0];
 
   // Só mostra se >= 70% de uso
-  if (critical.pct < 70) return null;
+  if (critical.percentage < 70) return null;
 
-  const isOver90 = critical.pct >= 90;
-  const isAt100 = critical.pct >= 100;
-
-  const usageValue = data.usage[critical.key];
-  const limitValue = critical.limit;
+  const isOver90 = critical.percentage >= 90;
+  const isAt100 = critical.percentage >= 100;
 
   return (
     <div
@@ -53,7 +55,7 @@ export default function UsageBanner() {
         <span className="text-xs font-medium text-white truncate">
           {isAt100
             ? `Limite de ${critical.label} atingido`
-            : `${critical.label}: ${critical.pct.toFixed(0)}% usado`}
+            : `${critical.label}: ${critical.percentage}% usado`}
         </span>
       </div>
 
@@ -63,20 +65,20 @@ export default function UsageBanner() {
           className={`h-1.5 rounded-full transition-all ${
             isAt100 ? 'bg-red-500' : isOver90 ? 'bg-yellow-500' : 'bg-indigo-400'
           }`}
-          style={{ width: `${Math.min(critical.pct, 100)}%` }}
+          style={{ width: `${Math.min(critical.percentage, 100)}%` }}
         />
       </div>
 
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-indigo-300">
-          {usageValue} / {limitValue}
+          {critical.current} / {critical.max}
         </span>
         <span
           className={`text-[10px] font-medium ${
             isAt100 ? 'text-red-400' : 'text-indigo-300'
           }`}
         >
-          {data.organization.plan}
+          {data.plan}
         </span>
       </div>
     </div>
