@@ -134,7 +134,7 @@ export default function NewProjectModal({
             <LimitAlert
               resource="projetos"
               usage={formatUsage('projects')}
-              planName={usageData?.organization.plan}
+              planName={usageData?.plan}
             />
           )}
 
