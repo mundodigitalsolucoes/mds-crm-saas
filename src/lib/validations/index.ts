@@ -121,6 +121,11 @@ export {
   userInviteSchema,
 } from './user';
 
+// Schemas — Permissions
+export {
+  userPermissionsUpdateSchema,
+} from './permission';
+
 // Schemas — Admin
 export {
   adminLoginSchema,
@@ -140,3 +145,8 @@ export {
 export {
   importLeadsSchema,
 } from './import';
+
+// Schemas — Integrations
+export {
+  metaSelectAccountSchema,
+} from './integration';
