@@ -1,8 +1,9 @@
 // src/app/api/admin/organizations/route.ts
-// API Admin — Listagem e Criação de Organizações
+// API Admin — Listagem e Criação de Organizações (com syncPlanLimits)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
+import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgCreateSchema } from '@/lib/validations';
 
 /**
@@ -46,8 +47,12 @@ export async function GET(req: NextRequest) {
           name: true,
           slug: true,
           plan: true,
+          planStatus: true,
+          trialEndsAt: true,
           maxUsers: true,
           maxLeads: true,
+          maxProjects: true,
+          maxOs: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -67,21 +72,29 @@ export async function GET(req: NextRequest) {
       prisma.organization.count({ where }),
     ]);
 
-    // Formata resposta
+    // Formata resposta com todos os limites
     const formattedOrgs = organizations.map((org) => ({
       id: org.id,
       name: org.name,
       slug: org.slug,
       plan: org.plan,
-      maxUsers: org.maxUsers,
-      maxLeads: org.maxLeads,
+      planStatus: org.planStatus,
+      trialEndsAt: org.trialEndsAt,
+      limits: {
+        maxUsers: org.maxUsers,
+        maxLeads: org.maxLeads,
+        maxProjects: org.maxProjects,
+        maxOs: org.maxOs,
+      },
+      usage: {
+        users: org._count.users,
+        leads: org._count.leads,
+        projects: org._count.projects,
+        tasks: org._count.tasks,
+        serviceOrders: org._count.serviceOrders,
+      },
       createdAt: org.createdAt,
       updatedAt: org.updatedAt,
-      users: org._count.users,
-      leads: org._count.leads,
-      projects: org._count.projects,
-      tasks: org._count.tasks,
-      serviceOrders: org._count.serviceOrders,
     }));
 
     return NextResponse.json({
@@ -104,6 +117,8 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/admin/organizations — Cria nova organização
+ * Se syncFromPlan=true (default), copia limites do Plan.
+ * Se false, usa os valores manuais enviados.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -114,7 +129,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada (slug já normalizado pelo schema)
+    // ✅ Validação Zod centralizada
     const parsed = parseBody(adminOrgCreateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
@@ -131,18 +146,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Cria organização
+    // Cria organização com limites manuais iniciais
     const org = await prisma.organization.create({
       data: {
         name: data.name,
         slug: data.slug,
         plan: data.plan,
+        planStatus: data.plan === 'trial' ? 'active' : 'active',
+        trialEndsAt: data.plan === 'trial'
+          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 dias
+          : null,
         maxUsers: data.maxUsers,
         maxLeads: data.maxLeads,
+        maxProjects: data.maxProjects,
+        maxOs: data.maxOs,
       },
     });
 
-    return NextResponse.json(org, { status: 201 });
+    // ✅ Se syncFromPlan=true, sobrescreve com os limites do Plan
+    if (data.syncFromPlan) {
+      const synced = await syncPlanLimits(org.id, data.plan);
+      if (synced) {
+        return NextResponse.json(
+          {
+            ...synced,
+            _syncedFromPlan: true,
+            message: `Organização criada com limites do plano "${data.plan}"`,
+          },
+          { status: 201 }
+        );
+      }
+      // Se plano não encontrado no banco, mantém os limites manuais (graceful)
+      console.warn(`[ADMIN ORGS] Plano "${data.plan}" não encontrado no banco. Limites manuais mantidos.`);
+    }
+
+    return NextResponse.json(
+      {
+        ...org,
+        _syncedFromPlan: false,
+        message: 'Organização criada com limites customizados',
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error('[ADMIN ORGS] Erro ao criar:', error);
     return NextResponse.json(

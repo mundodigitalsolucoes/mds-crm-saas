@@ -1,6 +1,7 @@
 // src/components/Sidebar.tsx
 // Sidebar com filtragem de menus por permissão do usuário
 // Skeleton loading enquanto carrega permissões (evita flash visual)
+// ✅ Inclui UsageBanner com indicador de uso do plano
 
 'use client';
 
@@ -25,6 +26,11 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { usePermission } from '@/hooks/usePermission';
+import dynamic from 'next/dynamic';
+
+const UsageBanner = dynamic(() => import('@/components/UsageBanner'), {
+  ssr: false,
+});
 import type { PermissionModule } from '@/types/permissions';
 
 // ============================================
@@ -102,7 +108,7 @@ export default function Sidebar() {
   const visibleMenu = useMemo(() => {
     if (isLoading) return [];
     return menuItems.filter((item) => {
-      if (!item.module) return true; // Dashboard sempre visível
+      if (!item.module) return true;
       return canAccess(item.module);
     });
   }, [canAccess, isLoading]);
@@ -110,8 +116,7 @@ export default function Sidebar() {
   const visibleSettings = useMemo(() => {
     if (isLoading) return [];
     return settingsItems.filter((item) => {
-      if (!item.module) return true; // Minha Conta: todos veem
-      // Membros: só admin/owner veem
+      if (!item.module) return true;
       if (item.module === 'users') return isAdmin;
       return canAccess(item.module);
     });
@@ -121,7 +126,6 @@ export default function Sidebar() {
     signOut({ callbackUrl: '/auth/login' });
   };
 
-  // Dados do usuário da session
   const userName = session?.user?.name || 'Usuário';
   const userRole = session?.user?.role || 'user';
   const userInitial = userName.charAt(0).toUpperCase();
@@ -246,6 +250,9 @@ export default function Sidebar() {
             </>
           )}
         </nav>
+
+        {/* ✅ Banner de Uso do Plano */}
+        <UsageBanner />
 
         {/* User Profile */}
         <div className="p-4 border-t border-indigo-700">

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkAdminAccess } from '@/lib/checkPermission';
+import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import {
   getDefaultPermissions,
   serializePermissions,
@@ -32,13 +33,21 @@ export async function POST(request: NextRequest) {
     const currentRole = session!.user.role;
     const organizationId = session!.user.organizationId;
 
-    // 2. ✅ Validação Zod centralizada
+    // 2. ✅ Verificar se plano está ativo
+    const planCheck = await checkPlanActive(organizationId);
+    if (!planCheck.active) return planCheck.errorResponse!;
+
+    // 3. ✅ Verificar limite de usuários do plano
+    const limitCheck = await checkOrganizationLimit(organizationId, 'users');
+    if (!limitCheck.allowed) return limitCheck.errorResponse!;
+
+    // 4. ✅ Validação Zod centralizada
     const body = await request.json();
     const parsed = parseBody(userInviteSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // 3. Admin não pode criar outro admin (apenas owner pode)
+    // 5. Admin não pode criar outro admin (apenas owner pode)
     if (currentRole === 'admin' && data.role === 'admin') {
       return NextResponse.json(
         { error: 'Apenas o proprietário pode criar administradores' },
@@ -46,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Verificar hierarquia: não pode criar role >= ao próprio
+    // 6. Verificar hierarquia: não pode criar role >= ao próprio
     const currentPower = ROLE_HIERARCHY[currentRole] || 0;
     const targetPower = ROLE_HIERARCHY[data.role] || 0;
     if (targetPower >= currentPower && currentRole !== 'owner') {
@@ -56,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Verificar se email já existe
+    // 7. Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -68,11 +77,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Gerar permissões padrão do role
+    // 8. Gerar permissões padrão do role
     const defaultPermissions = getDefaultPermissions(data.role as UserRole);
     const permissionsJson = serializePermissions(defaultPermissions);
 
-    // 7. Hash da senha e criar usuário
+    // 9. Hash da senha e criar usuário
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
     const newUser = await prisma.user.create({
@@ -94,7 +103,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 8. Buscar dados para o email (nome de quem convidou + org)
+    // 10. Buscar dados para o email (nome de quem convidou + org)
     const [inviter, organization] = await Promise.all([
       prisma.user.findUnique({
         where: { id: currentUserId },
@@ -106,7 +115,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    // 9. Disparar email de convite (não bloqueia resposta se falhar)
+    // 11. Disparar email de convite (não bloqueia resposta se falhar)
     sendInviteEmail({
       to: data.email,
       userName: newUser.name,

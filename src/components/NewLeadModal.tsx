@@ -1,8 +1,11 @@
+// src/components/NewLeadModal.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle2, Download, Loader2 } from 'lucide-react';
 import { useLeadsStore, type Lead, type Stage } from '@/store/leadsStore';
+import { useUsage } from '@/hooks/useUsage';
+import LimitAlert from '@/components/LimitAlert';
 
 interface NewLeadModalProps {
   isOpen: boolean;
@@ -42,6 +45,7 @@ export default function NewLeadModal({
   initialData = null,
 }: NewLeadModalProps) {
   const { addLead, updateLead, stages } = useLeadsStore();
+  const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
   const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
   const [formData, setFormData] = useState<FormData>(emptyForm);
@@ -53,6 +57,9 @@ export default function NewLeadModal({
   const [csvData, setCsvData] = useState<any[]>([]);
   const [importStatus, setImportStatus] = useState<'idle' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [importResults, setImportResults] = useState({ success: 0, errors: 0, total: 0 });
+
+  // ✅ Verificar limite (só bloqueia criação, edição sempre OK)
+  const limitReached = mode === 'create' && (isAtLimit('leads') || isPlanInactive());
 
   // Preenche/reseta form ao abrir
   useEffect(() => {
@@ -89,6 +96,8 @@ export default function NewLeadModal({
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (limitReached) return; // Segurança extra
 
     if (!formData.name.trim()) {
       setFormError('Nome é obrigatório');
@@ -160,7 +169,6 @@ export default function NewLeadModal({
           row[header] = values[index] || '';
         });
 
-        // Aceita tanto PT-BR quanto EN nos headers do CSV
         const name = row.name || row.nome || '';
         const email = row.email || '';
 
@@ -185,6 +193,8 @@ export default function NewLeadModal({
   };
 
   const handleCsvImport = async () => {
+    if (limitReached) return; // Segurança extra
+
     setImportStatus('importing');
     let successCount = 0;
     let errorCount = 0;
@@ -269,6 +279,15 @@ export default function NewLeadModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* ✅ Alerta de limite atingido */}
+          {limitReached && (
+            <LimitAlert
+              resource="leads"
+              usage={formatUsage('leads')}
+              planName={usageData?.organization.plan}
+            />
+          )}
+
           {activeTab === 'manual' ? (
             <form onSubmit={handleManualSubmit} className="space-y-4">
               {formError && (
@@ -288,6 +307,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="João Silva"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -299,6 +319,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="joao@email.com"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -310,6 +331,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="(19) 99999-9999"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -321,6 +343,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Empresa Exemplo"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -332,6 +355,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Diretor Comercial"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -341,6 +365,7 @@ export default function NewLeadModal({
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    disabled={limitReached}
                   >
                     {stages.map((stage) => (
                       <option key={stage.id} value={stage.id}>
@@ -356,6 +381,7 @@ export default function NewLeadModal({
                     value={formData.source}
                     onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    disabled={limitReached}
                   >
                     <option value="">Selecione...</option>
                     <option value="manual">Manual</option>
@@ -379,6 +405,7 @@ export default function NewLeadModal({
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="5000.00"
+                    disabled={limitReached}
                   />
                 </div>
               </div>
@@ -391,6 +418,7 @@ export default function NewLeadModal({
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   placeholder="Notas sobre o lead..."
+                  disabled={limitReached}
                 />
               </div>
 
@@ -405,11 +433,15 @@ export default function NewLeadModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || limitReached}
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSaving && <Loader2 size={18} className="animate-spin" />}
-                  {mode === 'edit' ? 'Salvar Alterações' : 'Adicionar Lead'}
+                  {limitReached
+                    ? 'Limite Atingido'
+                    : mode === 'edit'
+                      ? 'Salvar Alterações'
+                      : 'Adicionar Lead'}
                 </button>
               </div>
             </form>
@@ -439,10 +471,10 @@ export default function NewLeadModal({
               {importStatus === 'idle' && (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
                   <Upload className="mx-auto text-gray-400 mb-4" size={48} />
-                  <label className="cursor-pointer">
+                  <label className={`cursor-pointer ${limitReached ? 'pointer-events-none opacity-50' : ''}`}>
                     <span className="text-indigo-600 hover:text-indigo-700 font-medium">Clique para selecionar</span>
                     <span className="text-gray-600"> ou arraste o arquivo CSV aqui</span>
-                    <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" />
+                    <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" disabled={limitReached} />
                   </label>
                   <p className="text-sm text-gray-500 mt-2">Formatos aceitos: CSV (máx. 10MB)</p>
                 </div>
@@ -502,9 +534,10 @@ export default function NewLeadModal({
                     </button>
                     <button
                       onClick={handleCsvImport}
-                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                      disabled={limitReached}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
                     >
-                      Importar {csvData.length} Lead(s)
+                      {limitReached ? 'Limite Atingido' : `Importar ${csvData.length} Lead(s)`}
                     </button>
                   </div>
                 </div>

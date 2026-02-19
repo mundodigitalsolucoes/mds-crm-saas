@@ -50,9 +50,13 @@ export const adminOrgCreateSchema = z.object({
     .min(1, 'Slug é obrigatório')
     .max(255)
     .pipe(slugTransform),
-  plan: z.string().max(50).optional().default('free'),
-  maxUsers: z.coerce.number().int().min(1).optional().default(5),
-  maxLeads: z.coerce.number().int().min(1).optional().default(500),
+  plan: z.string().max(50).optional().default('trial'),
+  maxUsers: z.coerce.number().int().min(-1).optional().default(5),
+  maxLeads: z.coerce.number().int().min(-1).optional().default(100),
+  maxProjects: z.coerce.number().int().min(-1).optional().default(10),
+  maxOs: z.coerce.number().int().min(-1).optional().default(10),
+  // Se true, copia limites do Plan ao invés de usar os valores manuais
+  syncFromPlan: z.boolean().optional().default(true),
 });
 
 export type AdminOrgCreateInput = z.infer<typeof adminOrgCreateSchema>;
@@ -75,8 +79,14 @@ export const adminOrgUpdateSchema = z.object({
     .pipe(slugTransform)
     .optional(),
   plan: z.string().max(50).optional(),
-  maxUsers: z.coerce.number().int().min(1).optional(),
-  maxLeads: z.coerce.number().int().min(1).optional(),
+  planStatus: z.enum(['active', 'cancelled', 'past_due', 'trial_expired']).optional(),
+  maxUsers: z.coerce.number().int().min(-1).optional(),
+  maxLeads: z.coerce.number().int().min(-1).optional(),
+  maxProjects: z.coerce.number().int().min(-1).optional(),
+  maxOs: z.coerce.number().int().min(-1).optional(),
+  trialEndsAt: z.string().datetime().nullable().optional(),
+  // Se true e plan mudou, copia limites do novo Plan
+  syncFromPlan: z.boolean().optional().default(false),
 }).strict('Campo não permitido na atualização de organização');
 
 export type AdminOrgUpdateInput = z.infer<typeof adminOrgUpdateSchema>;
@@ -111,9 +121,10 @@ export const adminPlanCreateSchema = z.object({
   description: z.string().max(1000).nullable().optional().default(null),
   price: z.coerce.number().min(0, 'Preço não pode ser negativo').optional().default(0),
   interval: z.enum(['month', 'year']).optional().default('month'),
-  maxUsers: z.coerce.number().int().min(1).optional().default(5),
-  maxLeads: z.coerce.number().int().min(1).optional().default(100),
-  maxProjects: z.coerce.number().int().min(1).optional().default(10),
+  maxUsers: z.coerce.number().int().min(-1).optional().default(5),
+  maxLeads: z.coerce.number().int().min(-1).optional().default(100),
+  maxProjects: z.coerce.number().int().min(-1).optional().default(10),
+  maxOs: z.coerce.number().int().min(-1).optional().default(20),
   features: z.string().max(5000).optional().default('[]'),
 });
 
@@ -139,11 +150,14 @@ export const adminPlanUpdateSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   price: z.coerce.number().min(0, 'Preço não pode ser negativo').optional(),
   interval: z.enum(['month', 'year']).optional(),
-  maxUsers: z.coerce.number().int().min(1).optional(),
-  maxLeads: z.coerce.number().int().min(1).optional(),
-  maxProjects: z.coerce.number().int().min(1).optional(),
+  maxUsers: z.coerce.number().int().min(-1).optional(),
+  maxLeads: z.coerce.number().int().min(-1).optional(),
+  maxProjects: z.coerce.number().int().min(-1).optional(),
+  maxOs: z.coerce.number().int().min(-1).optional(),
   features: z.string().max(5000).optional(),
   isActive: z.boolean().optional(),
+  // Se true, propaga os novos limites para TODAS as orgs que usam este plano
+  propagateToOrgs: z.boolean().optional().default(false),
 }).strict('Campo não permitido na atualização de plano');
 
 export type AdminPlanUpdateInput = z.infer<typeof adminPlanUpdateSchema>;
