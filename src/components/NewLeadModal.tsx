@@ -284,7 +284,7 @@ export default function NewLeadModal({
             <LimitAlert
               resource="leads"
               usage={formatUsage('leads')}
-              planName={usageData?.organization.plan}
+              planName={usageData?.plan}
             />
           )}
 

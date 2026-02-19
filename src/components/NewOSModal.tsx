@@ -229,7 +229,7 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
             <LimitAlert
               resource="ordens de serviço"
               usage={formatUsage('serviceOrders')}
-              planName={usageData?.organization.plan}
+              planName={usageData?.plan}
             />
           )}
 
