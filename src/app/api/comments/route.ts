@@ -3,23 +3,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
+import { parseBody, commentCreateSchema, commentEntityTypeEnum } from '@/lib/validations';
 import type { PermissionModule } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
 const entityTypeToModule: Record<string, PermissionModule> = {
   task: 'tasks',
   lead: 'leads',
-  kanban_card: 'tasks', // kanban_card vive dentro de tasks
-  goal: 'projects',     // goals vinculados a projetos
+  kanban_card: 'tasks',
+  goal: 'projects',
 };
-
-const createCommentSchema = z.object({
-  content: z.string().min(1, 'Conteúdo é obrigatório'),
-  entityType: z.enum(['task', 'lead', 'kanban_card', 'goal']),
-  entityId: z.string().uuid(),
-  parentId: z.string().uuid().optional(),
-});
 
 // GET /api/comments?entityType=task&entityId=xxx
 export async function GET(request: NextRequest) {
@@ -108,10 +101,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const data = createCommentSchema.parse(body);
+
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(commentCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // ✅ Permissão granular dinâmica: entityType → módulo.edit
-    // Criar comment requer permissão de edição no módulo-pai
     const module = entityTypeToModule[data.entityType];
     if (!module) {
       return NextResponse.json({ error: 'entityType inválido' }, { status: 400 });
@@ -136,8 +132,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Notificar mencionados ou autor da entidade (futuro: implementar @mentions)
-
     return NextResponse.json({
       ...comment,
       createdAt: comment.createdAt.toISOString(),
@@ -145,12 +139,6 @@ export async function POST(request: NextRequest) {
       replies: [],
     }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao criar comment:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

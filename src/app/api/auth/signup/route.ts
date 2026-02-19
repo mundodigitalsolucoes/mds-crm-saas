@@ -1,11 +1,10 @@
 // src/app/api/auth/signup/route.ts
 // API de cadastro com registro de consentimento LGPD
 
-import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { parseBody, signupSchema } from '@/lib/validations';
 
 function slugify(input: string) {
   return input
@@ -13,80 +12,68 @@ function slugify(input: string) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)+/g, '')
+    .replace(/(^-|-$)+/g, '');
 }
 
 export async function POST(request: Request) {
   try {
-    const { name, email, companyName, password, consent } = await request.json()
+    const body = await request.json();
 
-    if (!name || !email || !companyName || !password) {
-      return NextResponse.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 })
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'A senha deve ter no mínimo 8 caracteres' }, { status: 400 })
-    }
-
-    if (!consent) {
-      return NextResponse.json(
-        { error: 'É necessário aceitar a Política de Privacidade e os Termos de Uso' },
-        { status: 400 }
-      )
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase()
+    // ✅ Validação Zod centralizada (inclui consent: true obrigatório)
+    const parsed = parseBody(signupSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const existingUser = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    })
+      where: { email: data.email },
+    });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
+      return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
     // LGPD: registrar IP do consentimento
-    const forwarded = request.headers.get('x-forwarded-for')
-    const consentIp = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
+    const forwarded = request.headers.get('x-forwarded-for');
+    const consentIp = forwarded
+      ? forwarded.split(',')[0].trim()
+      : request.headers.get('x-real-ip') || 'unknown';
 
     // Gera slug único para Organization
-    const baseSlug = slugify(companyName)
-    let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`
-    let i = 1
+    const baseSlug = slugify(data.companyName);
+    let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`;
+    let i = 1;
 
     while (await prisma.organization.findUnique({ where: { slug } })) {
-      slug = `${baseSlug}-${i++}`
+      slug = `${baseSlug}-${i++}`;
     }
 
     // Criar org + user em transação para não deixar org "órfã"
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
-          name: companyName,
+          name: data.companyName,
           slug,
-          // Usando o plano padrão do schema: "trial"
           plan: 'trial',
         },
-      })
+      });
 
       const user = await tx.user.create({
         data: {
-          name,
-          email: normalizedEmail,
+          name: data.name,
+          email: data.email,
           passwordHash: hashedPassword,
-          // Colocando owner como first user da org (recomendado no multi-tenant SaaS)
           role: 'owner',
           organizationId: organization.id,
           // LGPD: registro de consentimento
           consentAt: new Date(),
           consentIp,
         },
-      })
+      });
 
-      return { organization, user }
-    })
+      return { organization, user };
+    });
 
     return NextResponse.json({
       message: 'Conta criada com sucesso!',
@@ -100,11 +87,12 @@ export async function POST(request: Request) {
         name: result.organization.name,
         slug: result.organization.slug,
       },
-    })
+    });
   } catch (error) {
-    console.error('Erro ao criar conta:', error)
-    return NextResponse.json({ error: 'Erro ao criar conta. Tente novamente.' }, { status: 500 })
-  } finally {
-    await prisma.$disconnect()
+    console.error('Erro ao criar conta:', error);
+    return NextResponse.json(
+      { error: 'Erro ao criar conta. Tente novamente.' },
+      { status: 500 }
+    );
   }
 }
