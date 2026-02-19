@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, Eye, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useOSStore } from '@/store/osStore';
 import { useProjectStore } from '@/store/projectStore';
 import type { OS } from '@/types/os';
@@ -10,6 +10,7 @@ import { OSDetailsModal } from '@/components/OSDetailsModal';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
 import PermissionLoading from '@/components/PermissionLoading';
+import { useUsage } from '@/hooks/useUsage';
 
 export default function OSPage() {
   const { ordens, deleteOS, fetchOS, loading, error } = useOSStore();
@@ -20,17 +21,27 @@ export default function OSPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const { canAccess, isLoading: permLoading } = usePermission();
+  const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('os')) return <AccessDenied module="os" />;
 
-  // Carregar OS e projetos do banco ao montar
+  // ✅ Bloqueio de criação quando limite atingido ou plano inativo
+  const limitReached = isAtLimit('os');
+  const planInactive = isPlanInactive();
+  const createBlocked = limitReached || planInactive;
+
+  const createTooltip = planInactive
+    ? 'Seu período de teste expirou. Entre em contato para continuar.'
+    : limitReached
+      ? `Limite de ordens de serviço atingido (${formatUsage('os')}). Faça upgrade do plano.`
+      : '';
+
   useEffect(() => {
     fetchOS();
     fetchProjects();
   }, [fetchOS, fetchProjects]);
 
-  // Helper: buscar nome do projeto pelo ID (string ou number)
   const getProjectName = (projetoId: number | string | undefined): string | undefined => {
     if (!projetoId) return undefined;
     const project = getProjectById(String(projetoId));
@@ -39,12 +50,9 @@ export default function OSPage() {
 
   const filteredOS = useMemo(() => {
     if (!searchQuery) return ordens;
-
     const q = searchQuery.toLowerCase();
-
     return ordens.filter((os) => {
       const projectName = getProjectName(os.projetoId) || '';
-
       return (
         os.codigo.toLowerCase().includes(q) ||
         os.titulo.toLowerCase().includes(q) ||
@@ -61,9 +69,7 @@ export default function OSPage() {
     const confirmMessage = osToDelete
       ? `Tem certeza que deseja excluir a OS "${osToDelete.codigo}"?`
       : 'Tem certeza que deseja excluir esta OS?';
-
     if (!window.confirm(confirmMessage)) return;
-
     setDeleting(String(id));
     try {
       await deleteOS(id);
@@ -136,7 +142,6 @@ export default function OSPage() {
   const handleCloseNewOSModal = () => {
     setShowNewOSModal(false);
     setSelectedOS(null);
-    // Recarregar lista após criar/editar
     fetchOS();
   };
 
@@ -194,17 +199,28 @@ export default function OSPage() {
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          <button
-            onClick={() => {
-              setSelectedOS(null);
-              setShowNewOSModal(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            type="button"
-          >
-            <Plus size={20} />
-            Nova OS
-          </button>
+          {/* ✅ Botão Nova OS com tooltip de limite */}
+          <div className="relative group">
+            <button
+              onClick={() => {
+                if (createBlocked) return;
+                setSelectedOS(null);
+                setShowNewOSModal(true);
+              }}
+              disabled={createBlocked}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+            >
+              {createBlocked ? <AlertTriangle size={18} /> : <Plus size={20} />}
+              Nova OS
+            </button>
+            {createBlocked && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                {createTooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -267,12 +283,10 @@ export default function OSPage() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
                 </tr>
               </thead>
-
               <tbody className="divide-y divide-gray-200">
                 {filteredOS.map((os) => (
                   <tr key={String(os.id)} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm font-medium text-gray-800">{os.codigo}</td>
-
                     <td className="px-6 py-4">
                       <div>
                         <p className="text-sm font-medium text-gray-800 truncate max-w-[200px]">{os.titulo}</p>
@@ -281,7 +295,6 @@ export default function OSPage() {
                         </p>
                       </div>
                     </td>
-
                     <td className="px-6 py-4 text-sm text-gray-600">
                       <div>
                         <p className="font-medium">
@@ -291,21 +304,17 @@ export default function OSPage() {
                         {os.cliente && <p className="text-xs text-gray-500">{os.cliente}</p>}
                       </div>
                     </td>
-
                     <td className="px-6 py-4 text-sm text-gray-600">{getTipoDisplay(os.tipo)}</td>
-
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(os.status)}`}>
                         {getStatusDisplay(os.status)}
                       </span>
                     </td>
-
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {os.responsavelNome || os.responsavel || '—'}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatDate(os.datas.inicio)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatDate(os.datas.prazo)}</td>
-
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[60px]">
@@ -317,7 +326,6 @@ export default function OSPage() {
                         <span className="text-xs text-gray-600 min-w-[30px]">{os.progresso || 0}%</span>
                       </div>
                     </td>
-
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                         <button
@@ -329,7 +337,6 @@ export default function OSPage() {
                           <Eye size={14} />
                           Ver
                         </button>
-
                         <button
                           onClick={() => handleOpenEditModal(os)}
                           className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
@@ -339,7 +346,6 @@ export default function OSPage() {
                           <Edit size={14} />
                           Editar
                         </button>
-
                         <button
                           onClick={() => handleDeleteOS(os.id)}
                           disabled={deleting === String(os.id)}
@@ -358,7 +364,6 @@ export default function OSPage() {
                     </td>
                   </tr>
                 ))}
-
                 {filteredOS.length === 0 && !loading && (
                   <tr>
                     <td colSpan={10} className="px-6 py-8 text-center text-gray-500">

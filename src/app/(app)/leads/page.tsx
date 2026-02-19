@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Plus, Upload, Edit, Trash2, Loader2, RefreshCw } from 'lucide-react';
+import { Search, Plus, Upload, Edit, Trash2, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
 import { useLeadsStore, type Lead } from '@/store/leadsStore';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
 import PermissionLoading from '@/components/PermissionLoading';
+import { useUsage } from '@/hooks/useUsage';
 
 export default function LeadsPage() {
   const {
@@ -28,9 +29,21 @@ export default function LeadsPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const { canAccess, isLoading: permLoading } = usePermission();
+  const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('leads')) return <AccessDenied module="leads" />;
+
+  // ✅ Bloqueio de criação quando limite atingido ou plano inativo
+  const limitReached = isAtLimit('leads');
+  const planInactive = isPlanInactive();
+  const createBlocked = limitReached || planInactive;
+
+  const createTooltip = planInactive
+    ? 'Seu período de teste expirou. Entre em contato para continuar.'
+    : limitReached
+      ? `Limite de leads atingido (${formatUsage('leads')}). Faça upgrade do plano.`
+      : '';
 
   // Busca leads ao montar e quando search/page muda
   useEffect(() => {
@@ -46,6 +59,7 @@ export default function LeadsPage() {
   }, [searchQuery]);
 
   const openCreateModal = () => {
+    if (createBlocked) return;
     setModalMode('create');
     setSelectedLead(null);
     setShowNewLead(true);
@@ -74,8 +88,6 @@ export default function LeadsPage() {
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-
-      // Aceita campos PT-BR e EN
       const name = row.name || row.nome;
       const email = row.email;
 
@@ -182,20 +194,41 @@ export default function LeadsPage() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          >
-            <Upload size={20} />
-            Importar CSV
-          </button>
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            <Plus size={20} />
-            Novo Lead
-          </button>
+          {/* ✅ Botão Importar CSV com tooltip de limite */}
+          <div className="relative group">
+            <button
+              onClick={() => !createBlocked && setShowImport(true)}
+              disabled={createBlocked}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createBlocked ? <AlertTriangle size={18} /> : <Upload size={20} />}
+              Importar CSV
+            </button>
+            {createBlocked && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                {createTooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
+          </div>
+
+          {/* ✅ Botão Novo Lead com tooltip de limite */}
+          <div className="relative group">
+            <button
+              onClick={openCreateModal}
+              disabled={createBlocked}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createBlocked ? <AlertTriangle size={18} /> : <Plus size={20} />}
+              Novo Lead
+            </button>
+            {createBlocked && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                {createTooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
