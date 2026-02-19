@@ -6,6 +6,7 @@ import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
 import { checkPermission } from '@/lib/checkPermission';
 import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, leadCreateSchema } from '@/lib/validations';
+import { createNotification } from '@/lib/notify';
 
 // GET /api/leads — Lista leads da organização
 export async function GET(req: NextRequest) {
@@ -130,6 +131,18 @@ export async function POST(req: NextRequest) {
         createdBy: { select: { id: true, name: true } },
       },
     });
+
+    // ✅ Notificar responsável atribuído (se diferente de quem criou)
+    if (data.assignedToId && data.assignedToId !== userId) {
+      await createNotification({
+        userId: data.assignedToId,
+        type: 'lead_assigned',
+        title: 'Novo lead atribuído',
+        message: `O lead "${lead.name}" foi atribuído a você`,
+        entityType: 'lead',
+        entityId: lead.id,
+      });
+    }
 
     return NextResponse.json(lead, { status: 201 });
   } catch (error) {
