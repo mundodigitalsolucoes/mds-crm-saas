@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Calendar, Clock, Users, DollarSign, Loader2, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Calendar, Clock, Users, DollarSign, Loader2, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { useProjectStore, ProjectStatus, ProjectPriority } from '@/store/projectStore';
 import NewProjectModal from '@/components/NewProjectModal';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
 import PermissionLoading from '@/components/PermissionLoading';
+import { useUsage } from '@/hooks/useUsage';
 
 export default function ProjectsPage() {
   const {
@@ -24,16 +25,28 @@ export default function ProjectsPage() {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const { canAccess, isLoading: permLoading } = usePermission();
+  const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('projects')) return <AccessDenied module="projects" />;
 
-  // Buscar projetos ao montar e quando busca muda
+  // ✅ Bloqueio de criação quando limite atingido ou plano inativo
+  const limitReached = isAtLimit('projects');
+  const planInactive = isPlanInactive();
+  const createBlocked = limitReached || planInactive;
+
+  const createTooltip = planInactive
+    ? 'Seu período de teste expirou. Entre em contato para continuar.'
+    : limitReached
+      ? `Limite de projetos atingido (${formatUsage('projects')}). Faça upgrade do plano.`
+      : '';
+
   useEffect(() => {
     fetchProjects({ search: searchQuery });
   }, [searchQuery, fetchProjects]);
 
   const openCreateModal = () => {
+    if (createBlocked) return;
     setModalMode('create');
     setSelectedProject(null);
     setShowModal(true);
@@ -76,7 +89,6 @@ export default function ProjectsPage() {
     }
   };
 
-  // Mapear status PT-BR → API
   const mapStatusToApi = (status: string): ProjectStatus => {
     const map: Record<string, ProjectStatus> = {
       'planejamento': 'planning',
@@ -119,7 +131,6 @@ export default function ProjectsPage() {
     return map[priority] || priority;
   };
 
-  // Mapear projeto da API → formato do modal (para edição)
   const mapProjectToModal = (project: any) => ({
     ...project,
     nome: project.title,
@@ -184,7 +195,6 @@ export default function ProjectsPage() {
     return 'bg-red-500';
   };
 
-  // KPIs calculados
   const stats = useMemo(() => ({
     total: projects.length,
     active: projects.filter(p => p.status === 'active').length,
@@ -217,13 +227,23 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex gap-3">
-          <button
-            onClick={openCreateModal}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-          >
-            <Plus size={20} />
-            Novo Projeto
-          </button>
+          {/* ✅ Botão Novo Projeto com tooltip de limite */}
+          <div className="relative group">
+            <button
+              onClick={openCreateModal}
+              disabled={createBlocked}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createBlocked ? <AlertTriangle size={18} /> : <Plus size={20} />}
+              Novo Projeto
+            </button>
+            {createBlocked && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 text-center">
+                {createTooltip}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -240,7 +260,6 @@ export default function ProjectsPage() {
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-lg">
@@ -252,7 +271,6 @@ export default function ProjectsPage() {
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-green-100 rounded-lg">
@@ -264,7 +282,6 @@ export default function ProjectsPage() {
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -276,7 +293,6 @@ export default function ProjectsPage() {
             </div>
           </div>
         </div>
-
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 rounded-lg">
@@ -366,9 +382,7 @@ export default function ProjectsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {project.endDate
-                          ? new Date(project.endDate).toLocaleDateString('pt-BR')
-                          : '—'}
+                        {project.endDate ? new Date(project.endDate).toLocaleDateString('pt-BR') : '—'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {Number(project.budget).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
