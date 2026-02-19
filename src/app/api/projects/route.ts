@@ -3,21 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Schema de validação para criar projeto
-const createProjectSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório'),
-  description: z.string().optional().nullable(),
-  client: z.string().optional().nullable(),
-  status: z.enum(['planning', 'active', 'paused', 'completed', 'cancelled']).default('planning'),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  budget: z.number().min(0).default(0),
-  spent: z.number().min(0).default(0),
-  progress: z.number().min(0).max(100).default(0),
-  startDate: z.string().optional().nullable(),
-  endDate: z.string().optional().nullable(),
-});
+import { parseBody, projectCreateSchema } from '@/lib/validations';
 
 // GET /api/projects — Listar projetos com busca e paginação
 export async function GET(request: NextRequest) {
@@ -99,15 +85,10 @@ export async function POST(request: NextRequest) {
     const userId = session!.user.id;
 
     const body = await request.json();
-    const parsed = createProjectSchema.safeParse(body);
 
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: parsed.error.flatten() },
-        { status: 400 }
-      );
-    }
-
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(projectCreateSchema, body);
+    if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
     const project = await prisma.marketingProject.create({

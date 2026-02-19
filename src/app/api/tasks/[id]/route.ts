@@ -3,57 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Helper: transforma string vazia em null/undefined para campos UUID opcionais
-const optionalUuidNullable = z
-  .string()
-  .optional()
-  .nullable()
-  .transform((val) => {
-    if (val === undefined) return undefined; // campo não enviado
-    if (val === null || val.trim() === '') return null; // campo limpo explicitamente
-    return val;
-  })
-  .pipe(z.string().uuid().optional().nullable());
-
-// Helper: transforma string vazia em null para campos string opcionais
-const optionalStringNullable = z
-  .string()
-  .optional()
-  .nullable()
-  .transform((val) => {
-    if (val === undefined) return undefined;
-    if (val === null || val.trim() === '') return null;
-    return val;
-  });
-
-// Helper: transforma string/number em number ou null
-const optionalNumberNullable = z
-  .union([z.number(), z.string(), z.null()])
-  .optional()
-  .transform((val) => {
-    if (val === undefined) return undefined;
-    if (val === null || val === '') return null;
-    const num = typeof val === 'string' ? parseInt(val, 10) : val;
-    return isNaN(num as number) ? null : num;
-  });
-
-const updateTaskSchema = z.object({
-  title: z.string().min(1).max(255).optional(),
-  description: optionalStringNullable,
-  status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).optional(),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-  dueDate: optionalStringNullable,
-  startDate: optionalStringNullable,
-  isRecurring: z.boolean().optional(),
-  recurrenceRule: optionalStringNullable,
-  estimatedMinutes: optionalNumberNullable,
-  actualMinutes: optionalNumberNullable,
-  projectId: optionalUuidNullable,
-  leadId: optionalUuidNullable,
-  assignedToId: optionalUuidNullable,
-});
+import { parseBody, taskUpdateSchema } from '@/lib/validations';
 
 // GET /api/tasks/[id]
 export async function GET(
@@ -183,7 +133,11 @@ export async function PUT(
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
     const body = await request.json();
-    const data = updateTaskSchema.parse(body);
+
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(taskUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Verificar se a task pertence à organização
     const currentTask = await prisma.task.findFirst({
@@ -308,12 +262,6 @@ export async function PUT(
       },
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao atualizar task:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

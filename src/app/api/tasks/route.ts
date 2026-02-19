@@ -3,67 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Helper: transforma string vazia em undefined (para campos opcionais UUID)
-const optionalUuid = z.preprocess(
-  (val) => {
-    if (typeof val === 'string' && val.trim() === '') return undefined;
-    return val;
-  },
-  z.string().uuid().optional()
-);
-
-// Helper: transforma string vazia em undefined (para campos opcionais string)
-const optionalString = z.preprocess(
-  (val) => {
-    if (typeof val === 'string' && val.trim() === '') return undefined;
-    return val;
-  },
-  z.string().optional()
-);
-
-// Helper: transforma string/number em number ou undefined
-const optionalNumber = z.preprocess(
-  (val) => {
-    if (val === undefined || val === null || val === '') return undefined;
-    const num = typeof val === 'string' ? parseInt(val, 10) : val;
-    return typeof num === 'number' && !isNaN(num) ? num : undefined;
-  },
-  z.number().optional()
-);
-
-// Schema de validação para criar task
-const createTaskSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório').max(255),
-  description: optionalString,
-  status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).default('todo'),
-  priority: z.enum(['low', 'medium', 'high', 'urgent']).default('medium'),
-  dueDate: optionalString,
-  startDate: optionalString,
-  isRecurring: z.boolean().default(false),
-  recurrenceRule: optionalString,
-  estimatedMinutes: optionalNumber,
-  projectId: optionalUuid,
-  leadId: optionalUuid,
-  assignedToId: optionalUuid,
-});
-
-// Schema de filtros
-const filtersSchema = z.object({
-  status: z.string().optional(),
-  priority: z.string().optional(),
-  assignedToId: z.string().optional(),
-  projectId: z.string().optional(),
-  leadId: z.string().optional(),
-  dueDateFrom: z.string().optional(),
-  dueDateTo: z.string().optional(),
-  search: z.string().optional(),
-  isOverdue: z.string().optional(),
-  isToday: z.string().optional(),
-  page: z.string().optional(),
-  pageSize: z.string().optional(),
-});
+import { parseBody, taskCreateSchema, taskFiltersSchema } from '@/lib/validations';
 
 // GET /api/tasks - Listar tasks com filtros e isolamento multi-tenant
 export async function GET(request: NextRequest) {
@@ -74,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     const organizationId = session!.user.organizationId;
     const { searchParams } = new URL(request.url);
-    const params = filtersSchema.parse(Object.fromEntries(searchParams));
+    const params = taskFiltersSchema.parse(Object.fromEntries(searchParams));
 
     // Paginação
     const page = parseInt(params.page || '1');
@@ -250,7 +190,10 @@ export async function POST(request: NextRequest) {
     const userId = session!.user.id;
     const body = await request.json();
 
-    const data = createTaskSchema.parse(body);
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(taskCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     const task = await prisma.task.create({
       data: {
@@ -324,12 +267,6 @@ export async function POST(request: NextRequest) {
       },
     }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { status: 400 }
-      );
-    }
     console.error('Erro ao criar task:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

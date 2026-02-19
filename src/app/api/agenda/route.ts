@@ -3,27 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Schema de validação para criação de evento
-const createEventSchema = z.object({
-  title: z.string().min(1, 'Título é obrigatório').max(200),
-  description: z.string().max(2000).optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data deve estar no formato YYYY-MM-DD'),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário deve estar no formato HH:MM').optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Horário deve estar no formato HH:MM').optional(),
-  allDay: z.boolean().optional().default(false),
-  type: z.enum(['meeting', 'call', 'follow_up', 'reminder', 'deadline', 'other']).optional().default('meeting'),
-  status: z.enum(['agendado', 'concluido', 'cancelado']).optional().default('agendado'),
-  color: z.string().max(20).optional(),
-  location: z.string().max(500).optional(),
-  isRecurring: z.boolean().optional().default(false),
-  recurrenceRule: z.string().max(500).optional(),
-  reminderMinutes: z.number().int().min(0).max(10080).optional(),
-  leadId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
-  assignedToId: z.string().uuid().optional(),
-});
+import { parseBody, agendaCreateSchema } from '@/lib/validations';
 
 // Includes padrão para retornar relações
 const eventIncludes = {
@@ -184,16 +164,11 @@ export async function POST(request: NextRequest) {
     const userId = session!.user.id;
 
     const body = await request.json();
-    const validation = createEventSchema.safeParse(body);
 
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: validation.error.flatten().fieldErrors },
-        { status: 400 }
-      );
-    }
-
-    const data = validation.data;
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(agendaCreateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Validar que endTime > startTime (se ambos fornecidos)
     if (data.startTime && data.endTime && data.endTime <= data.startTime) {

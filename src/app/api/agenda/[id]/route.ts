@@ -3,27 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
-import { z } from 'zod';
-
-// Schema de validação para atualização
-const updateEventSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).nullable().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
-  allDay: z.boolean().optional(),
-  type: z.enum(['meeting', 'call', 'follow_up', 'reminder', 'deadline', 'other']).optional(),
-  status: z.enum(['agendado', 'concluido', 'cancelado']).optional(),
-  color: z.string().max(20).nullable().optional(),
-  location: z.string().max(500).nullable().optional(),
-  isRecurring: z.boolean().optional(),
-  recurrenceRule: z.string().max(500).nullable().optional(),
-  reminderMinutes: z.number().int().min(0).max(10080).nullable().optional(),
-  leadId: z.string().uuid().nullable().optional(),
-  projectId: z.string().uuid().nullable().optional(),
-  assignedToId: z.string().uuid().nullable().optional(),
-});
+import { parseBody, agendaUpdateSchema } from '@/lib/validations';
 
 const eventIncludes = {
   lead: {
@@ -101,16 +81,11 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const validation = updateEventSchema.safeParse(body);
 
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: validation.error.flatten().fieldErrors },
-        { status: 400 }
-      );
-    }
-
-    const data = validation.data;
+    // ✅ Validação Zod centralizada
+    const parsed = parseBody(agendaUpdateSchema, body);
+    if (!parsed.success) return parsed.response;
+    const data = parsed.data;
 
     // Validar horários
     const finalStartTime = data.startTime !== undefined ? data.startTime : existing.startTime;
