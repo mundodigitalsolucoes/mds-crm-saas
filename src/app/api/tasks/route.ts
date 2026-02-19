@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, taskCreateSchema, taskFiltersSchema } from '@/lib/validations';
+import { createNotification } from '@/lib/notify';
 
 // GET /api/tasks - Listar tasks com filtros e isolamento multi-tenant
 export async function GET(request: NextRequest) {
@@ -221,17 +222,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Criar notificação se atribuiu a alguém
+    // ✅ Notificar responsável atribuído (se diferente de quem criou)
     if (data.assignedToId && data.assignedToId !== userId) {
-      await prisma.notification.create({
-        data: {
-          userId: data.assignedToId,
-          type: 'task_assigned',
-          title: 'Nova tarefa atribuída',
-          message: `Você foi atribuído à tarefa "${task.title}"`,
-          entityType: 'task',
-          entityId: task.id,
-        },
+      await createNotification({
+        userId: data.assignedToId,
+        type: 'task_assigned',
+        title: 'Nova tarefa atribuída',
+        message: `Você foi atribuído à tarefa "${task.title}"`,
+        entityType: 'task',
+        entityId: task.id,
       });
     }
 

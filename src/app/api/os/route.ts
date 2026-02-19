@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, osCreateSchema } from '@/lib/validations';
+import { createNotification } from '@/lib/notify';
 
 // Gerar código sequencial da OS: OS-2026-0001
 async function generateOSCode(organizationId: string): Promise<string> {
@@ -153,6 +154,18 @@ export async function POST(request: NextRequest) {
         project: { select: { id: true, title: true } },
       },
     });
+
+    // ✅ Notificar responsável atribuído (se diferente de quem criou)
+    if (data.assignedToId && data.assignedToId !== userId) {
+      await createNotification({
+        userId: data.assignedToId,
+        type: 'os_assigned',
+        title: 'Nova OS atribuída',
+        message: `A ordem de serviço "${serviceOrder.title}" (${serviceOrder.code}) foi atribuída a você`,
+        entityType: 'os',
+        entityId: serviceOrder.id,
+      });
+    }
 
     return NextResponse.json(serviceOrder, { status: 201 });
   } catch (error) {
