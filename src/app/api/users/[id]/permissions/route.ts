@@ -1,7 +1,6 @@
 // src/app/api/users/[id]/permissions/route.ts
 // Atualiza permissões granulares de um usuário da organização
 // Apenas owner e admin podem acessar
-
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkAdminAccess } from '@/lib/checkPermission';
@@ -9,11 +8,9 @@ import {
   parsePermissions,
   serializePermissions,
   getDefaultPermissions,
-  ALL_MODULES,
 } from '@/lib/permissions';
-import type { UserRole, UserPermissions, PermissionAction } from '@/types/permissions';
-
-const VALID_ACTIONS: PermissionAction[] = ['view', 'create', 'edit', 'delete'];
+import { parseBody, userPermissionsUpdateSchema } from '@/lib/validations';
+import type { UserRole, UserPermissions } from '@/types/permissions';
 
 // Hierarquia de roles (maior número = mais poder)
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -22,24 +19,6 @@ const ROLE_HIERARCHY: Record<string, number> = {
   admin: 3,
   owner: 4,
 };
-
-/**
- * Valida se o objeto de permissões tem a estrutura correta.
- */
-function validatePermissions(perms: unknown): perms is UserPermissions {
-  if (typeof perms !== 'object' || perms === null) return false;
-
-  for (const mod of ALL_MODULES) {
-    const modPerms = (perms as Record<string, unknown>)[mod];
-    if (typeof modPerms !== 'object' || modPerms === null) return false;
-
-    for (const action of VALID_ACTIONS) {
-      if (typeof (modPerms as Record<string, unknown>)[action] !== 'boolean') return false;
-    }
-  }
-
-  return true;
-}
 
 export async function PUT(
   req: NextRequest,
@@ -102,8 +81,8 @@ export async function PUT(
     );
   }
 
-  // 7. Parsear body
-  let body: { permissions?: unknown; resetToDefault?: boolean };
+  // 7. Parsear e validar body
+  let body: unknown;
   try {
     body = await req.json();
   } catch {
@@ -113,22 +92,20 @@ export async function PUT(
     );
   }
 
+  // ✅ Validação Zod centralizada (refine: resetToDefault XOR permissions, módulos strict)
+  const parsed = parseBody(userPermissionsUpdateSchema, body);
+  if (!parsed.success) return parsed.response;
+  const data = parsed.data;
+
   let permissionsToSave: string;
 
   // 8. Reset para padrão do role
-  if (body.resetToDefault) {
+  if (data.resetToDefault) {
     const defaults = getDefaultPermissions(targetUser.role as UserRole);
     permissionsToSave = serializePermissions(defaults);
   } else {
-    // 9. Validar e salvar permissões customizadas
-    if (!body.permissions || !validatePermissions(body.permissions)) {
-      return NextResponse.json(
-        { error: 'Formato de permissões inválido' },
-        { status: 400 }
-      );
-    }
-
-    permissionsToSave = serializePermissions(body.permissions);
+    // 9. Salvar permissões customizadas (já validadas pelo Zod)
+    permissionsToSave = serializePermissions(data.permissions as UserPermissions);
   }
 
   // 10. Salvar no banco
