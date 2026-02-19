@@ -1,3 +1,4 @@
+// src/components/NewOSModal.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -6,6 +7,8 @@ import type { OS, OSTipo } from '@/types/os';
 import { useOSStore } from '@/store/osStore';
 import { useProjectStore } from '@/store/projectStore';
 import { LaunchTasksFromOSModal } from '@/components/LaunchTasksFromOSModal';
+import { useUsage } from '@/hooks/useUsage';
+import LimitAlert from '@/components/LimitAlert';
 
 interface NewOSModalProps {
   isOpen: boolean;
@@ -24,6 +27,7 @@ const getPrioridadeOptions = () =>
 export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
   const { addOS, updateOS, osStages, loading } = useOSStore();
   const { projects, getProjectById } = useProjectStore();
+  const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
   const [formData, setFormData] = useState<Partial<OS>>({
     tipo: 'implantacao_mds',
@@ -41,6 +45,10 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
   // Guardamos o ID da OS (após salvar/criar) para poder lançar tarefas
   const [savedOSId, setSavedOSId] = useState<number | string | null>(null);
+
+  // ✅ Verificar limite (só bloqueia criação, edição sempre OK)
+  const isEditMode = Boolean(initialData);
+  const limitReached = !isEditMode && (isAtLimit('serviceOrders') || isPlanInactive());
 
   // ✅ hooks sempre rodam
   const projectOptions = useMemo(
@@ -169,6 +177,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (limitReached) return; // Segurança extra
+
     const result = validateAndBuildPayload();
     if (!result) return;
 
@@ -178,11 +188,9 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
     try {
       if (initialData) {
-        // Editar OS existente
         await updateOS(initialData.id, payload as Partial<OS>);
         setSavedOSId(initialData.id);
       } else {
-        // Criar nova OS
         const created = await addOS(payload as Omit<OS, 'id' | 'codigo'>);
         if (created?.id) {
           setSavedOSId(created.id);
@@ -216,6 +224,15 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* ✅ Alerta de limite atingido */}
+          {limitReached && (
+            <LimitAlert
+              resource="ordens de serviço"
+              usage={formatUsage('serviceOrders')}
+              planName={usageData?.organization.plan}
+            />
+          )}
+
           <section>
             <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Dados Gerais</h3>
 
@@ -227,8 +244,9 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="titulo"
                   value={formData.titulo || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={limitReached}
                 />
               </div>
 
@@ -238,8 +256,9 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="projetoId"
                   value={formData.projetoId ?? ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={limitReached}
                 >
                   <option value="">Selecione</option>
                   {projectOptions.map((opt) => (
@@ -256,8 +275,9 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="status"
                   value={(formData.status as string) || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   required
+                  disabled={limitReached}
                 >
                   <option value="">Selecione</option>
                   {statusOptions.map((opt) => (
@@ -274,7 +294,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="prioridade"
                   value={(formData.prioridade as string) || 'media'}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={limitReached}
                 >
                   {getPrioridadeOptions().map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -291,7 +312,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="responsavel"
                   value={formData.responsavel || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={limitReached}
                 />
               </div>
 
@@ -302,7 +324,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="datas.inicio"
                   value={formData.datas?.inicio || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={limitReached}
                 />
               </div>
 
@@ -313,7 +336,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
                   name="datas.prazo"
                   value={formData.datas?.prazo || ''}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={limitReached}
                 />
               </div>
             </div>
@@ -327,7 +351,8 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
               onChange={handleChange}
               rows={2}
               placeholder="Descreva o objetivo principal desta ordem de serviço..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={limitReached}
             />
           </section>
 
@@ -360,11 +385,15 @@ export function NewOSModal({ isOpen, onClose, initialData }: NewOSModalProps) {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || limitReached}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
             >
               {submitting && <Loader2 size={16} className="animate-spin" />}
-              {initialData ? 'Salvar' : 'Criar OS'}
+              {limitReached
+                ? 'Limite Atingido'
+                : initialData
+                  ? 'Salvar'
+                  : 'Criar OS'}
             </button>
           </div>
         </form>

@@ -1,8 +1,9 @@
 // src/app/api/projects/route.ts
-// CRUD de projetos com permissões granulares e multi-tenant
+// CRUD de projetos com permissões granulares, limites de plano e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, projectCreateSchema } from '@/lib/validations';
 
 // GET /api/projects — Listar projetos com busca e paginação
@@ -83,6 +84,14 @@ export async function POST(request: NextRequest) {
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
+
+    // ✅ Verificar se plano está ativo
+    const planCheck = await checkPlanActive(organizationId);
+    if (!planCheck.active) return planCheck.errorResponse!;
+
+    // ✅ Verificar limite de projetos do plano
+    const limitCheck = await checkOrganizationLimit(organizationId, 'projects');
+    if (!limitCheck.allowed) return limitCheck.errorResponse!;
 
     const body = await request.json();
 

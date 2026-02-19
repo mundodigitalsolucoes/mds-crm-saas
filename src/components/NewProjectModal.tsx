@@ -1,7 +1,10 @@
+// src/components/NewProjectModal.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { X, Calendar, User, FileText } from 'lucide-react';
+import { useUsage } from '@/hooks/useUsage';
+import LimitAlert from '@/components/LimitAlert';
 
 interface NewProjectModalProps {
   isOpen: boolean;
@@ -18,6 +21,8 @@ export default function NewProjectModal({
   initialData = null,
   mode = 'create',
 }: NewProjectModalProps) {
+  const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
+
   const [formData, setFormData] = useState({
     nome: '',
     cliente: '',
@@ -30,6 +35,9 @@ export default function NewProjectModal({
     responsavel: '',
     progresso: '0',
   });
+
+  // ✅ Verificar limite (só bloqueia criação)
+  const limitReached = mode === 'create' && (isAtLimit('projects') || isPlanInactive());
 
   // Preenche o form quando abrir em modo edição
   useEffect(() => {
@@ -70,6 +78,7 @@ export default function NewProjectModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (limitReached) return;
     onSubmit(formData);
     onClose();
   };
@@ -80,11 +89,8 @@ export default function NewProjectModal({
 
   // Formatar orçamento como moeda BRL ao digitar
   const handleOrcamentoChange = (value: string) => {
-    // Remove tudo que não é número
     const numbers = value.replace(/\D/g, '');
-    // Converte para centavos → reais
     const amount = (parseInt(numbers) || 0) / 100;
-    // Formata como número para salvar no state (mantém como string numérica)
     setFormData((prev) => ({
       ...prev,
       orcamento: amount > 0 ? amount.toString() : '',
@@ -99,10 +105,10 @@ export default function NewProjectModal({
   };
 
   const inputClass =
-    'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
+    'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white disabled:opacity-50 disabled:cursor-not-allowed';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
   const selectClass =
-    'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
+    'w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -123,6 +129,15 @@ export default function NewProjectModal({
 
         {/* Form */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* ✅ Alerta de limite atingido */}
+          {limitReached && (
+            <LimitAlert
+              resource="projetos"
+              usage={formatUsage('projects')}
+              planName={usageData?.organization.plan}
+            />
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Informações Básicas */}
             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -140,6 +155,7 @@ export default function NewProjectModal({
                     onChange={(e) => handleInputChange('nome', e.target.value)}
                     className={inputClass}
                     placeholder="Ex: Site Institucional - Empresa Tech"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -152,6 +168,7 @@ export default function NewProjectModal({
                     onChange={(e) => handleInputChange('cliente', e.target.value)}
                     className={inputClass}
                     placeholder="Nome da empresa/cliente"
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -165,6 +182,7 @@ export default function NewProjectModal({
                       onChange={(e) => handleInputChange('responsavel', e.target.value)}
                       className={`${inputClass} pl-10`}
                       placeholder="Nome do responsável"
+                      disabled={limitReached}
                     />
                   </div>
                 </div>
@@ -177,6 +195,7 @@ export default function NewProjectModal({
                     onChange={(e) => handleInputChange('descricao', e.target.value)}
                     className={inputClass}
                     placeholder="Descreva o projeto, objetivos e escopo..."
+                    disabled={limitReached}
                   />
                 </div>
               </div>
@@ -190,6 +209,7 @@ export default function NewProjectModal({
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
                   className={selectClass}
+                  disabled={limitReached}
                 >
                   <option value="planejamento">Planejamento</option>
                   <option value="em-andamento">Em Andamento</option>
@@ -205,6 +225,7 @@ export default function NewProjectModal({
                   value={formData.prioridade}
                   onChange={(e) => handleInputChange('prioridade', e.target.value)}
                   className={selectClass}
+                  disabled={limitReached}
                 >
                   <option value="baixa">Baixa</option>
                   <option value="media">Média</option>
@@ -223,6 +244,7 @@ export default function NewProjectModal({
                   onChange={(e) => handleInputChange('progresso', e.target.value)}
                   className={inputClass}
                   placeholder="0"
+                  disabled={limitReached}
                 />
               </div>
             </div>
@@ -241,6 +263,7 @@ export default function NewProjectModal({
                     value={formData.dataInicio}
                     onChange={(e) => handleInputChange('dataInicio', e.target.value)}
                     className={inputClass}
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -252,6 +275,7 @@ export default function NewProjectModal({
                     value={formData.prazoEntrega}
                     onChange={(e) => handleInputChange('prazoEntrega', e.target.value)}
                     className={inputClass}
+                    disabled={limitReached}
                   />
                 </div>
 
@@ -268,6 +292,7 @@ export default function NewProjectModal({
                       onChange={(e) => handleOrcamentoChange(e.target.value)}
                       className={`${inputClass} pl-10`}
                       placeholder="R$ 0,00"
+                      disabled={limitReached}
                     />
                   </div>
                 </div>
@@ -285,9 +310,14 @@ export default function NewProjectModal({
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                disabled={limitReached}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
-                {mode === 'edit' ? 'Salvar Alterações' : 'Criar Projeto'}
+                {limitReached
+                  ? 'Limite Atingido'
+                  : mode === 'edit'
+                    ? 'Salvar Alterações'
+                    : 'Criar Projeto'}
               </button>
             </div>
           </form>

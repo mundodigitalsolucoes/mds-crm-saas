@@ -1,7 +1,7 @@
 // src/lib/auth.ts
 // Configuração CENTRALIZADA do NextAuth.js
 // Single source of truth — usado por route.ts e getServerSession()
-// Inclui permissões granulares no JWT e session
+// Inclui permissões granulares + dados do plano no JWT e session
 
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -33,6 +33,13 @@ export const authOptions: NextAuthOptions = {
             role: true,
             permissions: true,
             deletedAt: true,
+            organization: {
+              select: {
+                plan: true,
+                planStatus: true,
+                trialEndsAt: true,
+              },
+            },
           },
         });
 
@@ -49,6 +56,9 @@ export const authOptions: NextAuthOptions = {
           organizationId: user.organizationId,
           role: user.role,
           permissions: user.permissions,
+          plan: user.organization.plan,
+          planStatus: user.organization.planStatus,
+          trialEndsAt: user.organization.trialEndsAt?.toISOString() || null,
         };
       },
     }),
@@ -64,33 +74,55 @@ export const authOptions: NextAuthOptions = {
         token.organizationId = (user as any).organizationId;
         token.role = (user as any).role;
         token.permissions = (user as any).permissions;
+        token.plan = (user as any).plan;
+        token.planStatus = (user as any).planStatus;
+        token.trialEndsAt = (user as any).trialEndsAt;
       }
 
-      // ─── Session update: recarregar permissões ───
-      // Cenário 1: Client chamou update() com dados (ex: após admin salvar)
-      // Cenário 2: Client chamou update() sem dados → busca do banco
+      // ─── Session update: recarregar permissões e dados do plano ───
       if (trigger === 'update') {
         if (updateData && ('permissions' in updateData || 'role' in updateData)) {
-          // Client enviou dados frescos
           if ('permissions' in updateData) {
             token.permissions = updateData.permissions;
           }
           if ('role' in updateData) {
             token.role = updateData.role;
           }
-        } else {
-          // Busca do banco (fallback seguro)
+        }
+
+        // Atualizar dados do plano se enviados
+        if (updateData && ('plan' in updateData || 'planStatus' in updateData)) {
+          if ('plan' in updateData) token.plan = updateData.plan;
+          if ('planStatus' in updateData) token.planStatus = updateData.planStatus;
+          if ('trialEndsAt' in updateData) token.trialEndsAt = updateData.trialEndsAt;
+        }
+
+        // Se não enviou dados específicos, busca tudo do banco
+        if (!updateData || Object.keys(updateData).length === 0) {
           try {
             const freshUser = await prisma.user.findUnique({
               where: { id: token.id as string },
-              select: { role: true, permissions: true },
+              select: {
+                role: true,
+                permissions: true,
+                organization: {
+                  select: {
+                    plan: true,
+                    planStatus: true,
+                    trialEndsAt: true,
+                  },
+                },
+              },
             });
             if (freshUser) {
               token.role = freshUser.role;
               token.permissions = freshUser.permissions;
+              token.plan = freshUser.organization.plan;
+              token.planStatus = freshUser.organization.planStatus;
+              token.trialEndsAt = freshUser.organization.trialEndsAt?.toISOString() || null;
             }
           } catch (error) {
-            console.error('[AUTH] Erro ao recarregar permissões:', error);
+            console.error('[AUTH] Erro ao recarregar dados do token:', error);
           }
         }
       }
@@ -103,6 +135,9 @@ export const authOptions: NextAuthOptions = {
         session.user.organizationId = token.organizationId as string;
         session.user.role = token.role as string;
         session.user.permissions = token.permissions as string;
+        session.user.plan = token.plan as string;
+        session.user.planStatus = token.planStatus as string;
+        session.user.trialEndsAt = (token.trialEndsAt as string) || null;
       }
       return session;
     },

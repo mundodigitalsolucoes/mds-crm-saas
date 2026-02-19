@@ -1,12 +1,13 @@
 // src/app/api/admin/organizations/[id]/route.ts
-// API Admin — Detalhe, Atualização e Exclusão de Organização
+// API Admin — Detalhe, Atualização e Exclusão de Organização (com syncPlanLimits)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
+import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
 
 /**
- * GET /api/admin/organizations/:id — Detalhes de uma organização
+ * GET /api/admin/organizations/:id — Detalhes de uma organização com usage
  */
 export async function GET(
   req: NextRequest,
@@ -24,6 +25,7 @@ export async function GET(
       where: { id },
       include: {
         users: {
+          where: { deletedAt: null },
           select: {
             id: true,
             name: true,
@@ -51,7 +53,23 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(org);
+    // Retorna com limites e usage lado a lado
+    return NextResponse.json({
+      ...org,
+      limits: {
+        maxUsers: org.maxUsers,
+        maxLeads: org.maxLeads,
+        maxProjects: org.maxProjects,
+        maxOs: org.maxOs,
+      },
+      usage: {
+        users: org.users.length,
+        leads: org._count.leads,
+        projects: org._count.projects,
+        tasks: org._count.tasks,
+        serviceOrders: org._count.serviceOrders,
+      },
+    });
   } catch (error) {
     console.error('[ADMIN ORGS] Erro ao buscar:', error);
     return NextResponse.json(
@@ -63,6 +81,8 @@ export async function GET(
 
 /**
  * PUT /api/admin/organizations/:id — Atualiza uma organização
+ * Se syncFromPlan=true E plan mudou, copia limites do novo Plan.
+ * Se syncFromPlan=false, usa os valores manuais (customização por org).
  */
 export async function PUT(
   req: NextRequest,
@@ -77,7 +97,7 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada (slug já normalizado pelo schema)
+    // ✅ Validação Zod centralizada
     const parsed = parseBody(adminOrgUpdateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
@@ -105,12 +125,49 @@ export async function PUT(
       }
     }
 
+    // Extrai syncFromPlan antes de enviar pro Prisma (não é coluna do banco)
+    const { syncFromPlan, ...updateData } = data;
+
+    // ✅ Se syncFromPlan=true E plan mudou, copia limites do novo plano
+    const planChanged = data.plan && data.plan !== existing.plan;
+
+    if (syncFromPlan && planChanged) {
+      // Primeiro atualiza campos não-limite (name, slug, planStatus, etc.)
+      const { maxUsers, maxLeads, maxProjects, maxOs, ...nonLimitData } = updateData;
+
+      // Atualiza campos não-limite
+      if (Object.keys(nonLimitData).length > 0) {
+        await prisma.organization.update({
+          where: { id },
+          data: nonLimitData,
+        });
+      }
+
+      // Depois sincroniza limites do Plan
+      const synced = await syncPlanLimits(id, data.plan!);
+
+      if (synced) {
+        return NextResponse.json({
+          ...synced,
+          _syncedFromPlan: true,
+          message: `Limites sincronizados do plano "${data.plan}"`,
+        });
+      }
+
+      // Se plano não encontrado, faz update normal com os valores manuais
+      console.warn(`[ADMIN ORGS] Plano "${data.plan}" não encontrado. Usando valores manuais.`);
+    }
+
+    // Update normal (customização manual ou sem sync)
     const org = await prisma.organization.update({
       where: { id },
-      data,
+      data: updateData,
     });
 
-    return NextResponse.json(org);
+    return NextResponse.json({
+      ...org,
+      _syncedFromPlan: false,
+    });
   } catch (error) {
     console.error('[ADMIN ORGS] Erro ao atualizar:', error);
     return NextResponse.json(

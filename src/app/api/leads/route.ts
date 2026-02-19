@@ -1,9 +1,10 @@
 // src/app/api/leads/route.ts
-// CRUD de leads com rate limiting, permissões granulares e multi-tenant
+// CRUD de leads com rate limiting, permissões granulares, limites de plano e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
 import { checkPermission } from '@/lib/checkPermission';
+import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, leadCreateSchema } from '@/lib/validations';
 
 // GET /api/leads — Lista leads da organização
@@ -87,6 +88,14 @@ export async function POST(req: NextRequest) {
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
+
+    // ✅ Verificar se plano está ativo
+    const planCheck = await checkPlanActive(organizationId);
+    if (!planCheck.active) return planCheck.errorResponse!;
+
+    // ✅ Verificar limite de leads do plano
+    const limitCheck = await checkOrganizationLimit(organizationId, 'leads');
+    if (!limitCheck.allowed) return limitCheck.errorResponse!;
 
     const body = await req.json();
 

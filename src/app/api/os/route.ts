@@ -1,8 +1,9 @@
 // src/app/api/os/route.ts
-// API de Ordens de Serviço — Listagem e Criação com permissões granulares
+// API de Ordens de Serviço — Listagem e Criação com permissões granulares e limites de plano
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, osCreateSchema } from '@/lib/validations';
 
 // Gerar código sequencial da OS: OS-2026-0001
@@ -109,6 +110,14 @@ export async function POST(request: NextRequest) {
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
+
+    // ✅ Verificar se plano está ativo
+    const planCheck = await checkPlanActive(organizationId);
+    if (!planCheck.active) return planCheck.errorResponse!;
+
+    // ✅ Verificar limite de OS do plano
+    const limitCheck = await checkOrganizationLimit(organizationId, 'os');
+    if (!limitCheck.allowed) return limitCheck.errorResponse!;
 
     const body = await request.json();
 
