@@ -1,165 +1,483 @@
+// src/app/api/webhooks/chatwoot/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { ChatwootWebhook } from '@/types'
+import { createNotification } from '@/lib/notify'
+import {
+  getChatwootCredentialsByAccountId,
+  normalizeChatwootChannel,
+} from '@/lib/chatwoot'
+import { Prisma } from '@prisma/client'
+
+// ─── Tipos do payload Chatwoot ────────────────────────────────────────────────
+
+interface ChatwootContact {
+  id: number
+  name?: string
+  email?: string
+  phone_number?: string
+  avatar_url?: string
+  custom_attributes?: Record<string, unknown>
+}
+
+interface ChatwootInbox {
+  id: number
+  name?: string
+  channel_type?: string
+}
+
+interface ChatwootAssignee {
+  id: number
+  name?: string
+  email?: string
+}
+
+interface ChatwootConversationPayload {
+  id: number
+  account_id?: number
+  inbox_id: number
+  status: string
+  channel?: string
+  contact_inbox?: { contact_id?: number }
+  meta?: {
+    sender?: ChatwootContact
+    assignee?: ChatwootAssignee
+    channel?: string
+  }
+  inbox?: ChatwootInbox
+}
+
+interface ChatwootMessagePayload {
+  id: number
+  content?: string
+  message_type: string
+  created_at: string
+  account_id?: number
+  conversation?: ChatwootConversationPayload
+  sender?: ChatwootContact
+  contact?: ChatwootContact
+}
+
+interface ChatwootWebhookPayload {
+  event: string
+  account_id?: number
+  id?: number
+  status?: string
+  channel?: string
+  inbox_id?: number
+  inbox?: ChatwootInbox
+  meta?: {
+    sender?: ChatwootContact
+    assignee?: ChatwootAssignee
+    channel?: string
+  }
+  content?: string
+  message_type?: string
+  created_at?: string
+  conversation?: ChatwootConversationPayload
+  contact?: ChatwootContact
+  sender?: ChatwootContact
+}
+
+// ─── Segredo do webhook ───────────────────────────────────────────────────────
+
+const WEBHOOK_SECRET = process.env.CHATWOOT_WEBHOOK_SECRET
+
+function validateSecret(req: NextRequest): boolean {
+  if (!WEBHOOK_SECRET) {
+    console.warn('[Chatwoot Webhook] CHATWOOT_WEBHOOK_SECRET não configurado.')
+    return true
+  }
+  const secret = req.nextUrl.searchParams.get('secret')
+  return secret === WEBHOOK_SECRET
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  if (!validateSecret(req)) {
+    console.warn('[Chatwoot Webhook] Secret invalido - requisicao rejeitada.')
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  let payload: ChatwootWebhookPayload
   try {
-    const webhook: ChatwootWebhook = await req.json()
+    payload = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
 
-    console.log('Chatwoot webhook received:', webhook.event)
+  console.log('[Chatwoot Webhook] Evento recebido:', payload.event)
 
-    // Handle different webhook events
-    switch (webhook.event) {
-      case 'conversation_created':
-        await handleConversationCreated(webhook)
-        break
-      
-      case 'message_created':
-        await handleMessageCreated(webhook)
-        break
-      
-      case 'contact_created':
-        await handleContactCreated(webhook)
-        break
-      
-      case 'conversation_status_changed':
-        await handleStatusChanged(webhook)
-        break
-      
-      default:
-        console.log('Unhandled event:', webhook.event)
-    }
+  const accountId =
+    payload.account_id ??
+    payload.conversation?.account_id ??
+    undefined
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Webhook error:', error)
-    return NextResponse.json(
-      { error: 'Webhook processing failed' },
-      { status: 500 }
+  let organizationId: string | null = null
+
+  if (accountId) {
+    const creds = await getChatwootCredentialsByAccountId(accountId)
+    organizationId = creds?.organizationId ?? null
+  }
+
+  if (!organizationId) {
+    const fallback = await prisma.connectedAccount.findFirst({
+      where: { provider: 'chatwoot', isActive: true },
+      select: { organizationId: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    organizationId = fallback?.organizationId ?? null
+  }
+
+  if (!organizationId) {
+    console.error('[Chatwoot Webhook] Organizacao nao encontrada para account_id:', accountId)
+    return NextResponse.json({ success: true, skipped: true })
+  }
+
+  processEvent(payload, organizationId).catch((err) =>
+    console.error('[Chatwoot Webhook] Erro ao processar evento:', err)
+  )
+
+  return NextResponse.json({ success: true })
+}
+
+// ─── Dispatcher ───────────────────────────────────────────────────────────────
+
+async function processEvent(
+  payload: ChatwootWebhookPayload,
+  organizationId: string
+): Promise<void> {
+  switch (payload.event) {
+    case 'conversation_created':
+      await handleConversationCreated(payload, organizationId)
+      break
+    case 'conversation_updated':
+    case 'conversation_status_changed':
+      await handleConversationUpdated(payload, organizationId)
+      break
+    case 'message_created':
+      await handleMessageCreated(payload, organizationId)
+      break
+    case 'contact_created':
+      await handleContactCreated(payload, organizationId)
+      break
+    default:
+      console.log('[Chatwoot Webhook] Evento nao tratado:', payload.event)
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function extractConversationData(payload: ChatwootWebhookPayload) {
+  const chatwootId = payload.id ?? payload.conversation?.id
+  const accountId  = payload.account_id ?? payload.conversation?.account_id
+  const inboxId    = payload.inbox_id ?? payload.conversation?.inbox_id
+  const inboxName  = payload.inbox?.name ?? payload.conversation?.inbox?.name
+  const rawChannel =
+    payload.channel ??
+    payload.meta?.channel ??
+    payload.conversation?.channel ??
+    payload.conversation?.meta?.channel ??
+    payload.inbox?.channel_type ??
+    payload.conversation?.inbox?.channel_type
+  const channel  = normalizeChatwootChannel(rawChannel)
+  const status   = payload.status ?? payload.conversation?.status ?? 'open'
+  const contact  = payload.meta?.sender ?? payload.contact ?? payload.sender
+  const assignee = payload.meta?.assignee ?? payload.conversation?.meta?.assignee
+
+  return { chatwootId, accountId, inboxId, inboxName, channel, status, contact, assignee }
+}
+
+async function findOrCreateLead(
+  organizationId: string,
+  contact: ChatwootContact,
+  chatwootConversationId: number
+): Promise<string | null> {
+  if (!contact) return null
+
+  const orConditions: Prisma.LeadWhereInput[] = [
+    { organizationId, chatwootContactId: contact.id },
+  ]
+  if (contact.email) {
+    orConditions.push({ organizationId, email: contact.email })
+  }
+  if (contact.phone_number) {
+    orConditions.push({ organizationId, phone: contact.phone_number })
+  }
+
+  const existingLead = await prisma.lead.findFirst({
+    where: { OR: orConditions },
+    select: { id: true },
+  })
+
+  if (existingLead) {
+    await prisma.lead.update({
+      where: { id: existingLead.id },
+      data: {
+        chatwootContactId: contact.id,
+        chatwootConversationId,
+      },
+    })
+    return existingLead.id
+  }
+
+  const newLead = await prisma.lead.create({
+    data: {
+      organizationId,
+      name:                  contact.name || 'Lead sem nome',
+      email:                 contact.email || null,
+      phone:                 contact.phone_number || null,
+      source:                'chatwoot',
+      status:                'new',
+      chatwootContactId:     contact.id,
+      chatwootConversationId,
+    },
+    select: { id: true },
+  })
+
+  return newLead.id
+}
+
+async function resolveAssigneeId(
+  organizationId: string,
+  assignee?: ChatwootAssignee
+): Promise<string | null> {
+  if (!assignee?.email) return null
+  const user = await prisma.user.findFirst({
+    where: { organizationId, email: assignee.email, deletedAt: null },
+    select: { id: true },
+  })
+  return user?.id ?? null
+}
+
+// ─── Handlers ─────────────────────────────────────────────────────────────────
+
+async function handleConversationCreated(
+  payload: ChatwootWebhookPayload,
+  organizationId: string
+): Promise<void> {
+  const {
+    chatwootId, accountId, inboxId, inboxName,
+    channel, status, contact, assignee,
+  } = extractConversationData(payload)
+
+  if (!chatwootId || !accountId || !inboxId) {
+    console.warn('[Chatwoot] conversation_created sem dados essenciais', { chatwootId, accountId, inboxId })
+    return
+  }
+
+  const assigneeId = await resolveAssigneeId(organizationId, assignee)
+
+  const leadId = contact
+    ? await findOrCreateLead(organizationId, contact, chatwootId)
+    : null
+
+  const conv = await prisma.chatwootConversation.upsert({
+    where: {
+      organizationId_chatwootId: { organizationId, chatwootId },
+    },
+    create: {
+      organizationId,
+      chatwootId,
+      chatwootAccountId:  accountId,
+      chatwootInboxId:    inboxId,
+      chatwootContactId:  contact?.id ?? 0,
+      channel,
+      inboxName:          inboxName ?? null,
+      status,
+      chatwootAssigneeId: assignee?.id ?? null,
+      assigneeId,
+      contactName:        contact?.name ?? null,
+      contactPhone:       contact?.phone_number ?? null,
+      contactEmail:       contact?.email ?? null,
+      contactAvatarUrl:   contact?.avatar_url ?? null,
+      leadId,
+      unreadCount:        1,
+      lastMessageAt:      new Date(),
+    },
+    update: {
+      status,
+      ...(inboxName                  && { inboxName }),
+      ...(channel                    && { channel }),
+      ...(assignee?.id !== undefined && { chatwootAssigneeId: assignee.id }),
+      ...(assigneeId                 && { assigneeId }),
+      ...(contact?.name              && { contactName:      contact.name }),
+      ...(contact?.phone_number      && { contactPhone:     contact.phone_number }),
+      ...(contact?.email             && { contactEmail:     contact.email }),
+      ...(contact?.avatar_url        && { contactAvatarUrl: contact.avatar_url }),
+      ...(leadId                     && { leadId }),
+    },
+    select: { id: true },
+  })
+
+  const channelLbl  = getChannelLabel(channel)
+  const contactName = contact?.name ?? 'Contato desconhecido'
+
+  if (assigneeId) {
+    await createNotification({
+      userId:     assigneeId,
+      type:       'chatwoot_conversation',
+      title:      'Nova conversa recebida',
+      message:    contactName + ' iniciou uma conversa via ' + channelLbl,
+      entityType: 'chatwoot_conversation',
+      entityId:   conv.id,
+    })
+  } else {
+    const admins = await prisma.user.findMany({
+      where: {
+        organizationId,
+        role:      { in: ['owner', 'admin'] },
+        deletedAt: null,
+      },
+      select: { id: true },
+    })
+    await Promise.all(
+      admins.map((admin) =>
+        createNotification({
+          userId:     admin.id,
+          type:       'chatwoot_conversation',
+          title:      'Nova conversa recebida',
+          message:    contactName + ' iniciou uma conversa via ' + channelLbl,
+          entityType: 'chatwoot_conversation',
+          entityId:   conv.id,
+        })
+      )
     )
   }
+
+  console.log('[Chatwoot] Conversa #' + chatwootId + ' criada | canal: ' + channel + ' | lead: ' + (leadId ?? 'novo'))
 }
 
-async function handleConversationCreated(webhook: ChatwootWebhook) {
-  const { conversation, contact } = webhook.data
+async function handleConversationUpdated(
+  payload: ChatwootWebhookPayload,
+  organizationId: string
+): Promise<void> {
+  const { chatwootId, inboxName, channel, status, contact, assignee } =
+    extractConversationData(payload)
 
-  // Get first organization (for now, you can improve this later)
-  const organization = await prisma.organization.findFirst()
-  
-  if (!organization) {
-    console.error('No organization found. Please create an organization first.')
+  if (!chatwootId) return
+
+  const assigneeId = await resolveAssigneeId(organizationId, assignee)
+
+  await prisma.chatwootConversation.updateMany({
+    where: { organizationId, chatwootId },
+    data: {
+      status,
+      ...(inboxName                  && { inboxName }),
+      ...(channel                    && { channel }),
+      ...(assignee?.id !== undefined && { chatwootAssigneeId: assignee.id }),
+      ...(assigneeId                 && { assigneeId }),
+      ...(contact?.name              && { contactName:      contact.name }),
+      ...(contact?.phone_number      && { contactPhone:     contact.phone_number }),
+      ...(contact?.email             && { contactEmail:     contact.email }),
+      ...(contact?.avatar_url        && { contactAvatarUrl: contact.avatar_url }),
+    },
+  })
+
+  console.log('[Chatwoot] Conversa #' + chatwootId + ' atualizada | status: ' + status)
+}
+
+async function handleMessageCreated(
+  payload: ChatwootWebhookPayload,
+  organizationId: string
+): Promise<void> {
+  if (payload.message_type === 'outgoing' || payload.message_type === 'activity') {
     return
   }
 
-  // Check if lead already exists
-  const existingLead = await prisma.lead.findFirst({
-    where: {
-      OR: [
-        { chatwootContactId: contact.id },
-        { email: contact.email }
-      ]
-    }
+  const conversationId = payload.conversation?.id
+  if (!conversationId) return
+
+  const content  = payload.content ?? ''
+  const contactN = payload.contact?.name ?? payload.sender?.name ?? 'Contato'
+  const now      = new Date()
+
+  const updated = await prisma.chatwootConversation.updateMany({
+    where: { organizationId, chatwootId: conversationId },
+    data: {
+      lastMessage:   content.slice(0, 255),
+      lastMessageAt: now,
+      unreadCount:   { increment: 1 },
+    },
   })
 
-  if (!existingLead) {
-    // Create new lead from Chatwoot conversation
-    await prisma.lead.create({
-      data: {
-        organizationId: organization.id,
-        name: contact.name || 'Lead sem nome',
-        email: contact.email,
-        phone: contact.phone_number,
-        source: 'chatwoot',
-        status: 'new',
-        chatwootContactId: contact.id,
-        chatwootConversationId: conversation.id,
-        customFields: contact.custom_attributes || {},
-      }
-    })
-  }
-}
-
-async function handleMessageCreated(webhook: ChatwootWebhook) {
-  const { conversation, message } = webhook.data
-  
-  // Find lead by conversation
-  const lead = await prisma.lead.findFirst({
-    where: {
-      chatwootConversationId: conversation.id
-    }
-  })
-
-  if (lead) {
-    // Update lead activity
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: { 
-        updatedAt: new Date()
-      }
-    })
-  }
-}
-
-async function handleContactCreated(webhook: ChatwootWebhook) {
-  const { contact } = webhook.data
-  
-  const organization = await prisma.organization.findFirst()
-  
-  if (!organization) {
-    console.error('No organization found')
+  if (updated.count === 0) {
+    console.warn('[Chatwoot] message_created: conversa #' + conversationId + ' nao encontrada no cache')
     return
   }
 
-  // Check if contact already exists
-  const existingLead = await prisma.lead.findFirst({
-    where: {
-      OR: [
-        { chatwootContactId: contact.id },
-        { email: contact.email }
-      ]
-    }
+  const conv = await prisma.chatwootConversation.findFirst({
+    where: { organizationId, chatwootId: conversationId },
+    select: { id: true, assigneeId: true },
   })
 
-  if (!existingLead) {
-    await prisma.lead.create({
-      data: {
-        organizationId: organization.id,
-        name: contact.name || 'Contato sem nome',
-        email: contact.email,
-        phone: contact.phone_number,
-        source: 'chatwoot',
-        status: 'new',
-        chatwootContactId: contact.id,
-        customFields: contact.custom_attributes || {},
-      }
+  if (conv?.assigneeId) {
+    await createNotification({
+      userId:     conv.assigneeId,
+      type:       'chatwoot_message',
+      title:      'Nova mensagem recebida',
+      message:    contactN + ': ' + content.slice(0, 100),
+      entityType: 'chatwoot_conversation',
+      entityId:   conv.id,
     })
   }
+
+  console.log('[Chatwoot] Mensagem criada na conversa #' + conversationId)
 }
 
-async function handleStatusChanged(webhook: ChatwootWebhook) {
-  const { conversation } = webhook.data
-  
-  const lead = await prisma.lead.findFirst({
-    where: {
-      chatwootConversationId: conversation.id
-    }
+async function handleContactCreated(
+  payload: ChatwootWebhookPayload,
+  organizationId: string
+): Promise<void> {
+  const contact = payload.contact
+
+  if (!contact?.id) return
+
+  const orConditions: Prisma.LeadWhereInput[] = [
+    { organizationId, chatwootContactId: contact.id },
+  ]
+  if (contact.email) {
+    orConditions.push({ organizationId, email: contact.email })
+  }
+
+  const existing = await prisma.lead.findFirst({
+    where: { OR: orConditions },
+    select: { id: true },
   })
 
-  if (lead) {
-    // Map Chatwoot status to lead status
-    let status = lead.status
-    if (conversation.status === 'resolved') {
-      status = 'qualified'
-    } else if (conversation.status === 'open') {
-      status = 'contacted'
-    }
-
+  if (existing) {
     await prisma.lead.update({
-      where: { id: lead.id },
-      data: { 
-        status,
-        updatedAt: new Date()
-      }
+      where: { id: existing.id },
+      data: { chatwootContactId: contact.id },
     })
+    return
   }
+
+  await prisma.lead.create({
+    data: {
+      organizationId,
+      name:              contact.name || 'Contato sem nome',
+      email:             contact.email || null,
+      phone:             contact.phone_number || null,
+      source:            'chatwoot',
+      status:            'new',
+      chatwootContactId: contact.id,
+    },
+  })
+
+  console.log('[Chatwoot] Lead criado via contact_created | contactId: ' + contact.id)
+}
+
+// ─── Util local ───────────────────────────────────────────────────────────────
+
+function getChannelLabel(channel: string): string {
+  const labels: Record<string, string> = {
+    whatsapp:   'WhatsApp',
+    email:      'Email',
+    web_widget: 'Widget Web',
+    instagram:  'Instagram',
+    facebook:   'Facebook',
+    telegram:   'Telegram',
+  }
+  return labels[channel] ?? channel
 }
