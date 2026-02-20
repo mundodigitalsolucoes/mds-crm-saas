@@ -2,6 +2,7 @@
 // Sidebar com filtragem de menus por permissão do usuário
 // Skeleton loading enquanto carrega permissões (evita flash visual)
 // ✅ Inclui UsageBanner com indicador de uso do plano
+// ✅ 3.4 White-label: logo e cores dinâmicas da organização
 
 'use client';
 
@@ -24,8 +25,9 @@ import {
   Shield,
   UserCog,
   CreditCard,
+  Paintbrush,
 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { usePermission } from '@/hooks/usePermission';
 import dynamic from 'next/dynamic';
 
@@ -35,7 +37,7 @@ const UsageBanner = dynamic(() => import('@/components/UsageBanner'), {
 import type { PermissionModule } from '@/types/permissions';
 
 // ============================================
-// MENU ITEMS COM MÓDULO DE PERMISSÃO
+// TIPOS
 // ============================================
 
 interface MenuItem {
@@ -43,28 +45,41 @@ interface MenuItem {
   icon: React.ComponentType<any>;
   path: string;
   module?: PermissionModule;
+  ownerOnly?: boolean;
 }
+
+interface OrgBranding {
+  name:           string;
+  logo:           string | null;
+  primaryColor:   string;
+  secondaryColor: string;
+}
+
+// ============================================
+// MENU ITEMS
+// ============================================
 
 const menuItems: MenuItem[] = [
   { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { name: 'Leads', icon: Users, path: '/leads', module: 'leads' },
-  { name: 'Kanban', icon: Kanban, path: '/kanban', module: 'kanban' },
-  { name: 'Projetos', icon: FolderKanban, path: '/projects', module: 'projects' },
-  { name: 'OS', icon: FileText, path: '/os', module: 'os' },
-  { name: 'Tarefas', icon: CheckSquare, path: '/tasks', module: 'tasks' },
-  { name: 'Agenda', icon: Calendar, path: '/agenda', module: 'agenda' },
-  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports' },
+  { name: 'Leads',     icon: Users,           path: '/leads',    module: 'leads'    },
+  { name: 'Kanban',    icon: Kanban,           path: '/kanban',   module: 'kanban'   },
+  { name: 'Projetos',  icon: FolderKanban,    path: '/projects', module: 'projects' },
+  { name: 'OS',        icon: FileText,         path: '/os',       module: 'os'       },
+  { name: 'Tarefas',   icon: CheckSquare,      path: '/tasks',    module: 'tasks'    },
+  { name: 'Agenda',    icon: Calendar,         path: '/agenda',   module: 'agenda'   },
+  { name: 'Relatórios',icon: BarChart3,        path: '/reports',  module: 'reports'  },
 ];
 
 const settingsItems: MenuItem[] = [
-  { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
-  { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
-  { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
-  { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
+  { name: 'Integrações', icon: Plug,        path: '/settings/integrations', module: 'integrations' },
+  { name: 'Membros',     icon: Shield,      path: '/settings/members',      module: 'users'        },
+  { name: 'Aparência',   icon: Paintbrush,  path: '/settings/branding',     ownerOnly: true        },
+  { name: 'Assinatura',  icon: CreditCard,  path: '/settings/billing'                              },
+  { name: 'Minha Conta', icon: UserCog,     path: '/settings/account'                              },
 ];
 
 // ============================================
-// SKELETON COMPONENT
+// SKELETON
 // ============================================
 
 function SidebarSkeleton() {
@@ -101,12 +116,41 @@ function SidebarSkeleton() {
 // ============================================
 
 export default function Sidebar() {
-  const pathname = usePathname();
+  const pathname  = usePathname();
   const { data: session } = useSession();
   const { canAccess, isAdmin, isLoading } = usePermission();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Filtrar menus por permissão
+  // ── Branding dinâmico ──────────────────────────────────────────────────────
+  const [branding, setBranding] = useState<OrgBranding>({
+    name:           'Mundo Digital',
+    logo:           null,
+    primaryColor:   '#6366f1',
+    secondaryColor: '#4f46e5',
+  });
+
+  useEffect(() => {
+    fetch('/api/organizations')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data) return;
+        setBranding({
+          name:           data.name           ?? 'Mundo Digital',
+          logo:           data.logo           ?? null,
+          primaryColor:   data.primaryColor   ?? '#6366f1',
+          secondaryColor: data.secondaryColor ?? '#4f46e5',
+        });
+        // Aplicar CSS variables globais
+        document.documentElement.style.setProperty('--color-primary',   data.primaryColor   ?? '#6366f1');
+        document.documentElement.style.setProperty('--color-secondary', data.secondaryColor ?? '#4f46e5');
+      })
+      .catch(() => {/* silencioso — usa defaults */});
+  }, []);
+
+  // ── Filtrar menus por permissão ────────────────────────────────────────────
+  const role = (session?.user as any)?.role ?? '';
+  const isOwnerOrAdmin = role === 'owner' || role === 'admin';
+
   const visibleMenu = useMemo(() => {
     if (isLoading) return [];
     return menuItems.filter((item) => {
@@ -118,30 +162,29 @@ export default function Sidebar() {
   const visibleSettings = useMemo(() => {
     if (isLoading) return [];
     return settingsItems.filter((item) => {
-      if (!item.module) return true;
+      if (item.ownerOnly)   return isOwnerOrAdmin;
+      if (!item.module)     return true;
       if (item.module === 'users') return isAdmin;
       return canAccess(item.module);
     });
-  }, [canAccess, isAdmin, isLoading]);
+  }, [canAccess, isAdmin, isLoading, isOwnerOrAdmin]);
 
-  const handleLogout = () => {
-    signOut({ callbackUrl: '/auth/login' });
-  };
+  const handleLogout = () => signOut({ callbackUrl: '/auth/login' });
 
-  const userName = session?.user?.name || 'Usuário';
-  const userRole = session?.user?.role || 'user';
+  const userName    = session?.user?.name  || 'Usuário';
+  const userRole    = (session?.user as any)?.role || 'user';
   const userInitial = userName.charAt(0).toUpperCase();
 
   const ROLE_DISPLAY: Record<string, string> = {
-    owner: 'Proprietário',
-    admin: 'Administrador',
+    owner:   'Proprietário',
+    admin:   'Administrador',
     manager: 'Gerente',
-    user: 'Usuário',
+    user:    'Usuário',
   };
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* Mobile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700"
@@ -149,12 +192,12 @@ export default function Sidebar() {
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
-      {/* Overlay para Mobile */}
+      {/* Overlay Mobile */}
       {isOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
           onClick={() => setIsOpen(false)}
-        ></div>
+        />
       )}
 
       {/* Sidebar */}
@@ -166,18 +209,32 @@ export default function Sidebar() {
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Logo */}
+        {/* ── Logo / Branding ── */}
         <div className="p-6 border-b border-indigo-700">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex-shrink-0">
-              <img
-                src="/images/logo-fundo-escuro.png"
-                alt="Mundo Digital Logo"
-                className="w-full h-full object-contain"
-              />
+              {branding.logo ? (
+                <img
+                  src={branding.logo}
+                  alt={`${branding.name} logo`}
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // fallback para logo padrão se URL quebrar
+                    (e.target as HTMLImageElement).src = '/images/logo-fundo-escuro.png';
+                  }}
+                />
+              ) : (
+                <img
+                  src="/images/logo-fundo-escuro.png"
+                  alt="Mundo Digital Logo"
+                  className="w-full h-full object-contain"
+                />
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-base leading-tight mb-0.5">Mundo Digital</h1>
+              <h1 className="font-bold text-base leading-tight mb-0.5 truncate">
+                {branding.name}
+              </h1>
               <p className="text-[10.5px] text-indigo-300 leading-tight">
                 Soluções em Marketing e Vendas
               </p>
@@ -185,7 +242,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        {/* Menu */}
+        {/* ── Nav ── */}
         <nav className="flex-1 p-4 overflow-y-auto">
           {isLoading ? (
             <SidebarSkeleton />
@@ -196,9 +253,8 @@ export default function Sidebar() {
                   <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
                   <ul className="space-y-1">
                     {visibleMenu.map((item) => {
-                      const Icon = item.icon;
+                      const Icon     = item.icon;
                       const isActive = pathname === item.path;
-
                       return (
                         <li key={item.path}>
                           <Link
@@ -220,15 +276,13 @@ export default function Sidebar() {
                 </>
               )}
 
-              {/* Configurações */}
               {visibleSettings.length > 0 && (
                 <>
                   <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
                   <ul className="space-y-1">
                     {visibleSettings.map((item) => {
-                      const Icon = item.icon;
+                      const Icon     = item.icon;
                       const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
-
                       return (
                         <li key={item.path}>
                           <Link
@@ -253,10 +307,10 @@ export default function Sidebar() {
           )}
         </nav>
 
-        {/* ✅ Banner de Uso do Plano */}
+        {/* ── Usage Banner ── */}
         <UsageBanner />
 
-        {/* User Profile */}
+        {/* ── User Profile ── */}
         <div className="p-4 border-t border-indigo-700">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-800">
             <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0">
@@ -267,8 +321,6 @@ export default function Sidebar() {
               <p className="text-xs text-indigo-300">{ROLE_DISPLAY[userRole] || userRole}</p>
             </div>
           </div>
-
-          {/* Botão de Logout */}
           <button
             onClick={handleLogout}
             className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
