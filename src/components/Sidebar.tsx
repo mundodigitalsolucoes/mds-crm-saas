@@ -26,6 +26,7 @@ import {
   UserCog,
   CreditCard,
   Paintbrush,
+  Target,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { usePermission } from '@/hooks/usePermission';
@@ -41,10 +42,10 @@ import type { PermissionModule } from '@/types/permissions';
 // ============================================
 
 interface MenuItem {
-  name: string;
-  icon: React.ComponentType<any>;
-  path: string;
-  module?: PermissionModule;
+  name:      string;
+  icon:      React.ComponentType<any>;
+  path:      string;
+  module?:   PermissionModule;
   ownerOnly?: boolean;
 }
 
@@ -60,22 +61,23 @@ interface OrgBranding {
 // ============================================
 
 const menuItems: MenuItem[] = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { name: 'Leads',     icon: Users,           path: '/leads',    module: 'leads'    },
-  { name: 'Kanban',    icon: Kanban,           path: '/kanban',   module: 'kanban'   },
-  { name: 'Projetos',  icon: FolderKanban,    path: '/projects', module: 'projects' },
-  { name: 'OS',        icon: FileText,         path: '/os',       module: 'os'       },
-  { name: 'Tarefas',   icon: CheckSquare,      path: '/tasks',    module: 'tasks'    },
-  { name: 'Agenda',    icon: Calendar,         path: '/agenda',   module: 'agenda'   },
-  { name: 'Relatórios',icon: BarChart3,        path: '/reports',  module: 'reports'  },
+  { name: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'                      },
+  { name: 'Leads',      icon: Users,           path: '/leads',    module: 'leads'      },
+  { name: 'Kanban',     icon: Kanban,          path: '/kanban',   module: 'kanban'     },
+  { name: 'Projetos',   icon: FolderKanban,    path: '/projects', module: 'projects'   },
+  { name: 'OS',         icon: FileText,        path: '/os',       module: 'os'         },
+  { name: 'Tarefas',    icon: CheckSquare,     path: '/tasks',    module: 'tasks'      },
+  { name: 'Agenda',     icon: Calendar,        path: '/agenda',   module: 'agenda'     },
+  { name: 'Metas',      icon: Target,          path: '/goals',    module: 'goals'      },
+  { name: 'Relatórios', icon: BarChart3,       path: '/reports',  module: 'reports'    },
 ];
 
 const settingsItems: MenuItem[] = [
-  { name: 'Integrações', icon: Plug,        path: '/settings/integrations', module: 'integrations' },
-  { name: 'Membros',     icon: Shield,      path: '/settings/members',      module: 'users'        },
-  { name: 'Aparência',   icon: Paintbrush,  path: '/settings/branding',     ownerOnly: true        },
-  { name: 'Assinatura',  icon: CreditCard,  path: '/settings/billing'                              },
-  { name: 'Minha Conta', icon: UserCog,     path: '/settings/account'                              },
+  { name: 'Integrações', icon: Plug,       path: '/settings/integrations', module: 'integrations' },
+  { name: 'Membros',     icon: Shield,     path: '/settings/members',      module: 'users'        },
+  { name: 'Aparência',   icon: Paintbrush, path: '/settings/branding',     ownerOnly: true        },
+  { name: 'Assinatura',  icon: CreditCard, path: '/settings/billing'                              },
+  { name: 'Minha Conta', icon: UserCog,    path: '/settings/account'                              },
 ];
 
 // ============================================
@@ -91,7 +93,10 @@ function SidebarSkeleton() {
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
               <div className="w-5 h-5 bg-indigo-700/50 rounded" />
-              <div className="h-4 bg-indigo-700/50 rounded flex-1" style={{ maxWidth: `${60 + i * 10}px` }} />
+              <div
+                className="h-4 bg-indigo-700/50 rounded flex-1"
+                style={{ maxWidth: `${60 + i * 10}px` }}
+              />
             </div>
           </li>
         ))}
@@ -102,7 +107,10 @@ function SidebarSkeleton() {
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
               <div className="w-5 h-5 bg-indigo-700/50 rounded" />
-              <div className="h-4 bg-indigo-700/50 rounded flex-1" style={{ maxWidth: `${70 + i * 15}px` }} />
+              <div
+                className="h-4 bg-indigo-700/50 rounded flex-1"
+                style={{ maxWidth: `${70 + i * 15}px` }}
+              />
             </div>
           </li>
         ))}
@@ -116,10 +124,10 @@ function SidebarSkeleton() {
 // ============================================
 
 export default function Sidebar() {
-  const pathname  = usePathname();
-  const { data: session } = useSession();
+  const pathname              = usePathname();
+  const { data: session }     = useSession();
   const { canAccess, isAdmin, isLoading } = usePermission();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen]   = useState(false);
 
   // ── Branding dinâmico ──────────────────────────────────────────────────────
   const [branding, setBranding] = useState<OrgBranding>({
@@ -148,7 +156,7 @@ export default function Sidebar() {
   }, []);
 
   // ── Filtrar menus por permissão ────────────────────────────────────────────
-  const role = (session?.user as any)?.role ?? '';
+  const role           = (session?.user as any)?.role ?? '';
   const isOwnerOrAdmin = role === 'owner' || role === 'admin';
 
   const visibleMenu = useMemo(() => {
@@ -162,8 +170,8 @@ export default function Sidebar() {
   const visibleSettings = useMemo(() => {
     if (isLoading) return [];
     return settingsItems.filter((item) => {
-      if (item.ownerOnly)   return isOwnerOrAdmin;
-      if (!item.module)     return true;
+      if (item.ownerOnly)          return isOwnerOrAdmin;
+      if (!item.module)            return true;
       if (item.module === 'users') return isAdmin;
       return canAccess(item.module);
     });
@@ -171,8 +179,8 @@ export default function Sidebar() {
 
   const handleLogout = () => signOut({ callbackUrl: '/auth/login' });
 
-  const userName    = session?.user?.name  || 'Usuário';
-  const userRole    = (session?.user as any)?.role || 'user';
+  const userName    = session?.user?.name              || 'Usuário';
+  const userRole    = (session?.user as any)?.role     || 'user';
   const userInitial = userName.charAt(0).toUpperCase();
 
   const ROLE_DISPLAY: Record<string, string> = {
@@ -219,7 +227,6 @@ export default function Sidebar() {
                   alt={`${branding.name} logo`}
                   className="w-full h-full object-contain"
                   onError={(e) => {
-                    // fallback para logo padrão se URL quebrar
                     (e.target as HTMLImageElement).src = '/images/logo-fundo-escuro.png';
                   }}
                 />
@@ -250,7 +257,9 @@ export default function Sidebar() {
             <>
               {visibleMenu.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">MENU PRINCIPAL</p>
+                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">
+                    MENU PRINCIPAL
+                  </p>
                   <ul className="space-y-1">
                     {visibleMenu.map((item) => {
                       const Icon     = item.icon;
@@ -278,11 +287,15 @@ export default function Sidebar() {
 
               {visibleSettings.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">
+                    CONFIGURAÇÕES
+                  </p>
                   <ul className="space-y-1">
                     {visibleSettings.map((item) => {
                       const Icon     = item.icon;
-                      const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
+                      const isActive =
+                        pathname === item.path ||
+                        pathname?.startsWith(item.path + '/');
                       return (
                         <li key={item.path}>
                           <Link
