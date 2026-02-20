@@ -102,6 +102,17 @@ export {
   osUpdateSchema,
 } from './os';
 
+// Schemas — Goals
+export {
+  goalTypeEnum,
+  goalCategoryEnum,
+  goalStatusEnum,
+  goalCreateSchema,
+  goalUpdateSchema,
+  goalActionCreateSchema,
+  goalActionUpdateSchema,
+} from './goal';
+
 // Schemas — Comments
 export {
   commentEntityTypeEnum,

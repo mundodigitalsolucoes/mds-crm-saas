@@ -13,6 +13,7 @@ export type NotificationType =
   | 'os_created'
   | 'os_assigned'
   | 'os_updated'
+  | 'goal_created'
   | 'goal_completed'
   | 'mention'
   | 'invite_sent';
