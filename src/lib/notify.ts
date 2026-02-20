@@ -16,7 +16,9 @@ export type NotificationType =
   | 'goal_created'
   | 'goal_completed'
   | 'mention'
-  | 'invite_sent';
+  | 'invite_sent'
+  | 'chatwoot_conversation'
+  | 'chatwoot_message';
 
 interface CreateNotificationParams {
   userId: string;

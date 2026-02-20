@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -19,10 +18,10 @@ model SuperAdmin {
   email         String    @unique
   name          String
   passwordHash  String    @map("password_hash")
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
-  
+
   @@map("super_admins")
 }
 
@@ -66,7 +65,6 @@ model Organization {
   name            String
   slug            String    @unique
   domain          String?   @unique
-  agendaEvents      AgendaEvent[]
 
   // White Label
   logo            String?
@@ -75,16 +73,16 @@ model Organization {
   secondaryColor  String    @default("#4f46e5") @map("secondary_color")
 
   settings        String    @default("{}")
-  features        String    @default("[]") // JSON: features habilitadas para esta org
+  features        String    @default("[]")
 
-    // Subscription info
-  plan            String    @default("trial") // trial, starter, professional, enterprise
-  planStatus      String    @default("active") @map("plan_status") // active, cancelled, past_due, trial_expired
+  // Subscription info
+  plan            String    @default("trial")
+  planStatus      String    @default("active") @map("plan_status")
   trialEndsAt     DateTime? @map("trial_ends_at")
   subscriptionId  String?   @map("subscription_id")
   asaasCustomerId String?   @map("asaas_customer_id")
 
-  // Limits (copiados do Plan, customizáveis por org pelo SuperAdmin)
+  // Limits
   maxUsers        Int       @default(5) @map("max_users")
   maxLeads        Int       @default(100) @map("max_leads")
   maxProjects     Int       @default(10) @map("max_projects")
@@ -94,16 +92,18 @@ model Organization {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  users             User[]
-  leads             Lead[]
-  projects          MarketingProject[]
-  tasks             Task[]
-  kanbanBoards      KanbanBoard[]
-  invitations       Invitation[]
-  connectedAccounts ConnectedAccount[]
-  goals             Goal[]
-  webhooks          Webhook[]
-  serviceOrders     ServiceOrder[]
+  users                 User[]
+  leads                 Lead[]
+  projects              MarketingProject[]
+  tasks                 Task[]
+  kanbanBoards          KanbanBoard[]
+  invitations           Invitation[]
+  connectedAccounts     ConnectedAccount[]
+  goals                 Goal[]
+  webhooks              Webhook[]
+  serviceOrders         ServiceOrder[]
+  agendaEvents          AgendaEvent[]
+  chatwootConversations ChatwootConversation[]
 
   @@map("organizations")
 }
@@ -135,22 +135,20 @@ model User {
   name            String
   passwordHash    String    @map("password_hash")
   avatarUrl       String?   @map("avatar_url")
-  eventsAssigned        AgendaEvent[]       @relation("AssignedEvents")
-  eventsCreated         AgendaEvent[]       @relation("CreatedEvents")
 
   // Multi-tenant
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   role            String    @default("user") // owner, admin, manager, user
-  
-  // Permissões específicas (para agentes)
-  permissions     String    @default("{}") // JSON: ["sales", "marketing", "reports"]
+
+  // Permissões específicas
+  permissions     String    @default("{}")
 
   // Settings
   emailVerified   DateTime? @map("email_verified")
   onboardingCompleted Boolean @default(false) @map("onboarding_completed")
-  preferences     String    @default("{}") // UI preferences, notifications, etc
+  preferences     String    @default("{}")
 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -161,26 +159,25 @@ model User {
   deletedAt       DateTime? @map("deleted_at")
 
   // Relations
-  leadsAssigned         Lead[]              @relation("AssignedLeads")
-  leadsCreated          Lead[]              @relation("CreatedLeads")
-  projectsOwned         MarketingProject[]  @relation("ProjectOwner")
-  tasksAssigned         Task[]              @relation("AssignedTasks")
-  tasksCreated          Task[]              @relation("CreatedTasks")
-  activities            Activity[]
-  kanbanBoardsCreated   KanbanBoard[]
-  kanbanCardsAssigned   KanbanCard[]
-  invitationsSent       Invitation[]        @relation("InvitationsSent")
-  connectedAccountsConnected ConnectedAccount[] @relation("ConnectedAccountsConnectedBy")
-  
-  // Novos
-  goalsCreated          Goal[]              @relation("CreatedGoals")
-  notifications         Notification[]
-  attachmentsUploaded   Attachment[]
-  comments              Comment[]
-
-  // OS
-  osAssigned            ServiceOrder[]      @relation("AssignedOS")
-  osCreated             ServiceOrder[]      @relation("CreatedOS")
+  leadsAssigned                 Lead[]                @relation("AssignedLeads")
+  leadsCreated                  Lead[]                @relation("CreatedLeads")
+  projectsOwned                 MarketingProject[]    @relation("ProjectOwner")
+  tasksAssigned                 Task[]                @relation("AssignedTasks")
+  tasksCreated                  Task[]                @relation("CreatedTasks")
+  activities                    Activity[]
+  kanbanBoardsCreated           KanbanBoard[]
+  kanbanCardsAssigned           KanbanCard[]
+  invitationsSent               Invitation[]          @relation("InvitationsSent")
+  connectedAccountsConnected    ConnectedAccount[]    @relation("ConnectedAccountsConnectedBy")
+  goalsCreated                  Goal[]                @relation("CreatedGoals")
+  notifications                 Notification[]
+  attachmentsUploaded           Attachment[]
+  comments                      Comment[]
+  osAssigned                    ServiceOrder[]        @relation("AssignedOS")
+  osCreated                     ServiceOrder[]        @relation("CreatedOS")
+  eventsAssigned                AgendaEvent[]         @relation("AssignedEvents")
+  eventsCreated                 AgendaEvent[]         @relation("CreatedEvents")
+  chatwootConversationsAssigned ChatwootConversation[] @relation("ChatwootAssignee")
 
   @@index([organizationId])
   @@index([email])
@@ -193,7 +190,6 @@ model User {
 
 model Lead {
   id                    String    @id @default(uuid())
-  agendaEvents          AgendaEvent[]
 
   // Multi-tenant
   organizationId        String    @map("organization_id")
@@ -204,10 +200,10 @@ model Lead {
   phone                 String?
   company               String?
   position              String?
-  source                String?   // chatwoot, website, manual, referral, meta_ads, google_ads
-  status                String    @default("new") // new, contacted, qualified, proposal, negotiation, won, lost
+  source                String?
+  status                String    @default("new")
   score                 Int       @default(0)
-  value                 Decimal?  // Expected deal value
+  value                 Decimal?
 
   // Chatwoot integration
   chatwootContactId     Int?      @map("chatwoot_contact_id")
@@ -236,6 +232,8 @@ model Lead {
   // Relations
   tasks                 Task[]
   activities            Activity[]
+  agendaEvents          AgendaEvent[]
+  chatwootConversations ChatwootConversation[]
 
   @@index([organizationId])
   @@index([status])
@@ -250,7 +248,6 @@ model Lead {
 
 model MarketingProject {
   id            String    @id @default(uuid())
-  agendaEvents          AgendaEvent[]
 
   // Multi-tenant
   organizationId String   @map("organization_id")
@@ -258,12 +255,12 @@ model MarketingProject {
 
   title         String
   description   String?
-  client        String?   // Nome do cliente vinculado ao projeto
-  status        String    @default("planning") // planning, active, paused, completed, cancelled
-  priority      String    @default("medium") // low, medium, high, urgent
+  client        String?
+  status        String    @default("planning")
+  priority      String    @default("medium")
   budget        Decimal   @default(0)
   spent         Decimal   @default(0)
-  progress      Int       @default(0) // 0-100
+  progress      Int       @default(0)
 
   startDate     DateTime? @map("start_date")
   endDate       DateTime? @map("end_date")
@@ -279,6 +276,7 @@ model MarketingProject {
   tasks         Task[]
   activities    Activity[]
   serviceOrders ServiceOrder[]
+  agendaEvents  AgendaEvent[]
 
   @@index([organizationId])
   @@index([status])
@@ -298,7 +296,7 @@ model KanbanBoard {
 
   title         String
   description   String?
-  type          String    @default("custom") // leads, tasks, custom
+  type          String    @default("custom")
 
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -353,26 +351,23 @@ model KanbanCard {
 }
 
 // ============================================
-// TASKS (EXPANDIDO)
+// TASKS
 // ============================================
 
 model Task {
   id            String    @id @default(uuid())
   title         String
   description   String?
-  status        String    @default("todo") // todo, in_progress, done, cancelled
-  priority      String    @default("medium") // low, medium, high, urgent
+  status        String    @default("todo")
+  priority      String    @default("medium")
 
-  // Datas
   dueDate       DateTime? @map("due_date")
   startDate     DateTime? @map("start_date")
   completedAt   DateTime? @map("completed_at")
 
-  // Recorrência (para tarefas recorrentes)
   isRecurring   Boolean   @default(false) @map("is_recurring")
-  recurrenceRule String?  @map("recurrence_rule") // RRULE format (iCal)
+  recurrenceRule String?  @map("recurrence_rule")
 
-  // Estimativa
   estimatedMinutes Int?   @map("estimated_minutes")
   actualMinutes    Int?   @map("actual_minutes")
 
@@ -380,7 +375,6 @@ model Task {
   organizationId String    @map("organization_id")
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Relations
   projectId     String?   @map("project_id")
   project       MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
@@ -396,7 +390,6 @@ model Task {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  // Relations
   subtasks      Subtask[]
 
   @@index([organizationId])
@@ -410,17 +403,17 @@ model Task {
 
 model Subtask {
   id          String    @id @default(uuid())
-  
+
   taskId      String    @map("task_id")
   task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  
+
   title       String
   completed   Boolean   @default(false)
   completedAt DateTime? @map("completed_at")
   position    Int       @default(0)
-  
+
   createdAt   DateTime  @default(now()) @map("created_at")
-  
+
   @@index([taskId])
   @@map("subtasks")
 }
@@ -431,35 +424,32 @@ model Subtask {
 
 model Goal {
   id              String    @id @default(uuid())
-  
+
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   title           String
   description     String?
-  type            String    @default("short") // short (curto), medium (médio), long (longo)
-  category        String    @default("general") // sales, marketing, general
-  status          String    @default("active") // active, completed, cancelled
-  
-  // Métricas
+  type            String    @default("short")
+  category        String    @default("general")
+  status          String    @default("active")
+
   targetValue     Decimal?  @map("target_value")
   currentValue    Decimal   @default(0) @map("current_value")
-  unit            String?   // leads, revenue, tasks, conversions, etc
-  
-  // Datas
+  unit            String?
+
   startDate       DateTime? @map("start_date")
   deadline        DateTime?
   completedAt     DateTime? @map("completed_at")
-  
+
   createdById     String?   @map("created_by")
   createdBy       User?     @relation("CreatedGoals", fields: [createdById], references: [id])
-  
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-  
-  // Relations
+
   actions         GoalAction[]
-  
+
   @@index([organizationId])
   @@index([type])
   @@index([status])
@@ -468,73 +458,72 @@ model Goal {
 
 model GoalAction {
   id          String    @id @default(uuid())
-  
+
   goalId      String    @map("goal_id")
   goal        Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
-  
+
   title       String
   description String?
   completed   Boolean   @default(false)
   completedAt DateTime? @map("completed_at")
   position    Int       @default(0)
-  
+
   createdAt   DateTime  @default(now()) @map("created_at")
-  
+
   @@index([goalId])
   @@map("goal_actions")
 }
 
 // ============================================
-// ATTACHMENTS (ANEXOS GENÉRICOS)
+// ATTACHMENTS
 // ============================================
 
 model Attachment {
   id            String    @id @default(uuid())
-  
+
   organizationId String   @map("organization_id")
-  
-  entityType    String    @map("entity_type") // lead, task, kanban_card, goal, comment
+
+  entityType    String    @map("entity_type")
   entityId      String    @map("entity_id")
-  
+
   filename      String
   originalName  String    @map("original_name")
   mimeType      String    @map("mime_type")
-  size          Int       // bytes
+  size          Int
   url           String
-  
+
   uploadedById  String?   @map("uploaded_by")
   uploadedBy    User?     @relation(fields: [uploadedById], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
-  
+
   @@index([entityType, entityId])
   @@index([organizationId])
   @@map("attachments")
 }
 
 // ============================================
-// COMMENTS (COMENTÁRIOS GENÉRICOS)
+// COMMENTS
 // ============================================
 
 model Comment {
   id            String    @id @default(uuid())
-  
+
   organizationId String   @map("organization_id")
-  
-  entityType    String    @map("entity_type") // lead, task, kanban_card, goal
+
+  entityType    String    @map("entity_type")
   entityId      String    @map("entity_id")
-  
+
   content       String
-  
-  // Para respostas/threads
+
   parentId      String?   @map("parent_id")
-  
+
   authorId      String    @map("author_id")
   author        User      @relation(fields: [authorId], references: [id])
-  
+
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
-  
+
   @@index([entityType, entityId])
   @@index([organizationId])
   @@index([parentId])
@@ -547,28 +536,25 @@ model Comment {
 
 model Notification {
   id          String    @id @default(uuid())
-  
+
   userId      String    @map("user_id")
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type        String    // task_assigned, task_due, task_completed, lead_assigned, goal_completed, mention, etc
+
+  type        String
   title       String
   message     String?
-  
-  // Link para a entidade relacionada
+
   entityType  String?   @map("entity_type")
   entityId    String?   @map("entity_id")
-  
-  // Status
+
   read        Boolean   @default(false)
   readAt      DateTime? @map("read_at")
-  
-  // Configurações de envio
+
   emailSent   Boolean   @default(false) @map("email_sent")
   pushSent    Boolean   @default(false) @map("push_sent")
-  
+
   createdAt   DateTime  @default(now()) @map("created_at")
-  
+
   @@index([userId, read])
   @@index([createdAt])
   @@map("notifications")
@@ -580,33 +566,28 @@ model Notification {
 
 model Webhook {
   id              String    @id @default(uuid())
-  
+
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
+
   name            String
   url             String
-  secret          String    // Para validar assinatura HMAC
-  
-  // Eventos que disparam o webhook
-  events          String    @default("[]") // JSON: ["lead.created", "lead.updated", "task.completed", "deal.won"]
-  
-  // Headers customizados (opcional)
-  headers         String    @default("{}") // JSON: {"Authorization": "Bearer xxx"}
-  
+  secret          String
+
+  events          String    @default("[]")
+  headers         String    @default("{}")
+
   isActive        Boolean   @default(true) @map("is_active")
-  
-  // Stats
+
   lastTriggeredAt DateTime? @map("last_triggered_at")
   successCount    Int       @default(0) @map("success_count")
   failCount       Int       @default(0) @map("fail_count")
-  
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-  
-  // Relations
+
   logs            WebhookLog[]
-  
+
   @@index([organizationId])
   @@index([isActive])
   @@map("webhooks")
@@ -614,23 +595,22 @@ model Webhook {
 
 model WebhookLog {
   id          String    @id @default(uuid())
-  
+
   webhookId   String    @map("webhook_id")
   webhook     Webhook   @relation(fields: [webhookId], references: [id], onDelete: Cascade)
-  
+
   event       String
-  payload     String    // JSON enviado
-  
-  // Response
+  payload     String
+
   statusCode  Int?      @map("status_code")
-  response    String?   // Response body (truncado)
-  duration    Int?      // ms
-  
+  response    String?
+  duration    Int?
+
   success     Boolean
-  error       String?   // Mensagem de erro se falhou
-  
+  error       String?
+
   createdAt   DateTime  @default(now()) @map("created_at")
-  
+
   @@index([webhookId])
   @@index([createdAt])
   @@map("webhook_logs")
@@ -642,11 +622,11 @@ model WebhookLog {
 
 model Activity {
   id            String    @id @default(uuid())
-  entityType    String    @map("entity_type") // lead, task, project, goal, etc
+  entityType    String    @map("entity_type")
   entityId      String    @map("entity_id")
-  action        String    // created, updated, deleted, status_changed, assigned, etc
+  action        String
   description   String?
-  metadata      String    @default("{}") // JSON com dados adicionais (old_value, new_value, etc)
+  metadata      String    @default("{}")
 
   userId        String?   @map("user_id")
   user          User?     @relation(fields: [userId], references: [id])
@@ -673,23 +653,18 @@ model ConnectedAccount {
   id              String   @id @default(uuid())
   provider        String   // meta_ads, google_ads, google_business, chatwoot, n8n
 
-  // Multi-tenant: por organização
   organizationId  String   @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Auditoria: quem conectou
   connectedById   String?  @map("connected_by_id")
   connectedBy     User?    @relation("ConnectedAccountsConnectedBy", fields: [connectedById], references: [id], onDelete: SetNull)
 
-  // Token criptografado (AES-GCM) via TOKENS_SECRET
   accessTokenEnc  String   @map("access_token_enc")
   refreshTokenEnc String?  @map("refresh_token_enc")
   expiresAt       DateTime?
-  
-  // Dados específicos do provider
-  data            String   @default("{}") // JSON: selectedAdAccountId, chatwootAccountId, etc.
-  
-  // Status
+
+  data            String   @default("{}")
+
   isActive        Boolean  @default(true) @map("is_active")
   lastSyncAt      DateTime? @map("last_sync_at")
   lastError       String?  @map("last_error")
@@ -707,35 +682,48 @@ model ConnectedAccount {
 // ============================================
 
 model ChatwootConversation {
-  id                  String    @id @default(uuid())
-  
+  id                  String    @id @default(cuid())
+
   organizationId      String    @map("organization_id")
-  
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
   chatwootId          Int       @map("chatwoot_id")
   chatwootAccountId   Int       @map("chatwoot_account_id")
   chatwootInboxId     Int       @map("chatwoot_inbox_id")
   chatwootContactId   Int       @map("chatwoot_contact_id")
-  
+
+  channel             String?
+  inboxName           String?   @map("inbox_name")
+
   status              String    // open, resolved, pending
-  assigneeId          Int?      @map("assignee_id")
-  
-  // Metadata
+
+  chatwootAssigneeId  Int?      @map("chatwoot_assignee_id")
+  assigneeId          String?   @map("assignee_id")
+  assignee            User?     @relation("ChatwootAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
   contactName         String?   @map("contact_name")
   contactPhone        String?   @map("contact_phone")
   contactEmail        String?   @map("contact_email")
+  contactAvatarUrl    String?   @map("contact_avatar_url")
+
+  lastMessage         String?   @map("last_message")
   lastMessageAt       DateTime? @map("last_message_at")
+  unreadCount         Int       @default(0) @map("unread_count")
   messagesCount       Int       @default(0) @map("messages_count")
-  
-  // Link com Lead do CRM
+
   leadId              String?   @map("lead_id")
-  
+  lead                Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
-  
+
   @@unique([organizationId, chatwootId])
   @@index([organizationId])
+  @@index([organizationId, status])
+  @@index([organizationId, channel])
   @@index([chatwootContactId])
   @@index([leadId])
+  @@index([assigneeId])
   @@map("chatwoot_conversations")
 }
 
@@ -745,36 +733,32 @@ model ChatwootConversation {
 
 model AdsCampaignMetric {
   id                String    @id @default(uuid())
-  
+
   organizationId    String    @map("organization_id")
-  
-  provider          String    // meta_ads, google_ads
+
+  provider          String
   accountId         String    @map("account_id")
   campaignId        String    @map("campaign_id")
   campaignName      String    @map("campaign_name")
-  
-  // Período
+
   date              DateTime  @db.Date
-  
-  // Métricas comuns
+
   impressions       Int       @default(0)
   clicks            Int       @default(0)
   spend             Decimal   @default(0)
   conversions       Int       @default(0)
   revenue           Decimal   @default(0)
-  
-  // Métricas calculadas (guardadas para performance)
-  ctr               Decimal?  // Click-through rate
-  cpc               Decimal?  // Cost per click
-  cpa               Decimal?  // Cost per acquisition
-  roas              Decimal?  // Return on ad spend
-  
-  // Dados brutos do provider
+
+  ctr               Decimal?
+  cpc               Decimal?
+  cpa               Decimal?
+  roas              Decimal?
+
   rawData           String    @default("{}") @map("raw_data")
-  
+
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
-  
+
   @@unique([organizationId, provider, campaignId, date])
   @@index([organizationId, provider])
   @@index([date])
@@ -787,16 +771,14 @@ model AdsCampaignMetric {
 
 model GoogleBusinessMetric {
   id                String    @id @default(uuid())
-  
+
   organizationId    String    @map("organization_id")
-  
+
   locationId        String    @map("location_id")
   locationName      String    @map("location_name")
-  
-  // Período
+
   date              DateTime  @db.Date
-  
-  // Métricas
+
   searchViews       Int       @default(0) @map("search_views")
   mapsViews         Int       @default(0) @map("maps_views")
   websiteClicks     Int       @default(0) @map("website_clicks")
@@ -804,18 +786,16 @@ model GoogleBusinessMetric {
   directionClicks   Int       @default(0) @map("direction_clicks")
   messageClicks     Int       @default(0) @map("message_clicks")
   bookingClicks     Int       @default(0) @map("booking_clicks")
-  
-  // Reviews
+
   totalReviews      Int       @default(0) @map("total_reviews")
   averageRating     Decimal?  @map("average_rating")
   newReviews        Int       @default(0) @map("new_reviews")
-  
-  // Dados brutos
+
   rawData           String    @default("{}") @map("raw_data")
-  
+
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
-  
+
   @@unique([organizationId, locationId, date])
   @@index([organizationId])
   @@index([date])
@@ -823,49 +803,41 @@ model GoogleBusinessMetric {
 }
 
 // ============================================
-// AGENDA (EVENTOS / COMPROMISSOS)
+// AGENDA
 // ============================================
 
 model AgendaEvent {
   id              String    @id @default(uuid())
 
-  // Multi-tenant
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   title           String
   description     String?
-  
-  // Data e horário
+
   date            DateTime  @db.Date
-  startTime       String?   @map("start_time")   // HH:MM
-  endTime         String?   @map("end_time")     // HH:MM
+  startTime       String?   @map("start_time")
+  endTime         String?   @map("end_time")
   allDay          Boolean   @default(false) @map("all_day")
 
-  // Tipo e status
-  type            String    @default("meeting") // meeting, call, follow_up, reminder, deadline, other
-  status          String    @default("agendado") // agendado, concluido, cancelado
-  color           String?   // Cor customizada no calendário
+  type            String    @default("meeting")
+  status          String    @default("agendado")
+  color           String?
 
-  // Localização
-  location        String?   // Endereço físico ou link (Google Meet, Zoom, etc.)
+  location        String?
 
-  // Recorrência
   isRecurring     Boolean   @default(false) @map("is_recurring")
-  recurrenceRule  String?   @map("recurrence_rule") // RRULE format (iCal)
+  recurrenceRule  String?   @map("recurrence_rule")
 
-  // Lembrete (minutos antes do evento)
-  reminderMinutes Int?      @map("reminder_minutes") // 5, 10, 15, 30, 60, 1440(1dia)
+  reminderMinutes Int?      @map("reminder_minutes")
   reminderSent    Boolean   @default(false) @map("reminder_sent")
 
-  // Vínculos opcionais
   leadId          String?   @map("lead_id")
   lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
 
   projectId       String?   @map("project_id")
   project         MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  // Responsável / criador
   assignedToId    String?   @map("assigned_to")
   assignedTo      User?     @relation("AssignedEvents", fields: [assignedToId], references: [id])
 
@@ -885,28 +857,28 @@ model AgendaEvent {
 }
 
 // ============================================
-// AI ASSISTANT USAGE (GEMINI/CHATGPT)
+// AI ASSISTANT USAGE
 // ============================================
 
 model AIUsage {
   id              String    @id @default(uuid())
-  
+
   organizationId  String    @map("organization_id")
   userId          String    @map("user_id")
-  
-  provider        String    // gemini, openai
-  model           String    // gpt-4, gemini-pro, etc
-  
-  feature         String    // lead_summary, email_draft, task_suggest, etc
-  
+
+  provider        String
+  model           String
+
+  feature         String
+
   promptTokens    Int       @map("prompt_tokens")
   completionTokens Int      @map("completion_tokens")
   totalTokens     Int       @map("total_tokens")
-  
-  cost            Decimal?  // Custo estimado em USD
-  
+
+  cost            Decimal?
+
   createdAt       DateTime  @default(now()) @map("created_at")
-  
+
   @@index([organizationId])
   @@index([userId])
   @@index([createdAt])
@@ -920,40 +892,32 @@ model AIUsage {
 model ServiceOrder {
   id              String    @id @default(uuid())
 
-  // Multi-tenant
   organizationId  String    @map("organization_id")
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Identificação
-  code            String    // OS-2026-0001
+  code            String
   title           String
   description     String?
-  type            String    @default("custom") // implantacao_mds, manutencao, custom
+  type            String    @default("custom")
 
-  // Status e prioridade
   status          String    @default("em_planejamento")
   priority        String    @default("medium")
   progress        Int       @default(0)
 
-  // Datas
   startDate       DateTime? @map("start_date")
   dueDate         DateTime? @map("due_date")
   completedAt     DateTime? @map("completed_at")
 
-  // Vínculo com projeto
   projectId       String?   @map("project_id")
   project         MarketingProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  // Responsável
   assignedToId    String?   @map("assigned_to")
   assignedTo      User?     @relation("AssignedOS", fields: [assignedToId], references: [id])
 
   createdById     String?   @map("created_by")
   createdBy       User?     @relation("CreatedOS", fields: [createdById], references: [id])
 
-  // Pilares e checklists (JSON flexível para template MDS)
   pilares         String    @default("{}")
-
   notes           String?
   customFields    String    @default("{}") @map("custom_fields")
 
@@ -968,7 +932,10 @@ model ServiceOrder {
   @@map("service_orders")
 }
 
-// Token de recuperação de senha
+// ============================================
+// PASSWORD RESET TOKEN
+// ============================================
+
 model PasswordResetToken {
   id        String   @id @default(cuid())
   token     String   @unique

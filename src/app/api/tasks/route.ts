@@ -71,12 +71,36 @@ export async function GET(request: NextRequest) {
       where.status = { notIn: ['done', 'cancelled'] };
     }
 
-    // Filtro: tarefas de hoje
+    // Filtro: tarefas de hoje — usa UTC-3 (America/Sao_Paulo) explícito
     if (params.isToday === 'true') {
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-      where.dueDate = { gte: startOfDay, lte: endOfDay };
+      // Offset UTC-3 em ms
+      const TZ_OFFSET_MS = -3 * 60 * 60 * 1000;
+
+      // "Agora" no horário de Brasília
+      const nowUtc = Date.now();
+      const nowBrt = new Date(nowUtc + TZ_OFFSET_MS);
+
+      // Início do dia BRT → converte de volta para UTC para salvar no Prisma
+      const startBrt = new Date(
+        Date.UTC(
+          nowBrt.getUTCFullYear(),
+          nowBrt.getUTCMonth(),
+          nowBrt.getUTCDate(),
+          0, 0, 0, 0
+        ) - TZ_OFFSET_MS
+      );
+
+      // Fim do dia BRT → converte de volta para UTC
+      const endBrt = new Date(
+        Date.UTC(
+          nowBrt.getUTCFullYear(),
+          nowBrt.getUTCMonth(),
+          nowBrt.getUTCDate(),
+          23, 59, 59, 999
+        ) - TZ_OFFSET_MS
+      );
+
+      where.dueDate = { gte: startBrt, lte: endBrt };
     }
 
     // Busca textual
