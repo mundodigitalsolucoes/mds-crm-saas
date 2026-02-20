@@ -3,19 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import {
-  Plus,
-  Search,
-  Filter,
-  Calendar,
-  List,
-  LayoutGrid,
-  CheckCircle2,
-  Circle,
-  Clock,
-  AlertTriangle,
-  ChevronDown,
-  Edit2,
-  Trash2,
+  Plus, Search, Filter, Calendar, List, LayoutGrid,
+  CheckCircle2, Circle, Clock, AlertTriangle, ChevronDown,
+  Edit2, Trash2,
 } from 'lucide-react';
 import { useTaskStore } from '@/store/taskStore';
 import { TaskDetailModal, TaskFormModal } from '@/components/tasks';
@@ -31,21 +21,12 @@ type FilterTab = 'all' | 'today' | 'overdue' | 'done';
 
 export default function TasksPage() {
   const {
-    tasks,
-    isLoading,
-    pagination,
-    filters,
-    fetchTasks,
-    createTask,
-    updateTask,
-    setFilters,
-    clearFilters,
-    deleteTask,
-    toggleTaskStatus,
-    getStatusLabel,
-    getStatusColor,
-    getPriorityLabel,
-    getPriorityColor,
+    tasks, isLoading, pagination, filters,
+    fetchTasks, createTask, updateTask,
+    deleteTask, toggleTaskStatus,
+    getStatusLabel, getStatusColor,
+    getPriorityLabel, getPriorityColor,
+    setPage, // ✅ adicionado
   } = useTaskStore();
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -55,46 +36,46 @@ export default function TasksPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  // Filtros locais
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
+
   const { canAccess, isLoading: permLoading } = usePermission();
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
-
-  // Fetch inicial
+  // ✅ ÚNICO useEffect de fetch — reage à aba ativa
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (permLoading) return;
 
-  // Aplicar tab filter
-  useEffect(() => {
-    const newFilters: Record<string, unknown> = {};
+    setStatusFilter('');
+    setPriorityFilter('');
+    setSearchQuery('');
+    setShowFilters(false);
 
     switch (activeTab) {
       case 'today':
-        newFilters.isToday = true;
+        fetchTasks({ isToday: true });
         break;
       case 'overdue':
-        newFilters.isOverdue = true;
+        fetchTasks({ isOverdue: true });
         break;
       case 'done':
-        newFilters.status = 'done';
+        fetchTasks({ status: 'done' });
+        break;
+      default:
+        fetchTasks({});
         break;
     }
+  }, [activeTab, permLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    setFilters(newFilters);
-  }, [activeTab]);
+  // ✅ Returns condicionais DEPOIS de todos os hooks
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
 
-  // Aplicar filtros avançados
   const handleApplyFilters = () => {
     const newFilters: Record<string, unknown> = {};
     if (statusFilter) newFilters.status = statusFilter;
     if (priorityFilter) newFilters.priority = priorityFilter;
     if (searchQuery) newFilters.search = searchQuery;
-    setFilters(newFilters);
+    fetchTasks(newFilters); // ✅ direto, sem setFilters
     setShowFilters(false);
   };
 
@@ -103,13 +84,12 @@ export default function TasksPage() {
     setPriorityFilter('');
     setSearchQuery('');
     setActiveTab('all');
-    clearFilters();
     setShowFilters(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setFilters({ ...filters, search: searchQuery });
+    fetchTasks({ ...filters, search: searchQuery });
   };
 
   const handleEdit = (task: Task) => {
@@ -130,15 +110,12 @@ export default function TasksPage() {
     setShowFormModal(true);
   };
 
-  // Usar a store para criar/editar (não fetch direto)
   const handleFormSubmit = async (data: any) => {
     try {
       if (editingTask) {
-        // Editar via store — atualiza a lista automaticamente
         const result = await updateTask(editingTask.id, data);
         if (!result) throw new Error('Erro ao atualizar tarefa');
       } else {
-        // Criar via store — adiciona na lista automaticamente
         const result = await createTask(data);
         if (!result) throw new Error('Erro ao criar tarefa');
       }
@@ -157,10 +134,10 @@ export default function TasksPage() {
   };
 
   const tabs = [
-    { id: 'all' as FilterTab, label: 'Todas', icon: List },
-    { id: 'today' as FilterTab, label: 'Hoje', icon: Calendar },
-    { id: 'overdue' as FilterTab, label: 'Atrasadas', icon: AlertTriangle },
-    { id: 'done' as FilterTab, label: 'Concluídas', icon: CheckCircle2 },
+    { id: 'all'     as FilterTab, label: 'Todas',      icon: List          },
+    { id: 'today'   as FilterTab, label: 'Hoje',        icon: Calendar      },
+    { id: 'overdue' as FilterTab, label: 'Atrasadas',   icon: AlertTriangle },
+    { id: 'done'    as FilterTab, label: 'Concluídas',  icon: CheckCircle2  },
   ];
 
   return (
@@ -216,7 +193,9 @@ export default function TasksPage() {
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
-            showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-600' : 'border-gray-300 hover:bg-gray-50'
+            showFilters
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-600'
+              : 'border-gray-300 hover:bg-gray-50'
           }`}
         >
           <Filter size={18} />
@@ -224,7 +203,6 @@ export default function TasksPage() {
           <ChevronDown size={16} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* View toggle */}
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           <button
             onClick={() => setViewMode('list')}
@@ -259,7 +237,6 @@ export default function TasksPage() {
                 <option value="cancelled">Cancelada</option>
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
               <select
@@ -275,7 +252,6 @@ export default function TasksPage() {
               </select>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             <button
               onClick={handleApplyFilters}
@@ -304,31 +280,36 @@ export default function TasksPage() {
             <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <CheckCircle2 size={32} className="text-gray-400" />
             </div>
-            <p className="text-gray-500 mb-4">Nenhuma tarefa encontrada</p>
-            <button
-              onClick={handleNewTask}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus size={18} />
-              Criar primeira tarefa
-            </button>
+            <p className="text-gray-500 mb-4">
+              {activeTab === 'today'
+                ? 'Nenhuma tarefa para hoje'
+                : activeTab === 'overdue'
+                ? 'Nenhuma tarefa atrasada'
+                : activeTab === 'done'
+                ? 'Nenhuma tarefa concluída'
+                : 'Nenhuma tarefa encontrada'}
+            </p>
+            {activeTab === 'all' && (
+              <button
+                onClick={handleNewTask}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Plus size={18} />
+                Criar primeira tarefa
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y">
             {tasks.map((task) => {
               const dueStatus = getTaskDueStatus(task);
-
               return (
                 <div
                   key={task.id}
                   className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors group"
                 >
-                  {/* Checkbox */}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleTaskStatus(task.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); toggleTaskStatus(task.id); }}
                     className={`flex-shrink-0 ${
                       task.status === 'done' ? 'text-green-500' : 'text-gray-400 hover:text-gray-600'
                     }`}
@@ -336,17 +317,12 @@ export default function TasksPage() {
                     {task.status === 'done' ? <CheckCircle2 size={22} /> : <Circle size={22} />}
                   </button>
 
-                  {/* Content - clicável para abrir detalhes */}
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
                     onClick={() => setSelectedTaskId(task.id)}
                   >
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`font-medium ${
-                          task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'
-                        }`}
-                      >
+                      <span className={`font-medium ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                         {task.title}
                       </span>
                       {task._count?.subtasks ? (
@@ -356,58 +332,43 @@ export default function TasksPage() {
                       ) : null}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-                      {task.project && <span>📁 {task.project.title}</span>}
+                      {task.project    && <span>📁 {task.project.title}</span>}
                       {task.assignedTo && <span>👤 {task.assignedTo.name}</span>}
-                      {task.lead && <span>🎯 {task.lead.name}</span>}
+                      {task.lead       && <span>🎯 {task.lead.name}</span>}
                     </div>
                   </div>
 
-                  {/* Meta */}
                   <div className="flex items-center gap-3">
-                    {/* Priority */}
                     <span className={`px-2 py-1 text-xs font-medium rounded border ${getPriorityColor(task.priority)}`}>
                       {getPriorityLabel(task.priority)}
                     </span>
 
-                    {/* Due date */}
                     {task.dueDate && (
-                      <span
-                        className={`flex items-center gap-1 text-sm ${
-                          dueStatus === 'overdue'
-                            ? 'text-red-600'
-                            : dueStatus === 'today'
-                            ? 'text-orange-600'
-                            : 'text-gray-500'
-                        }`}
-                      >
+                      <span className={`flex items-center gap-1 text-sm ${
+                        dueStatus === 'overdue' ? 'text-red-600'
+                        : dueStatus === 'today' ? 'text-orange-600'
+                        : 'text-gray-500'
+                      }`}>
                         {dueStatus === 'overdue' && <AlertTriangle size={14} />}
-                        {dueStatus === 'today' && <Clock size={14} />}
+                        {dueStatus === 'today'   && <Clock size={14} />}
                         {format(parseISO(task.dueDate), 'dd/MM', { locale: ptBR })}
                       </span>
                     )}
 
-                    {/* Status badge */}
                     <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(task.status)}`}>
                       {getStatusLabel(task.status)}
                     </span>
 
-                    {/* Botões Editar e Excluir — SEMPRE visíveis */}
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(task);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleEdit(task); }}
                         className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                         title="Editar tarefa"
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(task.id);
-                        }}
+                        onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Excluir tarefa"
                       >
@@ -431,11 +392,9 @@ export default function TasksPage() {
               {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
-                  onClick={() => useTaskStore.getState().setPage(page)}
+                  onClick={() => setPage(page)} // ✅ corrigido
                   className={`px-3 py-1 rounded ${
-                    pagination.page === page
-                      ? 'bg-indigo-600 text-white'
-                      : 'hover:bg-gray-200'
+                    pagination.page === page ? 'bg-indigo-600 text-white' : 'hover:bg-gray-200'
                   }`}
                 >
                   {page}
@@ -457,20 +416,19 @@ export default function TasksPage() {
 
       <TaskFormModal
         isOpen={showFormModal}
-        onClose={() => {
-          setShowFormModal(false);
-          setEditingTask(null);
-        }}
+        onClose={() => { setShowFormModal(false); setEditingTask(null); }}
         onSubmit={handleFormSubmit}
-        initialData={editingTask ? {
-          title: editingTask.title,
-          description: editingTask.description || '',
-          status: editingTask.status as any,
-          priority: editingTask.priority as any,
-          dueDate: editingTask.dueDate?.split('T')[0] || '',
-          startDate: editingTask.startDate?.split('T')[0] || '',
-          estimatedMinutes: editingTask.estimatedMinutes || undefined,
-        } : undefined}
+        initialData={
+          editingTask ? {
+            title:              editingTask.title,
+            description:        editingTask.description || '',
+            status:             editingTask.status as any,
+            priority:           editingTask.priority as any,
+            dueDate:            editingTask.dueDate?.split('T')[0] || '',
+            startDate:          editingTask.startDate?.split('T')[0] || '',
+            estimatedMinutes:   editingTask.estimatedMinutes || undefined,
+          } : undefined
+        }
         mode={editingTask ? 'edit' : 'create'}
       />
     </div>
