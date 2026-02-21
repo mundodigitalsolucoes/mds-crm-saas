@@ -27,9 +27,6 @@ export default function ProjectsPage() {
   const { canAccess, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('projects')) return <AccessDenied module="projects" />;
-
   // ✅ Bloqueio de criação quando limite atingido ou plano inativo
   const limitReached = isAtLimit('projects');
   const planInactive = isPlanInactive();
@@ -44,6 +41,18 @@ export default function ProjectsPage() {
   useEffect(() => {
     fetchProjects({ search: searchQuery });
   }, [searchQuery, fetchProjects]);
+
+  const stats = useMemo(() => ({
+    total: projects.length,
+    active: projects.filter(p => p.status === 'active').length,
+    completed: projects.filter(p => p.status === 'completed').length,
+    planning: projects.filter(p => p.status === 'planning').length,
+    totalBudget: projects.reduce((acc, p) => acc + (Number(p.budget) || 0), 0),
+  }), [projects]);
+
+  // ✅ Early returns DEPOIS de todos os hooks
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('projects')) return <AccessDenied module="projects" />;
 
   const openCreateModal = () => {
     if (createBlocked) return;
@@ -194,14 +203,6 @@ export default function ProjectsPage() {
     if (progress >= 20) return 'bg-orange-500';
     return 'bg-red-500';
   };
-
-  const stats = useMemo(() => ({
-    total: projects.length,
-    active: projects.filter(p => p.status === 'active').length,
-    completed: projects.filter(p => p.status === 'completed').length,
-    planning: projects.filter(p => p.status === 'planning').length,
-    totalBudget: projects.reduce((acc, p) => acc + (Number(p.budget) || 0), 0),
-  }), [projects]);
 
   return (
     <div className="p-6">

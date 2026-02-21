@@ -31,6 +31,20 @@ export default function LeadsPage() {
   const { canAccess, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
+  // Busca leads ao montar e quando search/page muda
+  useEffect(() => {
+    fetchLeads({ search: debouncedSearch });
+  }, [debouncedSearch, fetchLeads]);
+
+  // Debounce na busca (400ms)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // ✅ Early returns DEPOIS de todos os hooks
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('leads')) return <AccessDenied module="leads" />;
 
@@ -44,19 +58,6 @@ export default function LeadsPage() {
     : limitReached
       ? `Limite de leads atingido (${formatUsage('leads')}). Faça upgrade do plano.`
       : '';
-
-  // Busca leads ao montar e quando search/page muda
-  useEffect(() => {
-    fetchLeads({ search: debouncedSearch });
-  }, [debouncedSearch, fetchLeads]);
-
-  // Debounce na busca (400ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
 
   const openCreateModal = () => {
     if (createBlocked) return;
