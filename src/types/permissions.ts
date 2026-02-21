@@ -16,7 +16,8 @@ export type PermissionModule =
   | 'goals'
   | 'integrations'
   | 'settings'
-  | 'users';       // Gerenciamento de membros da org
+  | 'users'        // Gerenciamento de membros da org
+  | 'atendimento'; // Módulo Chatwoot
 
 /**
  * Ações possíveis dentro de cada módulo.

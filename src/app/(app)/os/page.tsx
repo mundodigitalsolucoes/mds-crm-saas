@@ -23,9 +23,6 @@ export default function OSPage() {
   const { canAccess, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('os')) return <AccessDenied module="os" />;
-
   // ✅ Bloqueio de criação quando limite atingido ou plano inativo
   const limitReached = isAtLimit('os');
   const planInactive = isPlanInactive();
@@ -37,6 +34,7 @@ export default function OSPage() {
       ? `Limite de ordens de serviço atingido (${formatUsage('os')}). Faça upgrade do plano.`
       : '';
 
+  // ✅ useEffect ANTES dos early returns
   useEffect(() => {
     fetchOS();
     fetchProjects();
@@ -48,6 +46,7 @@ export default function OSPage() {
     return project?.title;
   };
 
+  // ✅ useMemo ANTES dos early returns
   const filteredOS = useMemo(() => {
     if (!searchQuery) return ordens;
     const q = searchQuery.toLowerCase();
@@ -63,6 +62,10 @@ export default function OSPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ordens, searchQuery, projects]);
+
+  // ✅ Early returns DEPOIS de todos os hooks
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('os')) return <AccessDenied module="os" />;
 
   const handleDeleteOS = async (id: number | string) => {
     const osToDelete = ordens.find((o) => String(o.id) === String(id));
@@ -199,7 +202,7 @@ export default function OSPage() {
             <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           </button>
 
-          {/* ✅ Botão Nova OS com tooltip de limite */}
+          {/* Botão Nova OS com tooltip de limite */}
           <div className="relative group">
             <button
               onClick={() => {
@@ -280,7 +283,7 @@ export default function OSPage() {
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Início</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Prazo</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Progresso</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibript text-gray-600 uppercase">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">

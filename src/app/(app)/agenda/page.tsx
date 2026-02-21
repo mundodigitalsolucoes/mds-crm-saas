@@ -28,9 +28,6 @@ export default function AgendaPage() {
   const [selected, setSelected] = useState<AgendaEvent | null>(null);
   const { canAccess, isLoading: permLoading } = usePermission();
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('agenda')) return <AccessDenied module="agenda" />;
-
   // ✅ Buscar eventos ao montar a página e quando o mês muda
   useEffect(() => {
     const start = startOfMonth(currentMonth);
@@ -60,6 +57,10 @@ export default function AgendaPage() {
     const end = endOfMonth(currentMonth);
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
+
+  // ✅ Early returns DEPOIS de todos os hooks
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('agenda')) return <AccessDenied module="agenda" />;
 
   // Verifica se um dia tem eventos (com normalização)
   const hasEvents = (date: Date) => {
@@ -174,10 +175,10 @@ export default function AgendaPage() {
                       onClick={() => handleDateSelect(day)}
                       className={`
                         p-2 text-sm rounded-lg relative transition-all duration-200
-                        ${isSelected 
-                          ? 'bg-indigo-600 text-white shadow-lg' 
-                          : isTodayDate 
-                            ? 'bg-indigo-100 text-indigo-800 font-semibold' 
+                        ${isSelected
+                          ? 'bg-indigo-600 text-white shadow-lg'
+                          : isTodayDate
+                            ? 'bg-indigo-100 text-indigo-800 font-semibold'
                             : isSameMonth(day, currentMonth)
                               ? 'hover:bg-gray-100 text-gray-900'
                               : 'text-gray-300 cursor-not-allowed'

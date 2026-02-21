@@ -27,7 +27,7 @@ const COLUMN_COLORS: Record<string, string> = {
 
 const SOURCE_LABELS: Record<string, string> = {
   manual: 'Manual',
-  website: 'Website',
+  website: 'WebSite',
   referral: 'Indicação',
   meta_ads: 'Meta Ads',
   google_ads: 'Google Ads',
@@ -159,12 +159,8 @@ function LeadEditModal({
     value: '',
     notes: '',
   });
-  
-  const { canAccess, isLoading: permLoading } = usePermission();
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
-
+  // ✅ useEffect ANTES de qualquer early return
   useEffect(() => {
     if (!isOpen || !lead) return;
     setForm({
@@ -180,6 +176,7 @@ function LeadEditModal({
     });
   }, [isOpen, lead]);
 
+  // ✅ Early returns DEPOIS dos hooks
   if (!isOpen || !lead) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -362,13 +359,13 @@ export default function KanbanPage() {
   const [showStageModal, setShowStageModal] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const { canAccess, isLoading: permLoading } = usePermission();
 
-  // Busca leads ao montar
+  // ✅ Hooks ANTES de qualquer early return
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
 
-  // Mapa de leads por ID para acesso rápido
   const leadsById = useMemo(() => {
     const map = new Map<string, Lead>();
     for (const l of leads) map.set(l.id, l);
@@ -380,21 +377,34 @@ export default function KanbanPage() {
     return leadsById.get(selectedLeadId) ?? null;
   }, [selectedLeadId, leadsById]);
 
-  // Monta as colunas agrupando leads por status
   const columns = useMemo(() => {
     return stages
       .sort((a, b) => a.order - b.order)
       .map((stage) => {
         const stageLeads = leads.filter((l) => l.status === stage.id);
         const totalValue = stageLeads.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
-
-        return {
-          ...stage,
-          items: stageLeads,
-          totalValue,
-        };
+        return { ...stage, items: stageLeads, totalValue };
       });
   }, [stages, leads]);
+
+  // ✅ Early returns DEPOIS de todos os hooks
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
+
+  if (isLoading && leads.length === 0) {
+    return (
+      <div className="p-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kanban - Pipeline</h1>
+          <p className="text-gray-600">Gerencie seu funil de vendas</p>
+        </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="animate-spin text-indigo-600 mr-3" size={28} />
+          <span className="text-gray-600 text-lg">Carregando pipeline...</span>
+        </div>
+      </div>
+    );
+  }
 
   // ==================== DRAG & DROP ====================
 
@@ -406,10 +416,8 @@ export default function KanbanPage() {
     const fromStage = source.droppableId;
     const toStage = destination.droppableId;
 
-    // Se não mudou de coluna e mesma posição, nada a fazer
     if (fromStage === toStage && source.index === destination.index) return;
 
-    // Se mudou de coluna, atualiza status via API
     if (fromStage !== toStage) {
       await moveLeadInKanban(draggableId, toStage);
     }
@@ -443,23 +451,6 @@ export default function KanbanPage() {
       setSelectedLeadId(null);
     }
   };
-
-  // ==================== LOADING STATE ====================
-
-  if (isLoading && leads.length === 0) {
-    return (
-      <div className="p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kanban - Pipeline</h1>
-          <p className="text-gray-600">Gerencie seu funil de vendas</p>
-        </div>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="animate-spin text-indigo-600 mr-3" size={28} />
-          <span className="text-gray-600 text-lg">Carregando pipeline...</span>
-        </div>
-      </div>
-    );
-  }
 
   // ==================== RENDER ====================
 
