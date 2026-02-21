@@ -9,8 +9,10 @@ import NotificationBellWrapper from '@/components/NotificationBellWrapper';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import type { Metadata } from 'next';
 
-export const metadata = {
+// ✅ metadata estático (fallback)
+export const metadata: Metadata = {
   title:       'MDS CRM - Dashboard',
   description: 'Sistema de Gestão de Leads e Projetos',
 };
@@ -41,19 +43,17 @@ export default async function AppLayout({
   const primaryColor   = branding?.primaryColor   ?? '#6366f1';
   const secondaryColor = branding?.secondaryColor  ?? '#4f46e5';
   const favicon        = branding?.favicon         ?? '/favicon.ico';
-  const orgName        = branding?.name            ?? 'MDS CRM';
 
   const cssVars = `:root { --color-primary: ${primaryColor}; --color-secondary: ${secondaryColor}; }`;
 
   return (
     <NextAuthSessionProvider>
       <Providers>
+        {/* ✅ CSS vars white-label injetadas via <style> — correto */}
         <style dangerouslySetInnerHTML={{ __html: cssVars }} />
 
-        <head>
-          <link rel="icon" href={favicon} />
-          <title>{orgName} — CRM</title>
-        </head>
+        {/* ✅ favicon dinâmico via link no <head> do Next.js */}
+        <link rel="icon" href={favicon} />
 
         <PermissionSync />
 
