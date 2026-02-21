@@ -27,6 +27,7 @@ import {
   CreditCard,
   Paintbrush,
   Target,
+  MessageSquare,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { usePermission } from '@/hooks/usePermission';
@@ -61,15 +62,16 @@ interface OrgBranding {
 // ============================================
 
 const menuItems: MenuItem[] = [
-  { name: 'Dashboard',  icon: LayoutDashboard, path: '/dashboard'                      },
-  { name: 'Leads',      icon: Users,           path: '/leads',    module: 'leads'      },
-  { name: 'Kanban',     icon: Kanban,          path: '/kanban',   module: 'kanban'     },
-  { name: 'Projetos',   icon: FolderKanban,    path: '/projects', module: 'projects'   },
-  { name: 'OS',         icon: FileText,        path: '/os',       module: 'os'         },
-  { name: 'Tarefas',    icon: CheckSquare,     path: '/tasks',    module: 'tasks'      },
-  { name: 'Agenda',     icon: Calendar,        path: '/agenda',   module: 'agenda'     },
-  { name: 'Metas',      icon: Target,          path: '/goals',    module: 'goals'      },
-  { name: 'Relatórios', icon: BarChart3,       path: '/reports',  module: 'reports'    },
+  { name: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard'                      },
+  { name: 'Leads',       icon: Users,           path: '/leads',    module: 'leads'      },
+  { name: 'Kanban',      icon: Kanban,          path: '/kanban',   module: 'kanban'     },
+  { name: 'Projetos',    icon: FolderKanban,    path: '/projects', module: 'projects'   },
+  { name: 'OS',          icon: FileText,        path: '/os',       module: 'os'         },
+  { name: 'Tarefas',     icon: CheckSquare,     path: '/tasks',    module: 'tasks'      },
+  { name: 'Agenda',      icon: Calendar,        path: '/agenda',   module: 'agenda'     },
+  { name: 'Metas',       icon: Target,          path: '/goals',    module: 'goals'      },
+  { name: 'Atendimento', icon: MessageSquare,   path: '/atendimento'                    },
+  { name: 'Relatórios',  icon: BarChart3,       path: '/reports',  module: 'reports'    },
 ];
 
 const settingsItems: MenuItem[] = [

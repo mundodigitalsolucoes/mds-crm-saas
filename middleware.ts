@@ -67,8 +67,8 @@ export default async function middleware(req: NextRequest) {
   const isExempt = PLAN_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
 
   if (!isExempt) {
-    const planStatus = token.planStatus as string | undefined;
-    const plan = token.plan as string | undefined;
+    const planStatus  = token.planStatus  as string | undefined;
+    const plan        = token.plan        as string | undefined;
     const trialEndsAt = token.trialEndsAt as string | undefined;
 
     let planBlocked = false;
@@ -91,9 +91,9 @@ export default async function middleware(req: NextRequest) {
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           {
-            error: 'Plano inativo',
+            error:  'Plano inativo',
             detail: 'Seu plano está inativo. Acesse as configurações para regularizar.',
-            code: 'PLAN_INACTIVE',
+            code:   'PLAN_INACTIVE',
           },
           { status: 403 }
         );
@@ -119,6 +119,7 @@ export const config = {
     '/tarefas/:path*',
     '/tasks/:path*',
     '/agenda/:path*',
+    '/atendimento/:path*', // ← NOVO
     '/relatorios/:path*',
     '/reports/:path*',
     '/configuracoes/:path*',
