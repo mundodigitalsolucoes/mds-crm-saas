@@ -21,6 +21,7 @@ CREATE TABLE "plans" (
     "max_users" INTEGER NOT NULL,
     "max_leads" INTEGER NOT NULL,
     "max_projects" INTEGER NOT NULL,
+    "max_os" INTEGER NOT NULL DEFAULT 20,
     "features" TEXT NOT NULL DEFAULT '[]',
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -45,9 +46,13 @@ CREATE TABLE "organizations" (
     "plan_status" TEXT NOT NULL DEFAULT 'active',
     "trial_ends_at" TIMESTAMP(3),
     "subscription_id" TEXT,
+    "asaas_customer_id" TEXT,
     "max_users" INTEGER NOT NULL DEFAULT 5,
     "max_leads" INTEGER NOT NULL DEFAULT 100,
     "max_projects" INTEGER NOT NULL DEFAULT 10,
+    "max_os" INTEGER NOT NULL DEFAULT 10,
+    "chatwoot_account_id" INTEGER,
+    "chatwoot_url" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
@@ -78,12 +83,15 @@ CREATE TABLE "users" (
     "avatar_url" TEXT,
     "organization_id" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'user',
-    "permissions" TEXT NOT NULL DEFAULT '[]',
+    "permissions" TEXT NOT NULL DEFAULT '{}',
     "email_verified" TIMESTAMP(3),
     "onboarding_completed" BOOLEAN NOT NULL DEFAULT false,
     "preferences" TEXT NOT NULL DEFAULT '{}',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "consent_at" TIMESTAMP(3),
+    "consent_ip" TEXT,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -383,12 +391,18 @@ CREATE TABLE "chatwoot_conversations" (
     "chatwoot_account_id" INTEGER NOT NULL,
     "chatwoot_inbox_id" INTEGER NOT NULL,
     "chatwoot_contact_id" INTEGER NOT NULL,
+    "channel" TEXT,
+    "inbox_name" TEXT,
     "status" TEXT NOT NULL,
-    "assignee_id" INTEGER,
+    "chatwoot_assignee_id" INTEGER,
+    "assignee_id" TEXT,
     "contact_name" TEXT,
     "contact_phone" TEXT,
     "contact_email" TEXT,
+    "contact_avatar_url" TEXT,
+    "last_message" TEXT,
     "last_message_at" TIMESTAMP(3),
+    "unread_count" INTEGER NOT NULL DEFAULT 0,
     "messages_count" INTEGER NOT NULL DEFAULT 0,
     "lead_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -447,6 +461,34 @@ CREATE TABLE "google_business_metrics" (
 );
 
 -- CreateTable
+CREATE TABLE "agenda_events" (
+    "id" TEXT NOT NULL,
+    "organization_id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "date" DATE NOT NULL,
+    "start_time" TEXT,
+    "end_time" TEXT,
+    "all_day" BOOLEAN NOT NULL DEFAULT false,
+    "type" TEXT NOT NULL DEFAULT 'meeting',
+    "status" TEXT NOT NULL DEFAULT 'agendado',
+    "color" TEXT,
+    "location" TEXT,
+    "is_recurring" BOOLEAN NOT NULL DEFAULT false,
+    "recurrence_rule" TEXT,
+    "reminder_minutes" INTEGER,
+    "reminder_sent" BOOLEAN NOT NULL DEFAULT false,
+    "lead_id" TEXT,
+    "project_id" TEXT,
+    "assigned_to" TEXT,
+    "created_by" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "agenda_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ai_usage" (
     "id" TEXT NOT NULL,
     "organization_id" TEXT NOT NULL,
@@ -487,6 +529,18 @@ CREATE TABLE "service_orders" (
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "service_orders_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PasswordResetToken" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "used" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PasswordResetToken_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -631,10 +685,19 @@ CREATE UNIQUE INDEX "connected_accounts_provider_organization_id_key" ON "connec
 CREATE INDEX "chatwoot_conversations_organization_id_idx" ON "chatwoot_conversations"("organization_id");
 
 -- CreateIndex
+CREATE INDEX "chatwoot_conversations_organization_id_status_idx" ON "chatwoot_conversations"("organization_id", "status");
+
+-- CreateIndex
+CREATE INDEX "chatwoot_conversations_organization_id_channel_idx" ON "chatwoot_conversations"("organization_id", "channel");
+
+-- CreateIndex
 CREATE INDEX "chatwoot_conversations_chatwoot_contact_id_idx" ON "chatwoot_conversations"("chatwoot_contact_id");
 
 -- CreateIndex
 CREATE INDEX "chatwoot_conversations_lead_id_idx" ON "chatwoot_conversations"("lead_id");
+
+-- CreateIndex
+CREATE INDEX "chatwoot_conversations_assignee_id_idx" ON "chatwoot_conversations"("assignee_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "chatwoot_conversations_organization_id_chatwoot_id_key" ON "chatwoot_conversations"("organization_id", "chatwoot_id");
@@ -656,6 +719,24 @@ CREATE INDEX "google_business_metrics_date_idx" ON "google_business_metrics"("da
 
 -- CreateIndex
 CREATE UNIQUE INDEX "google_business_metrics_organization_id_location_id_date_key" ON "google_business_metrics"("organization_id", "location_id", "date");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_organization_id_idx" ON "agenda_events"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_date_idx" ON "agenda_events"("date");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_status_idx" ON "agenda_events"("status");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_assigned_to_idx" ON "agenda_events"("assigned_to");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_lead_id_idx" ON "agenda_events"("lead_id");
+
+-- CreateIndex
+CREATE INDEX "agenda_events_organization_id_date_idx" ON "agenda_events"("organization_id", "date");
 
 -- CreateIndex
 CREATE INDEX "ai_usage_organization_id_idx" ON "ai_usage"("organization_id");
@@ -680,6 +761,15 @@ CREATE INDEX "service_orders_assigned_to_idx" ON "service_orders"("assigned_to")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "service_orders_organization_id_code_key" ON "service_orders"("organization_id", "code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
+
+-- CreateIndex
+CREATE INDEX "PasswordResetToken_token_idx" ON "PasswordResetToken"("token");
+
+-- CreateIndex
+CREATE INDEX "PasswordResetToken_email_idx" ON "PasswordResetToken"("email");
 
 -- AddForeignKey
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -779,6 +869,30 @@ ALTER TABLE "connected_accounts" ADD CONSTRAINT "connected_accounts_organization
 
 -- AddForeignKey
 ALTER TABLE "connected_accounts" ADD CONSTRAINT "connected_accounts_connected_by_id_fkey" FOREIGN KEY ("connected_by_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "chatwoot_conversations" ADD CONSTRAINT "chatwoot_conversations_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "chatwoot_conversations" ADD CONSTRAINT "chatwoot_conversations_assignee_id_fkey" FOREIGN KEY ("assignee_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "chatwoot_conversations" ADD CONSTRAINT "chatwoot_conversations_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "leads"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agenda_events" ADD CONSTRAINT "agenda_events_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agenda_events" ADD CONSTRAINT "agenda_events_lead_id_fkey" FOREIGN KEY ("lead_id") REFERENCES "leads"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agenda_events" ADD CONSTRAINT "agenda_events_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "marketing_projects"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agenda_events" ADD CONSTRAINT "agenda_events_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "agenda_events" ADD CONSTRAINT "agenda_events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "service_orders" ADD CONSTRAINT "service_orders_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
