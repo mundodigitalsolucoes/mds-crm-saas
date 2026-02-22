@@ -12,7 +12,6 @@ export async function POST() {
 
   const organizationId = session!.user.organizationId
 
-  // ── Busca org para pegar slug e limite ──────────────────────────────────────
   const org = await prisma.organization.findUnique({
     where:  { id: organizationId },
     select: { slug: true, maxWhatsappInstances: true },
@@ -21,26 +20,57 @@ export async function POST() {
 
   const instanceName = `org-${org.slug}`
 
-  // ── Verifica se já existe conta ativa ───────────────────────────────────────
+  // Se já existe conta ativa no banco → reusa
   const existing = await prisma.connectedAccount.findUnique({
-    where: { provider_organizationId: { provider: 'whatsapp', organizationId } },
+    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
     select: { isActive: true, data: true },
   })
 
-  // Se já existe e está ativa, apenas retorna QR (reusa instância)
   if (existing?.isActive) {
     const data = JSON.parse(existing.data) as { instanceName: string }
     return NextResponse.json({ instanceName: data.instanceName, alreadyExists: true })
   }
 
-  // ── Cria instância na Evolution API ─────────────────────────────────────────
+  // ── Verifica se instância já existe na Evolution API ──────────────────────
   try {
+    const checkRes = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
+      headers: { apikey: EVO_KEY },
+      signal:  AbortSignal.timeout(8_000),
+    })
+
+    const accessTokenEnc = encryptToken(EVO_KEY)
+    const upsertData = {
+      instanceName,
+      serverUrl:   EVO_URL,
+      phone:       null,
+      connectedAt: null,
+    }
+
+    if (checkRes.ok) {
+      // Instância já existe na Evolution → só vincula no banco
+      await prisma.connectedAccount.upsert({
+        where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
+        create: {
+          provider:      'whatsapp',
+          organizationId,
+          connectedById: session!.user.id,
+          accessTokenEnc,
+          isActive:      true,
+          data: JSON.stringify(upsertData),
+        },
+        update: {
+          isActive:  true,
+          lastError: null,
+          data: JSON.stringify(upsertData),
+        },
+      })
+      return NextResponse.json({ instanceName, alreadyExists: true })
+    }
+
+    // Instância não existe → criar
     const createRes = await fetch(`${EVO_URL}/instance/create`, {
       method:  'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: EVO_KEY,
-      },
+      headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
       body: JSON.stringify({
         instanceName,
         integration: 'WHATSAPP-BAILEYS',
@@ -49,44 +79,29 @@ export async function POST() {
       signal: AbortSignal.timeout(15_000),
     })
 
-    // 409 = instância já existe na Evolution (criada antes) — tudo bem, continua
-    if (!createRes.ok && createRes.status !== 409) {
+    if (!createRes.ok) {
       const err = await createRes.text()
-      console.error('[EVO CREATE]', err)
+      console.error('[EVO CREATE]', createRes.status, err)
       return NextResponse.json(
         { error: 'Erro ao criar instância WhatsApp. Tente novamente.' },
         { status: 502 }
       )
     }
 
-    // ── Salva no banco ───────────────────────────────────────────────────────
-    // Usa token placeholder — a apiKey real da instância é a global (EVO_KEY)
-    const accessTokenEnc = encryptToken(EVO_KEY)
-
     await prisma.connectedAccount.upsert({
-      where: { provider_organizationId: { provider: 'whatsapp', organizationId } },
+      where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
       create: {
         provider:      'whatsapp',
         organizationId,
         connectedById: session!.user.id,
         accessTokenEnc,
         isActive:      true,
-        data: JSON.stringify({
-          instanceName,
-          serverUrl: EVO_URL,
-          phone: null,
-          connectedAt: null,
-        }),
+        data: JSON.stringify(upsertData),
       },
       update: {
-        isActive:   true,
-        lastError:  null,
-        data: JSON.stringify({
-          instanceName,
-          serverUrl: EVO_URL,
-          phone: null,
-          connectedAt: null,
-        }),
+        isActive:  true,
+        lastError: null,
+        data: JSON.stringify(upsertData),
       },
     })
 
