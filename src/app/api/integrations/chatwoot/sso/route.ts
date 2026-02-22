@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { decrypt } from '@/lib/integrations/crypto'
+import { decryptToken } from '@/lib/integrations/crypto'
 
 export const runtime = 'nodejs'
 
@@ -20,7 +20,7 @@ export async function GET(_req: NextRequest) {
     // ── Busca ConnectedAccount Chatwoot da org ────────────────────────────────
     const account = await prisma.connectedAccount.findFirst({
       where  : { organizationId, provider: 'chatwoot' },
-      select : { accessToken: true, metadata: true },
+      select : { accessTokenEnc: true, data: true },
     })
 
     if (!account) {
@@ -33,7 +33,7 @@ export async function GET(_req: NextRequest) {
     // ── Descriptografa o api_access_token do agente ──────────────────────────
     let apiToken: string
     try {
-      apiToken = await decrypt(account.accessToken)
+      apiToken = await decryptToken(account.accessTokenEnc)
     } catch {
       return NextResponse.json(
         { error: 'Erro ao descriptografar token do Chatwoot. Reconecte a integração.' },
@@ -49,10 +49,10 @@ export async function GET(_req: NextRequest) {
     }
 
     // ── Resolve URL base do Chatwoot ─────────────────────────────────────────
-    const meta = account.metadata as { chatwootUrl?: string } | null
+    const meta = JSON.parse(account.data) as { chatwootUrl?: string }
     const chatwootBase =
-      meta?.chatwootUrl?.replace(/\/$/, '') ??           // salvo no connect
-      process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '') ?? // fallback env
+      meta?.chatwootUrl?.replace(/\/$/, '') ??
+      process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '') ??
       null
 
     if (!chatwootBase) {
@@ -63,7 +63,6 @@ export async function GET(_req: NextRequest) {
     }
 
     // ── Monta URL de auto-login com token ────────────────────────────────────
-    // Chatwoot aceita ?token= desde v2.x — estável entre versões
     const ssoUrl = `${chatwootBase}/app/login?token=${encodeURIComponent(apiToken)}`
 
     return NextResponse.json({ url: ssoUrl })
