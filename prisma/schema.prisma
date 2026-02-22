@@ -88,6 +88,10 @@ model Organization {
   maxProjects     Int       @default(10) @map("max_projects")
   maxOs           Int       @default(10) @map("max_os")
 
+  // Chatwoot
+  chatwootAccountId Int?    @map("chatwoot_account_id")
+  chatwootUrl       String? @map("chatwoot_url")
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
