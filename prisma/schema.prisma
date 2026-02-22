@@ -44,6 +44,7 @@ model Plan {
   maxLeads      Int       @map("max_leads")
   maxProjects   Int       @map("max_projects")
   maxOs         Int       @default(20) @map("max_os")
+  maxWhatsappInstances  Int  @default(1) @map("max_whatsapp_instances")
 
   // Features habilitadas
   features      String    @default("[]") // JSON: ["whatsapp", "meta_ads", "google_ads", "ai_assistant"]
@@ -87,7 +88,8 @@ model Organization {
   maxLeads        Int       @default(100) @map("max_leads")
   maxProjects     Int       @default(10) @map("max_projects")
   maxOs           Int       @default(10) @map("max_os")
-
+  maxWhatsappInstances  Int  @default(1) @map("max_whatsapp_instances")
+  
   // Chatwoot
   chatwootAccountId Int?    @map("chatwoot_account_id")
   chatwootUrl       String? @map("chatwoot_url")
