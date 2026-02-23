@@ -2,13 +2,18 @@ import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 
-const EVO_URL = process.env.EVOLUTION_API_URL!.replace(/\/$/, '')
-const EVO_KEY = process.env.EVOLUTION_API_KEY!
+function getEvoConfig() {
+  const url = process.env.EVOLUTION_API_URL
+  const key = process.env.EVOLUTION_API_KEY
+  if (!url || !key) throw new Error('EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados.')
+  return { EVO_URL: url.replace(/\/$/, ''), EVO_KEY: key }
+}
 
 export async function GET() {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
   if (!allowed) return errorResponse!
 
+  const { EVO_URL, EVO_KEY } = getEvoConfig()
   const organizationId = session!.user.organizationId
 
   const account = await prisma.connectedAccount.findUnique({
@@ -53,19 +58,20 @@ export async function GET() {
     let phone = data.phone
     if (isConnected && !phone) {
       try {
-        const infoRes = await fetch(`${EVO_URL}/instance/fetchInstances?instanceName=${data.instanceName}`, {
-          headers: { apikey: EVO_KEY },
-          signal:  AbortSignal.timeout(5_000),
-        })
+        const infoRes = await fetch(
+          `${EVO_URL}/instance/fetchInstances?instanceName=${data.instanceName}`,
+          {
+            headers: { apikey: EVO_KEY },
+            signal:  AbortSignal.timeout(5_000),
+          }
+        )
         if (infoRes.ok) {
           const info = await infoRes.json() as Array<{
             instance?: { profileName?: string; wuid?: string }
           }>
           const wuid = info?.[0]?.instance?.wuid ?? null
           if (wuid) {
-            // wuid formato: 5517992822597@s.whatsapp.net → extrai número
             phone = wuid.split('@')[0] ?? null
-            // Atualiza banco com número
             await prisma.connectedAccount.updateMany({
               where: { provider: 'whatsapp', organizationId },
               data: {
