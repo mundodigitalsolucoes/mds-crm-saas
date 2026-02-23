@@ -3,72 +3,34 @@ import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
 
-const EVO_URL = process.env.EVOLUTION_API_URL!.replace(/\/$/, '')
-const EVO_KEY = process.env.EVOLUTION_API_KEY!
+function getEvoConfig() {
+  const url = process.env.EVOLUTION_API_URL
+  const key = process.env.EVOLUTION_API_KEY
+  if (!url || !key) throw new Error('EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados.')
+  return { EVO_URL: url.replace(/\/$/, ''), EVO_KEY: key }
+}
 
-export async function POST() {
-  const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
-  if (!allowed) return errorResponse!
-
-  const organizationId = session!.user.organizationId
-
-  const org = await prisma.organization.findUnique({
-    where:  { id: organizationId },
-    select: { slug: true, maxWhatsappInstances: true },
-  })
-  if (!org) return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
-
-  const instanceName = `org-${org.slug}`
-
-  // Se já existe conta ativa no banco → reusa
-  const existing = await prisma.connectedAccount.findUnique({
-    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-    select: { isActive: true, data: true },
-  })
-
-  if (existing?.isActive) {
-    const data = JSON.parse(existing.data) as { instanceName: string }
-    return NextResponse.json({ instanceName: data.instanceName, alreadyExists: true })
-  }
-
-  // ── Verifica se instância já existe na Evolution API ──────────────────────
+async function deleteInstance(EVO_URL: string, EVO_KEY: string, instanceName: string) {
   try {
-    const checkRes = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
+    await fetch(`${EVO_URL}/instance/logout/${instanceName}`, {
+      method:  'DELETE',
       headers: { apikey: EVO_KEY },
       signal:  AbortSignal.timeout(8_000),
     })
+  } catch { /* silencioso */ }
 
-    const accessTokenEnc = encryptToken(EVO_KEY)
-    const upsertData = {
-      instanceName,
-      serverUrl:   EVO_URL,
-      phone:       null,
-      connectedAt: null,
-    }
+  try {
+    await fetch(`${EVO_URL}/instance/delete/${instanceName}`, {
+      method:  'DELETE',
+      headers: { apikey: EVO_KEY },
+      signal:  AbortSignal.timeout(8_000),
+    })
+  } catch { /* silencioso */ }
+}
 
-    if (checkRes.ok) {
-      // Instância já existe na Evolution → só vincula no banco
-      await prisma.connectedAccount.upsert({
-        where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-        create: {
-          provider:      'whatsapp',
-          organizationId,
-          connectedById: session!.user.id,
-          accessTokenEnc,
-          isActive:      true,
-          data: JSON.stringify(upsertData),
-        },
-        update: {
-          isActive:  true,
-          lastError: null,
-          data: JSON.stringify(upsertData),
-        },
-      })
-      return NextResponse.json({ instanceName, alreadyExists: true })
-    }
-
-    // Instância não existe → criar
-    const createRes = await fetch(`${EVO_URL}/instance/create`, {
+async function createInstance(EVO_URL: string, EVO_KEY: string, instanceName: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${EVO_URL}/instance/create`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
       body: JSON.stringify({
@@ -78,16 +40,66 @@ export async function POST() {
       }),
       signal: AbortSignal.timeout(15_000),
     })
+    return res.ok
+  } catch {
+    return false
+  }
+}
 
-    if (!createRes.ok) {
-      const err = await createRes.text()
-      console.error('[EVO CREATE]', createRes.status, err)
-      return NextResponse.json(
-        { error: 'Erro ao criar instância WhatsApp. Tente novamente.' },
-        { status: 502 }
-      )
+export async function POST() {
+  const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
+  if (!allowed) return errorResponse!
+
+  const { EVO_URL, EVO_KEY } = getEvoConfig()
+  const organizationId = session!.user.organizationId
+
+  const org = await prisma.organization.findUnique({
+    where:  { id: organizationId },
+    select: { slug: true },
+  })
+  if (!org) {
+    return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
+  }
+
+  const instanceName   = `org-${org.slug}`
+  const accessTokenEnc = encryptToken(EVO_KEY)
+  const upsertData     = {
+    instanceName,
+    serverUrl:   EVO_URL,
+    phone:       null,
+    connectedAt: null,
+  }
+
+  // ── Verifica estado real na Evolution ────────────────────────────────────────
+  let instanceExistsAndOnline = false
+  let instanceExistsOffline   = false
+
+  try {
+    const stateRes = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
+      headers: { apikey: EVO_KEY },
+      signal:  AbortSignal.timeout(8_000),
+    })
+
+    if (stateRes.ok) {
+      const stateJson = await stateRes.json() as { instance?: { state?: string } }
+      const state     = stateJson?.instance?.state
+
+      if (state === 'open') {
+        instanceExistsAndOnline = true
+      } else {
+        instanceExistsOffline = true
+      }
     }
+    // não ok → instância não existe na Evolution
+  } catch {
+    return NextResponse.json(
+      { error: 'Não foi possível conectar ao servidor WhatsApp.' },
+      { status: 502 }
+    )
+  }
 
+  // ── Caso 1: já conectado — garante banco e retorna ───────────────────────────
+  if (instanceExistsAndOnline) {
     await prisma.connectedAccount.upsert({
       where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
       create: {
@@ -99,19 +111,48 @@ export async function POST() {
         data: JSON.stringify(upsertData),
       },
       update: {
-        isActive:  true,
-        lastError: null,
+        isActive:   true,
+        lastError:  null,
+        lastSyncAt: new Date(),
         data: JSON.stringify(upsertData),
       },
     })
+    return NextResponse.json({ instanceName, alreadyExists: true })
+  }
 
-    return NextResponse.json({ instanceName, alreadyExists: false })
+  // ── Caso 2: instância offline — deleta e recria para gerar novo QR ──────────
+  if (instanceExistsOffline) {
+    await deleteInstance(EVO_URL, EVO_KEY, instanceName)
+    await new Promise(r => setTimeout(r, 1_500))
+  }
 
-  } catch (err) {
-    console.error('[EVO CONNECT]', err)
+  // ── Caso 3 (e continuação do Caso 2): cria instância nova ───────────────────
+  const created = await createInstance(EVO_URL, EVO_KEY, instanceName)
+  if (!created) {
     return NextResponse.json(
-      { error: 'Não foi possível conectar ao servidor WhatsApp.' },
+      { error: 'Erro ao criar instância WhatsApp. Tente novamente.' },
       { status: 502 }
     )
   }
+
+  await prisma.connectedAccount.upsert({
+    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
+    create: {
+      provider:      'whatsapp',
+      organizationId,
+      connectedById: session!.user.id,
+      accessTokenEnc,
+      isActive:      true,
+      data: JSON.stringify(upsertData),
+    },
+    update: {
+      accessTokenEnc,
+      isActive:   true,
+      lastError:  null,
+      lastSyncAt: new Date(),
+      data: JSON.stringify(upsertData),
+    },
+  })
+
+  return NextResponse.json({ instanceName, alreadyExists: false })
 }
