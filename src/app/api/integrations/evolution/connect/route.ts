@@ -28,6 +28,19 @@ async function deleteInstance(EVO_URL: string, EVO_KEY: string, instanceName: st
   } catch { /* silencioso */ }
 }
 
+async function restartInstance(EVO_URL: string, EVO_KEY: string, instanceName: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${EVO_URL}/instance/restart/${instanceName}`, {
+      method:  'PUT',
+      headers: { apikey: EVO_KEY },
+      signal:  AbortSignal.timeout(8_000),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 async function createInstance(EVO_URL: string, EVO_KEY: string, instanceName: string): Promise<boolean> {
   try {
     const res = await fetch(`${EVO_URL}/instance/create`, {
@@ -69,6 +82,14 @@ export async function POST() {
     phone:       null,
     connectedAt: null,
   }
+
+  // ── Verifica se Chatwoot já está configurado para esta instância ─────────────
+  // Se sim, preferimos restart em vez de delete+create (preserva webhook do Chatwoot)
+  const hasChatwoot = await prisma.connectedAccount.findUnique({
+    where:  { provider_organizationId: { provider: 'chatwoot', organizationId } },
+    select: { isActive: true },
+  })
+  const chatwootConfigured = hasChatwoot?.isActive === true
 
   // ── Verifica estado real na Evolution ────────────────────────────────────────
   let instanceExistsAndOnline = false
@@ -120,13 +141,43 @@ export async function POST() {
     return NextResponse.json({ instanceName, alreadyExists: true })
   }
 
-  // ── Caso 2: instância offline — deleta e recria para gerar novo QR ──────────
+  // ── Caso 2: instância offline ────────────────────────────────────────────────
   if (instanceExistsOffline) {
+    if (chatwootConfigured) {
+      // ✅ Chatwoot configurado → restart preserva webhook e inbox
+      const restarted = await restartInstance(EVO_URL, EVO_KEY, instanceName)
+      if (restarted) {
+        await new Promise(r => setTimeout(r, 2_000))
+
+        await prisma.connectedAccount.upsert({
+          where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
+          create: {
+            provider:      'whatsapp',
+            organizationId,
+            connectedById: session!.user.id,
+            accessTokenEnc,
+            isActive:      true,
+            data: JSON.stringify(upsertData),
+          },
+          update: {
+            isActive:   true,
+            lastError:  null,
+            lastSyncAt: new Date(),
+            data: JSON.stringify(upsertData),
+          },
+        })
+        // Retorna instanceName para o frontend abrir o modal QR
+        return NextResponse.json({ instanceName, alreadyExists: false })
+      }
+      // restart falhou → cai para delete+create abaixo
+    }
+
+    // Sem Chatwoot configurado (ou restart falhou) → delete + create
     await deleteInstance(EVO_URL, EVO_KEY, instanceName)
     await new Promise(r => setTimeout(r, 1_500))
   }
 
-  // ── Caso 3 (e continuação do Caso 2): cria instância nova ───────────────────
+  // ── Caso 3: cria instância nova ──────────────────────────────────────────────
   const created = await createInstance(EVO_URL, EVO_KEY, instanceName)
   if (!created) {
     return NextResponse.json(

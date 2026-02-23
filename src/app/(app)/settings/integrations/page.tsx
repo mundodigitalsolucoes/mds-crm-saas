@@ -267,15 +267,29 @@ export default function IntegrationsPage() {
 
   // ── Carregar status ─────────────────────────────────────────────────────────
 
-  const loadWaStatus = useCallback(async () => {
+  // ✅ FIX: retry com backoff — aguarda Evolution estabilizar após conexão
+  const loadWaStatus = useCallback(async (retries = 0) => {
     setWaLoading(true)
     try {
       const { data } = await axios.get<WhatsAppStatus>('/api/integrations/evolution/status')
+
+      // Se conta existe mas ainda não está "open", tenta mais 3x com 2s de intervalo
+      if (!data.isConnected && data.connected && retries < 3) {
+        await new Promise(r => setTimeout(r, 2_000))
+        return loadWaStatus(retries + 1)
+      }
+
       setWaStatus(data)
     } catch {
       setWaStatus(null)
     } finally {
-      setWaLoading(false)
+      // Só desliga o loading na última tentativa
+      if (retries >= 3) setWaLoading(false)
+      // Nas tentativas intermediárias o loading fica ativo (UX contínua)
+      else if (retries === 0) {
+        // Primeira chamada sem retry bem-sucedido — desliga normalmente
+        setWaLoading(false)
+      }
     }
   }, [])
 
@@ -306,7 +320,6 @@ export default function IntegrationsPage() {
   // ── Criar inbox automaticamente no Chatwoot via Evolution ──────────────────
 
   const createChatwootInbox = useCallback(async () => {
-    // Só tenta se Chatwoot estiver configurado
     if (!cwStatus?.connected) return
 
     setCreatingInbox(true)
@@ -318,7 +331,6 @@ export default function IntegrationsPage() {
       if (data.inboxCreated) {
         showMsg('success', `✅ WhatsApp conectado e inbox "${data.inboxName}" criado no Chatwoot!`)
       } else {
-        // Não bloqueia — WA já conectou. Apenas avisa.
         const reasons: Record<string, string> = {
           chatwoot_not_configured:  'WhatsApp conectado! Configure o Chatwoot para criar o inbox automaticamente.',
           chatwoot_data_incomplete: 'WhatsApp conectado! Dados do Chatwoot incompletos — reconecte o Chatwoot.',
@@ -330,7 +342,6 @@ export default function IntegrationsPage() {
         showMsg(data.reason === 'chatwoot_not_configured' ? 'info' : 'success', msg)
       }
     } catch {
-      // Falha silenciosa no inbox — WhatsApp já está conectado, não queremos assustar o usuário
       showMsg('success', 'WhatsApp conectado com sucesso! 🎉')
     } finally {
       setCreatingInbox(false)
@@ -357,9 +368,12 @@ export default function IntegrationsPage() {
     }
   }
 
+  // ✅ FIX: aguarda 3s para Evolution estabilizar o estado "open" antes de checar
   const handleQRConnected = useCallback(async () => {
     setShowQRModal(false)
     setQrInstance(null)
+    // Aguarda Evolution propagar o estado "open" internamente
+    await new Promise(r => setTimeout(r, 3_000))
     await loadWaStatus()
     // Cria inbox no Chatwoot automaticamente via Evolution API nativa
     await createChatwootInbox()
@@ -543,7 +557,7 @@ export default function IntegrationsPage() {
               </button>
             )}
             <button
-              onClick={loadWaStatus}
+              onClick={() => loadWaStatus()}
               disabled={waLoading || creatingInbox}
               title="Atualizar status"
               className="flex items-center gap-2 px-3 py-2.5 bg-gray-800 text-gray-400 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 text-sm transition-colors"
