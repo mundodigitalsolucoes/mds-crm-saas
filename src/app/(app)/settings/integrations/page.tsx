@@ -5,7 +5,7 @@ import {
   Plug, MessageCircle, CheckCircle, XCircle,
   ExternalLink, Eye, EyeOff, Save, Loader2,
   Trash2, RefreshCw, Bot, AlertCircle, Smartphone,
-  QrCode, Wifi, WifiOff,
+  QrCode, Wifi, WifiOff, Info,
 } from 'lucide-react'
 import axios from 'axios'
 import Image from 'next/image'
@@ -36,7 +36,13 @@ interface ChatwootStatus {
   lastError:         string | null
 }
 
-type MessageState = { type: 'success' | 'error'; text: string } | null
+interface CreateInboxResult {
+  inboxCreated: boolean
+  inboxName?:   string
+  reason?:      string
+}
+
+type MessageState = { type: 'success' | 'error' | 'info'; text: string } | null
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -55,16 +61,23 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
 
 function FeedbackBanner({ msg, onClose }: { msg: MessageState; onClose: () => void }) {
   if (!msg) return null
+
+  const styles = {
+    success: 'bg-green-900/30 text-green-400 border-green-800',
+    error:   'bg-red-900/30 text-red-400 border-red-800',
+    info:    'bg-blue-900/30 text-blue-400 border-blue-800',
+  }
+
+  const icons = {
+    success: <CheckCircle className="w-4 h-4 shrink-0" />,
+    error:   <AlertCircle className="w-4 h-4 shrink-0" />,
+    info:    <Info className="w-4 h-4 shrink-0" />,
+  }
+
   return (
-    <div className={`mb-6 p-4 rounded-lg flex items-center justify-between gap-2 border ${
-      msg.type === 'success'
-        ? 'bg-green-900/30 text-green-400 border-green-800'
-        : 'bg-red-900/30 text-red-400 border-red-800'
-    }`}>
+    <div className={`mb-6 p-4 rounded-lg flex items-center justify-between gap-2 border ${styles[msg.type]}`}>
       <div className="flex items-center gap-2">
-        {msg.type === 'success'
-          ? <CheckCircle className="w-4 h-4 shrink-0" />
-          : <AlertCircle className="w-4 h-4 shrink-0" />}
+        {icons[msg.type]}
         <span className="text-sm">{msg.text}</span>
       </div>
       <button onClick={onClose} className="text-current opacity-60 hover:opacity-100">
@@ -97,7 +110,6 @@ function QRCodeModal({
         `/api/integrations/evolution/qrcode?instance=${instanceName}`
       )
       if (data.connected) {
-        // WhatsApp conectado!
         clearInterval(intervalRef.current!)
         clearTimeout(expireTimerRef.current!)
         onConnected()
@@ -113,9 +125,7 @@ function QRCodeModal({
 
   useEffect(() => {
     fetchQR()
-    // Polling a cada 3s
-    intervalRef.current = setInterval(fetchQR, 3_000)
-    // QR expira em 60s
+    intervalRef.current    = setInterval(fetchQR, 3_000)
     expireTimerRef.current = setTimeout(() => {
       setExpired(true)
       clearInterval(intervalRef.current!)
@@ -131,7 +141,7 @@ function QRCodeModal({
     setExpired(false)
     setLoading(true)
     fetchQR()
-    intervalRef.current = setInterval(fetchQR, 3_000)
+    intervalRef.current    = setInterval(fetchQR, 3_000)
     expireTimerRef.current = setTimeout(() => {
       setExpired(true)
       clearInterval(intervalRef.current!)
@@ -236,20 +246,23 @@ export default function IntegrationsPage() {
   const [showQRModal, setShowQRModal]         = useState(false)
   const [qrInstance, setQrInstance]           = useState<string | null>(null)
 
+  // Inbox creation state
+  const [creatingInbox, setCreatingInbox] = useState(false)
+
   // Chatwoot
-  const [cw, setCw]                         = useState({ chatwootUrl: '', chatwootAccountId: '', apiToken: '' })
-  const [cwStatus, setCwStatus]             = useState<ChatwootStatus | null>(null)
-  const [cwLoading, setCwLoading]           = useState(true)
-  const [cwSaving, setCwSaving]             = useState(false)
+  const [cw, setCw]                           = useState({ chatwootUrl: '', chatwootAccountId: '', apiToken: '' })
+  const [cwStatus, setCwStatus]               = useState<ChatwootStatus | null>(null)
+  const [cwLoading, setCwLoading]             = useState(true)
+  const [cwSaving, setCwSaving]               = useState(false)
   const [cwDisconnecting, setCwDisconnecting] = useState(false)
-  const [showCwToken, setShowCwToken]       = useState(false)
+  const [showCwToken, setShowCwToken]         = useState(false)
 
   // Feedback global
   const [message, setMessage] = useState<MessageState>(null)
 
-  const showMsg = (type: 'success' | 'error', text: string) => {
+  const showMsg = (type: 'success' | 'error' | 'info', text: string) => {
     setMessage({ type, text })
-    if (type === 'success') setTimeout(() => setMessage(null), 4000)
+    if (type === 'success' || type === 'info') setTimeout(() => setMessage(null), 5000)
   }
 
   // ── Carregar status ─────────────────────────────────────────────────────────
@@ -290,6 +303,40 @@ export default function IntegrationsPage() {
     loadCwStatus()
   }, [loadWaStatus, loadCwStatus])
 
+  // ── Criar inbox automaticamente no Chatwoot via Evolution ──────────────────
+
+  const createChatwootInbox = useCallback(async () => {
+    // Só tenta se Chatwoot estiver configurado
+    if (!cwStatus?.connected) return
+
+    setCreatingInbox(true)
+    try {
+      const { data } = await axios.post<CreateInboxResult>(
+        '/api/integrations/whatsapp/create-inbox'
+      )
+
+      if (data.inboxCreated) {
+        showMsg('success', `✅ WhatsApp conectado e inbox "${data.inboxName}" criado no Chatwoot!`)
+      } else {
+        // Não bloqueia — WA já conectou. Apenas avisa.
+        const reasons: Record<string, string> = {
+          chatwoot_not_configured:  'WhatsApp conectado! Configure o Chatwoot para criar o inbox automaticamente.',
+          chatwoot_data_incomplete: 'WhatsApp conectado! Dados do Chatwoot incompletos — reconecte o Chatwoot.',
+          evolution_api_error:      'WhatsApp conectado! Falha ao criar inbox no Chatwoot (erro Evolution API).',
+          whatsapp_not_connected:   'WhatsApp conectado com sucesso! 🎉',
+          unexpected_error:         'WhatsApp conectado! Ocorreu um erro inesperado ao criar o inbox.',
+        }
+        const msg = reasons[data.reason ?? ''] ?? 'WhatsApp conectado com sucesso! 🎉'
+        showMsg(data.reason === 'chatwoot_not_configured' ? 'info' : 'success', msg)
+      }
+    } catch {
+      // Falha silenciosa no inbox — WhatsApp já está conectado, não queremos assustar o usuário
+      showMsg('success', 'WhatsApp conectado com sucesso! 🎉')
+    } finally {
+      setCreatingInbox(false)
+    }
+  }, [cwStatus])
+
   // ── WhatsApp handlers ───────────────────────────────────────────────────────
 
   const handleWaConnect = async () => {
@@ -310,12 +357,13 @@ export default function IntegrationsPage() {
     }
   }
 
-  const handleQRConnected = async () => {
+  const handleQRConnected = useCallback(async () => {
     setShowQRModal(false)
     setQrInstance(null)
-    showMsg('success', 'WhatsApp conectado com sucesso! 🎉')
     await loadWaStatus()
-  }
+    // Cria inbox no Chatwoot automaticamente via Evolution API nativa
+    await createChatwootInbox()
+  }, [loadWaStatus, createChatwootInbox])
 
   const handleWaDisconnect = async () => {
     if (!confirm('Deseja desconectar o WhatsApp? A instância será removida.')) return
@@ -418,6 +466,17 @@ export default function IntegrationsPage() {
         </div>
 
         <div className="p-5">
+
+          {/* Criando inbox — feedback visual inline */}
+          {creatingInbox && (
+            <div className="flex items-center gap-3 p-3 bg-indigo-900/20 border border-indigo-800 rounded-xl mb-4">
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
+              <p className="text-xs text-indigo-300">
+                Configurando inbox no Chatwoot automaticamente...
+              </p>
+            </div>
+          )}
+
           {/* Estado: Conectado */}
           {waStatus?.connected && waStatus?.isConnected && (
             <div className="flex items-center gap-4 p-4 bg-green-900/20 border border-green-800 rounded-xl mb-4">
@@ -474,7 +533,7 @@ export default function IntegrationsPage() {
             {waStatus?.connected && (
               <button
                 onClick={handleWaDisconnect}
-                disabled={waDisconnecting || waConnecting}
+                disabled={waDisconnecting || waConnecting || creatingInbox}
                 className="flex items-center gap-2 px-4 py-2.5 bg-red-900/40 text-red-400 border border-red-800 rounded-lg hover:bg-red-900/60 disabled:opacity-50 text-sm font-medium transition-colors"
               >
                 {waDisconnecting
@@ -485,7 +544,7 @@ export default function IntegrationsPage() {
             )}
             <button
               onClick={loadWaStatus}
-              disabled={waLoading}
+              disabled={waLoading || creatingInbox}
               title="Atualizar status"
               className="flex items-center gap-2 px-3 py-2.5 bg-gray-800 text-gray-400 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 text-sm transition-colors"
             >
@@ -493,14 +552,16 @@ export default function IntegrationsPage() {
             </button>
             <button
               onClick={handleWaConnect}
-              disabled={waConnecting || waLoading}
+              disabled={waConnecting || waLoading || creatingInbox}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
             >
               {waConnecting
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Iniciando...</>
-                : waStatus?.connected
-                  ? <><QrCode className="w-4 h-4" /> Reconectar</>
-                  : <><QrCode className="w-4 h-4" /> Conectar WhatsApp</>
+                : creatingInbox
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Configurando Chatwoot...</>
+                  : waStatus?.connected
+                    ? <><QrCode className="w-4 h-4" /> Reconectar</>
+                    : <><QrCode className="w-4 h-4" /> Conectar WhatsApp</>
               }
             </button>
           </div>
