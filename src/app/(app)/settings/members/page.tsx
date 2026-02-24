@@ -25,6 +25,7 @@ import {
   EyeOff,
   AlertTriangle,
   Clock,
+  MessagesSquare,
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { useUsage } from '@/hooks/useUsage';
@@ -41,6 +42,7 @@ import type {
   UserPermissions,
   UserRole,
 } from '@/types/permissions';
+import ChatwootTeamsTab from '@/components/settings/ChatwootTeamsTab';
 
 // ============================================
 // TIPOS
@@ -55,37 +57,44 @@ interface OrgUser {
   createdAt: string;
 }
 
+interface ChatwootTeam {
+  id:   number;
+  name: string;
+}
+
 // ============================================
 // CONSTANTES
 // ============================================
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: 'Proprietário',
-  admin: 'Administrador',
+  owner:   'Proprietário',
+  admin:   'Administrador',
   manager: 'Gerente',
-  user: 'Usuário',
+  user:    'Usuário',
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  owner: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  admin: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  owner:   'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  admin:   'bg-purple-500/20 text-purple-400 border-purple-500/30',
   manager: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  user: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  user:    'bg-gray-500/20 text-gray-400 border-gray-500/30',
 };
 
 const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  owner: Crown,
-  admin: ShieldCheck,
+  owner:   Crown,
+  admin:   ShieldCheck,
   manager: UserCog,
-  user: UserIcon,
+  user:    UserIcon,
 };
 
 const ROLE_HIERARCHY: Record<string, number> = {
-  user: 1,
+  user:    1,
   manager: 2,
-  admin: 3,
-  owner: 4,
+  admin:   3,
+  owner:   4,
 };
+
+type ActiveTab = 'members' | 'teams';
 
 // ============================================
 // COMPONENTE PRINCIPAL
@@ -95,32 +104,39 @@ export default function MembersPage() {
   const { role: currentRole, isAdmin, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
-  const [users, setUsers] = useState<OrgUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>('members');
+  const [users, setUsers]         = useState<OrgUser[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
 
   // Modal de permissões
-  const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
+  const [editingUser, setEditingUser]       = useState<OrgUser | null>(null);
   const [editPermissions, setEditPermissions] = useState<UserPermissions | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saving, setSaving]                 = useState(false);
+  const [saveMessage, setSaveMessage]       = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // Modal de convite
-  const [showInvite, setShowInvite] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user' as string,
+  const [showInvite, setShowInvite]   = useState(false);
+  const [inviteForm, setInviteForm]   = useState({
+    name:           '',
+    email:          '',
+    password:       '',
+    role:           'user' as string,
+    chatwootTeamId: undefined as number | undefined,
   });
-  const [inviting, setInviting] = useState(false);
+  const [inviting, setInviting]         = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Times do Chatwoot para o select do convite
+  const [chatwootTeams, setChatwootTeams]           = useState<ChatwootTeam[]>([]);
+  const [chatwootConnected, setChatwootConnected]   = useState(false);
+  const [loadingTeams, setLoadingTeams]             = useState(false);
+
   // ✅ Bloqueio de criação quando limite atingido ou plano inativo
-  const limitReached = isAtLimit('users');
-  const planInactive = isPlanInactive();
+  const limitReached  = isAtLimit('users');
+  const planInactive  = isPlanInactive();
   const createBlocked = limitReached || planInactive;
 
   const inviteTooltip = planInactive
@@ -158,6 +174,25 @@ export default function MembersPage() {
   }, [fetchUsers, permLoading]);
 
   // ============================================
+  // FETCH TIMES CHATWOOT (ao abrir modal convite)
+  // ============================================
+
+  const fetchChatwootTeams = useCallback(async () => {
+    try {
+      setLoadingTeams(true);
+      const res  = await fetch('/api/integrations/chatwoot/teams');
+      const data = await res.json();
+      setChatwootConnected(data.connected ?? false);
+      setChatwootTeams(data.teams ?? []);
+    } catch {
+      setChatwootConnected(false);
+      setChatwootTeams([]);
+    } finally {
+      setLoadingTeams(false);
+    }
+  }, []);
+
+  // ============================================
   // PERMISSION HANDLERS
   // ============================================
 
@@ -166,7 +201,7 @@ export default function MembersPage() {
     if (targetUser.role === 'owner') return false;
     if (currentRole !== 'owner') {
       const currentPower = ROLE_HIERARCHY[currentRole || ''] || 0;
-      const targetPower = ROLE_HIERARCHY[targetUser.role] || 0;
+      const targetPower  = ROLE_HIERARCHY[targetUser.role] || 0;
       if (targetPower >= currentPower) return false;
     }
     return true;
@@ -227,9 +262,9 @@ export default function MembersPage() {
     setSaveMessage(null);
     try {
       const res = await fetch(`/api/users/${editingUser.id}/permissions`, {
-        method: 'PUT',
+        method:  'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: editPermissions }),
+        body:    JSON.stringify({ permissions: editPermissions }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
@@ -268,7 +303,7 @@ export default function MembersPage() {
 
   const isPartialEnabled = (module: PermissionModule): boolean => {
     if (!editPermissions) return false;
-    const m = editPermissions[module];
+    const m     = editPermissions[module];
     const count = [m.view, m.create, m.edit, m.delete].filter(Boolean).length;
     return count > 0 && count < 4;
   };
@@ -277,8 +312,14 @@ export default function MembersPage() {
   // INVITE HANDLERS
   // ============================================
 
+  const handleOpenInvite = () => {
+    if (createBlocked) return;
+    setShowInvite(true);
+    fetchChatwootTeams(); // busca times ao abrir modal
+  };
+
   const handleInvite = async () => {
-    if (createBlocked) return; // Segurança extra
+    if (createBlocked) return;
 
     if (!inviteForm.name.trim() || !inviteForm.email.trim() || !inviteForm.password) {
       setInviteMessage({ type: 'error', text: 'Preencha todos os campos' });
@@ -293,10 +334,20 @@ export default function MembersPage() {
     setInviteMessage(null);
 
     try {
-      const res = await fetch('/api/users/invite', {
-        method: 'POST',
+      const payload: Record<string, unknown> = {
+        name:     inviteForm.name,
+        email:    inviteForm.email,
+        password: inviteForm.password,
+        role:     inviteForm.role,
+      };
+      if (inviteForm.chatwootTeamId) {
+        payload.chatwootTeamId = inviteForm.chatwootTeamId;
+      }
+
+      const res  = await fetch('/api/users/invite', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inviteForm),
+        body:    JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao convidar membro');
@@ -304,7 +355,7 @@ export default function MembersPage() {
       await fetchUsers();
       setTimeout(() => {
         setShowInvite(false);
-        setInviteForm({ name: '', email: '', password: '', role: 'user' });
+        setInviteForm({ name: '', email: '', password: '', role: 'user', chatwootTeamId: undefined });
         setInviteMessage(null);
         setShowPassword(false);
       }, 1500);
@@ -320,7 +371,7 @@ export default function MembersPage() {
 
   const handleCloseInvite = () => {
     setShowInvite(false);
-    setInviteForm({ name: '', email: '', password: '', role: 'user' });
+    setInviteForm({ name: '', email: '', password: '', role: 'user', chatwootTeamId: undefined });
     setInviteMessage(null);
     setShowPassword(false);
   };
@@ -360,27 +411,29 @@ export default function MembersPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="mb-8 flex items-start justify-between">
+      {/* ── Header ── */}
+      <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Users className="w-7 h-7 text-indigo-600" />
             Membros da Equipe
           </h1>
           <p className="text-gray-600 mt-1">
-            Gerencie os membros e suas permissões de acesso
+            Gerencie os membros, permissões e times de atendimento
           </p>
         </div>
 
-        {/* ✅ Botão Convidar com tooltip de limite */}
-        {isAdmin && (
+        {isAdmin && activeTab === 'members' && (
           <div className="relative group">
             <button
-              onClick={() => !createBlocked && setShowInvite(true)}
+              onClick={handleOpenInvite}
               disabled={createBlocked}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-medium text-sm rounded-lg hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {createBlocked ? <AlertTriangle className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+              {createBlocked
+                ? <AlertTriangle className="w-4 h-4" />
+                : <UserPlus className="w-4 h-4" />
+              }
               Convidar Membro
             </button>
             {createBlocked && (
@@ -393,92 +446,127 @@ export default function MembersPage() {
         )}
       </div>
 
-      {/* Tabela de Membros */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Membro</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
-                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões</th>
-                <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {users.map((user) => {
-                const RoleIcon = ROLE_ICONS[user.role] || UserIcon;
-                const hasCustomPerms =
-                  user.permissions &&
-                  user.permissions !== '[]' &&
-                  user.permissions !== '{}';
-
-                return (
-                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-indigo-600 font-semibold text-sm">
-                            {user.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{user.name}</p>
-                          <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[user.role] || ROLE_COLORS.user}`}>
-                        <RoleIcon className="w-3.5 h-3.5" />
-                        {ROLE_LABELS[user.role] || user.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      {user.role === 'owner' ? (
-                        <span className="text-xs text-amber-600 font-medium">Acesso total</span>
-                      ) : hasCustomPerms ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium">
-                          <Shield className="w-3.5 h-3.5" />
-                          Customizado
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-500">Padrão do cargo</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {canEditUser(user) ? (
-                        <button
-                          onClick={() => handleOpenEdit(user)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                        >
-                          <Shield className="w-4 h-4" />
-                          Permissões
-                        </button>
-                      ) : user.role === 'owner' ? (
-                        <span className="text-xs text-gray-400">—</span>
-                      ) : (
-                        <span className="text-xs text-gray-400">Sem acesso</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                    Nenhum membro encontrado
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'members'
+              ? 'bg-white text-indigo-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Membros
+        </button>
+        <button
+          onClick={() => setActiveTab('teams')}
+          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            activeTab === 'teams'
+              ? 'bg-white text-indigo-600 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <MessagesSquare className="w-4 h-4" />
+          Times Chatwoot
+        </button>
       </div>
 
+      {/* ── Tab: Times ── */}
+      {activeTab === 'teams' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <ChatwootTeamsTab />
+        </div>
+      )}
+
+      {/* ── Tab: Membros ── */}
+      {activeTab === 'members' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Membro</th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
+                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões</th>
+                  <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {users.map((user) => {
+                  const RoleIcon    = ROLE_ICONS[user.role] || UserIcon;
+                  const hasCustomPerms =
+                    user.permissions &&
+                    user.permissions !== '[]' &&
+                    user.permissions !== '{}';
+
+                  return (
+                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-indigo-600 font-semibold text-sm">
+                              {user.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">{user.name}</p>
+                            <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[user.role] || ROLE_COLORS.user}`}>
+                          <RoleIcon className="w-3.5 h-3.5" />
+                          {ROLE_LABELS[user.role] || user.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {user.role === 'owner' ? (
+                          <span className="text-xs text-amber-600 font-medium">Acesso total</span>
+                        ) : hasCustomPerms ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium">
+                            <Shield className="w-3.5 h-3.5" />
+                            Customizado
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-500">Padrão do cargo</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {canEditUser(user) ? (
+                          <button
+                            onClick={() => handleOpenEdit(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                          >
+                            <Shield className="w-4 h-4" />
+                            Permissões
+                          </button>
+                        ) : user.role === 'owner' ? (
+                          <span className="text-xs text-gray-400">—</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Sem acesso</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {users.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                      Nenhum membro encontrado
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ============================================ */}
-      {/* MODAL DE CONVITE */}
+      {/* MODAL DE CONVITE                            */}
       {/* ============================================ */}
       {showInvite && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -504,7 +592,7 @@ export default function MembersPage() {
 
             {/* Body */}
             <div className="px-6 py-4 space-y-4">
-              {/* ✅ Banner de limite dentro do modal */}
+              {/* Banner de limite */}
               {createBlocked && (
                 <div className={`flex items-start gap-3 p-3 rounded-lg border ${
                   planInactive
@@ -584,11 +672,51 @@ export default function MembersPage() {
                   ))}
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  {inviteForm.role === 'admin' && 'Acesso quase total — pode gerenciar membros e configurações'}
+                  {inviteForm.role === 'admin'   && 'Acesso quase total — pode gerenciar membros e configurações'}
                   {inviteForm.role === 'manager' && 'Acesso a leads, projetos, tarefas e relatórios'}
-                  {inviteForm.role === 'user' && 'Acesso básico — visualizar e criar conteúdo'}
+                  {inviteForm.role === 'user'    && 'Acesso básico — visualizar e criar conteúdo'}
                 </p>
               </div>
+
+              {/* Time Chatwoot (apenas se conectado e com times) */}
+              {chatwootConnected && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Time Chatwoot
+                    <span className="ml-1 text-xs text-gray-400 font-normal">(opcional)</span>
+                  </label>
+                  {loadingTeams ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      <span className="text-sm text-gray-400">Carregando times...</span>
+                    </div>
+                  ) : chatwootTeams.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic px-1">
+                      Nenhum time criado ainda. Crie na aba "Times Chatwoot".
+                    </p>
+                  ) : (
+                    <select
+                      value={inviteForm.chatwootTeamId ?? ''}
+                      onChange={(e) =>
+                        setInviteForm((prev) => ({
+                          ...prev,
+                          chatwootTeamId: e.target.value ? Number(e.target.value) : undefined,
+                        }))
+                      }
+                      disabled={createBlocked}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-colors bg-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Nenhum time</option>
+                      {chatwootTeams.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    O membro será criado como agente no Chatwoot e adicionado ao time selecionado
+                  </p>
+                </div>
+              )}
 
               {/* Feedback */}
               {inviteMessage && (
@@ -631,7 +759,7 @@ export default function MembersPage() {
       )}
 
       {/* ============================================ */}
-      {/* MODAL DE EDIÇÃO DE PERMISSÕES */}
+      {/* MODAL DE EDIÇÃO DE PERMISSÕES               */}
       {/* ============================================ */}
       {editingUser && editPermissions && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -671,7 +799,7 @@ export default function MembersPage() {
               {ALL_MODULES.map((module) => {
                 const isExpanded = expandedModules.has(module);
                 const allEnabled = isAllEnabled(module);
-                const partial = isPartialEnabled(module);
+                const partial    = isPartialEnabled(module);
 
                 return (
                   <div key={module} className="border border-gray-200 rounded-lg overflow-hidden">
