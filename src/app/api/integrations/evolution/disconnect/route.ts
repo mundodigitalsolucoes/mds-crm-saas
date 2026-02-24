@@ -1,6 +1,8 @@
+// src/app/api/integrations/evolution/disconnect/route.ts
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
+import { decryptToken } from '@/lib/integrations/crypto'
 
 function getEvoConfig() {
   const url = process.env.EVOLUTION_API_URL
@@ -16,44 +18,75 @@ export async function POST() {
   const { EVO_URL, EVO_KEY } = getEvoConfig()
   const organizationId = session!.user.organizationId
 
-  const account = await prisma.connectedAccount.findUnique({
+  // ── Busca instância WhatsApp ─────────────────────────────────────────────────
+  const waAccount = await prisma.connectedAccount.findUnique({
     where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
     select: { data: true },
   })
 
-  if (!account) {
+  if (!waAccount) {
     return NextResponse.json({ success: true }) // já desconectado
   }
 
-  const data = JSON.parse(account.data) as { instanceName: string }
+  const waData = JSON.parse(waAccount.data) as {
+    instanceName: string
+    inboxId?:     number
+  }
 
-  // ── Desconecta e deleta instância na Evolution API ───────────────────────────
+  // ── 1. Remove inbox do Chatwoot (se existir) ─────────────────────────────────
+  if (waData.inboxId) {
+    const cwAccount = await prisma.connectedAccount.findUnique({
+      where:  { provider_organizationId: { provider: 'chatwoot', organizationId } },
+      select: { accessTokenEnc: true, data: true },
+    })
+
+    if (cwAccount) {
+      try {
+        const cwData      = JSON.parse(cwAccount.data) as { chatwootUrl: string; chatwootAccountId: number }
+        const apiToken    = decryptToken(cwAccount.accessTokenEnc)
+        const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
+        const baseUrl     = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
+
+        await fetch(
+          `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${waData.inboxId}`,
+          {
+            method:  'DELETE',
+            headers: { api_access_token: apiToken },
+            signal:  AbortSignal.timeout(8_000),
+          }
+        )
+      } catch {
+        // Silencioso — não impede o disconnect do WhatsApp
+      }
+    }
+  }
+
+  // ── 2. Logout na Evolution (desconecta WhatsApp) ─────────────────────────────
   try {
-    // 1. Logout (desconecta WhatsApp)
-    await fetch(`${EVO_URL}/instance/logout/${data.instanceName}`, {
+    await fetch(`${EVO_URL}/instance/logout/${waData.instanceName}`, {
       method:  'DELETE',
       headers: { apikey: EVO_KEY },
       signal:  AbortSignal.timeout(8_000),
     })
-  } catch {
-    // Silencioso — pode já estar desconectado
-  }
+  } catch { /* silencioso */ }
 
+  // ── 3. Deleta instância na Evolution ────────────────────────────────────────
   try {
-    // 2. Deleta instância
-    await fetch(`${EVO_URL}/instance/delete/${data.instanceName}`, {
+    await fetch(`${EVO_URL}/instance/delete/${waData.instanceName}`, {
       method:  'DELETE',
       headers: { apikey: EVO_KEY },
       signal:  AbortSignal.timeout(8_000),
     })
-  } catch {
-    // Silencioso
-  }
+  } catch { /* silencioso */ }
 
-  // ── Desativa no banco ────────────────────────────────────────────────────────
+  // ── 4. Desativa no banco + limpa inboxId ────────────────────────────────────
   await prisma.connectedAccount.updateMany({
     where: { provider: 'whatsapp', organizationId },
-    data:  { isActive: false, lastError: null },
+    data:  {
+      isActive:  false,
+      lastError: null,
+      data: JSON.stringify({ instanceName: waData.instanceName, inboxId: null }),
+    },
   })
 
   return NextResponse.json({ success: true })
