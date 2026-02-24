@@ -29,12 +29,12 @@ export async function POST() {
   }
 
   const waData = JSON.parse(waAccount.data) as {
-    instanceName: string
-    inboxId?:     number
+    instanceName:     string
+    chatwootInboxId?: number
   }
 
   // ── 1. Remove inbox do Chatwoot (se existir) ─────────────────────────────────
-  if (waData.inboxId) {
+  if (waData.chatwootInboxId) {
     const cwAccount = await prisma.connectedAccount.findUnique({
       where:  { provider_organizationId: { provider: 'chatwoot', organizationId } },
       select: { accessTokenEnc: true, data: true },
@@ -48,7 +48,7 @@ export async function POST() {
         const baseUrl     = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
 
         await fetch(
-          `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${waData.inboxId}`,
+          `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${waData.chatwootInboxId}`,
           {
             method:  'DELETE',
             headers: { api_access_token: apiToken },
@@ -61,7 +61,7 @@ export async function POST() {
     }
   }
 
-  // ── 2. Logout na Evolution (desconecta WhatsApp) ─────────────────────────────
+  // ── 2. Logout na Evolution ───────────────────────────────────────────────────
   try {
     await fetch(`${EVO_URL}/instance/logout/${waData.instanceName}`, {
       method:  'DELETE',
@@ -79,13 +79,16 @@ export async function POST() {
     })
   } catch { /* silencioso */ }
 
-  // ── 4. Desativa no banco + limpa inboxId ────────────────────────────────────
+  // ── 4. Desativa no banco + limpa chatwootInboxId ─────────────────────────────
   await prisma.connectedAccount.updateMany({
     where: { provider: 'whatsapp', organizationId },
     data:  {
       isActive:  false,
       lastError: null,
-      data: JSON.stringify({ instanceName: waData.instanceName, inboxId: null }),
+      data:      JSON.stringify({
+        instanceName:    waData.instanceName,
+        chatwootInboxId: null,
+      }),
     },
   })
 
