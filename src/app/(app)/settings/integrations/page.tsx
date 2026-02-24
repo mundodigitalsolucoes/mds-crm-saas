@@ -90,11 +90,17 @@ function QRCodeModal({
   onConnected:  () => void
   onClose:      () => void
 }) {
-  const [qrData, setQrData]   = useState<QRCodeData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [expired, setExpired] = useState(false)
-  const intervalRef           = useRef<ReturnType<typeof setInterval> | null>(null)
-  const expireTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [qrData, setQrData]         = useState<QRCodeData | null>(null)
+  const [loading, setLoading]       = useState(true)
+  const [expired, setExpired]       = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const intervalRef                 = useRef<ReturnType<typeof setInterval> | null>(null)
+  const expireTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearTimers = () => {
+    if (intervalRef.current)    clearInterval(intervalRef.current)
+    if (expireTimerRef.current) clearTimeout(expireTimerRef.current)
+  }
 
   const fetchQR = useCallback(async () => {
     try {
@@ -102,41 +108,41 @@ function QRCodeModal({
         `/api/integrations/evolution/qrcode?instance=${instanceName}`
       )
       if (data.connected) {
-        clearInterval(intervalRef.current!)
-        clearTimeout(expireTimerRef.current!)
+        clearTimers()
         onConnected()
         return
       }
       setQrData(data)
+      setFetchError(null)
       setLoading(false)
       setExpired(false)
     } catch {
+      setFetchError('Não foi possível gerar o QR Code. Tente novamente.')
       setLoading(false)
     }
   }, [instanceName, onConnected])
 
-  useEffect(() => {
-    fetchQR()
+  const startTimers = useCallback(() => {
     intervalRef.current    = setInterval(fetchQR, 3_000)
     expireTimerRef.current = setTimeout(() => {
       setExpired(true)
       clearInterval(intervalRef.current!)
     }, 60_000)
-    return () => {
-      clearInterval(intervalRef.current!)
-      clearTimeout(expireTimerRef.current!)
-    }
   }, [fetchQR])
 
+  useEffect(() => {
+    fetchQR()
+    startTimers()
+    return () => clearTimers()
+  }, [fetchQR, startTimers])
+
   const handleRefresh = () => {
+    clearTimers()
     setExpired(false)
+    setFetchError(null)
     setLoading(true)
     fetchQR()
-    intervalRef.current    = setInterval(fetchQR, 3_000)
-    expireTimerRef.current = setTimeout(() => {
-      setExpired(true)
-      clearInterval(intervalRef.current!)
-    }, 60_000)
+    startTimers()
   }
 
   return (
@@ -152,13 +158,31 @@ function QRCodeModal({
         </div>
 
         <div className="w-56 h-56 bg-white rounded-xl flex items-center justify-center relative overflow-hidden">
-          {loading && (
+          {/* Carregando */}
+          {loading && !fetchError && (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               <span className="text-xs text-gray-500">Gerando QR...</span>
             </div>
           )}
-          {!loading && expired && (
+
+          {/* Erro ao buscar */}
+          {!loading && fetchError && (
+            <div className="flex flex-col items-center gap-3 p-4 text-center">
+              <AlertCircle className="w-10 h-10 text-red-400" />
+              <p className="text-sm text-gray-600 font-medium">{fetchError}</p>
+              <button
+                onClick={handleRefresh}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Tentar novamente
+              </button>
+            </div>
+          )}
+
+          {/* QR expirado */}
+          {!loading && !fetchError && expired && (
             <div className="flex flex-col items-center gap-3 p-4 text-center">
               <XCircle className="w-10 h-10 text-red-400" />
               <p className="text-sm text-gray-600 font-medium">QR Code expirado</p>
@@ -171,7 +195,9 @@ function QRCodeModal({
               </button>
             </div>
           )}
-          {!loading && !expired && qrData?.qrcode && (
+
+          {/* QR Code */}
+          {!loading && !fetchError && !expired && qrData?.qrcode && (
             <Image
               src={qrData.qrcode}
               alt="QR Code WhatsApp"
@@ -183,7 +209,7 @@ function QRCodeModal({
           )}
         </div>
 
-        {!expired && (
+        {!expired && !fetchError && (
           <ol className="text-xs text-gray-400 space-y-1.5 self-start w-full">
             <li className="flex items-start gap-2">
               <span className="w-4 h-4 rounded-full bg-green-600 text-white text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
@@ -200,7 +226,7 @@ function QRCodeModal({
           </ol>
         )}
 
-        {!loading && !expired && (
+        {!loading && !expired && !fetchError && (
           <div className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             Aguardando conexão...
