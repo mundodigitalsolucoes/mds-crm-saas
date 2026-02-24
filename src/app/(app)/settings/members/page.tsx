@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Clock,
   MessagesSquare,
+  Trash2,
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { useUsage } from '@/hooks/useUsage';
@@ -102,7 +103,7 @@ type ActiveTab = 'members' | 'teams';
 
 export default function MembersPage() {
   const { role: currentRole, isAdmin, isLoading: permLoading } = usePermission();
-  const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
+  const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('members');
   const [users, setUsers]         = useState<OrgUser[]>([]);
@@ -110,29 +111,33 @@ export default function MembersPage() {
   const [error, setError]         = useState<string | null>(null);
 
   // Modal de permissões
-  const [editingUser, setEditingUser]       = useState<OrgUser | null>(null);
+  const [editingUser, setEditingUser]         = useState<OrgUser | null>(null);
   const [editPermissions, setEditPermissions] = useState<UserPermissions | null>(null);
-  const [saving, setSaving]                 = useState(false);
-  const [saveMessage, setSaveMessage]       = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saving, setSaving]                   = useState(false);
+  const [saveMessage, setSaveMessage]         = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // Modal de convite
-  const [showInvite, setShowInvite]   = useState(false);
-  const [inviteForm, setInviteForm]   = useState({
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
     name:           '',
     email:          '',
     password:       '',
     role:           'user' as string,
     chatwootTeamId: undefined as number | undefined,
   });
-  const [inviting, setInviting]         = useState(false);
+  const [inviting, setInviting]           = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword]   = useState(false);
 
   // Times do Chatwoot para o select do convite
-  const [chatwootTeams, setChatwootTeams]           = useState<ChatwootTeam[]>([]);
-  const [chatwootConnected, setChatwootConnected]   = useState(false);
-  const [loadingTeams, setLoadingTeams]             = useState(false);
+  const [chatwootTeams, setChatwootTeams]         = useState<ChatwootTeam[]>([]);
+  const [chatwootConnected, setChatwootConnected] = useState(false);
+  const [loadingTeams, setLoadingTeams]           = useState(false);
+
+  // Exclusão de membro
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [deleteUserMsg, setDeleteUserMsg]   = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // ✅ Bloqueio de criação quando limite atingido ou plano inativo
   const limitReached  = isAtLimit('users');
@@ -315,7 +320,7 @@ export default function MembersPage() {
   const handleOpenInvite = () => {
     if (createBlocked) return;
     setShowInvite(true);
-    fetchChatwootTeams(); // busca times ao abrir modal
+    fetchChatwootTeams();
   };
 
   const handleInvite = async () => {
@@ -374,6 +379,31 @@ export default function MembersPage() {
     setInviteForm({ name: '', email: '', password: '', role: 'user', chatwootTeamId: undefined });
     setInviteMessage(null);
     setShowPassword(false);
+  };
+
+  // ============================================
+  // DELETE HANDLER
+  // ============================================
+
+  const handleDeleteUser = async (user: OrgUser) => {
+    if (!confirm(`Remover "${user.name}" da equipe? Esta ação não pode ser desfeita.`)) return;
+    setDeletingUserId(user.id);
+    setDeleteUserMsg(null);
+    try {
+      const res  = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+      const data = await res.json() as { error?: string; message?: string };
+      if (!res.ok) {
+        setDeleteUserMsg({ type: 'error', text: data.error ?? 'Erro ao remover membro' });
+        return;
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      setDeleteUserMsg({ type: 'success', text: data.message ?? 'Membro removido!' });
+      setTimeout(() => setDeleteUserMsg(null), 3000);
+    } catch {
+      setDeleteUserMsg({ type: 'error', text: 'Erro de conexão ao remover membro' });
+    } finally {
+      setDeletingUserId(null);
+    }
   };
 
   const availableRoles = (): { value: string; label: string }[] => {
@@ -482,6 +512,22 @@ export default function MembersPage() {
       {/* ── Tab: Membros ── */}
       {activeTab === 'members' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+          {/* Feedback exclusão */}
+          {deleteUserMsg && (
+            <div className={`mx-6 mt-4 flex items-center gap-2 p-3 rounded-lg text-sm ${
+              deleteUserMsg.type === 'success'
+                ? 'bg-green-50 text-green-700 border border-green-200'
+                : 'bg-red-50 text-red-700 border border-red-200'
+            }`}>
+              {deleteUserMsg.type === 'success'
+                ? <Check className="w-4 h-4 flex-shrink-0" />
+                : <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              }
+              {deleteUserMsg.text}
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -494,7 +540,7 @@ export default function MembersPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {users.map((user) => {
-                  const RoleIcon    = ROLE_ICONS[user.role] || UserIcon;
+                  const RoleIcon       = ROLE_ICONS[user.role] || UserIcon;
                   const hasCustomPerms =
                     user.permissions &&
                     user.permissions !== '[]' &&
@@ -502,6 +548,7 @@ export default function MembersPage() {
 
                   return (
                     <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                      {/* Membro */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -515,12 +562,16 @@ export default function MembersPage() {
                           </div>
                         </div>
                       </td>
+
+                      {/* Cargo */}
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[user.role] || ROLE_COLORS.user}`}>
                           <RoleIcon className="w-3.5 h-3.5" />
                           {ROLE_LABELS[user.role] || user.role}
                         </span>
                       </td>
+
+                      {/* Permissões */}
                       <td className="px-6 py-4">
                         {user.role === 'owner' ? (
                           <span className="text-xs text-amber-600 font-medium">Acesso total</span>
@@ -533,15 +584,30 @@ export default function MembersPage() {
                           <span className="text-xs text-gray-500">Padrão do cargo</span>
                         )}
                       </td>
+
+                      {/* Ações */}
                       <td className="px-6 py-4 text-right">
                         {canEditUser(user) ? (
-                          <button
-                            onClick={() => handleOpenEdit(user)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                          >
-                            <Shield className="w-4 h-4" />
-                            Permissões
-                          </button>
+                          <div className="inline-flex items-center gap-2">
+                            <button
+                              onClick={() => handleOpenEdit(user)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                            >
+                              <Shield className="w-4 h-4" />
+                              Permissões
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              disabled={deletingUserId === user.id}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Remover membro"
+                            >
+                              {deletingUserId === user.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Trash2 className="w-4 h-4" />
+                              }
+                            </button>
+                          </div>
                         ) : user.role === 'owner' ? (
                           <span className="text-xs text-gray-400">—</span>
                         ) : (
