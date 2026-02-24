@@ -1,6 +1,6 @@
 // src/components/settings/ChatwootTeamsTab.tsx
 // Aba "Times" na página de membros
-// Lista times do Chatwoot e permite criar novos
+// Lista times do Chatwoot e permite criar/excluir
 
 'use client'
 
@@ -14,14 +14,15 @@ import {
   X,
   RefreshCw,
   Link2Off,
+  Trash2,
 } from 'lucide-react'
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
 interface ChatwootTeam {
-  id:          number
-  name:        string
-  description: string
+  id:           number
+  name:         string
+  description:  string
   agents_count?: number
 }
 
@@ -34,19 +35,23 @@ interface TeamsResponse {
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export default function ChatwootTeamsTab() {
-  const [loading, setLoading]   = useState(true)
+  const [loading,   setLoading]   = useState(true)
   const [connected, setConnected] = useState(false)
-  const [teams, setTeams]       = useState<ChatwootTeam[]>([])
-  const [error, setError]       = useState<string | null>(null)
+  const [teams,     setTeams]     = useState<ChatwootTeam[]>([])
+  const [error,     setError]     = useState<string | null>(null)
 
   // Form novo time
-  const [showForm, setShowForm]       = useState(false)
-  const [formName, setFormName]       = useState('')
-  const [formDesc, setFormDesc]       = useState('')
-  const [creating, setCreating]       = useState(false)
-  const [createMsg, setCreateMsg]     = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showForm,   setShowForm]   = useState(false)
+  const [formName,   setFormName]   = useState('')
+  const [formDesc,   setFormDesc]   = useState('')
+  const [creating,   setCreating]   = useState(false)
+  const [createMsg,  setCreateMsg]  = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  // ─── Fetch times ───────────────────────────────────────────────────────────
+  // Exclusão
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deleteMsg,  setDeleteMsg]  = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // ─── Fetch times ─────────────────────────────────────────────────────────
 
   const fetchTeams = useCallback(async () => {
     try {
@@ -73,7 +78,7 @@ export default function ChatwootTeamsTab() {
     fetchTeams()
   }, [fetchTeams])
 
-  // ─── Criar time ────────────────────────────────────────────────────────────
+  // ─── Criar time ──────────────────────────────────────────────────────────
 
   const handleCreate = async () => {
     if (!formName.trim()) {
@@ -120,7 +125,36 @@ export default function ChatwootTeamsTab() {
     setCreateMsg(null)
   }
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Excluir time ────────────────────────────────────────────────────────
+
+  const handleDelete = async (team: ChatwootTeam) => {
+    if (!confirm(`Excluir o time "${team.name}"? Esta ação não pode ser desfeita.`)) return
+
+    setDeletingId(team.id)
+    setDeleteMsg(null)
+
+    try {
+      const res  = await fetch(`/api/integrations/chatwoot/teams/${team.id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json() as { error?: string }
+
+      if (!res.ok) {
+        setDeleteMsg({ type: 'error', text: data.error ?? 'Erro ao excluir time' })
+        return
+      }
+
+      setTeams((prev) => prev.filter((t) => t.id !== team.id))
+      setDeleteMsg({ type: 'success', text: `Time "${team.name}" excluído com sucesso!` })
+      setTimeout(() => setDeleteMsg(null), 3000)
+    } catch {
+      setDeleteMsg({ type: 'error', text: 'Erro de conexão ao excluir time' })
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // ─── Render ──────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -130,7 +164,6 @@ export default function ChatwootTeamsTab() {
     )
   }
 
-  // Chatwoot não conectado
   if (!connected) {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-3 text-center px-6">
@@ -145,7 +178,6 @@ export default function ChatwootTeamsTab() {
     )
   }
 
-  // Erro de API
   if (error) {
     return (
       <div className="p-6">
@@ -260,6 +292,21 @@ export default function ChatwootTeamsTab() {
         </div>
       )}
 
+      {/* Feedback de exclusão */}
+      {deleteMsg && (
+        <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${
+          deleteMsg.type === 'success'
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {deleteMsg.type === 'success'
+            ? <Check className="w-4 h-4 flex-shrink-0" />
+            : <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          }
+          {deleteMsg.text}
+        </div>
+      )}
+
       {/* Lista de times */}
       {teams.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-32 gap-2 text-center border-2 border-dashed border-gray-200 rounded-xl">
@@ -285,11 +332,25 @@ export default function ChatwootTeamsTab() {
                   )}
                 </div>
               </div>
-              {typeof team.agents_count === 'number' && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
-                  {team.agents_count} {team.agents_count === 1 ? 'agente' : 'agentes'}
-                </span>
-              )}
+
+              <div className="flex items-center gap-2">
+                {typeof team.agents_count === 'number' && (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+                    {team.agents_count} {team.agents_count === 1 ? 'agente' : 'agentes'}
+                  </span>
+                )}
+                <button
+                  onClick={() => handleDelete(team)}
+                  disabled={deletingId === team.id}
+                  className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Excluir time"
+                >
+                  {deletingId === team.id
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Trash2 className="w-4 h-4" />
+                  }
+                </button>
+              </div>
             </div>
           ))}
         </div>
