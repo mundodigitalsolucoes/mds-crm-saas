@@ -49,7 +49,7 @@ interface ChatwootConversationPayload {
 interface ChatwootMessagePayload {
   id: number
   content?: string
-  message_type: string
+  message_type: string | number
   created_at: string
   account_id?: number
   conversation?: ChatwootConversationPayload
@@ -71,7 +71,7 @@ interface ChatwootWebhookPayload {
     channel?: string
   }
   content?: string
-  message_type?: string
+  message_type?: string | number  // ← corrigido: número ou string
   created_at?: string
   conversation?: ChatwootConversationPayload
   contact?: ChatwootContact
@@ -186,6 +186,19 @@ function extractConversationData(payload: ChatwootWebhookPayload) {
   const assignee = payload.meta?.assignee ?? payload.conversation?.meta?.assignee
 
   return { chatwootId, accountId, inboxId, inboxName, channel, status, contact, assignee }
+}
+
+function isOutgoingOrActivity(messageType: string | number | undefined): boolean {
+  // Chatwoot envia message_type como número (0=incoming, 1=outgoing, 2=activity)
+  // ou como string em algumas versões ("incoming", "outgoing", "activity")
+  return (
+    messageType === 1 ||
+    messageType === '1' ||
+    messageType === 'outgoing' ||
+    messageType === 2 ||
+    messageType === '2' ||
+    messageType === 'activity'
+  )
 }
 
 async function findOrCreateLead(
@@ -381,7 +394,9 @@ async function handleMessageCreated(
   payload: ChatwootWebhookPayload,
   organizationId: string
 ): Promise<void> {
-  if (payload.message_type === 'outgoing' || payload.message_type === 'activity') {
+  // Ignora mensagens enviadas (outgoing) e atividades do sistema
+  if (isOutgoingOrActivity(payload.message_type)) {
+    console.log('[Chatwoot] message_created ignorado | type:', payload.message_type)
     return
   }
 
@@ -392,20 +407,63 @@ async function handleMessageCreated(
   const contactN = payload.contact?.name ?? payload.sender?.name ?? 'Contato'
   const now      = new Date()
 
-  const updated = await prisma.chatwootConversation.updateMany({
-    where: { organizationId, chatwootId: conversationId },
-    data: {
-      lastMessage:   content.slice(0, 255),
-      lastMessageAt: now,
-      unreadCount:   { increment: 1 },
-    },
-  })
+  // Extrai dados para upsert caso a conversa não exista no cache
+  const accountId = payload.account_id ?? payload.conversation?.account_id
+  const inboxId   = payload.conversation?.inbox_id
+  const contact   = payload.conversation?.meta?.sender ?? payload.contact ?? payload.sender
+  const rawChannel =
+    payload.conversation?.channel ??
+    payload.conversation?.meta?.channel ??
+    payload.conversation?.inbox?.channel_type
+  const channel = normalizeChatwootChannel(rawChannel)
+  const status  = payload.conversation?.status ?? 'open'
 
-  if (updated.count === 0) {
-    console.warn('[Chatwoot] message_created: conversa #' + conversationId + ' nao encontrada no cache')
-    return
+  // Garante que o Lead existe
+  if (contact?.id) {
+    await findOrCreateLead(organizationId, contact as ChatwootContact, conversationId)
   }
 
+  if (accountId && inboxId) {
+    // Upsert: cria a conversa no cache se ainda não existir
+    await prisma.chatwootConversation.upsert({
+      where: {
+        organizationId_chatwootId: { organizationId, chatwootId: conversationId },
+      },
+      create: {
+        organizationId,
+        chatwootId:        conversationId,
+        chatwootAccountId: accountId,
+        chatwootInboxId:   inboxId,
+        chatwootContactId: contact?.id ?? 0,
+        channel,
+        status,
+        contactName:       contact?.name ?? null,
+        contactPhone:      (contact as ChatwootContact)?.phone_number ?? null,
+        contactEmail:      (contact as ChatwootContact)?.email ?? null,
+        contactAvatarUrl:  (contact as ChatwootContact)?.avatar_url ?? null,
+        lastMessage:       content.slice(0, 255),
+        lastMessageAt:     now,
+        unreadCount:       1,
+      },
+      update: {
+        lastMessage:   content.slice(0, 255),
+        lastMessageAt: now,
+        unreadCount:   { increment: 1 },
+      },
+    })
+  } else {
+    // Fallback: só atualiza se já existir
+    await prisma.chatwootConversation.updateMany({
+      where: { organizationId, chatwootId: conversationId },
+      data: {
+        lastMessage:   content.slice(0, 255),
+        lastMessageAt: now,
+        unreadCount:   { increment: 1 },
+      },
+    })
+  }
+
+  // Notifica o agente responsável
   const conv = await prisma.chatwootConversation.findFirst({
     where: { organizationId, chatwootId: conversationId },
     select: { id: true, assigneeId: true },
@@ -422,7 +480,7 @@ async function handleMessageCreated(
     })
   }
 
-  console.log('[Chatwoot] Mensagem criada na conversa #' + conversationId)
+  console.log('[Chatwoot] Mensagem recebida na conversa #' + conversationId + ' | type:', payload.message_type)
 }
 
 async function handleContactCreated(
