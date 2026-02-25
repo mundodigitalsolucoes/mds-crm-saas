@@ -96,6 +96,7 @@ function QRCodeModal({
   const [fetchError, setFetchError] = useState<string | null>(null)
   const intervalRef                 = useRef<ReturnType<typeof setInterval> | null>(null)
   const expireTimerRef              = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const attemptRef                  = useRef(0)
 
   const clearTimers = () => {
     if (intervalRef.current)    clearInterval(intervalRef.current)
@@ -105,19 +106,36 @@ function QRCodeModal({
   const fetchQR = useCallback(async () => {
     try {
       const { data } = await axios.get<QRCodeData>(
-        `/api/integrations/evolution/qrcode?instance=${instanceName}`
+        `/api/integrations/evolution/qrcode?instance=${instanceName}`,
+        { timeout: 15_000 }
       )
+
+      attemptRef.current = 0 // reset em sucesso
+
       if (data.connected) {
         clearTimers()
         onConnected()
         return
       }
-      setQrData(data)
-      setFetchError(null)
+
+      if (data.qrcode) {
+        setQrData(data)
+        setFetchError(null)
+        setExpired(false)
+      }
+
       setLoading(false)
-      setExpired(false)
-    } catch {
-      setFetchError('Não foi possível gerar o QR Code. Tente novamente.')
+
+    } catch (err) {
+      attemptRef.current += 1
+      console.warn(`[QR] tentativa ${attemptRef.current} falhou:`, err)
+
+      // Só exibe erro após 5 falhas consecutivas
+      if (attemptRef.current >= 5) {
+        setFetchError('Não foi possível gerar o QR Code. Tente reconectar.')
+        clearTimers()
+      }
+
       setLoading(false)
     }
   }, [instanceName, onConnected])
@@ -141,6 +159,7 @@ function QRCodeModal({
     setExpired(false)
     setFetchError(null)
     setLoading(true)
+    attemptRef.current = 0
     fetchQR()
     startTimers()
   }
@@ -158,6 +177,7 @@ function QRCodeModal({
         </div>
 
         <div className="w-56 h-56 bg-white rounded-xl flex items-center justify-center relative overflow-hidden">
+
           {/* Carregando */}
           {loading && !fetchError && (
             <div className="flex flex-col items-center gap-2">
@@ -291,7 +311,7 @@ export default function IntegrationsPage() {
         showMsg('success', `✅ WhatsApp conectado e inbox "${data.inboxName}" criado no Chatwoot!`)
       } else {
         const reasons: Record<string, string> = {
-          chatwoot_not_configured:  'WhatsApp conectado! Configure o Chatwoot nas configurações internas para criar o inbox.',
+          chatwoot_not_configured:  'WhatsApp conectado! Configure o Chatwoot para criar o inbox automaticamente.',
           chatwoot_data_incomplete: 'WhatsApp conectado! Dados do Chatwoot incompletos — entre em contato com o suporte.',
           evolution_api_error:      'WhatsApp conectado! Falha ao criar inbox (erro Evolution API).',
           whatsapp_not_connected:   'WhatsApp conectado com sucesso! 🎉',
