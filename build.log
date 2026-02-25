@@ -1,0 +1,116 @@
+⚠ `images.domains` is deprecated in favor of `images.remotePatterns`. Please update next.config.js to protect your application from malicious users.
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 16.2s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/73) ...
+  Generating static pages using 7 workers (18/73) 
+  Generating static pages using 7 workers (36/73) 
+  Generating static pages using 7 workers (54/73) 
+✓ Generating static pages using 7 workers (73/73) in 1466.5ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin/dashboard
+├ ○ /admin/login
+├ ○ /admin/organizations
+├ ○ /admin/plans
+├ ○ /admin/users
+├ ƒ /agenda
+├ ƒ /api/admin/auth
+├ ƒ /api/admin/dashboard
+├ ƒ /api/admin/organizations
+├ ƒ /api/admin/organizations/[id]
+├ ƒ /api/admin/plans
+├ ƒ /api/admin/plans/[id]
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/agenda
+├ ƒ /api/agenda/[id]
+├ ƒ /api/attachments
+├ ƒ /api/attachments/[id]
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/auth/delete-account
+├ ƒ /api/auth/export-data
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/auth/me
+├ ƒ /api/auth/reset-password
+├ ƒ /api/auth/signup
+├ ƒ /api/comments
+├ ƒ /api/comments/[id]
+├ ƒ /api/goals
+├ ƒ /api/goals/[id]
+├ ƒ /api/goals/[id]/actions
+├ ƒ /api/goals/[id]/actions/[actionId]
+├ ƒ /api/import
+├ ƒ /api/integrations/chatwoot/connect
+├ ƒ /api/integrations/chatwoot/disconnect
+├ ƒ /api/integrations/chatwoot/sso
+├ ƒ /api/integrations/chatwoot/status
+├ ƒ /api/integrations/chatwoot/team-members
+├ ƒ /api/integrations/chatwoot/teams
+├ ƒ /api/integrations/chatwoot/teams/[teamId]
+├ ƒ /api/integrations/evolution/connect
+├ ƒ /api/integrations/evolution/disconnect
+├ ƒ /api/integrations/evolution/qrcode
+├ ƒ /api/integrations/evolution/setup-inbox
+├ ƒ /api/integrations/evolution/status
+├ ƒ /api/integrations/whatsapp/connect
+├ ƒ /api/integrations/whatsapp/create-inbox
+├ ƒ /api/integrations/whatsapp/disconnect
+├ ƒ /api/integrations/whatsapp/status
+├ ƒ /api/leads
+├ ƒ /api/leads/[id]
+├ ƒ /api/notifications
+├ ƒ /api/notifications/read
+├ ƒ /api/organizations
+├ ƒ /api/os
+├ ƒ /api/os/[id]
+├ ƒ /api/projects
+├ ƒ /api/projects/[id]
+├ ƒ /api/tasks
+├ ƒ /api/tasks/[id]
+├ ƒ /api/tasks/[id]/subtasks
+├ ƒ /api/tasks/[id]/subtasks/[subtaskId]
+├ ƒ /api/usage
+├ ƒ /api/users
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/permissions
+├ ƒ /api/users/invite
+├ ƒ /api/webhooks/asaas
+├ ƒ /api/webhooks/chatwoot
+├ ƒ /atendimento
+├ ○ /auth/forgot-password
+├ ○ /auth/login
+├ ○ /auth/logout
+├ ○ /auth/reset-password
+├ ○ /auth/signup
+├ ƒ /dashboard
+├ ƒ /goals
+├ ƒ /kanban
+├ ƒ /leads
+├ ƒ /os
+├ ○ /privacy
+├ ƒ /projects
+├ ƒ /reports
+├ ƒ /settings/account
+├ ƒ /settings/billing
+├ ƒ /settings/branding
+├ ƒ /settings/integrations
+├ ƒ /settings/members
+├ ƒ /tasks
+└ ○ /terms
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
