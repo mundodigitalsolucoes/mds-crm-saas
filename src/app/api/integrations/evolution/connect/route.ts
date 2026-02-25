@@ -1,7 +1,9 @@
+// src/app/api/integrations/evolution/connect/route.ts
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
+import { setupChatwootEvolution } from '@/lib/integrations/chatwoot-evo'
 
 function getEvoConfig() {
   const url = process.env.EVOLUTION_API_URL
@@ -28,7 +30,11 @@ async function deleteInstance(EVO_URL: string, EVO_KEY: string, instanceName: st
   } catch { /* silencioso */ }
 }
 
-async function restartInstance(EVO_URL: string, EVO_KEY: string, instanceName: string): Promise<boolean> {
+async function restartInstance(
+  EVO_URL: string,
+  EVO_KEY: string,
+  instanceName: string
+): Promise<boolean> {
   try {
     const res = await fetch(`${EVO_URL}/instance/restart/${instanceName}`, {
       method:  'PUT',
@@ -41,7 +47,11 @@ async function restartInstance(EVO_URL: string, EVO_KEY: string, instanceName: s
   }
 }
 
-async function createInstance(EVO_URL: string, EVO_KEY: string, instanceName: string): Promise<boolean> {
+async function createInstance(
+  EVO_URL: string,
+  EVO_KEY: string,
+  instanceName: string
+): Promise<boolean> {
   try {
     const res = await fetch(`${EVO_URL}/instance/create`, {
       method:  'POST',
@@ -58,6 +68,80 @@ async function createInstance(EVO_URL: string, EVO_KEY: string, instanceName: st
     return false
   }
 }
+
+// ─── Salva ConnectedAccount WhatsApp com chatwootInboxId ─────────────────────
+
+async function upsertWhatsappAccount(params: {
+  organizationId:  string
+  userId:          string
+  accessTokenEnc:  string
+  instanceName:    string
+  evoUrl:          string
+  chatwootInboxId: number | null
+  phone:           string | null
+}) {
+  const {
+    organizationId, userId, accessTokenEnc,
+    instanceName, evoUrl, chatwootInboxId, phone,
+  } = params
+
+  const data = JSON.stringify({
+    instanceName,
+    serverUrl:       evoUrl,
+    phone:           phone ?? null,
+    connectedAt:     null,
+    chatwootInboxId: chatwootInboxId ?? null,
+  })
+
+  await prisma.connectedAccount.upsert({
+    where: {
+      provider_organizationId: { provider: 'whatsapp', organizationId },
+    },
+    create: {
+      provider:      'whatsapp',
+      organizationId,
+      connectedById: userId,
+      accessTokenEnc,
+      isActive:      true,
+      data,
+    },
+    update: {
+      accessTokenEnc,
+      isActive:   true,
+      lastError:  null,
+      lastSyncAt: new Date(),
+      data,
+    },
+  })
+}
+
+// ─── Tenta configurar Chatwoot (nunca bloqueia o fluxo principal) ─────────────
+
+async function tryChatwootSetup(params: {
+  organizationId: string
+  orgSlug:        string
+  instanceName:   string
+  evoUrl:         string
+  evoKey:         string
+  phoneNumber:    string | null
+}): Promise<number | null> {
+  try {
+    const result = await setupChatwootEvolution(params)
+    if (result.skipped) {
+      console.log('[Connect] Chatwoot não configurado, pulando setup.')
+    } else if (!result.success) {
+      console.warn('[Connect] Setup Chatwoot parcialmente falhou. InboxId:', result.chatwootInboxId)
+    } else {
+      console.log('[Connect] Chatwoot configurado com sucesso. InboxId:', result.chatwootInboxId)
+    }
+    return result.chatwootInboxId
+  } catch (err) {
+    console.error('[Connect] Erro inesperado no setup Chatwoot (ignorado):', err)
+    return null
+  }
+}
+
+// ─── Handler principal ────────────────────────────────────────────────────────
 
 export async function POST() {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
@@ -76,20 +160,24 @@ export async function POST() {
 
   const instanceName   = `org-${org.slug}`
   const accessTokenEnc = encryptToken(EVO_KEY)
-  const upsertData     = {
-    instanceName,
-    serverUrl:   EVO_URL,
-    phone:       null,
-    connectedAt: null,
-  }
 
-  // ── Verifica se Chatwoot já está configurado para esta instância ─────────────
-  // Se sim, preferimos restart em vez de delete+create (preserva webhook do Chatwoot)
+  // ── Verifica se Chatwoot está configurado (para decidir restart vs delete) ───
   const hasChatwoot = await prisma.connectedAccount.findUnique({
     where:  { provider_organizationId: { provider: 'chatwoot', organizationId } },
     select: { isActive: true },
   })
   const chatwootConfigured = hasChatwoot?.isActive === true
+
+  // ── Busca chatwootInboxId já salvo (preserva se Chatwoot não mudar) ──────────
+  const existingWa = await prisma.connectedAccount.findUnique({
+    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
+    select: { data: true },
+  })
+  const existingData = existingWa
+    ? (JSON.parse(existingWa.data) as { chatwootInboxId?: number | null; phone?: string | null })
+    : null
+  const existingInboxId = existingData?.chatwootInboxId ?? null
+  const existingPhone   = existingData?.phone ?? null
 
   // ── Verifica estado real na Evolution ────────────────────────────────────────
   let instanceExistsAndOnline = false
@@ -111,7 +199,7 @@ export async function POST() {
         instanceExistsOffline = true
       }
     }
-    // não ok → instância não existe na Evolution
+    // não ok → instância não existe
   } catch {
     return NextResponse.json(
       { error: 'Não foi possível conectar ao servidor WhatsApp.' },
@@ -119,60 +207,65 @@ export async function POST() {
     )
   }
 
-  // ── Caso 1: já conectado — garante banco e retorna ───────────────────────────
+  // ── Caso 1: já conectado ─────────────────────────────────────────────────────
   if (instanceExistsAndOnline) {
-    await prisma.connectedAccount.upsert({
-      where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-      create: {
-        provider:      'whatsapp',
-        organizationId,
-        connectedById: session!.user.id,
-        accessTokenEnc,
-        isActive:      true,
-        data: JSON.stringify(upsertData),
-      },
-      update: {
-        isActive:   true,
-        lastError:  null,
-        lastSyncAt: new Date(),
-        data: JSON.stringify(upsertData),
-      },
+    const chatwootInboxId = existingInboxId
+      ? existingInboxId
+      : await tryChatwootSetup({
+          organizationId,
+          orgSlug:     org.slug,
+          instanceName,
+          evoUrl:      EVO_URL,
+          evoKey:      EVO_KEY,
+          phoneNumber: existingPhone,
+        })
+
+    await upsertWhatsappAccount({
+      organizationId,
+      userId:         session!.user.id,
+      accessTokenEnc,
+      instanceName,
+      evoUrl:         EVO_URL,
+      chatwootInboxId,
+      phone:          existingPhone,
     })
+
     return NextResponse.json({ instanceName, alreadyExists: true })
   }
 
   // ── Caso 2: instância offline ────────────────────────────────────────────────
   if (instanceExistsOffline) {
     if (chatwootConfigured) {
-      // ✅ Chatwoot configurado → restart preserva webhook e inbox
       const restarted = await restartInstance(EVO_URL, EVO_KEY, instanceName)
       if (restarted) {
         await new Promise(r => setTimeout(r, 2_000))
 
-        await prisma.connectedAccount.upsert({
-          where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-          create: {
-            provider:      'whatsapp',
-            organizationId,
-            connectedById: session!.user.id,
-            accessTokenEnc,
-            isActive:      true,
-            data: JSON.stringify(upsertData),
-          },
-          update: {
-            isActive:   true,
-            lastError:  null,
-            lastSyncAt: new Date(),
-            data: JSON.stringify(upsertData),
-          },
+        const chatwootInboxId = existingInboxId
+          ? existingInboxId
+          : await tryChatwootSetup({
+              organizationId,
+              orgSlug:     org.slug,
+              instanceName,
+              evoUrl:      EVO_URL,
+              evoKey:      EVO_KEY,
+              phoneNumber: existingPhone,
+            })
+
+        await upsertWhatsappAccount({
+          organizationId,
+          userId:         session!.user.id,
+          accessTokenEnc,
+          instanceName,
+          evoUrl:         EVO_URL,
+          chatwootInboxId,
+          phone:          existingPhone,
         })
-        // Retorna instanceName para o frontend abrir o modal QR
+
         return NextResponse.json({ instanceName, alreadyExists: false })
       }
-      // restart falhou → cai para delete+create abaixo
+      // restart falhou → cai para delete+create
     }
 
-    // Sem Chatwoot configurado (ou restart falhou) → delete + create
     await deleteInstance(EVO_URL, EVO_KEY, instanceName)
     await new Promise(r => setTimeout(r, 1_500))
   }
@@ -186,23 +279,23 @@ export async function POST() {
     )
   }
 
-  await prisma.connectedAccount.upsert({
-    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-    create: {
-      provider:      'whatsapp',
-      organizationId,
-      connectedById: session!.user.id,
-      accessTokenEnc,
-      isActive:      true,
-      data: JSON.stringify(upsertData),
-    },
-    update: {
-      accessTokenEnc,
-      isActive:   true,
-      lastError:  null,
-      lastSyncAt: new Date(),
-      data: JSON.stringify(upsertData),
-    },
+  const chatwootInboxId = await tryChatwootSetup({
+    organizationId,
+    orgSlug:     org.slug,
+    instanceName,
+    evoUrl:      EVO_URL,
+    evoKey:      EVO_KEY,
+    phoneNumber: null,
+  })
+
+  await upsertWhatsappAccount({
+    organizationId,
+    userId:         session!.user.id,
+    accessTokenEnc,
+    instanceName,
+    evoUrl:         EVO_URL,
+    chatwootInboxId,
+    phone:          null,
   })
 
   return NextResponse.json({ instanceName, alreadyExists: false })
