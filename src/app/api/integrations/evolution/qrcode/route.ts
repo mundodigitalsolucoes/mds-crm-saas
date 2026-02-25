@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'instance obrigatório.' }, { status: 400 })
   }
 
-  // ── Tenta até 4x com intervalo de 2s (total ~8s) para aguardar QR gerado ──
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // ── Tenta até 5x com intervalo de 2s (total ~10s) para aguardar QR gerado ──
+  for (let attempt = 0; attempt < 5; attempt++) {
     if (attempt > 0) await sleep(2_000)
 
     try {
@@ -32,8 +32,10 @@ export async function GET(req: NextRequest) {
         signal:  AbortSignal.timeout(10_000),
       })
 
+      // ✅ CORREÇÃO: !res.ok → continua tentando (instância ainda inicializando)
       if (!res.ok) {
-        return NextResponse.json({ error: 'Instância não encontrada.' }, { status: 404 })
+        console.warn(`[EVO QRCODE] tentativa ${attempt + 1}: instância não pronta (${res.status}), aguardando...`)
+        continue
       }
 
       const json = await res.json() as {
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest) {
 
     } catch (err) {
       console.error(`[EVO QRCODE] tentativa ${attempt + 1}:`, err)
-      if (attempt === 3) {
+      if (attempt === 4) {
         return NextResponse.json({ error: 'Erro ao buscar QR Code.' }, { status: 502 })
       }
     }
