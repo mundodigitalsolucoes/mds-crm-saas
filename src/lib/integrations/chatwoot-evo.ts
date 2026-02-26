@@ -95,13 +95,12 @@ async function createChatwootInbox(
 ): Promise<number | null> {
   try {
     const body: Record<string, unknown> = {
-      name:    inboxName,
-      channel: {
-        type:         'whatsapp',
-        phone_number: phoneNumber ?? '',
-        provider:     'whatsapp_cloud_api', // Evolution usa esse provider
-      },
-    }
+  name:    inboxName,
+  channel: {
+    type:        'api',
+    webhook_url: '',
+  },
+}
 
     const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
       method:  'POST',
