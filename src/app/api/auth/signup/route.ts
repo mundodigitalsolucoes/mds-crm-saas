@@ -1,11 +1,13 @@
 // src/app/api/auth/signup/route.ts
 // API de cadastro com registro de consentimento LGPD
 // Aceita ?plan= e ?cid= vindos do fluxo Builderall → Asaas
+// ✅ Onboarding automático Chatwoot ao criar nova org
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { parseBody, signupSchema } from '@/lib/validations'
+import { provisionChatwootForOrg } from '@/lib/integrations/chatwootOnboarding'
 
 function slugify(input: string) {
   return input
@@ -59,8 +61,8 @@ export async function POST(request: Request) {
     }
 
     // Resolve plano vindo da Builderall
-    const plan       = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
-    const planStatus = plan === 'trial' ? 'active' : 'active' // webhook confirma depois
+    const plan        = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
+    const planStatus  = 'active' // webhook confirma depois
     const trialEndsAt = plan === 'trial'
       ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 dias
       : null
@@ -90,6 +92,18 @@ export async function POST(request: Request) {
       })
 
       return { organization, user }
+    })
+
+    // ✅ Onboarding automático Chatwoot — não bloqueia o signup em caso de falha
+    provisionChatwootForOrg({
+      organizationId: result.organization.id,
+      orgName:        result.organization.name,
+      ownerEmail:     result.user.email,
+      ownerName:      result.user.name,
+      connectedById:  result.user.id,
+    }).catch((err) => {
+      // Loga mas não deixa o signup falhar por causa disso
+      console.error('[Signup] Falha no provisionamento Chatwoot (não bloqueante):', err)
     })
 
     return NextResponse.json({

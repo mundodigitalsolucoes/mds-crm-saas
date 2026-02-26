@@ -1,11 +1,13 @@
 // src/app/(app)/layout.tsx
 // ✅ 3.4 White-label: injeta primaryColor/secondaryColor no <head> via branding da org
+// ✅ WhatsAppStatusBanner: notificação visual quando WA desconecta
 
 import Sidebar from '@/components/Sidebar';
 import PermissionSync from '@/components/PermissionSync';
 import NextAuthSessionProvider from '@/providers/session-provider';
 import { Providers } from '@/components/providers';
 import NotificationBellWrapper from '@/components/NotificationBellWrapper';
+import WhatsAppStatusBanner from '@/components/integrations/WhatsAppStatusBanner';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -49,13 +51,16 @@ export default async function AppLayout({
   return (
     <NextAuthSessionProvider>
       <Providers>
-        {/* ✅ CSS vars white-label injetadas via <style> — correto */}
+        {/* ✅ CSS vars white-label injetadas via <style> */}
         <style dangerouslySetInnerHTML={{ __html: cssVars }} />
 
-        {/* ✅ favicon dinâmico via link no <head> do Next.js */}
+        {/* ✅ favicon dinâmico */}
         <link rel="icon" href={favicon} />
 
         <PermissionSync />
+
+        {/* ✅ Banner de status WhatsApp — floating, não interfere no layout */}
+        <WhatsAppStatusBanner />
 
         <div className="flex min-h-screen bg-gray-50">
           <Sidebar />
