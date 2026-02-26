@@ -1,19 +1,20 @@
+/**
+ * src/app/api/integrations/evolution/status/route.ts
+ *
+ * Verifica status do WhatsApp da organização.
+ * Retorna isConnected=false com disconnectedAt quando a instância cai,
+ * permitindo que o frontend mostre notificação visual.
+ */
+
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
-
-function getEvoConfig() {
-  const url = process.env.EVOLUTION_API_URL
-  const key = process.env.EVOLUTION_API_KEY
-  if (!url || !key) throw new Error('EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados.')
-  return { EVO_URL: url.replace(/\/$/, ''), EVO_KEY: key }
-}
+import { getInstanceState, fetchInstanceInfo } from '@/lib/integrations/evolutionClient'
 
 export async function GET() {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
   if (!allowed) return errorResponse!
 
-  const { EVO_URL, EVO_KEY } = getEvoConfig()
   const organizationId = session!.user.organizationId
 
   const account = await prisma.connectedAccount.findUnique({
@@ -26,84 +27,88 @@ export async function GET() {
   }
 
   const data = JSON.parse(account.data) as {
-    instanceName: string
-    serverUrl:    string
-    phone:        string | null
-    connectedAt:  string | null
+    instanceName:    string
+    serverUrl:       string
+    phone:           string | null
+    connectedAt:     string | null
+    disconnectedAt?: string | null
   }
 
-  // ── Verifica estado real na Evolution API ────────────────────────────────────
-  try {
-    const res = await fetch(`${EVO_URL}/instance/connectionState/${data.instanceName}`, {
-      headers: { apikey: EVO_KEY },
-      signal:  AbortSignal.timeout(5_000),
+  // ── Verifica estado real na Evolution ────────────────────────────────────────
+  const state = await getInstanceState(data.instanceName)
+
+  if (state === 'not_found') {
+    // Instância sumiu da Evolution → marca como inativa no banco
+    await prisma.connectedAccount.updateMany({
+      where: { provider: 'whatsapp', organizationId },
+      data:  {
+        isActive:  false,
+        lastError: 'Instância não encontrada na Evolution API.',
+        data:      JSON.stringify({ ...data, disconnectedAt: new Date().toISOString() }),
+      },
     })
+    return NextResponse.json({ connected: false, lostConnection: true })
+  }
 
-    if (!res.ok) {
-      // Instância não existe mais na Evolution
-      await prisma.connectedAccount.updateMany({
-        where: { provider: 'whatsapp', organizationId },
-        data:  { isActive: false, lastError: 'Instância não encontrada na Evolution API.' },
-      })
-      return NextResponse.json({ connected: false })
-    }
+  const isConnected = state === 'open'
 
-    const json = await res.json() as {
-      instance?: { state?: string }
-    }
-
-    const isConnected = json?.instance?.state === 'open'
-
-    // Se conectou agora, busca número do telefone
-    let phone = data.phone
-    if (isConnected && !phone) {
-      try {
-        const infoRes = await fetch(
-          `${EVO_URL}/instance/fetchInstances?instanceName=${data.instanceName}`,
-          {
-            headers: { apikey: EVO_KEY },
-            signal:  AbortSignal.timeout(5_000),
-          }
-        )
-        if (infoRes.ok) {
-          const info = await infoRes.json() as Array<{
-            instance?: { profileName?: string; wuid?: string }
-          }>
-          const wuid = info?.[0]?.instance?.wuid ?? null
-          if (wuid) {
-            phone = wuid.split('@')[0] ?? null
-            await prisma.connectedAccount.updateMany({
-              where: { provider: 'whatsapp', organizationId },
-              data: {
-                lastSyncAt: new Date(),
-                lastError:  null,
-                data: JSON.stringify({ ...data, phone, connectedAt: new Date().toISOString() }),
-              },
-            })
-          }
-        }
-      } catch {
-        // Silencioso — número é opcional
+  // ── Se conectado e sem número, tenta buscar ──────────────────────────────────
+  let phone = data.phone
+  if (isConnected && !phone) {
+    try {
+      const info = await fetchInstanceInfo(data.instanceName)
+      const wuid = info?.instance?.wuid ?? null
+      if (wuid) {
+        phone = wuid.split('@')[0] ?? null
+        await prisma.connectedAccount.updateMany({
+          where: { provider: 'whatsapp', organizationId },
+          data: {
+            lastSyncAt: new Date(),
+            lastError:  null,
+            data:       JSON.stringify({
+              ...data,
+              phone,
+              connectedAt:     new Date().toISOString(),
+              disconnectedAt:  null,
+            }),
+          },
+        })
       }
+    } catch {
+      // Número é opcional — silencioso
     }
+  }
 
-    return NextResponse.json({
-      connected:    true,
-      isConnected,
-      instanceName: data.instanceName,
-      phone,
-      lastSyncAt:   account.lastSyncAt,
-      lastError:    account.lastError,
-    })
-
-  } catch {
-    return NextResponse.json({
-      connected:    true,
-      isConnected:  false,
-      instanceName: data.instanceName,
-      phone:        data.phone,
-      lastSyncAt:   account.lastSyncAt,
-      lastError:    'Erro ao verificar status.',
+  // ── Se desconectou (celular sem internet, etc.) → salva disconnectedAt ───────
+  if (!isConnected && !data.disconnectedAt) {
+    await prisma.connectedAccount.updateMany({
+      where: { provider: 'whatsapp', organizationId },
+      data: {
+        lastError: 'WhatsApp desconectado. Verifique o celular.',
+        data:      JSON.stringify({ ...data, disconnectedAt: new Date().toISOString() }),
+      },
     })
   }
+
+  // ── Se reconectou → limpa disconnectedAt ────────────────────────────────────
+  if (isConnected && data.disconnectedAt) {
+    await prisma.connectedAccount.updateMany({
+      where: { provider: 'whatsapp', organizationId },
+      data: {
+        lastError: null,
+        data:      JSON.stringify({ ...data, disconnectedAt: null, connectedAt: new Date().toISOString() }),
+      },
+    })
+  }
+
+  return NextResponse.json({
+    connected:      true,
+    isConnected,
+    instanceName:   data.instanceName,
+    phone,
+    connectedAt:    data.connectedAt,
+    disconnectedAt: isConnected ? null : (data.disconnectedAt ?? new Date().toISOString()),
+    lastSyncAt:     account.lastSyncAt,
+    lastError:      account.lastError,
+  })
 }
