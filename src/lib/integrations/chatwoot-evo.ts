@@ -3,27 +3,34 @@
  * Helper: integração Evolution API ↔ Chatwoot
  * - Cria/busca inbox WhatsApp no Chatwoot
  * - Configura webhook da Evolution apontando para o Chatwoot
+ *
+ * REGRA DE MANUTENÇÃO:
+ * - Sempre usar /api/v1/ (nunca /api/latest/)
+ * - Token do Chatwoot sempre vem do banco (decryptToken), nunca de env diretamente
+ * - URL interna Docker (CHATWOOT_INTERNAL_URL) para chamadas server→server
+ * - URL pública (CHATWOOT_API_URL) apenas para webhook da Evolution (chamada externa)
  */
 
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
 interface ChatwootInboxResult {
-  inboxId: number
+  inboxId:   number
   inboxName: string
 }
 
 interface EvoWebhookResult {
   success: boolean
-  error?: string
+  error?:  string
 }
 
 // ─── Busca credenciais Chatwoot da organização ────────────────────────────────
 
 async function getChatwootCreds(organizationId: string): Promise<{
-  baseUrl: string
-  accountId: number
-  apiToken: string
+  baseUrl:    string
+  publicUrl:  string
+  accountId:  number
+  apiToken:   string
 } | null> {
   const account = await prisma.connectedAccount.findUnique({
     where: {
@@ -36,14 +43,19 @@ async function getChatwootCreds(organizationId: string): Promise<{
 
   try {
     const data = JSON.parse(account.data) as {
-      chatwootUrl: string
+      chatwootUrl:       string
       chatwootAccountId: number
     }
     const apiToken = decryptToken(account.accessTokenEnc)
-    // Prefere URL interna (evita hairpin NAT em Docker)
+
+    // URL interna para chamadas server→server (evita hairpin NAT no Docker)
     const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-    const baseUrl = internalUrl ?? data.chatwootUrl.replace(/\/$/, '')
-    return { baseUrl, accountId: data.chatwootAccountId, apiToken }
+    const baseUrl     = internalUrl ?? data.chatwootUrl.replace(/\/$/, '')
+
+    // URL pública sempre usada pelo webhook da Evolution (chamada externa)
+    const publicUrl = data.chatwootUrl.replace(/\/$/, '')
+
+    return { baseUrl, publicUrl, accountId: data.chatwootAccountId, apiToken }
   } catch {
     return null
   }
@@ -52,15 +64,15 @@ async function getChatwootCreds(organizationId: string): Promise<{
 // ─── Busca inbox existente pelo nome ─────────────────────────────────────────
 
 async function findExistingInbox(
-  baseUrl: string,
+  baseUrl:   string,
   accountId: number,
-  apiToken: string,
+  apiToken:  string,
   inboxName: string
 ): Promise<number | null> {
   try {
     const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
       headers: { api_access_token: apiToken },
-      signal: AbortSignal.timeout(10_000),
+      signal:  AbortSignal.timeout(10_000),
     })
     if (!res.ok) return null
 
@@ -77,15 +89,15 @@ async function findExistingInbox(
 // ─── Cria inbox WhatsApp no Chatwoot ─────────────────────────────────────────
 
 async function createChatwootInbox(
-  baseUrl: string,
-  accountId: number,
-  apiToken: string,
-  inboxName: string,
+  baseUrl:     string,
+  accountId:   number,
+  apiToken:    string,
+  inboxName:   string,
   phoneNumber: string | null
 ): Promise<number | null> {
   try {
     const body: Record<string, unknown> = {
-      name:         inboxName,
+      name:    inboxName,
       channel: {
         type:         'whatsapp',
         phone_number: phoneNumber ?? '',
@@ -96,8 +108,8 @@ async function createChatwootInbox(
     const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
       method:  'POST',
       headers: {
-        'Content-Type':    'application/json',
-        api_access_token:  apiToken,
+        'Content-Type':   'application/json',
+        api_access_token: apiToken,
       },
       body:   JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
@@ -121,8 +133,8 @@ async function createChatwootInbox(
 
 export async function ensureChatwootInbox(
   organizationId: string,
-  orgSlug: string,
-  phoneNumber: string | null
+  orgSlug:        string,
+  phoneNumber:    string | null
 ): Promise<ChatwootInboxResult | null> {
   const creds = await getChatwootCreds(organizationId)
   if (!creds) {
@@ -164,58 +176,50 @@ export async function ensureChatwootInbox(
 }
 
 // ─── Configura webhook Evolution → Chatwoot ──────────────────────────────────
+// IMPORTANTE: A Evolution chama o Chatwoot de fora da rede Docker,
+// então deve-se usar sempre a URL PÚBLICA do Chatwoot aqui.
+// O token vem das credenciais do banco (getChatwootCreds), não do env.
 
 export async function setEvolutionWebhook(
-  evoUrl: string,
-  evoKey: string,
-  instanceName: string,
+  evoUrl:            string,
+  evoKey:            string,
+  instanceName:      string,
   chatwootAccountId: number,
-  chatwootInboxId: number
+  chatwootInboxId:   number,
+  chatwootPublicUrl: string,   // ← recebe explicitamente para evitar ambiguidade
+  apiToken:          string    // ← token do banco, não do env
 ): Promise<EvoWebhookResult> {
-  // URL pública do Chatwoot (sempre a pública — Evolution chama de fora)
-  const chatwootPublicUrl = process.env.CHATWOOT_API_URL
-    ?.replace(/\/api\/v1$/, '')
-    .replace(/\/$/, '')
-
-  if (!chatwootPublicUrl) {
-    return { success: false, error: 'CHATWOOT_API_URL não configurada' }
-  }
-
-  // Endpoint nativo Evolution v2 para integrar com Chatwoot
   const payload = {
-    enabled:        true,
-    accountId:      chatwootAccountId,
-    token:          process.env.CHATWOOT_API_KEY ?? '',
-    url:            chatwootPublicUrl,
-    signMsg:        false,
-    reopenConversation: true,
-    conversationPending: false,
-    mergeBrazilContacts: true,
-    importContacts:      true,
-    importMessages:      false,
+    enabled:                 true,
+    accountId:               chatwootAccountId,
+    token:                   apiToken,          // token do banco
+    url:                     chatwootPublicUrl, // URL pública
+    signMsg:                 false,
+    reopenConversation:      true,
+    conversationPending:     false,
+    mergeBrazilContacts:     true,
+    importContacts:          true,
+    importMessages:          false,
     daysLimitImportMessages: 0,
-    autoCreate: true,
-    nameInbox:  `WhatsApp - ${instanceName}`,
+    autoCreate:              true,
+    nameInbox:               `WhatsApp - ${instanceName}`,
   }
 
   try {
-    const res = await fetch(
-      `${evoUrl}/chatwoot/set/${instanceName}`,
-      {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey:         evoKey,
-        },
-        body:   JSON.stringify(payload),
-        signal: AbortSignal.timeout(10_000),
-      }
-    )
+    const res = await fetch(`${evoUrl}/chatwoot/set/${instanceName}`, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey:         evoKey,
+      },
+      body:   JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+    })
 
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
       console.error('[ChatwootEvo] Erro ao configurar webhook Evolution:', res.status, errText)
-      return { success: false, error: `Evolution retornou ${res.status}` }
+      return { success: false, error: `Evolution retornou ${res.status}: ${errText}` }
     }
 
     console.log(`[ChatwootEvo] Webhook Evolution→Chatwoot configurado para instância: ${instanceName}`)
@@ -236,13 +240,13 @@ export async function setupChatwootEvolution(params: {
   evoKey:         string
   phoneNumber:    string | null
 }): Promise<{
-  success:        boolean
+  success:         boolean
   chatwootInboxId: number | null
-  skipped:        boolean   // true = Chatwoot não configurado (sem erro)
+  skipped:         boolean   // true = Chatwoot não configurado (sem erro)
 }> {
   const { organizationId, orgSlug, instanceName, evoUrl, evoKey, phoneNumber } = params
 
-  // 1. Garante inbox no Chatwoot
+  // 1. Garante inbox no Chatwoot (busca ou cria)
   const inboxResult = await ensureChatwootInbox(organizationId, orgSlug, phoneNumber)
 
   if (!inboxResult) {
@@ -250,31 +254,32 @@ export async function setupChatwootEvolution(params: {
     return { success: true, chatwootInboxId: null, skipped: true }
   }
 
-  // 2. Busca chatwootAccountId para configurar webhook
-  const cwAccount = await prisma.connectedAccount.findUnique({
-    where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
-    select: { data: true },
-  })
+  // 2. Busca credenciais completas para configurar webhook
+  const creds = await getChatwootCreds(organizationId)
 
-  const cwData = cwAccount
-    ? (JSON.parse(cwAccount.data) as { chatwootAccountId: number })
-    : null
-
-  if (!cwData?.chatwootAccountId) {
+  if (!creds) {
+    console.error('[ChatwootEvo] Credenciais Chatwoot não encontradas após criar inbox')
     return { success: false, chatwootInboxId: inboxResult.inboxId, skipped: false }
   }
 
   // 3. Configura webhook Evolution → Chatwoot
+  // Token e URL pública vêm do banco (getChatwootCreds), nunca de env
   const webhookResult = await setEvolutionWebhook(
     evoUrl,
     evoKey,
     instanceName,
-    cwData.chatwootAccountId,
-    inboxResult.inboxId
+    creds.accountId,
+    inboxResult.inboxId,
+    creds.publicUrl,  // URL pública para a Evolution
+    creds.apiToken    // token do banco
   )
 
   if (!webhookResult.success) {
-    console.warn('[ChatwootEvo] Webhook não configurado, mas inbox foi criado. InboxId:', inboxResult.inboxId)
+    console.warn(
+      '[ChatwootEvo] Webhook não configurado, mas inbox foi criado. InboxId:',
+      inboxResult.inboxId,
+      'Erro:', webhookResult.error
+    )
     // Retorna parcial — inbox criado mas webhook falhou
     // Não bloqueia o connect do WhatsApp
     return { success: false, chatwootInboxId: inboxResult.inboxId, skipped: false }
