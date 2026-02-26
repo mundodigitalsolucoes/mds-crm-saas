@@ -274,7 +274,7 @@ async function handleConversationCreated(
     channel, status, contact, assignee,
   } = extractConversationData(payload)
 
-  if (!chatwootId || !accountId || !inboxId) {
+  if (!chatwootId || !inboxId) {
     console.warn('[Chatwoot] conversation_created sem dados essenciais', { chatwootId, accountId, inboxId })
     return
   }
@@ -292,7 +292,7 @@ async function handleConversationCreated(
     create: {
       organizationId,
       chatwootId,
-      chatwootAccountId:  accountId,
+      chatwootAccountId:  accountId ?? 0,
       chatwootInboxId:    inboxId,
       chatwootContactId:  contact?.id ?? 0,
       channel,
@@ -310,6 +310,7 @@ async function handleConversationCreated(
     },
     update: {
       status,
+      ...(accountId                  && { chatwootAccountId: accountId }),
       ...(inboxName                  && { inboxName }),
       ...(channel                    && { channel }),
       ...(assignee?.id !== undefined && { chatwootAssigneeId: assignee.id }),
