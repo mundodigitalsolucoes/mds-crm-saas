@@ -1,13 +1,17 @@
 // src/app/api/integrations/whatsapp/create-inbox/route.ts
+// Chamado após o QR Code ser escaneado com sucesso.
+// Configura a integração Evolution → Chatwoot e salva o inboxId no banco.
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
 interface EvoData {
-  serverUrl:       string
-  instanceName:    string
-  chatwootInboxId?: number
+  serverUrl:        string
+  instanceName:     string
+  chatwootInboxId?: number | null
+  phone?:           string | null
+  connectedAt?:     string | null
 }
 
 interface CwData {
@@ -49,7 +53,8 @@ export async function POST() {
   }
 
   const waData = JSON.parse(waAccount.data) as EvoData
-  const { serverUrl, instanceName } = waData
+  const { instanceName } = waData
+  const serverUrl = waData.serverUrl ?? process.env.EVOLUTION_API_URL?.replace(/\/$/, '')
 
   if (!serverUrl || !instanceName) {
     return NextResponse.json({ inboxCreated: false, reason: 'whatsapp_data_incomplete' })
@@ -66,7 +71,7 @@ export async function POST() {
   }
 
   const cwData      = JSON.parse(cwAccount.data) as CwData
-  const chatwootUrl = cwData.chatwootUrl
+  const chatwootUrl = cwData.chatwootUrl?.replace(/\/$/, '')
   const accountId   = cwData.chatwootAccountId
   const apiToken    = decryptToken(cwAccount.accessTokenEnc)
 
@@ -79,22 +84,27 @@ export async function POST() {
     return NextResponse.json({ inboxCreated: false, reason: 'evolution_key_not_configured' })
   }
 
-  // URL interna Docker (evita hairpin NAT) — cai na pública se não definida
+  // URL interna Docker para chamadas server→server (evita hairpin NAT)
   const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-  const cwBaseUrl   = internalUrl ?? chatwootUrl.replace(/\/$/, '')
+  const cwBaseUrl   = internalUrl ?? chatwootUrl
 
   const inboxName = `WhatsApp - ${instanceName}`
 
-  // ── 3. Chama Evolution API — cria inbox no Chatwoot automaticamente ─────────
+  // ── 3. Chama Evolution API — configura integração com Chatwoot ─────────────
+  // Nota: usa a URL PÚBLICA do Chatwoot (chatwootUrl) porque a Evolution
+  // chama o Chatwoot de fora da rede Docker.
+  // O token (apiToken) vem do banco — nunca de variável de ambiente.
   try {
+    console.log(`[create-inbox] Configurando Evolution→Chatwoot para instância: ${instanceName}`)
+
     const evoRes = await fetch(`${serverUrl}/chatwoot/set/${instanceName}`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', apikey: EVO_KEY },
       body: JSON.stringify({
         enabled:                 true,
         accountId:               String(accountId),
-        token:                   apiToken,
-        url:                     chatwootUrl,
+        token:                   apiToken,     // ← token do banco
+        url:                     chatwootUrl,  // ← URL pública
         signMsg:                 false,
         reopenConversation:      true,
         conversationPending:     false,
@@ -109,13 +119,14 @@ export async function POST() {
     })
 
     if (!evoRes.ok) {
-      const errText = await evoRes.text()
+      const errText = await evoRes.text().catch(() => '')
       console.error('[create-inbox] Evolution API error:', evoRes.status, errText)
       return NextResponse.json({ inboxCreated: false, reason: 'evolution_api_error' })
     }
 
     const evoJson = await evoRes.json() as EvoSetChatwootResponse
     const resolvedInboxName = evoJson?.chatwoot?.nameInbox ?? inboxName
+    console.log(`[create-inbox] Evolution configurou inbox: "${resolvedInboxName}"`)
 
     // ── 4. Busca o inboxId real no Chatwoot pelo nome ──────────────────────────
     // A Evolution não retorna o inboxId diretamente — precisamos buscá-lo
@@ -136,16 +147,19 @@ export async function POST() {
           (inbox) => inbox.name === resolvedInboxName || inbox.name === inboxName
         )
         chatwootInboxId = found?.id
+        console.log(`[create-inbox] InboxId encontrado no Chatwoot: ${chatwootInboxId}`)
+      } else {
+        console.warn(`[create-inbox] Falha ao listar inboxes Chatwoot: ${cwRes.status}`)
       }
-    } catch {
-      // Silencioso — inbox foi criado, só não conseguimos o id agora
-      console.warn('[create-inbox] Não foi possível buscar inboxId no Chatwoot')
+    } catch (err) {
+      console.warn('[create-inbox] Não foi possível buscar inboxId no Chatwoot:', err)
     }
 
-    // ── 5. Persiste chatwootInboxId no data do ConnectedAccount(whatsapp) ──────
+    // ── 5. Persiste chatwootInboxId no ConnectedAccount(whatsapp) ──────────────
     const updatedData: EvoData = {
       ...waData,
-      chatwootInboxId,
+      serverUrl,
+      chatwootInboxId: chatwootInboxId ?? null,
     }
 
     await prisma.connectedAccount.update({
