@@ -8,7 +8,7 @@
  * - Sempre usar /api/v1/ (nunca /api/latest/)
  * - Token do Chatwoot sempre vem do banco (decryptToken), nunca de env diretamente
  * - URL interna Docker (CHATWOOT_INTERNAL_URL) para chamadas server→server
- * - URL pública (CHATWOOT_API_URL) apenas para webhook da Evolution (chamada externa)
+ * - URL pública (chatwootUrl salvo no banco) para webhook da Evolution (chamada externa)
  */
 
 import { prisma } from '@/lib/prisma'
@@ -27,10 +27,10 @@ interface EvoWebhookResult {
 // ─── Busca credenciais Chatwoot da organização ────────────────────────────────
 
 async function getChatwootCreds(organizationId: string): Promise<{
-  baseUrl:    string
-  publicUrl:  string
-  accountId:  number
-  apiToken:   string
+  baseUrl:   string   // URL interna Docker (server→server)
+  publicUrl: string   // URL pública (para Evolution chamar de fora)
+  accountId: number
+  apiToken:  string
 } | null> {
   const account = await prisma.connectedAccount.findUnique({
     where: {
@@ -46,14 +46,12 @@ async function getChatwootCreds(organizationId: string): Promise<{
       chatwootUrl:       string
       chatwootAccountId: number
     }
-    const apiToken = decryptToken(account.accessTokenEnc)
-
-    // URL interna para chamadas server→server (evita hairpin NAT no Docker)
-    const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-    const baseUrl     = internalUrl ?? data.chatwootUrl.replace(/\/$/, '')
-
-    // URL pública sempre usada pelo webhook da Evolution (chamada externa)
+    const apiToken  = decryptToken(account.accessTokenEnc)
     const publicUrl = data.chatwootUrl.replace(/\/$/, '')
+
+    // Prefere URL interna para chamadas server→server (evita hairpin NAT Docker)
+    const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
+    const baseUrl     = internalUrl ?? publicUrl
 
     return { baseUrl, publicUrl, accountId: data.chatwootAccountId, apiToken }
   } catch {
@@ -176,9 +174,8 @@ export async function ensureChatwootInbox(
 }
 
 // ─── Configura webhook Evolution → Chatwoot ──────────────────────────────────
-// IMPORTANTE: A Evolution chama o Chatwoot de fora da rede Docker,
-// então deve-se usar sempre a URL PÚBLICA do Chatwoot aqui.
-// O token vem das credenciais do banco (getChatwootCreds), não do env.
+// Assinatura mantida igual para não quebrar chamadores externos (setup-inbox).
+// Internamente, token e URL pública SEMPRE vêm do banco via organizationId.
 
 export async function setEvolutionWebhook(
   evoUrl:            string,
@@ -186,14 +183,48 @@ export async function setEvolutionWebhook(
   instanceName:      string,
   chatwootAccountId: number,
   chatwootInboxId:   number,
-  chatwootPublicUrl: string,   // ← recebe explicitamente para evitar ambiguidade
-  apiToken:          string    // ← token do banco, não do env
+  // Parâmetros opcionais para compatibilidade — se não passados, busca do banco
+  _unusedInboxId?:   number,
+  organizationId?:   string
 ): Promise<EvoWebhookResult> {
+  // Token e URL pública sempre do banco — nunca de env
+  // Se organizationId fornecido, busca credenciais frescas
+  let publicUrl: string | undefined
+  let apiToken:  string | undefined
+
+  if (organizationId) {
+    const creds = await getChatwootCreds(organizationId)
+    if (creds) {
+      publicUrl = creds.publicUrl
+      apiToken  = creds.apiToken
+    }
+  }
+
+  // Fallback: tenta CHATWOOT_API_URL do env apenas se não tiver do banco
+  if (!publicUrl) {
+    publicUrl = process.env.CHATWOOT_API_URL
+      ?.replace(/\/api\/v1$/, '')
+      .replace(/\/$/, '')
+  }
+
+  if (!publicUrl) {
+    return { success: false, error: 'URL pública do Chatwoot não disponível' }
+  }
+
+  if (!apiToken) {
+    // Último recurso: env (legado) — loga aviso
+    apiToken = process.env.CHATWOOT_API_KEY ?? ''
+    if (!apiToken) {
+      return { success: false, error: 'Token Chatwoot não disponível' }
+    }
+    console.warn('[ChatwootEvo] Usando CHATWOOT_API_KEY do env como fallback — prefira passar organizationId')
+  }
+
   const payload = {
     enabled:                 true,
     accountId:               chatwootAccountId,
-    token:                   apiToken,          // token do banco
-    url:                     chatwootPublicUrl, // URL pública
+    token:                   apiToken,
+    url:                     publicUrl,
     signMsg:                 false,
     reopenConversation:      true,
     conversationPending:     false,
@@ -254,7 +285,7 @@ export async function setupChatwootEvolution(params: {
     return { success: true, chatwootInboxId: null, skipped: true }
   }
 
-  // 2. Busca credenciais completas para configurar webhook
+  // 2. Busca credenciais para configurar webhook
   const creds = await getChatwootCreds(organizationId)
 
   if (!creds) {
@@ -263,25 +294,23 @@ export async function setupChatwootEvolution(params: {
   }
 
   // 3. Configura webhook Evolution → Chatwoot
-  // Token e URL pública vêm do banco (getChatwootCreds), nunca de env
+  // Passa organizationId para que setEvolutionWebhook use token e URL do banco
   const webhookResult = await setEvolutionWebhook(
     evoUrl,
     evoKey,
     instanceName,
     creds.accountId,
     inboxResult.inboxId,
-    creds.publicUrl,  // URL pública para a Evolution
-    creds.apiToken    // token do banco
+    undefined,        // _unusedInboxId
+    organizationId    // ← garante token e URL pública do banco
   )
 
   if (!webhookResult.success) {
     console.warn(
       '[ChatwootEvo] Webhook não configurado, mas inbox foi criado. InboxId:',
       inboxResult.inboxId,
-      'Erro:', webhookResult.error
+      '| Erro:', webhookResult.error
     )
-    // Retorna parcial — inbox criado mas webhook falhou
-    // Não bloqueia o connect do WhatsApp
     return { success: false, chatwootInboxId: inboxResult.inboxId, skipped: false }
   }
 
