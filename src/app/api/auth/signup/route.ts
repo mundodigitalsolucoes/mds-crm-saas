@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const planParam = searchParams.get('plan') ?? 'trial'
-    const cidParam  = searchParams.get('cid')  ?? null   // asaasCustomerId
+    const cidParam  = searchParams.get('cid')  ?? null
 
     const body = await request.json()
 
@@ -60,11 +60,10 @@ export async function POST(request: Request) {
       slug = `${baseSlug}-${i++}`
     }
 
-    // Resolve plano vindo da Builderall
     const plan        = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
-    const planStatus  = 'active' // webhook confirma depois
+    const planStatus  = 'active'
     const trialEndsAt = plan === 'trial'
-      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 dias
+      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       : null
 
     const result = await prisma.$transaction(async (tx) => {
@@ -75,7 +74,7 @@ export async function POST(request: Request) {
           plan,
           planStatus,
           trialEndsAt,
-          asaasCustomerId: cidParam,  // vincula cliente Asaas imediatamente
+          asaasCustomerId: cidParam,
         },
       })
 
@@ -94,15 +93,15 @@ export async function POST(request: Request) {
       return { organization, user }
     })
 
-    // ✅ Onboarding automático Chatwoot — não bloqueia o signup em caso de falha
+    // ✅ Onboarding automático Chatwoot — não bloqueia o signup
     provisionChatwootForOrg({
       organizationId: result.organization.id,
       orgName:        result.organization.name,
       ownerEmail:     result.user.email,
       ownerName:      result.user.name,
+      ownerPassword:  data.password,  // ← senha plaintext para criar agente no Chatwoot
       connectedById:  result.user.id,
     }).catch((err) => {
-      // Loga mas não deixa o signup falhar por causa disso
       console.error('[Signup] Falha no provisionamento Chatwoot (não bloqueante):', err)
     })
 
