@@ -1,13 +1,22 @@
 // src/app/api/auth/signup/route.ts
-// API de cadastro com registro de consentimento LGPD
-// Aceita ?plan= e ?cid= vindos do fluxo Builderall → Asaas
-// ✅ Onboarding automático Chatwoot ao criar nova org
+//
+// API de cadastro com provisionamento automático do Chatwoot.
+// Mantém falha silenciosa: Chatwoot não provisionado NUNCA bloqueia o signup.
+//
+// FLUXO:
+//   1. Valida dados e cria Organization + User (transação Prisma)
+//   2. Dispara provisionamento Chatwoot em background (sem await bloqueante)
+//   3. Retorna resposta ao usuário imediatamente
+//
+// CONTENÇÃO: se CHATWOOT_SUPER_ADMIN_EMAIL não estiver definido,
+// o step 2 é ignorado e o admin provisiona manualmente via:
+//   POST /api/admin/orgs/[orgId]/provision-chatwoot
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { parseBody, signupSchema } from '@/lib/validations'
-import { provisionChatwootForOrg } from '@/lib/integrations/chatwootOnboarding'
+import { provisionChatwootForOrg } from '@/lib/integrations/chatwoot-provision'
 
 function slugify(input: string) {
   return input
@@ -32,24 +41,21 @@ export async function POST(request: Request) {
     const planParam = searchParams.get('plan') ?? 'trial'
     const cidParam  = searchParams.get('cid')  ?? null
 
-    const body = await request.json()
-
+    const body   = await request.json()
     const parsed = parseBody(signupSchema, body)
     if (!parsed.success) return parsed.response
 
     const data = parsed.data
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    })
+    const existingUser = await prisma.user.findUnique({ where: { email: data.email } })
     if (existingUser) {
       return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
-    const forwarded  = request.headers.get('x-forwarded-for')
-    const consentIp  = forwarded
+    const forwarded = request.headers.get('x-forwarded-for')
+    const consentIp = forwarded
       ? forwarded.split(',')[0].trim()
       : request.headers.get('x-real-ip') || 'unknown'
 
@@ -61,18 +67,18 @@ export async function POST(request: Request) {
     }
 
     const plan        = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
-    const planStatus  = 'active'
     const trialEndsAt = plan === 'trial'
       ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       : null
 
+    // ── 1. Criar Organization + User (transação atômica) ────────────────────
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
           name:            data.companyName,
           slug,
           plan,
-          planStatus,
+          planStatus:      'active',
           trialEndsAt,
           asaasCustomerId: cidParam,
         },
@@ -93,18 +99,30 @@ export async function POST(request: Request) {
       return { organization, user }
     })
 
-    // ✅ Onboarding automático Chatwoot — não bloqueia o signup
+    // ── 2. Provisionar Chatwoot em background (falha silenciosa) ────────────
+    // Não usamos await aqui para não atrasar a resposta ao usuário.
+    // O provisionamento leva ~2-4s e não é crítico para o signup.
     provisionChatwootForOrg({
       organizationId: result.organization.id,
       orgName:        result.organization.name,
-      ownerEmail:     result.user.email,
+      orgSlug:        result.organization.slug,
+      ownerUserId:    result.user.id,
       ownerName:      result.user.name,
-      ownerPassword:  data.password,  // ← senha plaintext para criar agente no Chatwoot
-      connectedById:  result.user.id,
+      ownerEmail:     result.user.email,
+      ownerPassword:  data.password,   // senha em texto puro usada apenas aqui
+    }).then((provResult) => {
+      if (!provResult.success) {
+        // Loga para monitoramento — admin pode reprovisionar manualmente
+        console.warn(
+          `[SIGNUP] Chatwoot não provisionado para org ${result.organization.slug}:`,
+          provResult.error,
+        )
+      }
     }).catch((err) => {
-      console.error('[Signup] Falha no provisionamento Chatwoot (não bloqueante):', err)
+      console.error('[SIGNUP] Erro inesperado no provisionamento Chatwoot:', err)
     })
 
+    // ── 3. Responder imediatamente ───────────────────────────────────────────
     return NextResponse.json({
       message: 'Conta criada com sucesso!',
       user: {
@@ -123,7 +141,7 @@ export async function POST(request: Request) {
     console.error('Erro ao criar conta:', error)
     return NextResponse.json(
       { error: 'Erro ao criar conta. Tente novamente.' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
