@@ -132,7 +132,7 @@ export async function GET(
   }
 
   const org = await prisma.organization.findUnique({
-    where:  { params.orgId },
+    where:  { id: params.orgId },
     select: { id: true, name: true, slug: true, chatwootAccountId: true },
   })
 
