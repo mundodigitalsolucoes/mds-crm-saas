@@ -3,12 +3,10 @@
 // Serviço de provisionamento automático de conta Chatwoot por organização.
 //
 // FLUXO:
-//   1. Faz login como Super Admin no Chatwoot
-//   2. Cria uma nova Account (isolada por org)
-//   3. Cria o usuário owner como Administrator nessa account
-//   4. Obtém o access_token do usuário
-//   5. Salva ConnectedAccount no banco
-//   6. Atualiza Organization.chatwootAccountId
+//   1. Chama POST /api/v1/accounts com email+senha do owner — cria account E usuário em uma só chamada
+//   2. Obtém o access_token do usuário criado
+//   3. Salva ConnectedAccount no banco
+//   4. Atualiza Organization.chatwootAccountId
 //
 // FALLBACK MANUAL: se CHATWOOT_SUPER_ADMIN_EMAIL não estiver configurado,
 // o provisionamento é ignorado silenciosamente e o admin pode fazê-lo
@@ -35,190 +33,10 @@ interface ProvisionInput {
 }
 
 interface ProvisionResult {
-  success:          boolean
+  success:           boolean
   chatwootAccountId?: number
   chatwootUserId?:    number
-  error?:           string
-}
-
-// Features mínimas habilitadas para o plano básico.
-// Upsell de features adicionais é feito manualmente no Super Admin console.
-const BASIC_FEATURES = [
-  'agent_management',
-  'team_management',
-  'channel_whatsapp',   // via Evolution API
-  'channel_instagram',
-  'channel_facebook',
-  'channel_email',
-  'reports',
-  'canned_responses',
-]
-
-// ─── Helper: autenticar como Super Admin ────────────────────────────────────
-
-async function getSuperAdminToken(baseUrl: string): Promise<string | null> {
-  const email    = process.env.CHATWOOT_SUPER_ADMIN_EMAIL
-  const password = process.env.CHATWOOT_SUPER_ADMIN_PASSWORD
-
-  if (!email || !password) return null
-
-  try {
-    const res = await fetch(`${baseUrl}/auth/sign_in`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ email, password }),
-      signal:  AbortSignal.timeout(10_000),
-    })
-
-    if (!res.ok) {
-      console.warn('[CHATWOOT PROVISION] Falha auth super admin:', res.status)
-      return null
-    }
-
-    const json = await res.json()
-    // Chatwoot retorna o token em data.access_token
-    return json?.data?.access_token ?? null
-  } catch (err) {
-    console.error('[CHATWOOT PROVISION] Erro ao autenticar super admin:', err)
-    return null
-  }
-}
-
-// ─── Helper: criar Account no Chatwoot ──────────────────────────────────────
-
-async function createChatwootAccount(
-  baseUrl:    string,
-  superToken: string,
-  name:       string,
-): Promise<{ id: number } | null> {
-  try {
-    const res = await fetch(`${baseUrl}/super_admin/api/v1/accounts`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        api_access_token: superToken,
-      },
-      body:   JSON.stringify({
-        name,
-        locale: 'pt_BR',
-        // features habilitadas por padrão
-        features: BASIC_FEATURES.reduce((acc, f) => ({ ...acc, [f]: true }), {}),
-      }),
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    if (!res.ok) {
-      console.warn('[CHATWOOT PROVISION] Falha criar account:', res.status, await res.text())
-      return null
-    }
-
-    const json = await res.json()
-    return { id: json.id }
-  } catch (err) {
-    console.error('[CHATWOOT PROVISION] Erro ao criar account:', err)
-    return null
-  }
-}
-
-// ─── Helper: criar usuário como Administrator na account ────────────────────
-
-async function createChatwootAdminUser(
-  baseUrl:    string,
-  superToken: string,
-  accountId:  number,
-  params: {
-    name:     string
-    email:    string
-    password: string
-  },
-): Promise<{ userId: number; accessToken: string } | null> {
-  try {
-    // Chatwoot Super Admin API: criar usuário e vinculá-lo à account
-    const res = await fetch(`${baseUrl}/super_admin/api/v1/users`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        api_access_token: superToken,
-      },
-      body: JSON.stringify({
-        name:                  params.name,
-        email:                 params.email,
-        password:              params.password,
-        password_confirmation: params.password,
-        role:                  'administrator',
-        account_id:            accountId,
-        availability:          'online',
-      }),
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      // Email já em uso no Chatwoot — tenta buscar o usuário existente
-      if (res.status === 422 && errText.includes('email')) {
-        console.warn('[CHATWOOT PROVISION] Email já existe no Chatwoot, tentando vincular...')
-        return await linkExistingUserToAccount(baseUrl, superToken, accountId, params.email)
-      }
-      console.warn('[CHATWOOT PROVISION] Falha criar usuário:', res.status, errText)
-      return null
-    }
-
-    const json = await res.json()
-    return {
-      userId:      json.id,
-      accessToken: json.access_token,
-    }
-  } catch (err) {
-    console.error('[CHATWOOT PROVISION] Erro ao criar usuário:', err)
-    return null
-  }
-}
-
-// ─── Helper: vincular usuário existente à account ───────────────────────────
-
-async function linkExistingUserToAccount(
-  baseUrl:    string,
-  superToken: string,
-  accountId:  number,
-  email:      string,
-): Promise<{ userId: number; accessToken: string } | null> {
-  try {
-    // Buscar usuário pelo email via Super Admin
-    const searchRes = await fetch(
-      `${baseUrl}/super_admin/api/v1/users?q=${encodeURIComponent(email)}`,
-      {
-        headers: { api_access_token: superToken },
-        signal:  AbortSignal.timeout(8_000),
-      },
-    )
-
-    if (!searchRes.ok) return null
-    const users = await searchRes.json()
-    const user  = Array.isArray(users) ? users.find((u: any) => u.email === email) : null
-    if (!user) return null
-
-    // Criar AccountUser (vincula usuário à account como administrator)
-    await fetch(`${baseUrl}/super_admin/api/v1/account_users`, {
-      method:  'POST',
-      headers: {
-        'Content-Type':   'application/json',
-        api_access_token: superToken,
-      },
-      body: JSON.stringify({
-        account_id: accountId,
-        user_id:    user.id,
-        role:       'administrator',
-      }),
-      signal: AbortSignal.timeout(8_000),
-    })
-
-    return {
-      userId:      user.id,
-      accessToken: user.access_token,
-    }
-  } catch {
-    return null
-  }
+  error?:            string
 }
 
 // ─── Função principal exportada ─────────────────────────────────────────────
@@ -226,50 +44,55 @@ async function linkExistingUserToAccount(
 export async function provisionChatwootForOrg(
   input: ProvisionInput,
 ): Promise<ProvisionResult> {
-  const chatwootUrl  = process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '')
-  const internalUrl  = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-  const baseUrl      = internalUrl ?? chatwootUrl
+  const chatwootUrl = process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '')
+  const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
+  const baseUrl     = internalUrl ?? chatwootUrl
 
-  // Se não houver URL ou credenciais super admin configuradas, skip silencioso
-  if (!baseUrl || !process.env.CHATWOOT_SUPER_ADMIN_EMAIL) {
-    console.info('[CHATWOOT PROVISION] Variáveis não configuradas — provisionamento manual necessário')
+  // Se não houver URL configurada, skip silencioso
+  if (!baseUrl) {
+    console.info('[CHATWOOT PROVISION] URL não configurada — provisionamento manual necessário')
     return { success: false, error: 'super_admin_not_configured' }
   }
 
   try {
-    // 1. Autenticar como Super Admin
-    const superToken = await getSuperAdminToken(baseUrl)
-    if (!superToken) {
-      return { success: false, error: 'super_admin_auth_failed' }
-    }
+    // POST /api/v1/accounts — cria account + usuário administrator em uma só chamada
+    // Requer ENABLE_ACCOUNT_SIGNUP=true no Chatwoot
+    const res = await fetch(`${baseUrl}/api/v1/accounts`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        account_name:          input.orgName,
+        email:                 input.ownerEmail,
+        password:              input.ownerPassword,
+        password_confirmation: input.ownerPassword,
+        locale:                'pt_BR',
+      }),
+      signal: AbortSignal.timeout(15_000),
+    })
 
-    // 2. Criar account isolada para esta org
-    const account = await createChatwootAccount(baseUrl, superToken, input.orgName)
-    if (!account) {
+    if (!res.ok) {
+      const errText = await res.text()
+      console.warn('[CHATWOOT PROVISION] Falha criar account:', res.status, errText)
       return { success: false, error: 'account_creation_failed' }
     }
 
-    // 3. Criar usuário administrator na account
-    const adminUser = await createChatwootAdminUser(
-      baseUrl,
-      superToken,
-      account.id,
-      {
-        name:     input.ownerName,
-        email:    input.ownerEmail,
-        password: input.ownerPassword,
-      },
-    )
-    if (!adminUser) {
-      return { success: false, error: 'user_creation_failed' }
+    const json = await res.json()
+    const data = json?.data
+
+    if (!data?.account_id || !data?.access_token) {
+      console.warn('[CHATWOOT PROVISION] Resposta inesperada:', JSON.stringify(json))
+      return { success: false, error: 'account_creation_failed' }
     }
 
-    // 4. Salvar ConnectedAccount + atualizar Organization (transação)
+    const chatwootAccountId = data.account_id as number
+    const chatwootUserId    = data.id as number
+    const accessToken       = data.access_token as string
+
+    // Salva ConnectedAccount + atualiza Organization (transação)
     const publicUrl = chatwootUrl ?? baseUrl
-    const encToken  = encryptToken(adminUser.accessToken)
+    const encToken  = encryptToken(accessToken)
 
     await prisma.$transaction([
-      // ConnectedAccount — mesmo padrão usado pelo connect/route.ts
       prisma.connectedAccount.upsert({
         where: {
           provider_organizationId: {
@@ -278,14 +101,14 @@ export async function provisionChatwootForOrg(
           },
         },
         create: {
-          provider:      'chatwoot',
+          provider:       'chatwoot',
           organizationId: input.organizationId,
-          connectedById: input.ownerUserId,
+          connectedById:  input.ownerUserId,
           accessTokenEnc: encToken,
-          isActive:      true,
+          isActive:       true,
           data: JSON.stringify({
             chatwootUrl:       publicUrl,
-            chatwootAccountId: account.id,
+            chatwootAccountId,
           }),
         },
         update: {
@@ -295,26 +118,25 @@ export async function provisionChatwootForOrg(
           lastSyncAt:     new Date(),
           data: JSON.stringify({
             chatwootUrl:       publicUrl,
-            chatwootAccountId: account.id,
+            chatwootAccountId,
           }),
         },
       }),
 
-      // Atualiza Organization com chatwootAccountId para lookups rápidos
       prisma.organization.update({
         where: { id: input.organizationId },
-        data:  { chatwootAccountId: account.id },
+        data:  { chatwootAccountId },
       }),
     ])
 
     console.info(
-      `[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${account.id} criada`,
+      `[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} criada`,
     )
 
     return {
-      success:          true,
-      chatwootAccountId: account.id,
-      chatwootUserId:   adminUser.userId,
+      success:           true,
+      chatwootAccountId,
+      chatwootUserId,
     }
   } catch (err) {
     console.error('[CHATWOOT PROVISION] Erro inesperado:', err)
