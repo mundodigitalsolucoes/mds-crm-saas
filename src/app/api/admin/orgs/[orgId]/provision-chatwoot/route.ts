@@ -42,13 +42,13 @@ async function verifySuperAdmin(req: NextRequest): Promise<boolean> {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { orgId: string } },
+  { params }: { params: Promise<{ orgId: string }> },
 ) {
   if (!(await verifySuperAdmin(req))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
-  const { orgId } = params
+  const { orgId } = await params
   const body  = await req.json().catch(() => ({}))
   const force = Boolean(body?.force)
 
@@ -89,8 +89,6 @@ export async function POST(
   }
 
   // ── Provisionar ─────────────────────────────────────────────────────────────
-  // Senha temporária gerada — o owner pode redefini-la no Chatwoot depois.
-  // O login no iframe usa SSO via api_access_token, não senha direta.
   const tempPassword = `Tmp@${crypto.randomUUID().slice(0, 8)}!`
 
   const result = await provisionChatwootForOrg({
@@ -125,14 +123,16 @@ export async function POST(
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { orgId: string } },
+  { params }: { params: Promise<{ orgId: string }> },
 ) {
   if (!(await verifySuperAdmin(req))) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
+  const { orgId } = await params
+
   const org = await prisma.organization.findUnique({
-    where:  { id: params.orgId },
+    where:  { id: orgId },
     select: { id: true, name: true, slug: true, chatwootAccountId: true },
   })
 
@@ -142,7 +142,7 @@ export async function GET(
 
   const connected = await prisma.connectedAccount.findUnique({
     where: {
-      provider_organizationId: { provider: 'chatwoot', organizationId: params.orgId },
+      provider_organizationId: { provider: 'chatwoot', organizationId: orgId },
     },
     select: { isActive: true, lastSyncAt: true, lastError: true, createdAt: true },
   })
