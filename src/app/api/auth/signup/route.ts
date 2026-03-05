@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       ownerUserId:    result.user.id,
       ownerName:      result.user.name,
       ownerEmail:     result.user.email,
-      ownerPassword:  data.password,   // senha em texto puro usada apenas aqui
+      ownerPassword:  `Tmp@${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}!Z`,
     }).then((provResult) => {
       if (!provResult.success) {
         // Loga para monitoramento — admin pode reprovisionar manualmente
