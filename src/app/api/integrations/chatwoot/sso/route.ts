@@ -1,74 +1,89 @@
 // src/app/api/integrations/chatwoot/sso/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+//
+// Gera token de sessão Devise do Chatwoot para SSO no iframe.
+// Faz POST /auth/sign_in no Chatwoot com as credenciais do owner
+// e retorna os tokens necessários para autenticação no frontend.
+
+import { NextResponse } from 'next/server'
+import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
-export const runtime = 'nodejs'
+export async function GET() {
+  const { allowed, session, errorResponse } = await checkPermission('atendimento', 'view')
+  if (!allowed) return errorResponse!
 
-export async function GET(_req: NextRequest) {
+  const organizationId = session!.user.organizationId
+
+  const account = await prisma.connectedAccount.findUnique({
+    where: {
+      provider_organizationId: {
+        provider: 'chatwoot',
+        organizationId,
+      },
+    },
+    select: { isActive: true, data: true },
+  })
+
+  if (!account?.isActive) {
+    return NextResponse.json({ error: 'chatwoot_not_configured' }, { status: 404 })
+  }
+
+  const data = JSON.parse(account.data) as {
+    chatwootUrl:       string
+    chatwootAccountId: number
+    ownerEmail?:       string
+    ownerPasswordEnc?: string
+  }
+
+  if (!data.ownerEmail || !data.ownerPasswordEnc) {
+    return NextResponse.json({ error: 'credentials_not_stored' }, { status: 404 })
+  }
+
+  const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
+  const baseUrl     = internalUrl ?? data.chatwootUrl.replace(/\/$/, '')
+
+  let password: string
   try {
-    // ── Auth ─────────────────────────────────────────────────────────────────
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-    }
+    password = decryptToken(data.ownerPasswordEnc)
+  } catch {
+    return NextResponse.json({ error: 'decrypt_failed' }, { status: 500 })
+  }
 
-    const { organizationId } = session.user
-
-    // ── Busca ConnectedAccount Chatwoot da org ────────────────────────────────
-    const account = await prisma.connectedAccount.findFirst({
-      where  : { organizationId, provider: 'chatwoot' },
-      select : { accessTokenEnc: true, data: true },
+  try {
+    const res = await fetch(`${baseUrl}/auth/sign_in`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email: data.ownerEmail, password }),
+      signal:  AbortSignal.timeout(10_000),
     })
 
-    if (!account) {
-      return NextResponse.json(
-        { error: 'Chatwoot não conectado. Configure em Configurações → Integrações.' },
-        { status: 404 },
-      )
+    if (!res.ok) {
+      console.warn('[ChatwootSSO] sign_in falhou:', res.status)
+      return NextResponse.json({ error: 'sign_in_failed' }, { status: 401 })
     }
 
-    // ── Descriptografa o api_access_token do agente ──────────────────────────
-    let apiToken: string
-    try {
-      apiToken = await decryptToken(account.accessTokenEnc)
-    } catch {
-      return NextResponse.json(
-        { error: 'Erro ao descriptografar token do Chatwoot. Reconecte a integração.' },
-        { status: 500 },
-      )
+    // Extrai os headers Devise Token Auth da resposta
+    const accessToken = res.headers.get('access-token')
+    const client      = res.headers.get('client')
+    const uid         = res.headers.get('uid')
+    const tokenType   = res.headers.get('token-type') ?? 'Bearer'
+
+    if (!accessToken || !client || !uid) {
+      console.warn('[ChatwootSSO] Headers Devise ausentes na resposta')
+      return NextResponse.json({ error: 'missing_headers' }, { status: 500 })
     }
 
-    if (!apiToken) {
-      return NextResponse.json(
-        { error: 'Token do Chatwoot inválido. Reconecte a integração.' },
-        { status: 500 },
-      )
-    }
-
-    // ── Resolve URL base do Chatwoot ─────────────────────────────────────────
-    const meta = JSON.parse(account.data) as { chatwootUrl?: string }
-    const chatwootBase =
-      meta?.chatwootUrl?.replace(/\/$/, '') ??
-      process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '') ??
-      null
-
-    if (!chatwootBase) {
-      return NextResponse.json(
-        { error: 'URL do Chatwoot não configurada.' },
-        { status: 500 },
-      )
-    }
-
-    // ── Monta URL de auto-login com token ────────────────────────────────────
-    const ssoUrl = `${chatwootBase}/app/login?token=${encodeURIComponent(apiToken)}`
-
-    return NextResponse.json({ url: ssoUrl })
-
-  } catch (error) {
-    console.error('[CHATWOOT SSO]', error)
-    return NextResponse.json({ error: 'Erro interno do servidor.' }, { status: 500 })
+    return NextResponse.json({
+      accessToken,
+      client,
+      uid,
+      tokenType,
+      chatwootUrl:       data.chatwootUrl,
+      chatwootAccountId: data.chatwootAccountId,
+    })
+  } catch (err) {
+    console.error('[ChatwootSSO] Erro:', err)
+    return NextResponse.json({ error: 'unexpected_error' }, { status: 500 })
   }
 }

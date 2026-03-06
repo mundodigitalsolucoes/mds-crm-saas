@@ -1,26 +1,6 @@
 // src/lib/integrations/chatwoot-provision.ts
-//
-// Serviço de provisionamento automático de conta Chatwoot por organização.
-//
-// FLUXO:
-//   1. Chama POST /api/v1/accounts com email+senha do owner — cria account E usuário em uma só chamada
-//   2. Obtém o access_token do usuário criado
-//   3. Salva ConnectedAccount no banco
-//   4. Atualiza Organization.chatwootAccountId
-//
-// FALLBACK MANUAL: se CHATWOOT_SUPER_ADMIN_EMAIL não estiver configurado,
-// o provisionamento é ignorado silenciosamente e o admin pode fazê-lo
-// depois pelo Super Admin console do Chatwoot ou pela rota
-// POST /api/admin/orgs/[orgId]/provision-chatwoot
-//
-// CONTENÇÃO: falha silenciosa — nunca bloqueia o signup do usuário.
-// O CRM funciona 100% sem Chatwoot provisionado; a aba Atendimento
-// simplesmente mostra "Configurar Integração".
-
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
-
-// ─── Tipos internos ─────────────────────────────────────────────────────────
 
 interface ProvisionInput {
   organizationId: string
@@ -29,17 +9,15 @@ interface ProvisionInput {
   ownerUserId:    string
   ownerName:      string
   ownerEmail:     string
-  ownerPassword:  string   // senha em texto puro (apenas para criar no Chatwoot)
+  ownerPassword:  string
 }
 
 interface ProvisionResult {
-  success:           boolean
+  success:            boolean
   chatwootAccountId?: number
   chatwootUserId?:    number
-  error?:            string
+  error?:             string
 }
-
-// ─── Função principal exportada ─────────────────────────────────────────────
 
 export async function provisionChatwootForOrg(
   input: ProvisionInput,
@@ -48,15 +26,12 @@ export async function provisionChatwootForOrg(
   const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
   const baseUrl     = internalUrl ?? chatwootUrl
 
-  // Se não houver URL configurada, skip silencioso
   if (!baseUrl) {
     console.info('[CHATWOOT PROVISION] URL não configurada — provisionamento manual necessário')
     return { success: false, error: 'super_admin_not_configured' }
   }
 
   try {
-    // POST /api/v1/accounts — cria account + usuário administrator em uma só chamada
-    // Requer ENABLE_ACCOUNT_SIGNUP=true no Chatwoot
     const res = await fetch(`${baseUrl}/api/v1/accounts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,9 +63,9 @@ export async function provisionChatwootForOrg(
     const chatwootUserId    = data.id as number
     const accessToken       = data.access_token as string
 
-    // Salva ConnectedAccount + atualiza Organization (transação)
-    const publicUrl = chatwootUrl ?? baseUrl
-    const encToken  = encryptToken(accessToken)
+    const publicUrl     = chatwootUrl ?? baseUrl
+    const encToken      = encryptToken(accessToken)
+    const encPassword   = encryptToken(input.ownerPassword) // salva para SSO
 
     await prisma.$transaction([
       prisma.connectedAccount.upsert({
@@ -107,8 +82,10 @@ export async function provisionChatwootForOrg(
           accessTokenEnc: encToken,
           isActive:       true,
           data: JSON.stringify({
-            chatwootUrl:       publicUrl,
+            chatwootUrl:      publicUrl,
             chatwootAccountId,
+            ownerEmail:       input.ownerEmail,
+            ownerPasswordEnc: encPassword,
           }),
         },
         update: {
@@ -117,8 +94,10 @@ export async function provisionChatwootForOrg(
           lastError:      null,
           lastSyncAt:     new Date(),
           data: JSON.stringify({
-            chatwootUrl:       publicUrl,
+            chatwootUrl:      publicUrl,
             chatwootAccountId,
+            ownerEmail:       input.ownerEmail,
+            ownerPasswordEnc: encPassword,
           }),
         },
       }),
@@ -129,15 +108,9 @@ export async function provisionChatwootForOrg(
       }),
     ])
 
-    console.info(
-      `[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} criada`,
-    )
+    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} criada`)
 
-    return {
-      success:           true,
-      chatwootAccountId,
-      chatwootUserId,
-    }
+    return { success: true, chatwootAccountId, chatwootUserId }
   } catch (err) {
     console.error('[CHATWOOT PROVISION] Erro inesperado:', err)
     return { success: false, error: 'unexpected_error' }

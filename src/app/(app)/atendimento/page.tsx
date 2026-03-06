@@ -1,9 +1,4 @@
 // src/app/(app)/atendimento/page.tsx
-// Página de Atendimento — Chatwoot embeddado em fullscreen via iframe
-// ✅ URL dinâmica por organização (via ConnectedAccount)
-// ✅ SSO automático via access_token (sem tela de login)
-// ✅ Permissão controlada por PermissionGate (módulo atendimento)
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,14 +7,14 @@ import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
 
-interface ChatwootStatus {
-  connected:         boolean;
-  chatwootUrl:       string;
-  chatwootAccountId: number;
-  accessToken:       string | null;
+interface SSOData {
+  accessToken:       string
+  client:            string
+  uid:               string
+  tokenType:         string
+  chatwootUrl:       string
+  chatwootAccountId: number
 }
-
-// ─── Fallback: Chatwoot não configurado ───────────────────────────────────────
 
 function NotConfigured() {
   return (
@@ -46,17 +41,13 @@ function NotConfigured() {
   );
 }
 
-// ─── Iframe Chatwoot ──────────────────────────────────────────────────────────
-
 function ChatwootIframe({ url }: { url: string }) {
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
         <div className="w-2 h-2 rounded-full bg-green-500" />
         <h1 className="text-xl font-semibold text-gray-800">Atendimento</h1>
       </div>
-      {/* Iframe fullscreen */}
       <div className="flex-1 relative">
         <iframe
           src={url}
@@ -69,34 +60,28 @@ function ChatwootIframe({ url }: { url: string }) {
   );
 }
 
-// ─── Monta URL de SSO ─────────────────────────────────────────────────────────
-// Chatwoot suporta login automático via:
-// /app/login?token=ACCESS_TOKEN
-// Isso loga o usuário diretamente sem exibir a tela de login.
-
-function buildSSOUrl(chatwootUrl: string, accessToken: string | null): string {
-  const base = chatwootUrl.replace(/\/$/, '')
-  if (!accessToken) return `${base}/app`
-  return `${base}/app/login?token=${encodeURIComponent(accessToken)}`
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
-
 export default function AtendimentoPage() {
-  const [status, setStatus]   = useState<ChatwootStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState(false);
 
   useEffect(() => {
     axios
-      .get<ChatwootStatus>('/api/integrations/chatwoot/status')
-      .then(({ data }) => setStatus(data))
-      .catch(() => setStatus(null))
+      .get<SSOData>('/api/integrations/chatwoot/sso')
+      .then(({ data }) => {
+        // Monta URL do sso.html com tokens Devise
+        const base   = data.chatwootUrl.replace(/\/$/, '')
+        const params = new URLSearchParams({
+          access_token: data.accessToken,
+          client:       data.client,
+          uid:          data.uid,
+          account_id:   String(data.chatwootAccountId),
+        })
+        setIframeUrl(`${base}/sso.html?${params.toString()}`)
+      })
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
-
-  const iframeUrl = status?.connected && status.chatwootUrl
-    ? buildSSOUrl(status.chatwootUrl, status.accessToken ?? null)
-    : null;
 
   return (
     <PermissionGate module="atendimento" action="view">
@@ -104,10 +89,10 @@ export default function AtendimentoPage() {
         <div className="flex items-center justify-center h-full">
           <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
         </div>
-      ) : iframeUrl ? (
-        <ChatwootIframe url={iframeUrl} />
-      ) : (
+      ) : error || !iframeUrl ? (
         <NotConfigured />
+      ) : (
+        <ChatwootIframe url={iframeUrl} />
       )}
     </PermissionGate>
   );
