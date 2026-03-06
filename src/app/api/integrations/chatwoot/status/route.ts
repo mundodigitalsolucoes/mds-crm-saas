@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
+import { decryptToken } from '@/lib/integrations/crypto'
 
 export async function GET() {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
@@ -17,10 +18,11 @@ export async function GET() {
       },
     },
     select: {
-      isActive:   true,
-      lastSyncAt: true,
-      lastError:  true,
-      data:       true,
+      isActive:       true,
+      lastSyncAt:     true,
+      lastError:      true,
+      data:           true,
+      accessTokenEnc: true,
     },
   })
 
@@ -33,11 +35,20 @@ export async function GET() {
     chatwootAccountId: number
   }
 
+  // Descriptografa o access_token do usuário para SSO no iframe
+  let accessToken: string | null = null
+  try {
+    accessToken = decryptToken(account.accessTokenEnc)
+  } catch {
+    console.warn('[ChatwootStatus] Falha ao descriptografar token')
+  }
+
   return NextResponse.json({
-    connected:        true,
-    chatwootUrl:      data.chatwootUrl,
+    connected:         true,
+    chatwootUrl:       data.chatwootUrl,
     chatwootAccountId: data.chatwootAccountId,
-    lastSyncAt:       account.lastSyncAt,
-    lastError:        account.lastError,
+    accessToken,
+    lastSyncAt:        account.lastSyncAt,
+    lastError:         account.lastError,
   })
 }

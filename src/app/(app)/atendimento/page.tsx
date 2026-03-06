@@ -1,6 +1,7 @@
 // src/app/(app)/atendimento/page.tsx
 // Página de Atendimento — Chatwoot embeddado em fullscreen via iframe
 // ✅ URL dinâmica por organização (via ConnectedAccount)
+// ✅ SSO automático via access_token (sem tela de login)
 // ✅ Permissão controlada por PermissionGate (módulo atendimento)
 
 'use client';
@@ -15,6 +16,7 @@ interface ChatwootStatus {
   connected:         boolean;
   chatwootUrl:       string;
   chatwootAccountId: number;
+  accessToken:       string | null;
 }
 
 // ─── Fallback: Chatwoot não configurado ───────────────────────────────────────
@@ -67,6 +69,17 @@ function ChatwootIframe({ url }: { url: string }) {
   );
 }
 
+// ─── Monta URL de SSO ─────────────────────────────────────────────────────────
+// Chatwoot suporta login automático via:
+// /app/login?token=ACCESS_TOKEN
+// Isso loga o usuário diretamente sem exibir a tela de login.
+
+function buildSSOUrl(chatwootUrl: string, accessToken: string | null): string {
+  const base = chatwootUrl.replace(/\/$/, '')
+  if (!accessToken) return `${base}/app`
+  return `${base}/app/login?token=${encodeURIComponent(accessToken)}`
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function AtendimentoPage() {
@@ -81,14 +94,18 @@ export default function AtendimentoPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const iframeUrl = status?.connected && status.chatwootUrl
+    ? buildSSOUrl(status.chatwootUrl, status.accessToken ?? null)
+    : null;
+
   return (
     <PermissionGate module="atendimento" action="view">
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
         </div>
-      ) : status?.connected && status.chatwootUrl ? (
-        <ChatwootIframe url={status.chatwootUrl} />
+      ) : iframeUrl ? (
+        <ChatwootIframe url={iframeUrl} />
       ) : (
         <NotConfigured />
       )}
