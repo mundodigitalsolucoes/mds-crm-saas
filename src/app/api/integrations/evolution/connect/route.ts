@@ -106,7 +106,7 @@ export async function POST() {
 
   const org = await prisma.organization.findUnique({
     where:  { id: organizationId },
-    select: { slug: true },
+    select: { slug: true, chatwootAccountId: true },
   })
   if (!org) {
     return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
@@ -120,9 +120,9 @@ export async function POST() {
     where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
     select: { data: true, isActive: true },
   })
-  const existingData    = existingWa ? (JSON.parse(existingWa.data) as { chatwootInboxId?: number | null; phone?: string | null; instanceName?: string }) : null
-  const existingInboxId = existingData?.chatwootInboxId ?? null
-  const existingPhone   = existingData?.phone ?? null
+  const existingData     = existingWa ? (JSON.parse(existingWa.data) as { chatwootInboxId?: number | null; phone?: string | null; instanceName?: string }) : null
+  const existingInboxId  = existingData?.chatwootInboxId ?? null
+  const existingPhone    = existingData?.phone ?? null
   const existingInstance = existingData?.instanceName ?? null
 
   // ── REGRA: bloqueia 2º número se já existe instância ativa com nome diferente ─
@@ -161,38 +161,32 @@ export async function POST() {
   }
 
   if (state === 'close' || state === 'connecting') {
-    // Caso 2: instância existe mas offline — tenta restart
-    const hasChatwoot = await prisma.connectedAccount.findUnique({
-      where:  { provider_organizationId: { provider: 'chatwoot', organizationId } },
-      select: { isActive: true },
-    })
+    // Caso 2: instância existe mas offline — tenta restart sempre
+    const restarted = await restartInstance(instanceName)
 
-    if (hasChatwoot?.isActive) {
-      const restarted = await restartInstance(instanceName)
-      if (restarted) {
-        await new Promise(r => setTimeout(r, 2_000))
+    if (restarted) {
+      await new Promise(r => setTimeout(r, 2_000))
 
-        const chatwootInboxId = existingInboxId ?? await tryChatwootSetup({
-          organizationId,
-          orgSlug:     org.slug,
-          instanceName,
-          evoUrl:      EVO_URL,
-          evoKey:      EVO_KEY,
-          phoneNumber: existingPhone,
-        })
+      const chatwootInboxId = existingInboxId ?? await tryChatwootSetup({
+        organizationId,
+        orgSlug:     org.slug,
+        instanceName,
+        evoUrl:      EVO_URL,
+        evoKey:      EVO_KEY,
+        phoneNumber: existingPhone,
+      })
 
-        await upsertWhatsappAccount({
-          organizationId,
-          userId:         session!.user.id,
-          accessTokenEnc,
-          instanceName,
-          evoUrl:         EVO_URL,
-          chatwootInboxId,
-          phone:          existingPhone,
-        })
+      await upsertWhatsappAccount({
+        organizationId,
+        userId:         session!.user.id,
+        accessTokenEnc,
+        instanceName,
+        evoUrl:         EVO_URL,
+        chatwootInboxId,
+        phone:          existingPhone,
+      })
 
-        return NextResponse.json({ instanceName, alreadyExists: false })
-      }
+      return NextResponse.json({ instanceName, alreadyExists: false })
     }
 
     // Restart falhou → deleta e recria
@@ -200,7 +194,7 @@ export async function POST() {
     await new Promise(r => setTimeout(r, 1_500))
   }
 
-  // Caso 3: cria instância nova
+  // Caso 3: cria instância nova (not_found ou restart falhou)
   const created = await createInstance(instanceName)
   if (!created) {
     return NextResponse.json(
