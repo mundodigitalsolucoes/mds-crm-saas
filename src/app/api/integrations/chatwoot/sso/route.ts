@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
 export async function GET() {
-  const { allowed, session, errorResponse } = await checkPermission('atendimento', 'view')
+  const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
