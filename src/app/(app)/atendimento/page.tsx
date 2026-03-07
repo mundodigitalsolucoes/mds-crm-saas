@@ -1,7 +1,6 @@
-// src/app/(app)/atendimento/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Settings, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -41,7 +40,21 @@ function NotConfigured() {
   );
 }
 
-function ChatwootIframe({ url }: { url: string }) {
+function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [src, setSrc] = useState(ssoUrl);
+
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type === 'chatwoot_sso_done') {
+        // SSO concluído — troca src do iframe para o dashboard
+        setSrc(dashboardUrl);
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [dashboardUrl]);
+
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
@@ -50,7 +63,8 @@ function ChatwootIframe({ url }: { url: string }) {
       </div>
       <div className="flex-1 relative">
         <iframe
-          src={url}
+          ref={iframeRef}
+          src={src}
           className="absolute inset-0 w-full h-full border-0"
           allow="microphone; camera; clipboard-write"
           title="Atendimento"
@@ -61,23 +75,25 @@ function ChatwootIframe({ url }: { url: string }) {
 }
 
 export default function AtendimentoPage() {
-  const [iframeUrl, setIframeUrl] = useState<string | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState(false);
+  const [urls, setUrls]   = useState<{ sso: string; dashboard: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(false);
 
   useEffect(() => {
     axios
       .get<SSOData>('/api/integrations/chatwoot/sso')
       .then(({ data }) => {
-        // Monta URL do sso.html com tokens Devise
-        const base   = data.chatwootUrl.replace(/\/$/, '')
+        const base   = data.chatwootUrl.replace(/\/$/, '');
         const params = new URLSearchParams({
           access_token: data.accessToken,
           client:       data.client,
           uid:          data.uid,
           account_id:   String(data.chatwootAccountId),
-        })
-        setIframeUrl(`${base}/sso.html?${params.toString()}`)
+        });
+        setUrls({
+          sso:       `${base}/sso.html?${params.toString()}`,
+          dashboard: `${base}/app/accounts/${data.chatwootAccountId}/dashboard`,
+        });
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -89,10 +105,10 @@ export default function AtendimentoPage() {
         <div className="flex items-center justify-center h-full">
           <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
         </div>
-      ) : error || !iframeUrl ? (
+      ) : error || !urls ? (
         <NotConfigured />
       ) : (
-        <ChatwootIframe url={iframeUrl} />
+        <ChatwootIframe ssoUrl={urls.sso} dashboardUrl={urls.dashboard} />
       )}
     </PermissionGate>
   );
