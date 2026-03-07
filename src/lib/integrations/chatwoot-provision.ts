@@ -32,6 +32,7 @@ export async function provisionChatwootForOrg(
   }
 
   try {
+    // 1. Cria account + usuário
     const res = await fetch(`${baseUrl}/api/v1/accounts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,9 +64,40 @@ export async function provisionChatwootForOrg(
     const chatwootUserId    = data.id as number
     const accessToken       = data.access_token as string
 
+    // 2. Confirma o usuário via Super Admin API para permitir sign_in via SSO
+    const superAdminToken = process.env.CHATWOOT_API_KEY
+    if (superAdminToken && chatwootUserId) {
+      try {
+        const confirmRes = await fetch(
+          `${baseUrl}/auth/confirmation`,
+          {
+            method:  'GET',
+            headers: { api_access_token: superAdminToken },
+            signal:  AbortSignal.timeout(5_000),
+          }
+        )
+        // Tenta via Platform API como fallback
+        if (!confirmRes.ok) {
+          await fetch(`${baseUrl}/platform/api/v1/users/${chatwootUserId}`, {
+            method:  'PATCH',
+            headers: {
+              'Content-Type':    'application/json',
+              'api_access_token': superAdminToken,
+            },
+            body:   JSON.stringify({ confirmed: true }),
+            signal: AbortSignal.timeout(5_000),
+          })
+        }
+      } catch {
+        // Falha silenciosa — SSO ainda funciona se o usuário confirmar o email
+        console.warn('[CHATWOOT PROVISION] Aviso: não foi possível confirmar usuário automaticamente')
+      }
+    }
+
+    // 3. Salva no banco
     const publicUrl     = chatwootUrl ?? baseUrl
     const encToken      = encryptToken(accessToken)
-    const encPassword   = encryptToken(input.ownerPassword) // salva para SSO
+    const encPassword   = encryptToken(input.ownerPassword)
 
     await prisma.$transaction([
       prisma.connectedAccount.upsert({
@@ -86,6 +118,7 @@ export async function provisionChatwootForOrg(
             chatwootAccountId,
             ownerEmail:       input.ownerEmail,
             ownerPasswordEnc: encPassword,
+            chatwootUserId,
           }),
         },
         update: {
@@ -98,6 +131,7 @@ export async function provisionChatwootForOrg(
             chatwootAccountId,
             ownerEmail:       input.ownerEmail,
             ownerPasswordEnc: encPassword,
+            chatwootUserId,
           }),
         },
       }),
