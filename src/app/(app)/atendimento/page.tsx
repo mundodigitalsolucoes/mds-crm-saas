@@ -44,23 +44,15 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [src, setSrc] = useState(ssoUrl);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+ useEffect(() => {
+  function handleMessage(e: MessageEvent) {
+    if (e.data?.type === 'chatwoot_sso_done') {
       setSrc(dashboardUrl);
-    }, 3000);
-
-    function handleMessage(e: MessageEvent) {
-      if (e.data?.type === 'chatwoot_sso_done') {
-        clearTimeout(timer);
-        setSrc(dashboardUrl);
-      }
     }
-    window.addEventListener('message', handleMessage);
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearTimeout(timer);
-    };
-  }, [dashboardUrl]);
+  }
+  window.addEventListener('message', handleMessage);
+  return () => window.removeEventListener('message', handleMessage);
+}, [dashboardUrl]);
 
   return (
     <div className="flex flex-col h-full w-full">
