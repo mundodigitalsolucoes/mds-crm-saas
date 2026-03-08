@@ -91,7 +91,7 @@ export default function AtendimentoPage() {
           account_id:   String(data.chatwootAccountId),
         });
         setUrls({
-          sso:       `${base}/sso.html?${params.toString()}`,
+          sso:       `${base}/mds-sso?${params.toString()}`,
           dashboard: `${base}/app/accounts/${data.chatwootAccountId}/dashboard`,
         });
       })
