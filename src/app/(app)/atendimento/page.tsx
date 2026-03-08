@@ -45,14 +45,22 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
   const [src, setSrc] = useState(ssoUrl);
 
   useEffect(() => {
+    // Aguarda 3s para o mds-sso setar o localStorage e então carrega o dashboard
+    const timer = setTimeout(() => {
+      setSrc(dashboardUrl);
+    }, 3000);
+
     function handleMessage(e: MessageEvent) {
       if (e.data?.type === 'chatwoot_sso_done') {
-        // SSO concluído — troca src do iframe para o dashboard
+        clearTimeout(timer);
         setSrc(dashboardUrl);
       }
     }
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearTimeout(timer);
+    };
   }, [dashboardUrl]);
 
   return (
@@ -71,45 +79,5 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
         />
       </div>
     </div>
-  );
-}
-
-export default function AtendimentoPage() {
-  const [urls, setUrls]   = useState<{ sso: string; dashboard: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(false);
-
-  useEffect(() => {
-    axios
-      .get<SSOData>('/api/integrations/chatwoot/sso')
-      .then(({ data }) => {
-        const base   = data.chatwootUrl.replace(/\/$/, '');
-        const params = new URLSearchParams({
-          access_token: data.accessToken,
-          client:       data.client,
-          uid:          data.uid,
-          account_id:   String(data.chatwootAccountId),
-        });
-        setUrls({
-          sso:       `${base}/mds-sso?${params.toString()}`,
-          dashboard: `${base}/app/accounts/${data.chatwootAccountId}/dashboard`,
-        });
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <PermissionGate module="atendimento" action="view">
-      {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
-        </div>
-      ) : error || !urls ? (
-        <NotConfigured />
-      ) : (
-        <ChatwootIframe ssoUrl={urls.sso} dashboardUrl={urls.dashboard} />
-      )}
-    </PermissionGate>
   );
 }
