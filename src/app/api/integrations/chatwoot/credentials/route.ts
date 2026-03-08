@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { checkPermission } from '@/lib/auth/permissions'
+import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
