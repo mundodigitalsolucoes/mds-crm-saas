@@ -6,11 +6,9 @@ import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
 
-interface SSOData {
-  accessToken:       string
-  client:            string
-  uid:               string
-  tokenType:         string
+interface CredentialsData {
+  email:             string
+  password:          string
   chatwootUrl:       string
   chatwootAccountId: number
 }
@@ -44,15 +42,15 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [src, setSrc] = useState(ssoUrl);
 
- useEffect(() => {
-  function handleMessage(e: MessageEvent) {
-    if (e.data?.type === 'chatwoot_sso_done') {
-      setSrc(dashboardUrl);
+  useEffect(() => {
+    function handleMessage(e: MessageEvent) {
+      if (e.data?.type === 'chatwoot_sso_done') {
+        setSrc(dashboardUrl);
+      }
     }
-  }
-  window.addEventListener('message', handleMessage);
-  return () => window.removeEventListener('message', handleMessage);
-}, [dashboardUrl]);
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [dashboardUrl]);
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -74,20 +72,19 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
 }
 
 export default function AtendimentoPage() {
-  const [urls, setUrls]   = useState<{ sso: string; dashboard: string } | null>(null);
+  const [urls, setUrls]       = useState<{ sso: string; dashboard: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
 
   useEffect(() => {
     axios
-      .get<SSOData>('/api/integrations/chatwoot/sso')
+      .get<CredentialsData>('/api/integrations/chatwoot/credentials')
       .then(({ data }) => {
         const base   = data.chatwootUrl.replace(/\/$/, '');
         const params = new URLSearchParams({
-          access_token: data.accessToken,
-          client:       data.client,
-          uid:          data.uid,
-          account_id:   String(data.chatwootAccountId),
+          email:      data.email,
+          password:   data.password,
+          account_id: String(data.chatwootAccountId),
         });
         setUrls({
           sso:       `${base}/mds-sso?${params.toString()}`,
