@@ -45,14 +45,21 @@ function ChatwootIframe({ ssoUrl, dashboardUrl }: { ssoUrl: string; dashboardUrl
   const [src, setSrc] = useState(ssoUrl);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setSrc(dashboardUrl);
+    }, 3000);
+
     function handleMessage(e: MessageEvent) {
       if (e.data?.type === 'chatwoot_sso_done') {
-        // SSO concluído — troca src do iframe para o dashboard
+        clearTimeout(timer);
         setSrc(dashboardUrl);
       }
     }
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearTimeout(timer);
+    };
   }, [dashboardUrl]);
 
   return (
