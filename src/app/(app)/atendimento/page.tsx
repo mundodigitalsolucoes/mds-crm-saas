@@ -87,7 +87,7 @@ export default function AtendimentoPage() {
           password:   data.password,
           account_id: String(data.chatwootAccountId),
         });
-        setSsoUrl(`${data.chatwootUrl}/sso/sso/mds-sso?${params.toString()}`);
+        setSsoUrl(`${data.chatwootUrl}/sso/mds-sso?${params.toString()}`);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
