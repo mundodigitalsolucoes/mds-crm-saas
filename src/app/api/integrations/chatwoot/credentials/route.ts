@@ -4,12 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
 export async function GET() {
-  const perm = await checkPermission('integrations', 'view')
-  if (!perm.ok) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (!perm.allowed) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const account = await prisma.connectedAccount.findFirst({
-    where: { organizationId: perm.organizationId, type: 'chatwoot' },
-  })
+const account = await prisma.connectedAccount.findFirst({
+  where: { organizationId: perm.session.user.organizationId, type: 'chatwoot' },
+})
   if (!account) return NextResponse.json({ error: 'not_configured' }, { status: 404 })
 
   const data = account.data as Record<string, string>
