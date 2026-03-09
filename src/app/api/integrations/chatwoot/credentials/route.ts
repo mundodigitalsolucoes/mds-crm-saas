@@ -5,14 +5,14 @@ import { decryptToken } from '@/lib/integrations/crypto'
 
 export async function GET() {
   const perm = await checkPermission('integrations', 'view')
-  if (!perm.allowed) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (!perm.allowed || !perm.session) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const account = await prisma.connectedAccount.findFirst({
-    where: { organizationId: perm.session.user.organizationId, type: 'chatwoot' },
+    where: { organizationId: perm.session.user.organizationId, provider: 'chatwoot' },
   })
   if (!account) return NextResponse.json({ error: 'not_configured' }, { status: 404 })
 
-  const data = account.data as Record<string, string>
+  const data = JSON.parse(account.data) as Record<string, string>
   if (!data?.ownerEmail || !data?.ownerPasswordEnc) {
     return NextResponse.json({ error: 'no_credentials' }, { status: 404 })
   }
@@ -24,6 +24,6 @@ export async function GET() {
     email:             data.ownerEmail,
     password,
     chatwootUrl,
-    chatwootAccountId: Number(data.chatwootAccountId || account.externalId),
+    chatwootAccountId: Number(data.chatwootAccountId ?? data.accountId ?? 0),
   })
 }
