@@ -24,7 +24,7 @@ export default async function middleware(req: NextRequest) {
   // ═══════════════════════════════════════
   // 🔒 ROTAS DO SUPER ADMIN (/admin/*)
   // ═══════════════════════════════════════
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     // Libera a página de login e a API de auth do admin
     if (
       pathname === '/admin/login' ||
