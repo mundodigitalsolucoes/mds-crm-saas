@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
+import { deleteChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
 
 /**
  * GET /api/admin/organizations/:id — Detalhes de uma organização com usage
@@ -53,7 +54,6 @@ export async function GET(
       );
     }
 
-    // Retorna com limites e usage lado a lado
     return NextResponse.json({
       ...org,
       limits: {
@@ -81,8 +81,6 @@ export async function GET(
 
 /**
  * PUT /api/admin/organizations/:id — Atualiza uma organização
- * Se syncFromPlan=true E plan mudou, copia limites do novo Plan.
- * Se syncFromPlan=false, usa os valores manuais (customização por org).
  */
 export async function PUT(
   req: NextRequest,
@@ -97,12 +95,10 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada
     const parsed = parseBody(adminOrgUpdateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // Verifica se existe
     const existing = await prisma.organization.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json(
@@ -111,7 +107,6 @@ export async function PUT(
       );
     }
 
-    // Se o slug mudou, verifica duplicidade
     if (data.slug && data.slug !== existing.slug) {
       const slugExists = await prisma.organization.findFirst({
         where: { slug: data.slug, NOT: { id } },
@@ -125,17 +120,12 @@ export async function PUT(
       }
     }
 
-    // Extrai syncFromPlan antes de enviar pro Prisma (não é coluna do banco)
     const { syncFromPlan, ...updateData } = data;
-
-    // ✅ Se syncFromPlan=true E plan mudou, copia limites do novo plano
     const planChanged = data.plan && data.plan !== existing.plan;
 
     if (syncFromPlan && planChanged) {
-      // Primeiro atualiza campos não-limite (name, slug, planStatus, etc.)
       const { maxUsers, maxLeads, maxProjects, maxOs, ...nonLimitData } = updateData;
 
-      // Atualiza campos não-limite
       if (Object.keys(nonLimitData).length > 0) {
         await prisma.organization.update({
           where: { id },
@@ -143,7 +133,6 @@ export async function PUT(
         });
       }
 
-      // Depois sincroniza limites do Plan
       const synced = await syncPlanLimits(id, data.plan!);
 
       if (synced) {
@@ -154,11 +143,9 @@ export async function PUT(
         });
       }
 
-      // Se plano não encontrado, faz update normal com os valores manuais
       console.warn(`[ADMIN ORGS] Plano "${data.plan}" não encontrado. Usando valores manuais.`);
     }
 
-    // Update normal (customização manual ou sem sync)
     const org = await prisma.organization.update({
       where: { id },
       data: updateData,
@@ -178,8 +165,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/admin/organizations/:id — Remove uma organização
- * ⚠️ CUIDADO: Remove todos os dados vinculados (cascade)
+ * DELETE /api/admin/organizations/:id — Remove uma organização + limpeza no Chatwoot
  */
 export async function DELETE(
   req: NextRequest,
@@ -193,12 +179,14 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Verifica se existe
+    // 1. Busca org e dados do Chatwoot antes de deletar
     const existing = await prisma.organization.findUnique({
       where: { id },
       include: {
-        _count: {
-          select: { users: true },
+        _count: { select: { users: true } },
+        connectedAccounts: {
+          where: { provider: 'chatwoot' },
+          select: { data: true },
         },
       },
     });
@@ -210,7 +198,23 @@ export async function DELETE(
       );
     }
 
-    // Deleta organização (cascade deleta users, leads, etc.)
+    // 2. Tenta deletar Account no Chatwoot (cascade deleta users/inboxes)
+    try {
+      const cwAccount = existing.connectedAccounts?.[0];
+      if (cwAccount?.data) {
+        const cwData = JSON.parse(cwAccount.data) as { chatwootAccountId?: number };
+        if (cwData.chatwootAccountId) {
+          await deleteChatwootAccount(cwData.chatwootAccountId);
+        }
+      } else if (existing.chatwootAccountId) {
+        await deleteChatwootAccount(existing.chatwootAccountId);
+      }
+    } catch (cwErr) {
+      // Loga mas não bloqueia — o delete do CRM deve continuar
+      console.warn('[ADMIN ORGS] Aviso: falha ao deletar no Chatwoot:', cwErr);
+    }
+
+    // 3. Deleta organização do CRM (cascade deleta users, leads, etc.)
     await prisma.organization.delete({ where: { id } });
 
     return NextResponse.json({

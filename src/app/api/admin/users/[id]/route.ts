@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { parseBody, adminUserUpdateSchema } from '@/lib/validations';
-import { getChatwootCredentials, chatwootApi } from '@/lib/chatwoot';
+import { deleteChatwootUser, deleteChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
 
 // PUT - Atualizar usuário (mudar role)
 export async function PUT(
@@ -58,55 +58,45 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // 1. Busca o usuário e os dados do Chatwoot antes de deletar
+    // 1. Busca o usuário e dados do Chatwoot antes de deletar
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
         organizationId: true,
         organization: {
-          select: { chatwootAccountId: true },
+          select: {
+            chatwootAccountId: true,
+            connectedAccounts: {
+              where: { provider: 'chatwoot' },
+              select: { data: true },
+            },
+          },
         },
       },
     });
 
-    // 2. Tenta deletar no Chatwoot (se tiver integração ativa)
+    // 2. Tenta limpar no Chatwoot
     if (user?.organizationId) {
       try {
-        const credentials = await getChatwootCredentials(user.organizationId);
+        const cwAccount = user.organization?.connectedAccounts?.[0];
+        if (cwAccount?.data) {
+          const cwData = JSON.parse(cwAccount.data) as {
+            chatwootUserId?: number;
+            chatwootAccountId?: number;
+          };
 
-        if (credentials) {
-          // Busca o ConnectedAccount para pegar o chatwootUserId
-          const connectedAccount = await prisma.connectedAccount.findUnique({
-            where: {
-              provider_organizationId: {
-                provider: 'chatwoot',
-                organizationId: user.organizationId,
-              },
-            },
-            select: { data: true },
-          });
-
-          if (connectedAccount?.data) {
-            const cwData = JSON.parse(connectedAccount.data) as {
-              chatwootUserId?: number;
-            };
-
-            if (cwData.chatwootUserId) {
-              // Remove o usuário da conta Chatwoot
-              await chatwootApi(credentials, `/agents/${cwData.chatwootUserId}`, {
-                method: 'DELETE',
-              });
-              console.info(`[ADMIN USERS] ✅ Usuário Chatwoot #${cwData.chatwootUserId} removido`);
-            }
+          if (cwData.chatwootUserId) {
+            await deleteChatwootUser(cwData.chatwootUserId);
+          } else if (cwData.chatwootAccountId) {
+            await deleteChatwootAccount(cwData.chatwootAccountId);
           }
         }
       } catch (cwErr) {
-        // Loga mas não bloqueia — o delete do CRM deve continuar
         console.warn('[ADMIN USERS] Aviso: falha ao deletar no Chatwoot:', cwErr);
       }
     }
 
-    // 3. Deleta do CRM (cascade deleta ConnectedAccount e outros dados)
+    // 3. Deleta do CRM
     await prisma.user.delete({ where: { id } });
 
     return NextResponse.json({ message: 'Usuário excluído com sucesso' });
