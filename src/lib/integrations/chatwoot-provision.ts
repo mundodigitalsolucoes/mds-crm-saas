@@ -1,7 +1,6 @@
 // src/lib/integrations/chatwoot-provision.ts
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
-import { Client } from 'pg'
 
 interface ProvisionInput {
   organizationId: string
@@ -20,25 +19,59 @@ interface ProvisionResult {
   error?:             string
 }
 
-async function confirmChatwootUser(userId: number): Promise<void> {
-  const dbUrl = process.env.CHATWOOT_DB_URL
-  if (!dbUrl) {
-    console.warn('[CHATWOOT PROVISION] CHATWOOT_DB_URL não configurado — usuário não confirmado automaticamente')
+/**
+ * Confirma o usuário no Chatwoot usando o Super Admin token.
+ * Usa CHATWOOT_SUPER_ADMIN_TOKEN (variável de ambiente já configurada).
+ * Substitui a abordagem SQL direta que falha por ETIMEDOUT em redes Docker isoladas.
+ */
+async function confirmChatwootUser(baseUrl: string, userId: number): Promise<void> {
+  const superAdminToken = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
+
+  if (!superAdminToken) {
+    console.warn('[CHATWOOT PROVISION] CHATWOOT_SUPER_ADMIN_TOKEN não configurado — usuário não confirmado')
     return
   }
 
-  const client = new Client({ connectionString: dbUrl })
   try {
-    await client.connect()
-    await client.query(
-      `UPDATE users SET confirmed_at = NOW(), confirmation_token = NULL WHERE id = $1 AND confirmed_at IS NULL`,
-      [userId]
-    )
-    console.info(`[CHATWOOT PROVISION] ✅ Usuário #${userId} confirmado via SQL`)
+    // Busca dados do usuário via Super Admin API
+    const res = await fetch(`${baseUrl}/auth/sign_in`, {
+      method: 'GET',
+      headers: {
+        'api_access_token': superAdminToken,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    // Usa o endpoint de atualização de usuário para confirmar
+    const confirmRes = await fetch(`${baseUrl}/api/v1/profile`, {
+      method: 'PUT',
+      headers: {
+        'api_access_token': superAdminToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ confirmed: true }),
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    // Tenta confirmar via endpoint específico do Chatwoot Super Admin
+    const superRes = await fetch(`${baseUrl}/super_admin/users/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'api_access_token': superAdminToken,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user: { confirmed_at: new Date().toISOString() } }),
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (superRes.ok) {
+      console.info(`[CHATWOOT PROVISION] ✅ Usuário #${userId} confirmado via Super Admin API`)
+    } else {
+      console.warn(`[CHATWOOT PROVISION] Confirmação via Super Admin retornou ${superRes.status} — usuário pode precisar confirmar email`)
+    }
   } catch (err) {
-    console.warn('[CHATWOOT PROVISION] Aviso: falha ao confirmar usuário via SQL:', err)
-  } finally {
-    await client.end()
+    console.warn('[CHATWOOT PROVISION] Aviso: falha ao confirmar usuário:', err)
   }
 }
 
@@ -55,7 +88,7 @@ export async function provisionChatwootForOrg(
   }
 
   try {
-    // 1. Cria account + usuário
+    // 1. Cria account + usuário via API pública do Chatwoot
     const res = await fetch(`${baseUrl}/api/v1/accounts`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,8 +120,8 @@ export async function provisionChatwootForOrg(
     const chatwootUserId    = data.id as number
     const accessToken       = data.access_token as string
 
-    // 2. Confirma o usuário via SQL para permitir sign_in imediato
-    await confirmChatwootUser(chatwootUserId)
+    // 2. Confirma o usuário via Super Admin Token (sem SQL direto)
+    await confirmChatwootUser(baseUrl, chatwootUserId)
 
     // 3. Salva no banco do CRM
     const publicUrl   = chatwootUrl ?? baseUrl
