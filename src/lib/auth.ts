@@ -1,10 +1,10 @@
 // src/lib/auth.ts
 // Configuração CENTRALIZADA do NextAuth.js
 // Single source of truth — usado por route.ts e getServerSession()
-// Inclui permissões granulares + dados do plano no JWT e session
+// Inclui permissões granulares + dados do plano no JWT e session  
 
 import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import CredentialsProvider from 'next-auth/providers/credentials'; 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -77,6 +77,27 @@ export const authOptions: NextAuthOptions = {
         token.plan = (user as any).plan;
         token.planStatus = (user as any).planStatus;
         token.trialEndsAt = (user as any).trialEndsAt;
+        token.lastChecked = Date.now();
+      }
+
+      // ─── Verificação periódica: usuário ainda existe? (a cada 5 min) ───
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      const lastChecked = token.lastChecked as number | undefined;
+      if (!lastChecked || Date.now() - lastChecked > FIVE_MINUTES) {
+        try {
+          const exists = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { id: true, deletedAt: true },
+          });
+          if (!exists || exists.deletedAt) {
+            token.banned = true;
+          } else {
+            token.banned = false;
+            token.lastChecked = Date.now();
+          }
+        } catch {
+          // Em caso de erro de DB, mantém sessão mas não atualiza lastChecked
+        }
       }
 
       // ─── Session update: recarregar permissões e dados do plano ───
