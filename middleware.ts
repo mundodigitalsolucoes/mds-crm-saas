@@ -22,7 +22,7 @@ export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ═══════════════════════════════════════
-  // 🔒 ROTAS DO SUPER ADMIN (/admin/*)
+  // 🔒 ROTAS DO SUPER ADMIN (/admin/* e /api/admin/*)
   // ═══════════════════════════════════════
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     // Libera a página de login e a API de auth do admin
@@ -57,6 +57,14 @@ export default async function middleware(req: NextRequest) {
 
   if (!token) {
     return NextResponse.redirect(new URL('/auth/login', req.url));
+  }
+
+  // ─── Usuário deletado ou banido — invalida sessão imediatamente ───
+  if (token.banned) {
+    const response = NextResponse.redirect(new URL('/auth/login', req.url));
+    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
+    return response;
   }
 
   // ═══════════════════════════════════════
@@ -119,7 +127,7 @@ export const config = {
     '/tarefas/:path*',
     '/tasks/:path*',
     '/agenda/:path*',
-    '/atendimento/:path*', // ← NOVO
+    '/atendimento/:path*',
     '/relatorios/:path*',
     '/reports/:path*',
     '/configuracoes/:path*',
