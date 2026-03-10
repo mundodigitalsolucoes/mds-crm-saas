@@ -85,11 +85,14 @@ export async function DELETE(
             chatwootAccountId?: number;
           };
 
-          if (cwData.chatwootUserId) {
-            await deleteChatwootUser(cwData.chatwootUserId);
+          if (cwData.chatwootUserId && cwData.chatwootAccountId) {
+            // Passa accountId para deletar como owner (cascade deleta a conta)
+            await deleteChatwootUser(cwData.chatwootUserId, cwData.chatwootAccountId);
           } else if (cwData.chatwootAccountId) {
             await deleteChatwootAccount(cwData.chatwootAccountId);
           }
+        } else if (user.organization?.chatwootAccountId) {
+          await deleteChatwootAccount(user.organization.chatwootAccountId);
         }
       } catch (cwErr) {
         console.warn('[ADMIN USERS] Aviso: falha ao deletar no Chatwoot:', cwErr);
