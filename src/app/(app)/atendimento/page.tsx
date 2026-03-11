@@ -1,7 +1,7 @@
 // src/app/(app)/atendimento/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MessageSquare, Settings, Loader2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -47,32 +47,68 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors"
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded transition-colors"
     >
-      {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'Copiado!' : 'Copiar'}
+      {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Copiado!' : 'Copiar senha'}
     </button>
   );
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   const { chatwootUrl, chatwootAccountId, email, password } = creds;
+  const iframeRef  = useRef<HTMLIFrameElement>(null);
+  const [showHint, setShowHint] = useState(true);
+
   const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      // Tenta ler a URL do iframe — se chegou no dashboard, some o banner
+      try {
+        const iframeSrc = iframe.contentWindow?.location?.href || '';
+        if (iframeSrc.includes('/dashboard') || iframeSrc.includes('/accounts/')) {
+          setShowHint(false);
+        }
+      } catch {
+        // Cross-origin: não consegue ler a URL, mas se o iframe carregou
+        // após o login o banner some mesmo assim num segundo load
+        setShowHint(false);
+      }
+    };
+
+    // Primeiro load = página de login, não some ainda
+    let loadCount = 0;
+    const handleLoadCount = () => {
+      loadCount++;
+      if (loadCount >= 2) {
+        // Segundo load em diante = após submit do login = logado
+        setShowHint(false);
+      }
+    };
+
+    iframe.addEventListener('load', handleLoadCount);
+    return () => iframe.removeEventListener('load', handleLoadCount);
+  }, []);
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-200 bg-amber-50 flex-shrink-0">
-        <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
-        <span className="text-xs text-amber-800">
-          Para acessar use: <strong>{email}</strong>
-        </span>
-        <span className="text-xs text-amber-700 flex items-center gap-1">
-          Senha: <strong className="font-mono">{password}</strong>
+      {/* Banner some após login */}
+      {showHint && (
+        <div className="flex items-center gap-3 px-6 py-2.5 border-b border-amber-200 bg-amber-50 flex-shrink-0">
+          <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
+          <span className="text-xs text-amber-800">
+            Faça login com: <strong>{email}</strong>
+          </span>
           <CopyButton text={password} />
-        </span>
-      </div>
+        </div>
+      )}
       <div className="flex-1 relative">
         <iframe
+          ref={iframeRef}
           src={iframeUrl}
           className="absolute inset-0 w-full h-full border-0"
           allow="microphone; camera; clipboard-write"
