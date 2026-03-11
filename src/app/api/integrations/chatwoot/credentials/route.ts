@@ -1,7 +1,4 @@
 // src/app/api/integrations/chatwoot/credentials/route.ts
-// Faz sign_in server-side no Chatwoot e retorna token fresco
-// Sem CORS — é servidor Next.js chamando servidor Chatwoot diretamente
-
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
@@ -13,7 +10,6 @@ export async function GET() {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  // Busca credenciais da org
   const account = await prisma.connectedAccount.findFirst({
     where: { organizationId: perm.session.user.organizationId, provider: 'chatwoot' },
   })
@@ -26,14 +22,13 @@ export async function GET() {
     return NextResponse.json({ error: 'no_credentials' }, { status: 404 })
   }
 
-  const chatwootUrl = process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '') 
-                   || data.chatwootUrl 
+  const chatwootUrl = process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '')
+                   || data.chatwootUrl
                    || 'https://app.mundodigitalsolucoes.com.br'
 
   const email    = data.ownerEmail
   const password = decryptToken(data.ownerPasswordEnc)
 
-  // Sign_in server-side — sem CORS, token sempre fresco
   try {
     const signInRes = await fetch(`${chatwootUrl}/auth/sign_in`, {
       method: 'POST',
@@ -48,10 +43,12 @@ export async function GET() {
     }
 
     const json = await signInRes.json()
-    const d    = json?.data
+    const d    = json?.data ?? {}
 
-    // Token pode vir no header ou no body
-    const accessToken = signInRes.headers.get('access-token') || d?.access_token
+    // Devise Token Auth retorna os 3 valores necessários nos headers
+    const accessToken = signInRes.headers.get('access-token') || signInRes.headers.get('Access-Token') || d.access_token || ''
+    const client      = signInRes.headers.get('client')       || signInRes.headers.get('Client')       || ''
+    const uid         = signInRes.headers.get('uid')          || signInRes.headers.get('Uid')          || email
 
     if (!accessToken) {
       return NextResponse.json({ error: 'no_token' }, { status: 502 })
@@ -59,8 +56,16 @@ export async function GET() {
 
     return NextResponse.json({
       accessToken,
+      client,
+      uid,
       chatwootUrl,
       chatwootAccountId: Number(data.chatwootAccountId),
+      user: {
+        id:         d.id,
+        name:       d.name,
+        email:      d.email,
+        avatar_url: d.avatar_url,
+      },
     })
   } catch (err) {
     console.error('[CHATWOOT CREDENTIALS] Erro:', err)
