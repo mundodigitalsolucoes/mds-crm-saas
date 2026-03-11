@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
+import { decryptToken } from '@/lib/integrations/crypto'
 
 export async function GET() {
   const perm = await checkPermission('integrations', 'view')
@@ -27,6 +28,7 @@ export async function GET() {
 
   return NextResponse.json({
     email:             data.ownerEmail,
+    password:          data.ownerPasswordEnc ? decryptToken(data.ownerPasswordEnc) : '',
     chatwootUrl,
     chatwootAccountId: Number(data.chatwootAccountId),
   })

@@ -2,13 +2,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MessageSquare, Settings, Loader2 } from 'lucide-react';
+import { MessageSquare, Settings, Loader2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
 
 interface ChatwootCredentials {
   email:             string;
+  password:          string;
   chatwootUrl:       string;
   chatwootAccountId: number;
 }
@@ -36,20 +37,38 @@ function NotConfigured() {
   );
 }
 
-function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const { chatwootUrl, chatwootAccountId, email } = creds;
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={copy}
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded transition-colors"
+    >
+      {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+      {copied ? 'Copiado!' : 'Copiar'}
+    </button>
+  );
+}
 
-  // Tenta carregar o dashboard — se não estiver logado, Chatwoot redireciona para login
-  // O email é passado como hint para facilitar o login manual
+function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
+  const { chatwootUrl, chatwootAccountId, email, password } = creds;
   const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
 
   return (
     <div className="flex flex-col h-full w-full">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
-        <div className="w-2 h-2 rounded-full bg-green-500" />
-        <h1 className="text-xl font-semibold text-gray-800">Atendimento</h1>
-        <span className="text-xs text-gray-400 ml-auto">
-          Use o email <strong>{email}</strong> e sua senha para acessar
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-gray-200 bg-amber-50 flex-shrink-0">
+        <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
+        <span className="text-xs text-amber-800">
+          Para acessar use: <strong>{email}</strong>
+        </span>
+        <span className="text-xs text-amber-700 flex items-center gap-1">
+          Senha: <strong className="font-mono">{password}</strong>
+          <CopyButton text={password} />
         </span>
       </div>
       <div className="flex-1 relative">
