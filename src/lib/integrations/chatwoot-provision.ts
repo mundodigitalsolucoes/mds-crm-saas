@@ -20,58 +20,29 @@ interface ProvisionResult {
 }
 
 /**
- * Confirma o usuário no Chatwoot usando o Super Admin token.
- * Usa CHATWOOT_SUPER_ADMIN_TOKEN (variável de ambiente já configurada).
- * Substitui a abordagem SQL direta que falha por ETIMEDOUT em redes Docker isoladas.
+ * Confirma o usuário via endpoint customizado no SSO controller do Chatwoot.
+ * Usa CHATWOOT_SUPER_ADMIN_TOKEN como segredo — sem SQL direto, sem ETIMEDOUT.
  */
-async function confirmChatwootUser(baseUrl: string, userId: number): Promise<void> {
-  const superAdminToken = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
-
-  if (!superAdminToken) {
-    console.warn('[CHATWOOT PROVISION] CHATWOOT_SUPER_ADMIN_TOKEN não configurado — usuário não confirmado')
+async function confirmChatwootUser(baseUrl: string, email: string): Promise<void> {
+  const secret = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
+  if (!secret) {
+    console.warn('[CHATWOOT PROVISION] CHATWOOT_SUPER_ADMIN_TOKEN não configurado')
     return
   }
 
   try {
-    // Busca dados do usuário via Super Admin API
-    const res = await fetch(`${baseUrl}/auth/sign_in`, {
-      method: 'GET',
-      headers: {
-        'api_access_token': superAdminToken,
-        'Content-Type': 'application/json',
-      },
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    // Usa o endpoint de atualização de usuário para confirmar
-    const confirmRes = await fetch(`${baseUrl}/api/v1/profile`, {
-      method: 'PUT',
-      headers: {
-        'api_access_token': superAdminToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ confirmed: true }),
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    // Tenta confirmar via endpoint específico do Chatwoot Super Admin
-    const superRes = await fetch(`${baseUrl}/super_admin/users/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        'api_access_token': superAdminToken,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ user: { confirmed_at: new Date().toISOString() } }),
-      signal: AbortSignal.timeout(10_000),
-    })
-
-    if (superRes.ok) {
-      console.info(`[CHATWOOT PROVISION] ✅ Usuário #${userId} confirmado via Super Admin API`)
+    const res = await fetch(
+      `${baseUrl}/sso/confirm-user?email=${encodeURIComponent(email)}&secret=${encodeURIComponent(secret)}`,
+      { signal: AbortSignal.timeout(10_000) }
+    )
+    if (res.ok) {
+      const json = await res.json()
+      console.info(`[CHATWOOT PROVISION] ✅ Usuário ${email} confirmado — ID #${json.user_id}`)
     } else {
-      console.warn(`[CHATWOOT PROVISION] Confirmação via Super Admin retornou ${superRes.status} — usuário pode precisar confirmar email`)
+      console.warn(`[CHATWOOT PROVISION] Confirmação retornou ${res.status}`)
     }
   } catch (err) {
-    console.warn('[CHATWOOT PROVISION] Aviso: falha ao confirmar usuário:', err)
+    console.warn('[CHATWOOT PROVISION] Falha ao confirmar usuário:', err)
   }
 }
 
@@ -83,7 +54,7 @@ export async function provisionChatwootForOrg(
   const baseUrl     = internalUrl ?? chatwootUrl
 
   if (!baseUrl) {
-    console.info('[CHATWOOT PROVISION] URL não configurada — provisionamento manual necessário')
+    console.info('[CHATWOOT PROVISION] URL não configurada')
     return { success: false, error: 'super_admin_not_configured' }
   }
 
@@ -117,11 +88,11 @@ export async function provisionChatwootForOrg(
     }
 
     const chatwootAccountId = data.account_id as number
-    const chatwootUserId    = data.id as number
+    const chatwootUserId    = data.id          as number
     const accessToken       = data.access_token as string
 
-    // 2. Confirma o usuário via Super Admin Token (sem SQL direto)
-    await confirmChatwootUser(baseUrl, chatwootUserId)
+    // 2. Confirma o usuário via endpoint SSO customizado
+    await confirmChatwootUser(baseUrl, input.ownerEmail)
 
     // 3. Salva no banco do CRM
     const publicUrl   = chatwootUrl ?? baseUrl
@@ -171,7 +142,7 @@ export async function provisionChatwootForOrg(
       }),
     ])
 
-    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} criada`)
+    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId}`)
 
     return { success: true, chatwootAccountId, chatwootUserId }
   } catch (err) {
