@@ -9,8 +9,16 @@ import axios from 'axios';
 
 interface ChatwootCredentials {
   accessToken:       string;
+  client:            string;
+  uid:               string;
   chatwootUrl:       string;
   chatwootAccountId: number;
+  user: {
+    id:         number;
+    name:       string;
+    email:      string;
+    avatar_url: string;
+  };
 }
 
 function NotConfigured() {
@@ -20,9 +28,7 @@ function NotConfigured() {
         <MessageSquare className="w-8 h-8 text-gray-500" />
       </div>
       <div className="text-center">
-        <h2 className="text-lg font-semibold text-white mb-1">
-          Atendimento não configurado
-        </h2>
+        <h2 className="text-lg font-semibold text-white mb-1">Atendimento não configurado</h2>
         <p className="text-sm text-gray-400 max-w-sm">
           Configure a integração com o Chatwoot para começar a atender seus clientes diretamente pelo CRM.
         </p>
@@ -39,8 +45,19 @@ function NotConfigured() {
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const { chatwootUrl, chatwootAccountId, accessToken } = creds;
-  const ssoUrl = `${chatwootUrl}/sso/mds-sso?access_token=${encodeURIComponent(accessToken)}&account_id=${chatwootAccountId}`;
+  const { chatwootUrl, chatwootAccountId, accessToken, client, uid, user } = creds;
+
+  const params = new URLSearchParams({
+    access_token: accessToken,
+    client:       client,
+    uid:          uid,
+    account_id:   String(chatwootAccountId),
+    user_id:      String(user?.id || ''),
+    user_name:    user?.name || '',
+    user_email:   user?.email || uid,
+  });
+
+  const ssoUrl = `${chatwootUrl}/sso/mds-sso?${params.toString()}`;
 
   return (
     <div className="flex flex-col h-full w-full">
