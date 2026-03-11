@@ -8,17 +8,9 @@ import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
 
 interface ChatwootCredentials {
-  accessToken:       string;
-  client:            string;
-  uid:               string;
+  email:             string;
   chatwootUrl:       string;
   chatwootAccountId: number;
-  user: {
-    id:         number;
-    name:       string;
-    email:      string;
-    avatar_url: string;
-  };
 }
 
 function NotConfigured() {
@@ -45,29 +37,24 @@ function NotConfigured() {
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const { chatwootUrl, chatwootAccountId, accessToken, client, uid, user } = creds;
+  const { chatwootUrl, chatwootAccountId, email } = creds;
 
-  const params = new URLSearchParams({
-    access_token: accessToken,
-    client:       client,
-    uid:          uid,
-    account_id:   String(chatwootAccountId),
-    user_id:      String(user?.id || ''),
-    user_name:    user?.name || '',
-    user_email:   user?.email || uid,
-  });
-
-  const ssoUrl = `${chatwootUrl}/sso/mds-sso?${params.toString()}`;
+  // Tenta carregar o dashboard — se não estiver logado, Chatwoot redireciona para login
+  // O email é passado como hint para facilitar o login manual
+  const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
 
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200 bg-white flex-shrink-0">
         <div className="w-2 h-2 rounded-full bg-green-500" />
         <h1 className="text-xl font-semibold text-gray-800">Atendimento</h1>
+        <span className="text-xs text-gray-400 ml-auto">
+          Use o email <strong>{email}</strong> e sua senha para acessar
+        </span>
       </div>
       <div className="flex-1 relative">
         <iframe
-          src={ssoUrl}
+          src={iframeUrl}
           className="absolute inset-0 w-full h-full border-0"
           allow="microphone; camera; clipboard-write"
           title="Atendimento"
