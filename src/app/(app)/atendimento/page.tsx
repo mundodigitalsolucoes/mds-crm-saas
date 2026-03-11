@@ -1,7 +1,7 @@
 // src/app/(app)/atendimento/page.tsx
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquare, Settings, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -39,35 +39,7 @@ function NotConfigured() {
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const { chatwootUrl, chatwootAccountId, accessToken } = creds;
-
-  // Monta URL do dashboard com access_token direto — sem depender do SSO controller Rails
-  const dashboardUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
-
-  useEffect(() => {
-    // Injeta o token no localStorage do iframe via postMessage depois que carrega
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    const inject = () => {
-      try {
-        iframe.contentWindow?.postMessage(
-          {
-            type: 'mds-sso-inject',
-            accessToken,
-            accountId: chatwootAccountId,
-          },
-          chatwootUrl
-        );
-      } catch {}
-    };
-
-    iframe.addEventListener('load', inject);
-    return () => iframe.removeEventListener('load', inject);
-  }, [chatwootUrl, chatwootAccountId, accessToken]);
-
-  // URL do SSO via página intermediária que injeta o token antes de redirecionar
   const ssoUrl = `${chatwootUrl}/sso/mds-sso?access_token=${encodeURIComponent(accessToken)}&account_id=${chatwootAccountId}`;
 
   return (
@@ -78,7 +50,6 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
       </div>
       <div className="flex-1 relative">
         <iframe
-          ref={iframeRef}
           src={ssoUrl}
           className="absolute inset-0 w-full h-full border-0"
           allow="microphone; camera; clipboard-write"
