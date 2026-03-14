@@ -86,20 +86,26 @@ async function findExistingInbox(
 // ─── Cria inbox WhatsApp no Chatwoot ─────────────────────────────────────────
 
 async function createChatwootInbox(
-  baseUrl:     string,
-  accountId:   number,
-  apiToken:    string,
-  inboxName:   string,
-  phoneNumber: string | null
+  baseUrl:      string,
+  accountId:    number,
+  apiToken:     string,
+  inboxName:    string,
+  phoneNumber:  string | null,
+  instanceName: string,
+  evoUrl:       string
 ): Promise<number | null> {
   try {
+    const webhookUrl = `${evoUrl}/chatwoot/webhook/${instanceName}`
+
     const body: Record<string, unknown> = {
       name:    inboxName,
       channel: {
         type:        'api',
-        webhook_url: '',
+        webhook_url: webhookUrl,
       },
     }
+
+    console.log(`[ChatwootEvo] Criando inbox "${inboxName}" com webhook: ${webhookUrl}`)
 
     const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
       method:  'POST',
@@ -130,7 +136,9 @@ async function createChatwootInbox(
 export async function ensureChatwootInbox(
   organizationId: string,
   orgSlug:        string,
-  phoneNumber:    string | null
+  phoneNumber:    string | null,
+  instanceName:   string,
+  evoUrl:         string
 ): Promise<ChatwootInboxResult | null> {
   const creds = await getChatwootCreds(organizationId)
   if (!creds) {
@@ -153,13 +161,15 @@ export async function ensureChatwootInbox(
     return { inboxId: existingId, inboxName }
   }
 
-  // 2. Cria novo inbox
+  // 2. Cria novo inbox com webhook_url correto
   const newId = await createChatwootInbox(
     creds.baseUrl,
     creds.accountId,
     creds.apiToken,
     inboxName,
-    phoneNumber
+    phoneNumber,
+    instanceName,
+    evoUrl
   )
 
   if (!newId) {
@@ -181,7 +191,7 @@ export async function setEvolutionWebhook(
   chatwootInboxId:   number,
   _unusedInboxId?:   number,
   organizationId?:   string,
-  orgSlug?:          string   // ← adicionado para garantir nameInbox correto
+  orgSlug?:          string
 ): Promise<EvoWebhookResult> {
   let publicUrl: string | undefined
   let apiToken:  string | undefined
@@ -212,8 +222,7 @@ export async function setEvolutionWebhook(
     console.warn('[ChatwootEvo] Usando CHATWOOT_API_KEY do env como fallback — prefira passar organizationId')
   }
 
-  // Usa orgSlug se disponível para garantir mesmo nome do inbox criado por ensureChatwootInbox
-  // Se não disponível, remove prefixo "org-" do instanceName como fallback
+  // Usa orgSlug para garantir mesmo nome do inbox criado por ensureChatwootInbox
   const inboxName = orgSlug
     ? `WhatsApp - ${orgSlug}`
     : `WhatsApp - ${instanceName.replace(/^org-/, '')}`
@@ -275,8 +284,14 @@ export async function setupChatwootEvolution(params: {
 }> {
   const { organizationId, orgSlug, instanceName, evoUrl, evoKey, phoneNumber } = params
 
-  // 1. Garante inbox no Chatwoot (busca ou cria)
-  const inboxResult = await ensureChatwootInbox(organizationId, orgSlug, phoneNumber)
+  // 1. Garante inbox no Chatwoot (busca ou cria) com webhook_url correto
+  const inboxResult = await ensureChatwootInbox(
+    organizationId,
+    orgSlug,
+    phoneNumber,
+    instanceName,
+    evoUrl
+  )
 
   if (!inboxResult) {
     return { success: true, chatwootInboxId: null, skipped: true }
@@ -297,9 +312,9 @@ export async function setupChatwootEvolution(params: {
     instanceName,
     creds.accountId,
     inboxResult.inboxId,
-    undefined,        // _unusedInboxId
-    organizationId,   // ← token e URL pública do banco
-    orgSlug           // ← garante nameInbox correto (sem prefixo "org-")
+    undefined,
+    organizationId,
+    orgSlug
   )
 
   if (!webhookResult.success) {
