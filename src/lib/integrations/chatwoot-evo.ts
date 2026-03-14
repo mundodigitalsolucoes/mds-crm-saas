@@ -230,7 +230,7 @@ export async function setEvolutionWebhook(
     importContacts:          true,
     importMessages:          false,
     daysLimitImportMessages: 0,
-    autoCreate:              true,
+    autoCreate:              false,
     nameInbox:               inboxName,
   }
 
