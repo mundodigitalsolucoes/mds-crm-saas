@@ -6,6 +6,7 @@ import { verifyAdminToken } from '@/lib/admin-auth';
 import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
 import { deleteChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
+import { disconnectInstance } from '@/lib/integrations/evolutionClient';
 
 /**
  * GET /api/admin/organizations/:id — Detalhes de uma organização com usage
@@ -165,7 +166,7 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/admin/organizations/:id — Remove uma organização + limpeza no Chatwoot
+ * DELETE /api/admin/organizations/:id — Remove uma organização + limpeza no Chatwoot + Evolution
  */
 export async function DELETE(
   req: NextRequest,
@@ -210,8 +211,24 @@ export async function DELETE(
         await deleteChatwootAccount(existing.chatwootAccountId);
       }
     } catch (cwErr) {
-      // Loga mas não bloqueia — o delete do CRM deve continuar
       console.warn('[ADMIN ORGS] Aviso: falha ao deletar no Chatwoot:', cwErr);
+    }
+
+    // 2b. Tenta deletar instância na Evolution (logout + delete)
+    try {
+      const waAccount = await prisma.connectedAccount.findUnique({
+        where: { provider_organizationId: { provider: 'whatsapp', organizationId: id } },
+        select: { data: true, isActive: true },
+      });
+      if (waAccount?.data) {
+        const waData = JSON.parse(waAccount.data) as { instanceName?: string };
+        if (waData.instanceName) {
+          await disconnectInstance(waData.instanceName);
+          console.log('[ADMIN ORGS] Evolution instance deletada:', waData.instanceName);
+        }
+      }
+    } catch (evoErr) {
+      console.warn('[ADMIN ORGS] Aviso: falha ao deletar na Evolution:', evoErr);
     }
 
     // 3. Deleta organização do CRM (cascade deleta users, leads, etc.)
