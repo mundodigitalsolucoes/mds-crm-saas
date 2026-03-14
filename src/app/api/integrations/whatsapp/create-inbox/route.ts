@@ -88,7 +88,7 @@ export async function POST() {
   const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
   const cwBaseUrl   = internalUrl ?? chatwootUrl
 
-  const inboxName = `WhatsApp - ${instanceName}`
+  const inboxName = `WhatsApp - ${instanceName.replace(/^org-/, '')}`
 
   // ── 3. Chama Evolution API — configura integração com Chatwoot ─────────────
   // Nota: usa a URL PÚBLICA do Chatwoot (chatwootUrl) porque a Evolution
@@ -113,7 +113,7 @@ export async function POST() {
         importContacts:          false,
         importMessages:          false,
         daysLimitImportMessages: 0,
-        autoCreate:              true,
+        autoCreate:              false,
       }),
       signal: AbortSignal.timeout(15_000),
     })
