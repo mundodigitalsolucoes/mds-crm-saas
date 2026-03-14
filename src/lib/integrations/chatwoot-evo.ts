@@ -27,8 +27,8 @@ interface EvoWebhookResult {
 // ─── Busca credenciais Chatwoot da organização ────────────────────────────────
 
 async function getChatwootCreds(organizationId: string): Promise<{
-  baseUrl:   string   // URL interna Docker (server→server)
-  publicUrl: string   // URL pública (para Evolution chamar de fora)
+  baseUrl:   string
+  publicUrl: string
   accountId: number
   apiToken:  string
 } | null> {
@@ -49,7 +49,6 @@ async function getChatwootCreds(organizationId: string): Promise<{
     const apiToken  = decryptToken(account.accessTokenEnc)
     const publicUrl = data.chatwootUrl.replace(/\/$/, '')
 
-    // Prefere URL interna para chamadas server→server (evita hairpin NAT Docker)
     const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
     const baseUrl     = internalUrl ?? publicUrl
 
@@ -95,12 +94,12 @@ async function createChatwootInbox(
 ): Promise<number | null> {
   try {
     const body: Record<string, unknown> = {
-  name:    inboxName,
-  channel: {
-    type:        'api',
-    webhook_url: '',
-  },
-}
+      name:    inboxName,
+      channel: {
+        type:        'api',
+        webhook_url: '',
+      },
+    }
 
     const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
       method:  'POST',
@@ -173,8 +172,6 @@ export async function ensureChatwootInbox(
 }
 
 // ─── Configura webhook Evolution → Chatwoot ──────────────────────────────────
-// Assinatura mantida igual para não quebrar chamadores externos (setup-inbox).
-// Internamente, token e URL pública SEMPRE vêm do banco via organizationId.
 
 export async function setEvolutionWebhook(
   evoUrl:            string,
@@ -182,12 +179,10 @@ export async function setEvolutionWebhook(
   instanceName:      string,
   chatwootAccountId: number,
   chatwootInboxId:   number,
-  // Parâmetros opcionais para compatibilidade — se não passados, busca do banco
   _unusedInboxId?:   number,
-  organizationId?:   string
+  organizationId?:   string,
+  orgSlug?:          string   // ← adicionado para garantir nameInbox correto
 ): Promise<EvoWebhookResult> {
-  // Token e URL pública sempre do banco — nunca de env
-  // Se organizationId fornecido, busca credenciais frescas
   let publicUrl: string | undefined
   let apiToken:  string | undefined
 
@@ -199,7 +194,6 @@ export async function setEvolutionWebhook(
     }
   }
 
-  // Fallback: tenta CHATWOOT_API_URL do env apenas se não tiver do banco
   if (!publicUrl) {
     publicUrl = process.env.CHATWOOT_API_URL
       ?.replace(/\/api\/v1$/, '')
@@ -211,13 +205,18 @@ export async function setEvolutionWebhook(
   }
 
   if (!apiToken) {
-    // Último recurso: env (legado) — loga aviso
     apiToken = process.env.CHATWOOT_API_KEY ?? ''
     if (!apiToken) {
       return { success: false, error: 'Token Chatwoot não disponível' }
     }
     console.warn('[ChatwootEvo] Usando CHATWOOT_API_KEY do env como fallback — prefira passar organizationId')
   }
+
+  // Usa orgSlug se disponível para garantir mesmo nome do inbox criado por ensureChatwootInbox
+  // Se não disponível, remove prefixo "org-" do instanceName como fallback
+  const inboxName = orgSlug
+    ? `WhatsApp - ${orgSlug}`
+    : `WhatsApp - ${instanceName.replace(/^org-/, '')}`
 
   const payload = {
     enabled:                 true,
@@ -232,7 +231,7 @@ export async function setEvolutionWebhook(
     importMessages:          false,
     daysLimitImportMessages: 0,
     autoCreate:              true,
-    nameInbox:               `WhatsApp - ${instanceName}`,
+    nameInbox:               inboxName,
   }
 
   try {
@@ -272,7 +271,7 @@ export async function setupChatwootEvolution(params: {
 }): Promise<{
   success:         boolean
   chatwootInboxId: number | null
-  skipped:         boolean   // true = Chatwoot não configurado (sem erro)
+  skipped:         boolean
 }> {
   const { organizationId, orgSlug, instanceName, evoUrl, evoKey, phoneNumber } = params
 
@@ -280,7 +279,6 @@ export async function setupChatwootEvolution(params: {
   const inboxResult = await ensureChatwootInbox(organizationId, orgSlug, phoneNumber)
 
   if (!inboxResult) {
-    // Chatwoot não configurado — não é erro, apenas pula
     return { success: true, chatwootInboxId: null, skipped: true }
   }
 
@@ -293,7 +291,6 @@ export async function setupChatwootEvolution(params: {
   }
 
   // 3. Configura webhook Evolution → Chatwoot
-  // Passa organizationId para que setEvolutionWebhook use token e URL do banco
   const webhookResult = await setEvolutionWebhook(
     evoUrl,
     evoKey,
@@ -301,7 +298,8 @@ export async function setupChatwootEvolution(params: {
     creds.accountId,
     inboxResult.inboxId,
     undefined,        // _unusedInboxId
-    organizationId    // ← garante token e URL pública do banco
+    organizationId,   // ← token e URL pública do banco
+    orgSlug           // ← garante nameInbox correto (sem prefixo "org-")
   )
 
   if (!webhookResult.success) {
