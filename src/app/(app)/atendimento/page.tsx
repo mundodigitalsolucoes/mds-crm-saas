@@ -58,8 +58,6 @@ function CopyButton({ text }: { text: string }) {
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   const { chatwootUrl, chatwootAccountId, email, password } = creds;
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  // Começa mostrando o banner — some só após detectar login bem sucedido
   const [showHint, setShowHint] = useState(true);
 
   const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
@@ -70,17 +68,13 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
 
     const handleLoad = () => {
       try {
-        // Tenta ler a URL do iframe (mesmo origin)
         const href = iframe.contentWindow?.location?.href ?? '';
-        if (href.includes('/dashboard') || href.includes('/accounts/')) {
-          // Está no dashboard — logado, some o banner
+        if (href.includes('/login') || href === '') {
+          setShowHint(true);
+        } else {
           setShowHint(false);
         }
-        // Se ainda está em /login ou /app/login, mantém o banner
-      } catch {
-        // Cross-origin block — só acontece quando o iframe navegou
-        // para o dashboard (domínio diferente bloqueia leitura da URL)
-        // Isso significa que o login foi bem sucedido
+      } catch (_e) {
         setShowHint(false);
       }
     };
@@ -91,7 +85,6 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Banner com credenciais — aparece enquanto deslogado, some após login */}
       {showHint && (
         <div className="flex items-center gap-3 px-6 py-2.5 border-b border-amber-200 bg-amber-50 flex-shrink-0">
           <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
