@@ -96,7 +96,6 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Banner some após login */}
       {showHint && (
         <div className="flex items-center gap-3 px-6 py-2.5 border-b border-amber-200 bg-amber-50 flex-shrink-0">
           <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
@@ -106,7 +105,7 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
           <CopyButton text={password} />
         </div>
       )}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative overflow-hidden min-h-0">
         <iframe
           ref={iframeRef}
           src={iframeUrl}
