@@ -57,7 +57,7 @@ function CopyButton({ text }: { text: string }) {
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   const { chatwootUrl, chatwootAccountId, email, password } = creds;
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef  = useRef<HTMLIFrameElement>(null);
   const [showHint, setShowHint] = useState(true);
 
   const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
@@ -67,24 +67,36 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
     if (!iframe) return;
 
     const handleLoad = () => {
+      // Tenta ler a URL do iframe — se chegou no dashboard, some o banner
       try {
-        const href = iframe.contentWindow?.location?.href ?? '';
-        if (href.includes('/login') || href === '') {
-          setShowHint(true);
-        } else {
+        const iframeSrc = iframe.contentWindow?.location?.href || '';
+        if (iframeSrc.includes('/dashboard') || iframeSrc.includes('/accounts/')) {
           setShowHint(false);
         }
-      } catch (_e) {
+      } catch {
+        // Cross-origin: não consegue ler a URL, mas se o iframe carregou
+        // após o login o banner some mesmo assim num segundo load
         setShowHint(false);
       }
     };
 
-    iframe.addEventListener('load', handleLoad);
-    return () => iframe.removeEventListener('load', handleLoad);
+    // Primeiro load = página de login, não some ainda
+    let loadCount = 0;
+    const handleLoadCount = () => {
+      loadCount++;
+      if (loadCount >= 2) {
+        // Segundo load em diante = após submit do login = logado
+        setShowHint(false);
+      }
+    };
+
+    iframe.addEventListener('load', handleLoadCount);
+    return () => iframe.removeEventListener('load', handleLoadCount);
   }, []);
 
   return (
     <div className="flex flex-col h-full w-full">
+      {/* Banner some após login */}
       {showHint && (
         <div className="flex items-center gap-3 px-6 py-2.5 border-b border-amber-200 bg-amber-50 flex-shrink-0">
           <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
