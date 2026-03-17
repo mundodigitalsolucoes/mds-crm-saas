@@ -57,47 +57,51 @@ function CopyButton({ text }: { text: string }) {
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   const { chatwootUrl, chatwootAccountId, email, password } = creds;
-  const iframeRef  = useRef<HTMLIFrameElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [showHint, setShowHint] = useState(true);
 
   const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
+
+  const SIDEBAR_WIDTH = 264; // largura do sidebar do CRM
+  const BANNER_HEIGHT = 40;  // altura do banner amarelo
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     const handleLoad = () => {
-      // Tenta ler a URL do iframe — se chegou no dashboard, some o banner
       try {
-        const iframeSrc = iframe.contentWindow?.location?.href || '';
-        if (iframeSrc.includes('/dashboard') || iframeSrc.includes('/accounts/')) {
+        const href = iframe.contentWindow?.location?.href ?? '';
+        if (href.includes('/login') || href === '') {
+          setShowHint(true);
+        } else {
           setShowHint(false);
         }
-      } catch {
-        // Cross-origin: não consegue ler a URL, mas se o iframe carregou
-        // após o login o banner some mesmo assim num segundo load
+      } catch (_e) {
         setShowHint(false);
       }
     };
 
-    // Primeiro load = página de login, não some ainda
-    let loadCount = 0;
-    const handleLoadCount = () => {
-      loadCount++;
-      if (loadCount >= 2) {
-        // Segundo load em diante = após submit do login = logado
-        setShowHint(false);
-      }
-    };
-
-    iframe.addEventListener('load', handleLoadCount);
-    return () => iframe.removeEventListener('load', handleLoadCount);
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
   }, []);
 
+  const topOffset = showHint ? BANNER_HEIGHT : 0;
+
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="w-full h-full relative">
       {showHint && (
-        <div className="flex items-center gap-3 px-6 py-2.5 border-b border-amber-200 bg-amber-50 flex-shrink-0">
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: SIDEBAR_WIDTH,
+            right: 0,
+            height: BANNER_HEIGHT,
+            zIndex: 50,
+          }}
+          className="flex items-center gap-3 px-6 border-b border-amber-200 bg-amber-50"
+        >
           <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
           <span className="text-xs text-amber-800">
             Faça login com: <strong>{email}</strong>
@@ -105,15 +109,23 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
           <CopyButton text={password} />
         </div>
       )}
-      <div className="flex-1 relative overflow-hidden min-h-0">
-        <iframe
-          ref={iframeRef}
-          src={iframeUrl}
-          className="absolute inset-0 w-full h-full border-0"
-          allow="microphone; camera; clipboard-write"
-          title="Atendimento"
-        />
-      </div>
+      <iframe
+        ref={iframeRef}
+        src={iframeUrl}
+        style={{
+          position: 'fixed',
+          top: topOffset,
+          left: SIDEBAR_WIDTH,
+          right: 0,
+          bottom: 0,
+          width: `calc(100vw - ${SIDEBAR_WIDTH}px)`,
+          height: `calc(100vh - ${topOffset}px)`,
+          border: 'none',
+          zIndex: 40,
+        }}
+        allow="microphone; camera; clipboard-write"
+        title="Atendimento"
+      />
     </div>
   );
 }
