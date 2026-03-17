@@ -70,17 +70,17 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
     if (!iframe) return;
 
     const handleLoad = () => {
-      try {
-        const href = iframe.contentWindow?.location?.href ?? '';
-        if (href.includes('/login') || href === '') {
-          setShowHint(true);
-        } else {
-          setShowHint(false);
-        }
-      } catch (_e) {
-        setShowHint(false);
-      }
-    };
+  try {
+    const href = iframe.contentWindow?.location?.href ?? '';
+    // Conseguiu ler a URL (mesmo origin) — verifica se saiu do login
+    if (!href.includes('/login') && href !== '') {
+      setShowHint(false);
+    }
+  } catch (_e) {
+    // Cross-origin block — NÃO some o banner automaticamente
+    // O usuário precisa fazer login manualmente
+  }
+};
 
     iframe.addEventListener('load', handleLoad);
     return () => iframe.removeEventListener('load', handleLoad);
