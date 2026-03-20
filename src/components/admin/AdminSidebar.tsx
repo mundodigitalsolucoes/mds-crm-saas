@@ -8,16 +8,12 @@ import {
   Building2,
   CreditCard,
   Users,
+  Tag,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Loader2,
 } from 'lucide-react';
-
-/**
- * Sidebar do painel SuperAdmin
- * Tema: azul com preto
- */
 
 interface NavItem {
   label: string;
@@ -26,26 +22,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: <LayoutDashboard className="w-5 h-5" />,
-  },
-  {
-    label: 'Organizações',
-    href: '/admin/organizations',
-    icon: <Building2 className="w-5 h-5" />,
-  },
-  {
-    label: 'Planos',
-    href: '/admin/plans',
-    icon: <CreditCard className="w-5 h-5" />,
-  },
-  {
-    label: 'Usuários',
-    href: '/admin/users',
-    icon: <Users className="w-5 h-5" />,
-  },
+  { label: 'Dashboard',     href: '/admin/dashboard',      icon: <LayoutDashboard className="w-5 h-5" /> },
+  { label: 'Organizações',  href: '/admin/organizations',   icon: <Building2 className="w-5 h-5" />      },
+  { label: 'Planos',        href: '/admin/plans',           icon: <CreditCard className="w-5 h-5" />     },
+  { label: 'Cupons',        href: '/admin/coupons',         icon: <Tag className="w-5 h-5" />            },
+  { label: 'Usuários',      href: '/admin/users',           icon: <Users className="w-5 h-5" />          },
 ];
 
 export default function AdminSidebar() {
@@ -54,10 +35,8 @@ export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Verifica se o item está ativo
   const isActive = (href: string) => pathname.startsWith(href);
 
-  // Logout do SuperAdmin
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
@@ -74,7 +53,6 @@ export default function AdminSidebar() {
         collapsed ? 'w-[72px]' : 'w-64'
       }`}
     >
-      {/* Header da Sidebar */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-blue-900/30">
         <div className="w-9 h-9 bg-blue-600/20 rounded-lg flex items-center justify-center border border-blue-500/30 flex-shrink-0">
           <Shield className="w-5 h-5 text-blue-400" />
@@ -87,7 +65,6 @@ export default function AdminSidebar() {
         )}
       </div>
 
-      {/* Navegação */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const active = isActive(item.href);
@@ -109,25 +86,18 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* Footer: Collapse + Logout */}
       <div className="p-3 border-t border-blue-900/30 space-y-1">
-        {/* Botão Collapse */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:text-white hover:bg-gray-800/50 transition-all"
           title={collapsed ? 'Expandir' : 'Recolher'}
         >
           <span className="flex-shrink-0">
-            {collapsed ? (
-              <ChevronRight className="w-5 h-5" />
-            ) : (
-              <ChevronLeft className="w-5 h-5" />
-            )}
+            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </span>
           {!collapsed && <span>Recolher</span>}
         </button>
 
-        {/* Botão Logout */}
         <button
           onClick={handleLogout}
           disabled={loggingOut}
@@ -135,11 +105,7 @@ export default function AdminSidebar() {
           title={collapsed ? 'Sair' : undefined}
         >
           <span className="flex-shrink-0">
-            {loggingOut ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <LogOut className="w-5 h-5" />
-            )}
+            {loggingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
           </span>
           {!collapsed && <span>{loggingOut ? 'Saindo...' : 'Sair'}</span>}
         </button>
