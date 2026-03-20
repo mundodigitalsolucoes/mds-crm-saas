@@ -1,3 +1,4 @@
+// src/app/auth/login/page.tsx
 'use client';
 
 import { signIn } from 'next-auth/react';
@@ -48,7 +49,7 @@ function LoginForm() {
           <img
             src="/images/logo-mds.svg"
             alt="MDS Logo"
-            className="h-16 w-auto"
+            className="h-32 w-auto"
           />
         </div>
 
@@ -66,11 +67,12 @@ function LoginForm() {
         )}
 
         <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-xl font-bold mb-4 text-gray-800">Entrar</h1>
+          <h1 className="text-xl font-bold mb-4" style={{ color: '#2f3453' }}>Entrar</h1>
 
           <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
-            className="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+            className="w-full border rounded px-3 py-2 mb-3 focus:outline-none focus:ring-2"
+            style={{ '--tw-ring-color': '#2f3453' } as React.CSSProperties}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
@@ -80,7 +82,7 @@ function LoginForm() {
           <label className="block text-sm mb-1 text-gray-700">Senha</label>
           <div className="relative mb-2">
             <input
-              className="w-full border rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="w-full border rounded px-3 py-2 pr-10 focus:outline-none focus:ring-2"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type={showPassword ? 'text' : 'password'}
@@ -96,7 +98,7 @@ function LoginForm() {
           </div>
 
           <div className="flex justify-end mb-3">
-            <Link href="/auth/forgot-password" className="text-sm text-indigo-600 hover:underline">
+            <Link href="/auth/forgot-password" className="text-sm hover:underline" style={{ color: '#2f3453' }}>
               Esqueceu sua senha?
             </Link>
           </div>
@@ -105,7 +107,8 @@ function LoginForm() {
 
           <button
             disabled={loading}
-            className="w-full bg-indigo-600 text-white rounded px-3 py-2 disabled:opacity-60 hover:bg-indigo-700 transition-colors font-medium"
+            className="w-full text-white rounded px-3 py-2 font-medium transition-opacity disabled:opacity-60"
+            style={{ backgroundColor: '#2f3453' }}
             type="submit"
           >
             {loading ? 'Entrando...' : 'Entrar'}
@@ -114,7 +117,7 @@ function LoginForm() {
 
         <p className="text-center text-sm mt-4 text-gray-600">
           Não tem uma conta?{' '}
-          <Link href="/auth/signup" className="text-indigo-600 hover:underline font-medium">
+          <Link href="/auth/signup" className="font-medium hover:underline" style={{ color: '#2f3453' }}>
             Cadastre-se grátis
           </Link>
         </p>
@@ -125,7 +128,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#2f3453' }} />
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   );
