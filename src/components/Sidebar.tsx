@@ -38,9 +38,17 @@ const UsageBanner = dynamic(() => import('@/components/UsageBanner'), {
 });
 import type { PermissionModule } from '@/types/permissions';
 
-// ============================================
-// TIPOS
-// ============================================
+// Paleta da marca
+const BRAND = {
+  bg:         '#2f3453',
+  bgDark:     '#252a43',
+  bgDarker:   '#1e2236',
+  active:     '#3d4466',
+  hover:      '#363c5e',
+  border:     'rgba(255,255,255,0.08)',
+  textMuted:  'rgba(255,255,255,0.5)',
+  textLabel:  'rgba(255,255,255,0.35)',
+};
 
 interface MenuItem {
   name:      string;
@@ -56,10 +64,6 @@ interface OrgBranding {
   primaryColor:   string;
   secondaryColor: string;
 }
-
-// ============================================
-// MENU ITEMS
-// ============================================
 
 const menuItems: MenuItem[] = [
   { name: 'Dashboard',   icon: LayoutDashboard, path: '/dashboard'                      },
@@ -82,37 +86,27 @@ const settingsItems: MenuItem[] = [
   { name: 'Minha Conta', icon: UserCog,    path: '/settings/account'                              },
 ];
 
-// ============================================
-// SKELETON
-// ============================================
-
 function SidebarSkeleton() {
   return (
     <div className="animate-pulse">
-      <p className="text-xs font-semibold text-indigo-300/50 mb-3 px-3">MENU PRINCIPAL</p>
+      <p className="text-xs font-semibold mb-3 px-3" style={{ color: BRAND.textLabel }}>MENU PRINCIPAL</p>
       <ul className="space-y-1">
         {Array.from({ length: 7 }).map((_, i) => (
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-5 h-5 bg-indigo-700/50 rounded" />
-              <div
-                className="h-4 bg-indigo-700/50 rounded flex-1"
-                style={{ maxWidth: `${60 + i * 10}px` }}
-              />
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: BRAND.hover }} />
+              <div className="h-4 rounded flex-1" style={{ backgroundColor: BRAND.hover, maxWidth: `${60 + i * 10}px` }} />
             </div>
           </li>
         ))}
       </ul>
-      <p className="text-xs font-semibold text-indigo-300/50 mb-3 px-3 mt-6">CONFIGURAÇÕES</p>
+      <p className="text-xs font-semibold mb-3 px-3 mt-6" style={{ color: BRAND.textLabel }}>CONFIGURAÇÕES</p>
       <ul className="space-y-1">
         {Array.from({ length: 3 }).map((_, i) => (
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-5 h-5 bg-indigo-700/50 rounded" />
-              <div
-                className="h-4 bg-indigo-700/50 rounded flex-1"
-                style={{ maxWidth: `${70 + i * 15}px` }}
-              />
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: BRAND.hover }} />
+              <div className="h-4 rounded flex-1" style={{ backgroundColor: BRAND.hover, maxWidth: `${70 + i * 15}px` }} />
             </div>
           </li>
         ))}
@@ -121,22 +115,17 @@ function SidebarSkeleton() {
   );
 }
 
-// ============================================
-// COMPONENTE PRINCIPAL
-// ============================================
-
 export default function Sidebar() {
   const pathname              = usePathname();
   const { data: session }     = useSession();
   const { canAccess, isAdmin, isLoading } = usePermission();
   const [isOpen, setIsOpen]   = useState(false);
 
-  // ── Branding dinâmico ──────────────────────────────────────────────────────
   const [branding, setBranding] = useState<OrgBranding>({
     name:           'Mundo Digital',
     logo:           null,
-    primaryColor:   '#6366f1',
-    secondaryColor: '#4f46e5',
+    primaryColor:   '#2f3453',
+    secondaryColor: '#252a43',
   });
 
   useEffect(() => {
@@ -147,26 +136,21 @@ export default function Sidebar() {
         setBranding({
           name:           data.name           ?? 'Mundo Digital',
           logo:           data.logo           ?? null,
-          primaryColor:   data.primaryColor   ?? '#6366f1',
-          secondaryColor: data.secondaryColor ?? '#4f46e5',
+          primaryColor:   data.primaryColor   ?? '#2f3453',
+          secondaryColor: data.secondaryColor ?? '#252a43',
         });
-        // Aplicar CSS variables globais
-        document.documentElement.style.setProperty('--color-primary',   data.primaryColor   ?? '#6366f1');
-        document.documentElement.style.setProperty('--color-secondary', data.secondaryColor ?? '#4f46e5');
+        document.documentElement.style.setProperty('--color-primary',   data.primaryColor   ?? '#2f3453');
+        document.documentElement.style.setProperty('--color-secondary', data.secondaryColor ?? '#252a43');
       })
-      .catch(() => {/* silencioso — usa defaults */});
+      .catch(() => {});
   }, []);
 
-  // ── Filtrar menus por permissão ────────────────────────────────────────────
   const role           = (session?.user as any)?.role ?? '';
   const isOwnerOrAdmin = role === 'owner' || role === 'admin';
 
   const visibleMenu = useMemo(() => {
     if (isLoading) return [];
-    return menuItems.filter((item) => {
-      if (!item.module) return true;
-      return canAccess(item.module);
-    });
+    return menuItems.filter((item) => !item.module || canAccess(item.module));
   }, [canAccess, isLoading]);
 
   const visibleSettings = useMemo(() => {
@@ -181,8 +165,8 @@ export default function Sidebar() {
 
   const handleLogout = () => signOut({ callbackUrl: '/auth/login' });
 
-  const userName    = session?.user?.name              || 'Usuário';
-  const userRole    = (session?.user as any)?.role     || 'user';
+  const userName    = session?.user?.name          || 'Usuário';
+  const userRole    = (session?.user as any)?.role || 'user';
   const userInitial = userName.charAt(0).toUpperCase();
 
   const ROLE_DISPLAY: Record<string, string> = {
@@ -197,7 +181,8 @@ export default function Sidebar() {
       {/* Mobile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 text-white rounded-lg shadow-lg transition-opacity hover:opacity-80"
+        style={{ backgroundColor: BRAND.bg }}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -214,13 +199,14 @@ export default function Sidebar() {
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-40
-          w-72 bg-gradient-to-b from-indigo-900 to-indigo-800 text-white flex flex-col
+          w-72 text-white flex flex-col
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
+        style={{ backgroundColor: BRAND.bg }}
       >
         {/* ── Logo / Branding ── */}
-        <div className="p-6 border-b border-indigo-700">
+        <div className="p-6" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex-shrink-0">
               {branding.logo ? (
@@ -241,10 +227,10 @@ export default function Sidebar() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-base leading-tight mb-0.5 truncate">
+              <h1 className="font-bold text-base leading-tight mb-0.5 truncate text-white">
                 {branding.name}
               </h1>
-              <p className="text-[10.5px] text-indigo-300 leading-tight">
+              <p className="text-[10.5px] leading-tight" style={{ color: BRAND.textMuted }}>
                 Soluções em Marketing e Vendas
               </p>
             </div>
@@ -259,10 +245,10 @@ export default function Sidebar() {
             <>
               {visibleMenu.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3">
+                  <p className="text-xs font-semibold mb-3 px-3 tracking-wider" style={{ color: BRAND.textLabel }}>
                     MENU PRINCIPAL
                   </p>
-                  <ul className="space-y-1">
+                  <ul className="space-y-0.5">
                     {visibleMenu.map((item) => {
                       const Icon     = item.icon;
                       const isActive = pathname === item.path;
@@ -271,11 +257,18 @@ export default function Sidebar() {
                           <Link
                             href={item.path}
                             onClick={() => setIsOpen(false)}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                              isActive
-                                ? 'bg-indigo-700 text-white font-medium'
-                                : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                            }`}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                            style={{
+                              backgroundColor: isActive ? BRAND.active : 'transparent',
+                              color: isActive ? '#ffffff' : BRAND.textMuted,
+                              fontWeight: isActive ? 600 : 400,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = BRAND.hover;
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                            }}
                           >
                             <Icon size={20} />
                             <span>{item.name}</span>
@@ -289,25 +282,30 @@ export default function Sidebar() {
 
               {visibleSettings.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold text-indigo-300 mb-3 px-3 mt-6">
+                  <p className="text-xs font-semibold mb-3 px-3 mt-6 tracking-wider" style={{ color: BRAND.textLabel }}>
                     CONFIGURAÇÕES
                   </p>
-                  <ul className="space-y-1">
+                  <ul className="space-y-0.5">
                     {visibleSettings.map((item) => {
                       const Icon     = item.icon;
-                      const isActive =
-                        pathname === item.path ||
-                        pathname?.startsWith(item.path + '/');
+                      const isActive = pathname === item.path || pathname?.startsWith(item.path + '/');
                       return (
                         <li key={item.path}>
                           <Link
                             href={item.path}
                             onClick={() => setIsOpen(false)}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                              isActive
-                                ? 'bg-indigo-700 text-white font-medium'
-                                : 'text-indigo-200 hover:bg-indigo-800 hover:text-white'
-                            }`}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
+                            style={{
+                              backgroundColor: isActive ? BRAND.active : 'transparent',
+                              color: isActive ? '#ffffff' : BRAND.textMuted,
+                              fontWeight: isActive ? 600 : 400,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = BRAND.hover;
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                            }}
                           >
                             <Icon size={20} />
                             <span>{item.name}</span>
@@ -326,19 +324,28 @@ export default function Sidebar() {
         <UsageBanner />
 
         {/* ── User Profile ── */}
-        <div className="p-4 border-t border-indigo-700">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-indigo-800">
-            <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0">
+        <div className="p-4" style={{ borderTop: `1px solid ${BRAND.border}` }}>
+          <div
+            className="flex items-center gap-3 p-3 rounded-lg"
+            style={{ backgroundColor: BRAND.bgDarker }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 text-sm"
+              style={{ backgroundColor: BRAND.active }}
+            >
               {userInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{userName}</p>
-              <p className="text-xs text-indigo-300">{ROLE_DISPLAY[userRole] || userRole}</p>
+              <p className="font-medium text-sm truncate text-white">{userName}</p>
+              <p className="text-xs" style={{ color: BRAND.textMuted }}>
+                {ROLE_DISPLAY[userRole] || userRole}
+              </p>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition-colors"
+            className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-white font-medium transition-opacity hover:opacity-80"
+            style={{ backgroundColor: '#c0392b' }}
           >
             <LogOut size={18} />
             <span>Sair</span>
