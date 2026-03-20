@@ -1,63 +1,64 @@
 // src/app/api/coupons/validate/route.ts
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+// Valida um cupom de desconto (público — usado no checkout/signup)
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+const schema = z.object({
+  code: z.string().min(1).transform(v => v.toUpperCase().trim()),
+  plan: z.string().optional(),
+});
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.organizationId) {
-    return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  try {
+    const body   = await req.json();
+    const parsed = schema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ valid: false, error: 'Dados inválidos' }, { status: 400 });
+    }
+    const { code, plan } = parsed.data;
+
+    const coupon = await prisma.coupon.findUnique({ where: { code } });
+
+    if (!coupon) {
+      return NextResponse.json({ valid: false, error: 'Cupom não encontrado' });
+    }
+
+    if (!coupon.isActive) {
+      return NextResponse.json({ valid: false, error: 'Cupom inativo' });
+    }
+
+    const now = new Date();
+    if (coupon.validFrom && now < new Date(coupon.validFrom)) {
+      return NextResponse.json({ valid: false, error: 'Cupom ainda não está válido' });
+    }
+    if (coupon.validUntil && now > new Date(coupon.validUntil)) {
+      return NextResponse.json({ valid: false, error: 'Cupom expirado' });
+    }
+
+    const usedCount = await prisma.couponUsage.count({ where: { couponId: coupon.id } });
+    if (coupon.maxUses != null && usedCount >= coupon.maxUses) {
+      return NextResponse.json({ valid: false, error: 'Cupom esgotado' });
+    }
+
+    // Verifica planos aplicáveis
+    if (plan && coupon.applicablePlans) {
+      const plans = JSON.parse(coupon.applicablePlans as string) as string[];
+      if (plans.length > 0 && !plans.includes(plan)) {
+        return NextResponse.json({ valid: false, error: 'Cupom não aplicável a este plano' });
+      }
+    }
+
+    return NextResponse.json({
+      valid:         true,
+      couponId:      coupon.id,
+      code:          coupon.code,
+      description:   coupon.description,
+      discountType:  coupon.discountType,
+      discountValue: Number(coupon.discountValue),
+    });
+  } catch (error) {
+    console.error('[COUPON VALIDATE]:', error);
+    return NextResponse.json({ valid: false, error: 'Erro interno' }, { status: 500 });
   }
-
-  const { code, planName } = await req.json()
-  if (!code) return NextResponse.json({ error: 'Código obrigatório' }, { status: 400 })
-
-  const coupon = await prisma.coupon.findUnique({
-    where: { code: code.toUpperCase().trim() },
-  })
-
-  if (!coupon || !coupon.isActive) {
-    return NextResponse.json({ error: 'Cupom inválido ou inativo' }, { status: 404 })
-  }
-
-  const now = new Date()
-  if (coupon.validFrom > now) {
-    return NextResponse.json({ error: 'Cupom ainda não está válido' }, { status: 400 })
-  }
-  if (coupon.validUntil && coupon.validUntil < now) {
-    return NextResponse.json({ error: 'Cupom expirado' }, { status: 400 })
-  }
-
-  if (coupon.maxUses && coupon.usesCount >= coupon.maxUses) {
-    return NextResponse.json({ error: 'Cupom esgotado' }, { status: 400 })
-  }
-
-  if (coupon.appliesToPlan && planName && coupon.appliesToPlan !== planName) {
-    return NextResponse.json(
-      { error: `Cupom válido apenas para o plano ${coupon.appliesToPlan}` },
-      { status: 400 }
-    )
-  }
-
-  const alreadyUsed = await prisma.couponUsage.findUnique({
-    where: {
-      couponId_organizationId: {
-        couponId:       coupon.id,
-        organizationId: session.user.organizationId,
-      },
-    },
-  })
-  if (alreadyUsed) {
-    return NextResponse.json({ error: 'Cupom já utilizado pela sua organização' }, { status: 400 })
-  }
-
-  return NextResponse.json({
-    valid:          true,
-    code:           coupon.code,
-    discountType:   coupon.discountType,
-    discountValue:  Number(coupon.discountValue),
-    durationMonths: coupon.durationMonths,
-    description:    coupon.description,
-  })
 }
