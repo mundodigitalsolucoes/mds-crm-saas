@@ -1,125 +1,59 @@
 // src/lib/checkLimits.ts
-// Enforcement de limites do plano para o MDS CRM SaaS
-// Verifica contagem atual vs limite da Organization
-// Pattern: mesmo retorno do checkPermission → { allowed, errorResponse }
-
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// ============================================
-// TIPOS
-// ============================================
-
-/** Recursos que possuem limite no plano */
-export type LimitedResource = 'users' | 'leads' | 'projects' | 'os';
+export type LimitedResource = 'users' | 'leads' | 'projects' | 'os' | 'goals';
 
 interface LimitCheckResult {
   allowed: boolean;
   errorResponse: NextResponse | null;
-  /** Dados do limite (útil para UI) */
-  usage?: {
-    current: number;
-    max: number;
-    resource: LimitedResource;
-  };
+  usage?: { current: number; max: number; resource: LimitedResource };
 }
 
 interface PlanStatusResult {
   active: boolean;
   errorResponse: NextResponse | null;
-  /** Razão do bloqueio */
   reason?: 'cancelled' | 'past_due' | 'trial_expired';
 }
 
-// ============================================
-// MAPEAMENTO DE RECURSOS
-// ============================================
-
-/** Mapeia recurso → campo de limite na Organization */
-const LIMIT_FIELD_MAP: Record<LimitedResource, 'maxUsers' | 'maxLeads' | 'maxProjects' | 'maxOs'> = {
-  users: 'maxUsers',
-  leads: 'maxLeads',
+const LIMIT_FIELD_MAP: Record<LimitedResource, 'maxUsers' | 'maxLeads' | 'maxProjects' | 'maxOs' | 'maxGoals'> = {
+  users:    'maxUsers',
+  leads:    'maxLeads',
   projects: 'maxProjects',
-  os: 'maxOs',
+  os:       'maxOs',
+  goals:    'maxGoals',
 };
 
-/** Labels amigáveis para mensagens de erro */
 const RESOURCE_LABELS: Record<LimitedResource, string> = {
-  users: 'usuários',
-  leads: 'leads',
+  users:    'usuários',
+  leads:    'leads',
   projects: 'projetos',
-  os: 'ordens de serviço',
+  os:       'ordens de serviço',
+  goals:    'metas',
 };
 
-// ============================================
-// CONTAGEM DE RECURSOS
-// ============================================
-
-/**
- * Conta o total de recursos ativos de uma organização.
- * Cada recurso tem sua query específica (exclui soft-deletes, etc).
- */
-async function countResource(
-  organizationId: string,
-  resource: LimitedResource
-): Promise<number> {
+async function countResource(organizationId: string, resource: LimitedResource): Promise<number> {
   switch (resource) {
     case 'users':
-      return prisma.user.count({
-        where: {
-          organizationId,
-          deletedAt: null, // LGPD: ignora soft-deleted
-        },
-      });
-
+      return prisma.user.count({ where: { organizationId, deletedAt: null } });
     case 'leads':
-      return prisma.lead.count({
-        where: { organizationId },
-      });
-
+      return prisma.lead.count({ where: { organizationId } });
     case 'projects':
-      return prisma.marketingProject.count({
-        where: { organizationId },
-      });
-
+      return prisma.marketingProject.count({ where: { organizationId } });
     case 'os':
-      return prisma.serviceOrder.count({
-        where: { organizationId },
-      });
-
+      return prisma.serviceOrder.count({ where: { organizationId } });
+    case 'goals':
+      return prisma.goal.count({ where: { organizationId } });
     default:
       return 0;
   }
 }
 
-// ============================================
-// CHECK ORGANIZATION LIMIT
-// ============================================
-
-/**
- * Verifica se a organização pode criar mais um recurso do tipo especificado.
- *
- * Fluxo:
- * 1. Busca os limites da Organization (já copiados do Plan)
- * 2. Conta uso atual
- * 3. Compara e retorna allowed/blocked
- *
- * @param organizationId - ID da organização
- * @param resource - Tipo de recurso ('users' | 'leads' | 'projects' | 'os')
- * @returns LimitCheckResult com allowed, errorResponse e usage
- *
- * @example
- * ```ts
- * const limit = await checkOrganizationLimit(orgId, 'leads');
- * if (!limit.allowed) return limit.errorResponse!;
- * ```
- */
 export async function checkOrganizationLimit(
   organizationId: string,
   resource: LimitedResource
 ): Promise<LimitCheckResult> {
   try {
-    // 1. Buscar limites da organização
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
       select: {
@@ -127,6 +61,7 @@ export async function checkOrganizationLimit(
         maxLeads: true,
         maxProjects: true,
         maxOs: true,
+        maxGoals: true,
         plan: true,
       },
     });
@@ -134,30 +69,19 @@ export async function checkOrganizationLimit(
     if (!org) {
       return {
         allowed: false,
-        errorResponse: NextResponse.json(
-          { error: 'Organização não encontrada' },
-          { status: 404 }
-        ),
+        errorResponse: NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 }),
       };
     }
 
-    // 2. Obter o limite para este recurso
     const limitField = LIMIT_FIELD_MAP[resource];
     const maxAllowed = org[limitField];
 
-    // Limite 0 ou -1 = ilimitado (para planos enterprise)
     if (maxAllowed <= 0) {
-      return {
-        allowed: true,
-        errorResponse: null,
-        usage: { current: 0, max: -1, resource },
-      };
+      return { allowed: true, errorResponse: null, usage: { current: 0, max: -1, resource } };
     }
 
-    // 3. Contar uso atual
     const currentCount = await countResource(organizationId, resource);
 
-    // 4. Comparar
     if (currentCount >= maxAllowed) {
       const label = RESOURCE_LABELS[resource];
       return {
@@ -167,11 +91,7 @@ export async function checkOrganizationLimit(
             error: 'Limite do plano atingido',
             detail: `Seu plano (${org.plan}) permite no máximo ${maxAllowed} ${label}. Você já possui ${currentCount}.`,
             code: 'PLAN_LIMIT_REACHED',
-            usage: {
-              current: currentCount,
-              max: maxAllowed,
-              resource,
-            },
+            usage: { current: currentCount, max: maxAllowed, resource },
           },
           { status: 403 }
         ),
@@ -179,176 +99,78 @@ export async function checkOrganizationLimit(
       };
     }
 
-    return {
-      allowed: true,
-      errorResponse: null,
-      usage: { current: currentCount, max: maxAllowed, resource },
-    };
+    return { allowed: true, errorResponse: null, usage: { current: currentCount, max: maxAllowed, resource } };
   } catch (error) {
     console.error(`[CHECK LIMITS] Erro ao verificar limite de ${resource}:`, error);
-    // Em caso de erro, permite a operação (fail-open para não bloquear produção)
-    return {
-      allowed: true,
-      errorResponse: null,
-    };
+    return { allowed: true, errorResponse: null };
   }
 }
 
-// ============================================
-// CHECK PLAN STATUS (PLANO ATIVO / TRIAL)
-// ============================================
-
-/**
- * Verifica se o plano da organização está ativo.
- *
- * Regras:
- * - planStatus 'active' → OK
- * - planStatus 'cancelled' → Bloqueado
- * - planStatus 'past_due' → Bloqueado (pagamento pendente)
- * - plan 'trial' + trialEndsAt expirado → Bloqueado
- *
- * @param organizationId - ID da organização
- * @returns PlanStatusResult com active, errorResponse e reason
- *
- * @example
- * ```ts
- * const plan = await checkPlanActive(orgId);
- * if (!plan.active) return plan.errorResponse!;
- * ```
- */
-export async function checkPlanActive(
-  organizationId: string
-): Promise<PlanStatusResult> {
+export async function checkPlanActive(organizationId: string): Promise<PlanStatusResult> {
   try {
     const org = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: {
-        plan: true,
-        planStatus: true,
-        trialEndsAt: true,
-      },
+      select: { plan: true, planStatus: true, trialEndsAt: true },
     });
 
     if (!org) {
       return {
         active: false,
-        errorResponse: NextResponse.json(
-          { error: 'Organização não encontrada' },
-          { status: 404 }
-        ),
+        errorResponse: NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 }),
       };
     }
 
-    // Plano cancelado
     if (org.planStatus === 'cancelled') {
       return {
-        active: false,
-        reason: 'cancelled',
+        active: false, reason: 'cancelled',
         errorResponse: NextResponse.json(
-          {
-            error: 'Plano cancelado',
-            detail: 'Seu plano foi cancelado. Acesse as configurações para reativar.',
-            code: 'PLAN_CANCELLED',
-          },
+          { error: 'Plano cancelado', detail: 'Seu plano foi cancelado. Acesse as configurações para reativar.', code: 'PLAN_CANCELLED' },
           { status: 403 }
         ),
       };
     }
 
-    // Pagamento pendente
     if (org.planStatus === 'past_due') {
       return {
-        active: false,
-        reason: 'past_due',
+        active: false, reason: 'past_due',
         errorResponse: NextResponse.json(
-          {
-            error: 'Pagamento pendente',
-            detail: 'Há um pagamento pendente no seu plano. Regularize para continuar.',
-            code: 'PLAN_PAST_DUE',
-          },
+          { error: 'Pagamento pendente', detail: 'Há um pagamento pendente no seu plano. Regularize para continuar.', code: 'PLAN_PAST_DUE' },
           { status: 403 }
         ),
       };
     }
 
-    // Trial expirado (verificação por data)
-    if (org.plan === 'trial' && org.trialEndsAt) {
-      const now = new Date();
-      if (now > new Date(org.trialEndsAt)) {
-        return {
-          active: false,
-          reason: 'trial_expired',
-          errorResponse: NextResponse.json(
-            {
-              error: 'Período de teste expirado',
-              detail: 'Seu período de teste terminou. Escolha um plano para continuar.',
-              code: 'TRIAL_EXPIRED',
-            },
-            { status: 403 }
-          ),
-        };
-      }
+    if (org.plan === 'trial' && org.trialEndsAt && new Date() > new Date(org.trialEndsAt)) {
+      return {
+        active: false, reason: 'trial_expired',
+        errorResponse: NextResponse.json(
+          { error: 'Período de teste expirado', detail: 'Seu período de teste terminou. Escolha um plano para continuar.', code: 'TRIAL_EXPIRED' },
+          { status: 403 }
+        ),
+      };
     }
 
-    // Plan status 'trial_expired' explícito
     if (org.planStatus === 'trial_expired') {
       return {
-        active: false,
-        reason: 'trial_expired',
+        active: false, reason: 'trial_expired',
         errorResponse: NextResponse.json(
-          {
-            error: 'Período de teste expirado',
-            detail: 'Seu período de teste terminou. Escolha um plano para continuar.',
-            code: 'TRIAL_EXPIRED',
-          },
+          { error: 'Período de teste expirado', detail: 'Seu período de teste terminou. Escolha um plano para continuar.', code: 'TRIAL_EXPIRED' },
           { status: 403 }
         ),
       };
     }
 
-    return {
-      active: true,
-      errorResponse: null,
-    };
+    return { active: true, errorResponse: null };
   } catch (error) {
     console.error('[CHECK PLAN] Erro ao verificar status do plano:', error);
-    // Fail-open: não bloqueia em caso de erro
-    return {
-      active: true,
-      errorResponse: null,
-    };
+    return { active: true, errorResponse: null };
   }
 }
 
-// ============================================
-// SYNC PLAN → ORGANIZATION LIMITS
-// ============================================
-
-/**
- * Copia os limites de um Plan para uma Organization.
- * Usado quando:
- * - SuperAdmin cria uma organização
- * - SuperAdmin muda o plano de uma organização
- * - Organização faz upgrade/downgrade via billing
- *
- * @param organizationId - ID da organização
- * @param planName - Nome (slug) do plano
- * @returns Organization atualizada ou null se plano não encontrado
- */
-export async function syncPlanLimits(
-  organizationId: string,
-  planName: string
-) {
-  // Buscar o plano pelo nome
+export async function syncPlanLimits(organizationId: string, planName: string) {
   const plan = await prisma.plan.findUnique({
     where: { name: planName },
-    select: {
-      maxUsers: true,
-      maxLeads: true,
-      maxProjects: true,
-      maxOs: true,
-      features: true,
-    },
+    select: { maxUsers: true, maxLeads: true, maxProjects: true, maxOs: true, maxGoals: true, features: true },
   });
 
   if (!plan) {
@@ -356,8 +178,7 @@ export async function syncPlanLimits(
     return null;
   }
 
-  // Atualizar a organização com os limites do plano
-  const updated = await prisma.organization.update({
+  return prisma.organization.update({
     where: { id: organizationId },
     data: {
       plan: planName,
@@ -365,54 +186,43 @@ export async function syncPlanLimits(
       maxLeads: plan.maxLeads,
       maxProjects: plan.maxProjects,
       maxOs: plan.maxOs,
+      maxGoals: plan.maxGoals,
       features: plan.features,
     },
   });
-
-  return updated;
 }
 
-// ============================================
-// HELPERS (para uso em componentes / APIs)
-// ============================================
-
-/**
- * Retorna o uso atual de todos os recursos limitados de uma organização.
- * Útil para dashboards, settings, banners de upgrade.
- */
 export async function getOrganizationUsage(organizationId: string) {
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
     select: {
-      plan: true,
-      planStatus: true,
-      trialEndsAt: true,
-      maxUsers: true,
-      maxLeads: true,
-      maxProjects: true,
-      maxOs: true,
+      plan: true, planStatus: true, trialEndsAt: true,
+      maxUsers: true, maxLeads: true, maxProjects: true, maxOs: true, maxGoals: true,
     },
   });
 
   if (!org) return null;
 
-  // Contar todos os recursos em paralelo
-  const [users, leads, projects, os] = await Promise.all([
+  const [users, leads, projects, os, goals] = await Promise.all([
     prisma.user.count({ where: { organizationId, deletedAt: null } }),
     prisma.lead.count({ where: { organizationId } }),
     prisma.marketingProject.count({ where: { organizationId } }),
     prisma.serviceOrder.count({ where: { organizationId } }),
+    prisma.goal.count({ where: { organizationId } }),
   ]);
+
+  const pct = (cur: number, max: number) => max > 0 ? Math.round((cur / max) * 100) : 0;
 
   return {
     plan: org.plan,
     planStatus: org.planStatus,
     trialEndsAt: org.trialEndsAt,
     resources: {
-      users: { current: users, max: org.maxUsers, percentage: org.maxUsers > 0 ? Math.round((users / org.maxUsers) * 100) : 0 },
-      leads: { current: leads, max: org.maxLeads, percentage: org.maxLeads > 0 ? Math.round((leads / org.maxLeads) * 100) : 0 },
-      projects: { current: projects, max: org.maxProjects, percentage: org.maxProjects > 0 ? Math.round((projects / org.maxProjects) * 100) : 0 },
-      os: { current: os, max: org.maxOs, percentage: org.maxOs > 0 ? Math.round((os / org.maxOs) * 100) : 0 },
+      users:    { current: users,    max: org.maxUsers,    percentage: pct(users,    org.maxUsers) },
+      leads:    { current: leads,    max: org.maxLeads,    percentage: pct(leads,    org.maxLeads) },
+      projects: { current: projects, max: org.maxProjects, percentage: pct(projects, org.maxProjects) },
+      os:       { current: os,       max: org.maxOs,       percentage: pct(os,       org.maxOs) },
+      goals:    { current: goals,    max: org.maxGoals,    percentage: pct(goals,    org.maxGoals) },
     },
   };
 }
