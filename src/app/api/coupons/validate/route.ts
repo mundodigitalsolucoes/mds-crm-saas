@@ -1,5 +1,4 @@
 // src/app/api/coupons/validate/route.ts
-// Valida um cupom de desconto (público — usado no checkout/signup)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
@@ -41,12 +40,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valid: false, error: 'Cupom esgotado' });
     }
 
-    // Verifica planos aplicáveis
-    if (plan && coupon.applicablePlans) {
-      const plans = JSON.parse(coupon.applicablePlans as string) as string[];
-      if (plans.length > 0 && !plans.includes(plan)) {
-        return NextResponse.json({ valid: false, error: 'Cupom não aplicável a este plano' });
-      }
+    // Verifica plano aplicável
+    if (plan && coupon.appliesToPlan && coupon.appliesToPlan !== plan) {
+      return NextResponse.json({ valid: false, error: 'Cupom não aplicável a este plano' });
     }
 
     return NextResponse.json({
