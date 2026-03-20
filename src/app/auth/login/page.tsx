@@ -2,12 +2,16 @@
 
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered') === 'true';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,63 +42,96 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm bg-white p-6 rounded-lg shadow">
-        <h1 className="text-xl font-bold mb-4">Entrar</h1>
+      <div className="w-full max-w-sm">
 
-        <label className="block text-sm mb-1">Email</label>
-        <input
-          className="w-full border rounded px-3 py-2 mb-3"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          required
-        />
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img
+            src="/images/logo-mds.svg"
+            alt="MDS Logo"
+            className="h-16 w-auto"
+          />
+        </div>
 
-        <label className="block text-sm mb-1">Senha</label>
-        <div className="relative mb-2">
+        {/* Banner pós-cadastro */}
+        {registered && (
+          <div className="mb-4 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Conta criada com sucesso! 🎉</p>
+              <p className="text-xs text-green-700 mt-0.5">
+                Faça seu login agora com os dados cadastrados.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow">
+          <h1 className="text-xl font-bold mb-4 text-gray-800">Entrar</h1>
+
+          <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
-            className="w-full border rounded px-3 py-2 pr-10"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type={showPassword ? 'text' : 'password'}
+            className="w-full border rounded px-3 py-2 mb-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
             required
           />
+
+          <label className="block text-sm mb-1 text-gray-700">Senha</label>
+          <div className="relative mb-2">
+            <input
+              className="w-full border rounded px-3 py-2 pr-10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type={showPassword ? 'text' : 'password'}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          <div className="flex justify-end mb-3">
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm text-indigo-600 hover:underline"
+            >
+              Esqueceu sua senha?
+            </Link>
+          </div>
+
+          {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+
           <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-            aria-label={showPassword ? 'Esconder senha' : 'Mostrar senha'}
+            disabled={loading}
+            className="w-full bg-indigo-600 text-white rounded px-3 py-2 disabled:opacity-60 hover:bg-indigo-700 transition-colors font-medium"
+            type="submit"
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
-        </div>
+        </form>
 
-        <div className="flex justify-end mb-3">
-          <Link
-            href="/auth/forgot-password"
-            className="text-sm text-indigo-600 hover:underline"
-          >
-            Esqueceu sua senha?
-          </Link>
-        </div>
-
-        {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
-
-        <button
-          disabled={loading}
-          className="w-full bg-indigo-600 text-white rounded px-3 py-2 disabled:opacity-60"
-          type="submit"
-        >
-          {loading ? 'Entrando...' : 'Entrar'}
-        </button>
-
-        <p className="text-center text-sm mt-4">
+        <p className="text-center text-sm mt-4 text-gray-600">
           Não tem uma conta?{' '}
-          <Link href="/auth/signup" className="text-indigo-600 hover:underline">
-            Cadastre-se
+          <Link href="/auth/signup" className="text-indigo-600 hover:underline font-medium">
+            Cadastre-se grátis
           </Link>
         </p>
-      </form>
+      </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" /></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
