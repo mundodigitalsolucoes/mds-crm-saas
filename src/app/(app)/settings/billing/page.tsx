@@ -80,6 +80,15 @@ export default function BillingPage() {
   const manageUrl  = process.env.NEXT_PUBLIC_ASAAS_MANAGE_URL ?? '#'
   const upgradeUrl = process.env.NEXT_PUBLIC_UPGRADE_URL      ?? '#'
 
+  // Labels PT-BR para todos os recursos
+  const resourceLabels: Record<string, string> = {
+    users:    'Usuários',
+    leads:    'Leads',
+    projects: 'Projetos',
+    os:       'Ordens de Serviço',
+    goals:    'Metas',
+  }
+
   return (
     <div className="p-6 max-w-3xl mx-auto">
 
@@ -173,19 +182,14 @@ export default function BillingPage() {
 
         <div className="grid grid-cols-2 gap-4">
           {(Object.entries(data.resources) as [string, { current: number; max: number; percentage: number }][]).map(([key, r]) => {
-            const labels: Record<string, string> = {
-              users:    'Usuários',
-              leads:    'Leads',
-              projects: 'Projetos',
-              os:       'Ordens de Serviço',
-            }
+            const label   = resourceLabels[key] ?? key
             const pct     = Math.min(r.percentage, 100)
             const isLimit = r.max > 0 && r.current >= r.max
 
             return (
               <div key={key} className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">{labels[key] ?? key}</span>
+                  <span className="text-sm font-medium text-gray-700">{label}</span>
                   <span className={`text-xs font-semibold ${isLimit ? 'text-red-600' : 'text-gray-500'}`}>
                     {r.max <= 0 ? `${r.current} / ∞` : `${r.current} / ${r.max}`}
                   </span>

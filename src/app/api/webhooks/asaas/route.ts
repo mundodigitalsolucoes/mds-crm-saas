@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { syncPlanLimits } from '@/lib/checkLimits'
 
 const WEBHOOK_TOKEN = process.env.ASAAS_WEBHOOK_TOKEN
 
@@ -71,6 +72,9 @@ export async function POST(req: NextRequest) {
             subscriptionId: subscription.id ?? org.subscriptionId,
           },
         })
+
+        // ✅ Sincroniza limites do plano (maxUsers, maxLeads, maxProjects, maxOs, maxGoals)
+        await syncPlanLimits(org.id, plan)
 
         console.log(`[Asaas] ✅ Org ${org.id} ativada — plano: ${plan}`)
         break
