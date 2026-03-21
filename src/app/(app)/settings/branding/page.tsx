@@ -75,7 +75,6 @@ function ColorInput({
       <label className="block text-sm font-medium text-gray-300 mb-1">{label}</label>
       <p className="text-xs text-gray-500 mb-2">{description}</p>
       <div className="flex items-center gap-3">
-        {/* Color picker nativo */}
         <div className="relative">
           <input
             type="color"
@@ -84,7 +83,6 @@ function ColorInput({
             className="w-12 h-10 rounded-lg cursor-pointer border border-gray-600 bg-transparent p-0.5"
           />
         </div>
-        {/* Input hex */}
         <input
           type="text"
           value={text}
@@ -108,14 +106,12 @@ export default function BrandingPage() {
   const [saving, setSaving]     = useState(false);
   const [message, setMessage]   = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // Form state
   const [name,           setName]           = useState('');
   const [logo,           setLogo]           = useState('');
   const [favicon,        setFavicon]        = useState('');
   const [primaryColor,   setPrimaryColor]   = useState(DEFAULTS.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(DEFAULTS.secondaryColor);
 
-  // Snapshot para detectar mudanças
   const [original, setOriginal] = useState<OrgBranding | null>(null);
 
   // ── Carregar dados ──────────────────────────────────────────────────────────
@@ -153,9 +149,9 @@ export default function BrandingPage() {
     setMessage(null);
     try {
       const body: Record<string, any> = { name, primaryColor, secondaryColor };
-      if (logo)    body.logo    = logo;
-      if (favicon) body.favicon = favicon;
-      if (!logo)   body.logo    = null;
+      if (logo)     body.logo    = logo;
+      if (favicon)  body.favicon = favicon;
+      if (!logo)    body.logo    = null;
       if (!favicon) body.favicon = null;
 
       const res = await fetch('/api/organizations', {
@@ -178,6 +174,10 @@ export default function BrandingPage() {
         const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
         if (link) link.href = updated.favicon;
       }
+
+      // Recarrega para aplicar cores no Sidebar e layout
+      setTimeout(() => window.location.reload(), 1200);
+
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -257,7 +257,6 @@ export default function BrandingPage() {
           <h2 className="text-base font-semibold text-gray-100">Identidade</h2>
         </div>
 
-        {/* Nome da organização */}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-1">
             Nome da organização
@@ -272,7 +271,6 @@ export default function BrandingPage() {
           />
         </div>
 
-        {/* Logo */}
         <div className="mb-5">
           <label className="block text-sm font-medium text-gray-300 mb-1">
             URL do logotipo
@@ -288,7 +286,6 @@ export default function BrandingPage() {
             placeholder="https://suaempresa.com/logo.png"
             className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          {/* Preview logo */}
           {logo && (
             <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-white/10 flex items-center gap-3">
               <Eye className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -302,7 +299,6 @@ export default function BrandingPage() {
           )}
         </div>
 
-        {/* Favicon */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1">
             URL do favicon
@@ -318,7 +314,6 @@ export default function BrandingPage() {
             placeholder="https://suaempresa.com/favicon.ico"
             className="w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          {/* Preview favicon */}
           {favicon && (
             <div className="mt-3 p-3 bg-gray-800 rounded-lg border border-white/10 flex items-center gap-3">
               <Eye className="w-4 h-4 text-gray-500 flex-shrink-0" />
@@ -367,7 +362,6 @@ export default function BrandingPage() {
           />
         </div>
 
-        {/* Preview das cores */}
         <div className="p-4 bg-gray-800/50 rounded-lg border border-white/5">
           <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5" />
@@ -377,7 +371,6 @@ export default function BrandingPage() {
             <ColorSwatch color={primaryColor}   label="Primária" />
             <ColorSwatch color={secondaryColor} label="Secundária" />
           </div>
-          {/* Botão de exemplo */}
           <div className="flex items-center gap-3 flex-wrap">
             <button
               className="px-4 py-2 rounded-lg text-sm font-medium text-white transition"
@@ -401,7 +394,7 @@ export default function BrandingPage() {
         </div>
       </div>
 
-      {/* ── Seção: Como aplicar as cores ── */}
+      {/* ── Seção: CSS Variables ── */}
       <div className="bg-gray-900 rounded-xl border border-white/10 p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
           <Image className="w-5 h-5 text-indigo-400" />
