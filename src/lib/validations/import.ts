@@ -11,7 +11,10 @@ const importLeadItemSchema = z.object({
   // Aceita "name" ou "nome"
   name: z.string().optional(),
   nome: z.string().optional(),
-  email: z.string().email().nullable().optional(),
+  email: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
+    z.string().email().nullable().optional()
+  ),
   // Aceita "phone" ou "telefone"
   phone: z.string().nullable().optional(),
   telefone: z.string().nullable().optional(),
@@ -22,7 +25,7 @@ const importLeadItemSchema = z.object({
   source: z.string().nullable().optional(),
   origem: z.string().nullable().optional(),
   status: z.string().optional().default('new'),
-}).passthrough(); // permite campos extras do CSV sem rejeitar
+}).passthrough();
 
 export const importLeadsSchema = z.object({
   leads: z
