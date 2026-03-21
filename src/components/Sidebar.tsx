@@ -38,18 +38,6 @@ const UsageBanner = dynamic(() => import('@/components/UsageBanner'), {
 });
 import type { PermissionModule } from '@/types/permissions';
 
-// Paleta da marca
-const BRAND = {
-  bg:         '#2f3453',
-  bgDark:     '#252a43',
-  bgDarker:   '#1e2236',
-  active:     '#3d4466',
-  hover:      '#363c5e',
-  border:     'rgba(255,255,255,0.08)',
-  textMuted:  'rgba(255,255,255,0.5)',
-  textLabel:  'rgba(255,255,255,0.35)',
-};
-
 interface MenuItem {
   name:      string;
   icon:      React.ComponentType<any>;
@@ -63,6 +51,20 @@ interface OrgBranding {
   logo:           string | null;
   primaryColor:   string;
   secondaryColor: string;
+}
+
+// Gera paleta dinâmica a partir das cores do banco
+function makePalette(primary: string, secondary: string) {
+  return {
+    bg:        primary,
+    bgDark:    secondary,
+    bgDarker:  secondary,
+    active:    'rgba(0,0,0,0.25)',
+    hover:     'rgba(0,0,0,0.15)',
+    border:    'rgba(255,255,255,0.08)',
+    textMuted: 'rgba(255,255,255,0.6)',
+    textLabel: 'rgba(255,255,255,0.35)',
+  };
 }
 
 const menuItems: MenuItem[] = [
@@ -86,27 +88,27 @@ const settingsItems: MenuItem[] = [
   { name: 'Minha Conta', icon: UserCog,    path: '/settings/account'                              },
 ];
 
-function SidebarSkeleton() {
+function SidebarSkeleton({ palette }: { palette: ReturnType<typeof makePalette> }) {
   return (
     <div className="animate-pulse">
-      <p className="text-xs font-semibold mb-3 px-3" style={{ color: BRAND.textLabel }}>MENU PRINCIPAL</p>
+      <p className="text-xs font-semibold mb-3 px-3" style={{ color: palette.textLabel }}>MENU PRINCIPAL</p>
       <ul className="space-y-1">
         {Array.from({ length: 7 }).map((_, i) => (
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: BRAND.hover }} />
-              <div className="h-4 rounded flex-1" style={{ backgroundColor: BRAND.hover, maxWidth: `${60 + i * 10}px` }} />
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
+              <div className="h-4 rounded flex-1" style={{ backgroundColor: palette.hover, maxWidth: `${60 + i * 10}px` }} />
             </div>
           </li>
         ))}
       </ul>
-      <p className="text-xs font-semibold mb-3 px-3 mt-6" style={{ color: BRAND.textLabel }}>CONFIGURAÇÕES</p>
+      <p className="text-xs font-semibold mb-3 px-3 mt-6" style={{ color: palette.textLabel }}>CONFIGURAÇÕES</p>
       <ul className="space-y-1">
         {Array.from({ length: 3 }).map((_, i) => (
           <li key={i}>
             <div className="flex items-center gap-3 px-3 py-2.5">
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: BRAND.hover }} />
-              <div className="h-4 rounded flex-1" style={{ backgroundColor: BRAND.hover, maxWidth: `${70 + i * 15}px` }} />
+              <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
+              <div className="h-4 rounded flex-1" style={{ backgroundColor: palette.hover, maxWidth: `${70 + i * 15}px` }} />
             </div>
           </li>
         ))}
@@ -145,6 +147,11 @@ export default function Sidebar() {
       .catch(() => {});
   }, []);
 
+  const palette = useMemo(
+    () => makePalette(branding.primaryColor, branding.secondaryColor),
+    [branding.primaryColor, branding.secondaryColor]
+  );
+
   const role           = (session?.user as any)?.role ?? '';
   const isOwnerOrAdmin = role === 'owner' || role === 'admin';
 
@@ -182,7 +189,7 @@ export default function Sidebar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 text-white rounded-lg shadow-lg transition-opacity hover:opacity-80"
-        style={{ backgroundColor: BRAND.bg }}
+        style={{ backgroundColor: palette.bg }}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -203,10 +210,10 @@ export default function Sidebar() {
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
-        style={{ backgroundColor: BRAND.bg }}
+        style={{ backgroundColor: palette.bg }}
       >
         {/* ── Logo / Branding ── */}
-        <div className="p-6" style={{ borderBottom: `1px solid ${BRAND.border}` }}>
+        <div className="p-6" style={{ borderBottom: `1px solid ${palette.border}` }}>
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex-shrink-0">
               {branding.logo ? (
@@ -230,7 +237,7 @@ export default function Sidebar() {
               <h1 className="font-bold text-base leading-tight mb-0.5 truncate text-white">
                 {branding.name}
               </h1>
-              <p className="text-[10.5px] leading-tight" style={{ color: BRAND.textMuted }}>
+              <p className="text-[10.5px] leading-tight" style={{ color: palette.textMuted }}>
                 Soluções em Marketing e Vendas
               </p>
             </div>
@@ -240,12 +247,12 @@ export default function Sidebar() {
         {/* ── Nav ── */}
         <nav className="flex-1 p-4 overflow-y-auto">
           {isLoading ? (
-            <SidebarSkeleton />
+            <SidebarSkeleton palette={palette} />
           ) : (
             <>
               {visibleMenu.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold mb-3 px-3 tracking-wider" style={{ color: BRAND.textLabel }}>
+                  <p className="text-xs font-semibold mb-3 px-3 tracking-wider" style={{ color: palette.textLabel }}>
                     MENU PRINCIPAL
                   </p>
                   <ul className="space-y-0.5">
@@ -259,12 +266,12 @@ export default function Sidebar() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
                             style={{
-                              backgroundColor: isActive ? BRAND.active : 'transparent',
-                              color: isActive ? '#ffffff' : BRAND.textMuted,
+                              backgroundColor: isActive ? palette.active : 'transparent',
+                              color: isActive ? '#ffffff' : palette.textMuted,
                               fontWeight: isActive ? 600 : 400,
                             }}
                             onMouseEnter={(e) => {
-                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = BRAND.hover;
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = palette.hover;
                             }}
                             onMouseLeave={(e) => {
                               if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -282,7 +289,7 @@ export default function Sidebar() {
 
               {visibleSettings.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold mb-3 px-3 mt-6 tracking-wider" style={{ color: BRAND.textLabel }}>
+                  <p className="text-xs font-semibold mb-3 px-3 mt-6 tracking-wider" style={{ color: palette.textLabel }}>
                     CONFIGURAÇÕES
                   </p>
                   <ul className="space-y-0.5">
@@ -296,12 +303,12 @@ export default function Sidebar() {
                             onClick={() => setIsOpen(false)}
                             className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors"
                             style={{
-                              backgroundColor: isActive ? BRAND.active : 'transparent',
-                              color: isActive ? '#ffffff' : BRAND.textMuted,
+                              backgroundColor: isActive ? palette.active : 'transparent',
+                              color: isActive ? '#ffffff' : palette.textMuted,
                               fontWeight: isActive ? 600 : 400,
                             }}
                             onMouseEnter={(e) => {
-                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = BRAND.hover;
+                              if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = palette.hover;
                             }}
                             onMouseLeave={(e) => {
                               if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
@@ -324,20 +331,20 @@ export default function Sidebar() {
         <UsageBanner />
 
         {/* ── User Profile ── */}
-        <div className="p-4" style={{ borderTop: `1px solid ${BRAND.border}` }}>
+        <div className="p-4" style={{ borderTop: `1px solid ${palette.border}` }}>
           <div
             className="flex items-center gap-3 p-3 rounded-lg"
-            style={{ backgroundColor: BRAND.bgDarker }}
+            style={{ backgroundColor: palette.bgDarker }}
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 text-sm"
-              style={{ backgroundColor: BRAND.active }}
+              style={{ backgroundColor: palette.active }}
             >
               {userInitial}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate text-white">{userName}</p>
-              <p className="text-xs" style={{ color: BRAND.textMuted }}>
+              <p className="text-xs" style={{ color: palette.textMuted }}>
                 {ROLE_DISPLAY[userRole] || userRole}
               </p>
             </div>
