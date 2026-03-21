@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, Plus, Upload, Edit, Trash2, Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
@@ -31,12 +31,10 @@ export default function LeadsPage() {
   const { canAccess, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage, data: usageData } = useUsage();
 
-  // Busca leads ao montar e quando search/page muda
   useEffect(() => {
     fetchLeads({ search: debouncedSearch });
   }, [debouncedSearch, fetchLeads]);
 
-  // Debounce na busca (400ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -44,11 +42,9 @@ export default function LeadsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // ✅ Early returns DEPOIS de todos os hooks
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('leads')) return <AccessDenied module="leads" />;
 
-  // ✅ Bloqueio de criação quando limite atingido ou plano inativo
   const limitReached = isAtLimit('leads');
   const planInactive = isPlanInactive();
   const createBlocked = limitReached || planInactive;
@@ -73,49 +69,36 @@ export default function LeadsPage() {
   };
 
   const handleDeleteLead = async (lead: Lead) => {
-    const confirmMessage = `Tem certeza que deseja excluir o lead "${lead.name}"?`;
-    if (!window.confirm(confirmMessage)) return;
-
+    if (!window.confirm(`Tem certeza que deseja excluir o lead "${lead.name}"?`)) return;
     setDeletingId(lead.id);
     await deleteLead(lead.id);
     setDeletingId(null);
   };
 
   const handleImport = async (data: any[]): Promise<{ success: number; failed: number; errors: string[] }> => {
-    const { addLead } = useLeadsStore.getState();
-    const errors: string[] = [];
-    let success = 0;
-    let failed = 0;
-
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const name = row.name || row.nome;
-      const email = row.email;
-
-      if (!name) {
-        errors.push(`Linha ${i + 2}: Nome é obrigatório`);
-        failed++;
-        continue;
-      }
-
-      const result = await addLead({
-        name,
-        email: email || null,
-        phone: row.phone || row.telefone || null,
-        company: row.company || row.empresa || null,
-        source: row.source || row.origem || 'csv_import',
-        status: row.status || 'new',
+    try {
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leads: data }),
       });
 
-      if (result) {
-        success++;
-      } else {
-        errors.push(`Linha ${i + 2}: Erro ao salvar "${name}"`);
-        failed++;
-      }
-    }
+      const json = await res.json();
 
-    return { success, failed, errors };
+      if (!res.ok) {
+        return { success: 0, failed: data.length, errors: [json.error || 'Erro na importação'] };
+      }
+
+      fetchLeads({ search: debouncedSearch });
+
+      return {
+        success: json.sucesso ?? 0,
+        failed: json.falhas ?? 0,
+        errors: [],
+      };
+    } catch {
+      return { success: 0, failed: data.length, errors: ['Erro de conexão'] };
+    }
   };
 
   const getStatusDisplay = (status: string) => {
@@ -159,13 +142,11 @@ export default function LeadsPage() {
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-800 mb-2">Leads</h1>
         <p className="text-gray-600">Gerencie seus leads e oportunidades de vendas</p>
       </div>
 
-      {/* Error Banner */}
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
           <span>{error}</span>
@@ -179,7 +160,6 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Actions Bar */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
         <div className="flex-1 max-w-md">
           <div className="relative">
@@ -195,7 +175,6 @@ export default function LeadsPage() {
         </div>
 
         <div className="flex gap-3">
-          {/* ✅ Botão Importar CSV com tooltip de limite */}
           <div className="relative group">
             <button
               onClick={() => !createBlocked && setShowImport(true)}
@@ -213,7 +192,6 @@ export default function LeadsPage() {
             )}
           </div>
 
-          {/* ✅ Botão Novo Lead com tooltip de limite */}
           <div className="relative group">
             <button
               onClick={openCreateModal}
@@ -233,7 +211,6 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <p className="text-sm text-gray-600 mb-1">Total</p>
@@ -249,7 +226,6 @@ export default function LeadsPage() {
         ))}
       </div>
 
-      {/* Leads Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {isLoading && leads.length === 0 ? (
           <div className="flex items-center justify-center py-16">
@@ -296,7 +272,6 @@ export default function LeadsPage() {
                         <button
                           onClick={() => openEditModal(lead)}
                           className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
-                          title="Editar lead"
                         >
                           <Edit size={14} />
                           Editar
@@ -305,7 +280,6 @@ export default function LeadsPage() {
                           onClick={() => handleDeleteLead(lead)}
                           disabled={deletingId === lead.id}
                           className="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
-                          title="Excluir lead"
                         >
                           {deletingId === lead.id ? (
                             <Loader2 size={14} className="animate-spin" />
@@ -333,7 +307,6 @@ export default function LeadsPage() {
           </div>
         )}
 
-        {/* Paginação */}
         {pagination.totalPages > 1 && (
           <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between bg-gray-50">
             <span className="text-sm text-gray-600">
@@ -362,7 +335,6 @@ export default function LeadsPage() {
         )}
       </div>
 
-      {/* Import Modal */}
       {showImport && (
         <CSVImport
           isOpen={true}
@@ -374,7 +346,6 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* New/Edit Lead Modal */}
       <NewLeadModal
         isOpen={showNewLead}
         onClose={() => {
