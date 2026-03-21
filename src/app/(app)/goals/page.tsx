@@ -13,7 +13,6 @@ import { NewGoalModal } from '@/components/goals/NewGoalModal';
 import { GoalDetailModal } from '@/components/goals/GoalDetailModal';
 import { PermissionGate } from '@/components/PermissionGate';
 import UsageBanner from '@/components/UsageBanner';
-import LimitAlert  from '@/components/LimitAlert';
 
 // ── Stat card ────────────────────────────────────────────────────────────────
 function StatCard({
@@ -112,8 +111,7 @@ export default function GoalsPage() {
 
       {/* Usage / Limit banners */}
       <UsageBanner />
-      <LimitAlert resource="goals" />
-
+      
       {/* Header */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
