@@ -124,15 +124,13 @@ export default function GoalsPage() {
           </p>
         </div>
 
-        <PermissionGate module="goals" action="create">
-          <button
-            onClick={() => setNewOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Nova Meta
-          </button>
-        </PermissionGate>
+        <button
+  onClick={() => setNewOpen(true)}
+  className="flex items-center gap-2 px-4 py-2.5 bg-[var(--primary)] text-white text-sm font-medium rounded-xl hover:opacity-90 transition-all shadow-sm"
+>
+  <Plus className="w-4 h-4" />
+  Nova Meta
+</button>
       </div>
 
       {/* Stats */}
