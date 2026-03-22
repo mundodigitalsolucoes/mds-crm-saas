@@ -98,7 +98,8 @@ model Organization {
 
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
-
+  deletedAt       DateTime? @map("deleted_at")
+  
   // Relations
   users                 User[]
   leads                 Lead[]
