@@ -5,7 +5,11 @@ import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
-import { deleteChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
+import {
+  invalidateChatwootUserSessions,
+  deleteChatwootAccount,
+  purgeOrphanChatwootAccount,
+} from '@/lib/integrations/chatwoot-cleanup';
 import { disconnectInstance } from '@/lib/integrations/evolutionClient';
 
 /**
@@ -166,7 +170,14 @@ export async function PUT(
 }
 
 /**
- * DELETE /api/admin/organizations/:id — Remove uma organização + limpeza no Chatwoot + Evolution
+ * DELETE /api/admin/organizations/:id
+ * Ordem de operações:
+ *   1. Invalidar sessões Chatwoot via SQL (contenção garantida)
+ *   2. Tentar deletar Account Chatwoot via API
+ *   3. Se API falhar → purgar via SQL direto
+ *   4. Desconectar instância Evolution
+ *   5. Deletar organização do CRM (cascade)
+ *   6. Retornar warnings se alguma limpeza falhou
  */
 export async function DELETE(
   req: NextRequest,
@@ -179,12 +190,12 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const warnings: string[] = [];
 
-    // 1. Busca org e dados do Chatwoot antes de deletar
+    // Busca org antes de deletar
     const existing = await prisma.organization.findUnique({
       where: { id },
       include: {
-        _count: { select: { users: true } },
         connectedAccounts: {
           where: { provider: 'chatwoot' },
           select: { data: true },
@@ -199,45 +210,73 @@ export async function DELETE(
       );
     }
 
-    // 2. Tenta deletar Account no Chatwoot (cascade deleta users/inboxes)
-    try {
-      const cwAccount = existing.connectedAccounts?.[0];
-      if (cwAccount?.data) {
-        const cwData = JSON.parse(cwAccount.data) as { chatwootAccountId?: number };
-        if (cwData.chatwootAccountId) {
-          await deleteChatwootAccount(cwData.chatwootAccountId);
-        }
-      } else if (existing.chatwootAccountId) {
-        await deleteChatwootAccount(existing.chatwootAccountId);
-      }
-    } catch (cwErr) {
-      console.warn('[ADMIN ORGS] Aviso: falha ao deletar no Chatwoot:', cwErr);
+    // Resolve chatwootAccountId
+    let chatwootAccountId: number | null = existing.chatwootAccountId ?? null;
+    if (!chatwootAccountId && existing.connectedAccounts?.[0]?.data) {
+      try {
+        const cwData = JSON.parse(existing.connectedAccounts[0].data) as { chatwootAccountId?: number };
+        chatwootAccountId = cwData.chatwootAccountId ?? null;
+      } catch {}
     }
 
-    // 2b. Tenta deletar instância na Evolution (logout + delete)
+    // ── PASSO 1: Invalidar sessões via SQL (contenção garantida) ──────────────
+    if (chatwootAccountId) {
+      const { blocked, errors } = await invalidateChatwootUserSessions(chatwootAccountId);
+
+      if (errors.length > 0) {
+        warnings.push(`Falha ao invalidar sessões Chatwoot: ${errors.join(', ')}`);
+      } else {
+        console.info(`[ADMIN ORGS] Sessões invalidadas: ${blocked.join(', ')}`);
+      }
+    }
+
+    // ── PASSO 2: Deletar Account via API ──────────────────────────────────────
+    if (chatwootAccountId) {
+      const apiDeleted = await deleteChatwootAccount(chatwootAccountId);
+
+      // ── PASSO 3: Se API falhou → purgar via SQL ───────────────────────────
+      if (!apiDeleted) {
+        console.warn(`[ADMIN ORGS] API delete falhou — tentando purga SQL para account #${chatwootAccountId}`);
+        const sqlPurged = await purgeOrphanChatwootAccount(chatwootAccountId);
+
+        if (!sqlPurged) {
+          warnings.push(
+            `Account Chatwoot #${chatwootAccountId} não foi deletada. ` +
+            `Sessões já foram invalidadas — usuários não conseguem mais logar.`
+          );
+        }
+      }
+    }
+
+    // ── PASSO 4: Desconectar instância Evolution ──────────────────────────────
     try {
       const waAccount = await prisma.connectedAccount.findUnique({
         where: { provider_organizationId: { provider: 'whatsapp', organizationId: id } },
-        select: { data: true, isActive: true },
+        select: { data: true },
       });
       if (waAccount?.data) {
         const waData = JSON.parse(waAccount.data) as { instanceName?: string };
         if (waData.instanceName) {
           await disconnectInstance(waData.instanceName);
-          console.log('[ADMIN ORGS] Evolution instance deletada:', waData.instanceName);
+          console.info('[ADMIN ORGS] Evolution instance deletada:', waData.instanceName);
         }
       }
     } catch (evoErr) {
-      console.warn('[ADMIN ORGS] Aviso: falha ao deletar na Evolution:', evoErr);
+      const msg = evoErr instanceof Error ? evoErr.message : String(evoErr);
+      console.warn('[ADMIN ORGS] Falha ao deletar na Evolution:', msg);
+      warnings.push(`Falha ao desconectar WhatsApp: ${msg}`);
     }
 
-    // 3. Deleta organização do CRM (cascade deleta users, leads, etc.)
+    // ── PASSO 5: Deletar organização do CRM (cascade) ─────────────────────────
     await prisma.organization.delete({ where: { id } });
 
+    // ── PASSO 6: Retorno com warnings se houver ───────────────────────────────
     return NextResponse.json({
       success: true,
       message: `Organização "${existing.name}" removida com sucesso`,
+      ...(warnings.length > 0 && { warnings }),
     });
+
   } catch (error) {
     console.error('[ADMIN ORGS] Erro ao deletar:', error);
     return NextResponse.json(
