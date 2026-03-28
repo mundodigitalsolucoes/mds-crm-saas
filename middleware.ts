@@ -1,6 +1,7 @@
 // middleware.ts
 // Middleware unificado: Auth (NextAuth) + SuperAdmin (JWT) + Plan Status (trial/cancelled)
 // Rate limiting é aplicado diretamente nas API routes (Node.js runtime)
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { jwtVerify } from 'jose';
@@ -9,7 +10,6 @@ const ADMIN_JWT_SECRET = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET || 'super-admin-secret-key'
 );
 
-// Rotas que o usuário pode acessar mesmo com plano inativo
 const PLAN_EXEMPT_ROUTES = [
   '/settings',
   '/api/auth',
@@ -21,11 +21,7 @@ const PLAN_EXEMPT_ROUTES = [
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ═══════════════════════════════════════
-  // 🔒 ROTAS DO SUPER ADMIN (/admin/* e /api/admin/*)
-  // ═══════════════════════════════════════
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    // Libera a página de login e a API de auth do admin
     if (
       pathname === '/admin/login' ||
       pathname.startsWith('/api/admin/auth')
@@ -33,7 +29,6 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
 
-    // Verifica o cookie admin-token
     const adminToken = req.cookies.get('admin-token')?.value;
 
     if (!adminToken) {
@@ -50,43 +45,32 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  // ═══════════════════════════════════════
-  // 🔒 ROTAS DO CRM (NextAuth)
-  // ═══════════════════════════════════════
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token) {
     return NextResponse.redirect(new URL('/auth/login', req.url));
   }
 
-  // ─── Usuário deletado ou banido — invalida sessão imediatamente ───
-  if (token.banned) {
+  if (token.banned || token.organizationDeleted) {
     const response = NextResponse.redirect(new URL('/auth/login', req.url));
     response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
     response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
     return response;
   }
 
-  // ═══════════════════════════════════════
-  // 📋 VERIFICAÇÃO DE STATUS DO PLANO
-  // ═══════════════════════════════════════
-
-  // Verifica se a rota é isenta (settings, auth, LGPD)
   const isExempt = PLAN_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
 
   if (!isExempt) {
-    const planStatus  = token.planStatus  as string | undefined;
-    const plan        = token.plan        as string | undefined;
+    const planStatus = token.planStatus as string | undefined;
+    const plan = token.plan as string | undefined;
     const trialEndsAt = token.trialEndsAt as string | undefined;
 
     let planBlocked = false;
 
-    // Plano cancelado ou pagamento pendente
     if (planStatus === 'cancelled' || planStatus === 'past_due' || planStatus === 'trial_expired') {
       planBlocked = true;
     }
 
-    // Trial expirado (verificação por data no token — sem hit no banco)
     if (plan === 'trial' && trialEndsAt) {
       const now = new Date();
       if (now > new Date(trialEndsAt)) {
@@ -95,19 +79,17 @@ export default async function middleware(req: NextRequest) {
     }
 
     if (planBlocked) {
-      // APIs retornam 403 JSON
       if (pathname.startsWith('/api/')) {
         return NextResponse.json(
           {
-            error:  'Plano inativo',
+            error: 'Plano inativo',
             detail: 'Seu plano está inativo. Acesse as configurações para regularizar.',
-            code:   'PLAN_INACTIVE',
+            code: 'PLAN_INACTIVE',
           },
           { status: 403 }
         );
       }
 
-      // Páginas redirecionam para settings
       return NextResponse.redirect(new URL('/settings?plan=inactive', req.url));
     }
   }
@@ -117,7 +99,6 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Rotas do CRM (NextAuth)
     '/dashboard/:path*',
     '/leads/:path*',
     '/kanban/:path*',
@@ -132,9 +113,7 @@ export const config = {
     '/reports/:path*',
     '/configuracoes/:path*',
     '/settings/:path*',
-    // Rotas do SuperAdmin (JWT próprio)
     '/admin/:path*',
-    // APIs do SuperAdmin
     '/api/admin/:path*',
   ],
 };
