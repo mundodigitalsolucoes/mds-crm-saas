@@ -3,7 +3,8 @@
 **Projeto:** `mundodigitalsolucoes/mds-crm-saas`  
 **Data de início:** 28/03/2026  
 **Responsável:** Mundo Digital Soluções  
-**Status atual:** EM ANDAMENTO
+**Status atual:** EM ANDAMENTO  
+**Última atualização:** 28/03/2026
 
 ---
 
@@ -91,15 +92,16 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 ## 7. Estrutura dos sprints
 
 ### SPRINT A | Organização e contenção
+**Status:** PARCIALMENTE VALIDADA  
 **Objetivo:** parar o looping e criar governança de execução.
 
 **Ações:**
 - [x] Criar documento oficial do sprint
 - [x] Definir este arquivo como fonte única de verdade
 - [x] Congelar escopo em Atendimento + Chatwoot + WhatsApp
-- [ ] Mapear fluxo real ponta a ponta
-- [ ] Criar regra prática de execução: 1 tarefa por vez
-- [ ] Garantir teste + evidência + commit por tarefa
+- [x] Trabalhar 1 frente por vez
+- [x] Respostas curtas e rastreáveis
+- [ ] Garantir teste + evidência + commit por tarefa em todas as frentes futuras
 
 **Critério de pronto:**
 - documento versionado na raiz
@@ -110,19 +112,41 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 ---
 
 ### SPRINT B | Revogação de acesso e segurança
+**Status:** VALIDADA  
 **Objetivo:** garantir que usuário e organização deletados percam acesso de verdade.
 
 **Ações:**
-- [ ] Revisar exclusão de usuário
-- [ ] Revisar exclusão de organização
-- [ ] Garantir soft delete dos usuários da org
-- [ ] Garantir bloqueio imediato no CRM
-- [ ] Garantir revogação de sessões críticas
-- [ ] Testar com contas fake
+- [x] Revisar exclusão de usuário
+- [x] Revisar exclusão de organização
+- [x] Garantir soft delete dos usuários da org
+- [x] Garantir bloqueio imediato no CRM
+- [x] Garantir revogação de sessões críticas
+- [x] Validar com contas fake
+- [x] Corrigir isolamento entre organizações no Atendimento/Chatwoot
+
+**Resultado validado:**
+- Usuário deletado não acessa mais o CRM
+- Organização deletada não mantém acesso residual
+- Novo login após delete falha corretamente
+- Sessão residual deixou de ser problema operacional
+- Nova organização não herda mais conta anterior no iframe
+- Refresh e relogin mantêm a org correta no Atendimento
+
+**Arquivos envolvidos nesta validação:**
+- `src/app/api/users/route.ts`
+- `src/app/api/users/[id]/route.ts`
+- `src/app/api/admin/organizations/[id]/route.ts`
+- `src/lib/checkPermission.ts`
+- `src/lib/auth.ts`
+- `middleware.ts`
+- `src/app/api/integrations/chatwoot/credentials/route.ts`
+- `src/app/(app)/atendimento/page.tsx`
+- `src/lib/integrations/chatwoot-provision.ts`
 
 ---
 
 ### SPRINT C | Auto-login / SSO do Atendimento
+**Status:** NÃO INICIADA  
 **Objetivo:** remover a dependência do login manual no iframe.
 
 **Ações:**
@@ -133,9 +157,15 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 - [ ] Manter fallback manual apenas como contingência
 - [ ] Testar signup, refresh e relogin
 
+**Observação atual:**
+- O Atendimento está isolado corretamente por organização
+- O login manual no Chatwoot ainda continua como contingência operacional
+- O banner com credenciais ainda não foi removido do fluxo principal
+
 ---
 
 ### SPRINT D | Cleanup de contas fantasmas
+**Status:** PRÓXIMA FRENTE OFICIAL  
 **Objetivo:** impedir resíduos operacionais após delete.
 
 **Ações:**
@@ -144,10 +174,22 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 - [ ] Validar delete via API
 - [ ] Validar purge via SQL quando necessário
 - [ ] Confirmar limpeza de org e membros
+- [ ] Garantir que conta/user não fiquem poluindo o Chatwoot Admin
+
+**Problema atual confirmado:**
+- No CRM, delete e revogação estão corretos
+- No Chatwoot, conta e usuário podem permanecer visíveis mesmo sem acesso operacional
+- O problema agora é de cleanup/containment, não mais de segurança do CRM
+
+**Arquivos alvo prováveis:**
+- `src/app/api/admin/organizations/[id]/route.ts`
+- `src/lib/integrations/chatwoot-cleanup.ts`
+- `src/lib/integrations/chatwoot-provision.ts`
 
 ---
 
 ### SPRINT E | WhatsApp estável no Atendimento
+**Status:** NÃO INICIADA  
 **Objetivo:** fazer o WhatsApp funcionar como primeiro canal oficial.
 
 **Ações:**
@@ -160,6 +202,7 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 ---
 
 ### SPRINT F | Homologação final
+**Status:** NÃO INICIADA  
 **Objetivo:** validar o fluxo completo antes de comercializar em escala.
 
 **Ações:**
@@ -173,16 +216,16 @@ Este sprint existe para parar o looping de alterações, evitar bugs em cascata 
 
 ## 8. Próxima tarefa oficial
 
-### Tarefa 02
-**Nome:** Corrigir revogação de acesso ao deletar usuário e organização
+### Tarefa 06
+**Nome:** Conter contas fantasmas no Chatwoot
 
 **Motivo:**  
-Sem isso, qualquer avanço no atendimento continua em cima de uma base insegura.
+A segurança do CRM foi validada, mas o Chatwoot ainda pode manter resíduos visuais e operacionais após exclusão.
 
 **Resultado esperado:**  
-- usuário deletado não acessa mais
-- organização desativada não mantém usuário ativo
-- sprint fica seguro para seguir para SSO
+- conta e usuário deletados no CRM tentam ser removidos no Chatwoot
+- se o delete real falhar, o sistema aplica contenção forte
+- o Chatwoot deixa de acumular lixo operacional
 
 ---
 
@@ -218,8 +261,8 @@ Não iniciado / Em andamento / Validado / Bloqueado
 ## 10. Registro rápido de tarefas
 
 - [x] Tarefa 01 — Organizar sprint oficial do atendimento
-- [ ] Tarefa 02 — Corrigir revogação de acesso ao deletar usuário = em andamento
-- [ ] Tarefa 03 — Corrigir revogação de acesso ao deletar organização
+- [x] Tarefa 02 — Corrigir revogação de acesso ao deletar usuário
+- [x] Tarefa 03 — Corrigir revogação de acesso ao deletar organização
 - [ ] Tarefa 04 — Implementar auto-login / SSO do Chatwoot
 - [ ] Tarefa 05 — Remover dependência do banner com senha
 - [ ] Tarefa 06 — Conter contas fantasmas no Chatwoot
@@ -229,64 +272,107 @@ Não iniciado / Em andamento / Validado / Bloqueado
 
 ---
 
-## 11. Observação final
+## 11. Atualização de validação executada
+
+### Evidências validadas até agora
+- Membro fake deletado sem acesso a novo login
+- Organização fake deletada sem acesso a novo login
+- Soft delete funcionando com mascaramento de e-mail
+- Build local passou limpo
+- Atendimento não herda mais conta de organização anterior
+- Refresh e logout/login preservam a org correta no iframe
+
+### Conclusão operacional
+- **Sprint B validada**
+- **Próxima prioridade: Sprint D**
+- **Sprint C continua dependente de implementação própria de SSO**
+- **WhatsApp continua fora da frente atual até cleanup e contenção ficarem estáveis**
+
+---
+
+## 12. Detalhamento consolidado da Tarefa 02 e 03
+
+## Tarefa 02 | Corrigir revogação de acesso ao deletar usuário
+**Status:** VALIDADA  
+**Prioridade:** CRÍTICA  
+**Sprint:** B | Revogação de acesso e segurança
+
+### Objetivo
+Garantir que usuários deletados percam acesso ao CRM de forma previsível e sem vazamento de sessão.
+
+### Resultado validado
+- Usuário deletado não consegue novo login
+- Sessão inválida deixa de navegar no CRM
+- Soft delete substitui hard delete com segurança
+
+---
+
+## Tarefa 03 | Corrigir revogação de acesso ao deletar organização
+**Status:** VALIDADA  
+**Prioridade:** CRÍTICA  
+**Sprint:** B | Revogação de acesso e segurança
+
+### Objetivo
+Garantir que organizações deletadas não mantenham usuários ativos nem contexto residual no Atendimento.
+
+### Resultado validado
+- Organização deletada perde acesso ao CRM
+- Usuários da org deletada ficam bloqueados
+- Atendimento deixou de herdar account incorreta no Chatwoot
+- Isolamento entre organizações ficou validado
+
+---
+
+## 13. Detalhamento da próxima frente
+
+## Tarefa 06 | Conter contas fantasmas no Chatwoot
+**Status:** NÃO INICIADA  
+**Prioridade:** ALTA  
+**Sprint:** D | Cleanup de contas fantasmas
+
+### Objetivo
+Garantir que deletar usuário ou organização no CRM não deixe conta, vínculo ou usuário residual no Chatwoot.
+
+### Problema atual
+- No CRM a exclusão está segura
+- No Chatwoot ainda pode sobrar conta ou usuário listado no Admin
+- Isso gera poluição operacional e risco de inconsistência futura
+
+### Escopo desta tarefa
+- Revisar cleanup no delete da organização
+- Revisar cleanup no delete de membro
+- Validar rota/API real de remoção
+- Aplicar contenção forte quando o delete total falhar
+- Confirmar comportamento no Admin do Chatwoot
+
+### Arquivos alvo iniciais
+- `src/app/api/admin/organizations/[id]/route.ts`
+- `src/lib/integrations/chatwoot-cleanup.ts`
+- `src/lib/integrations/chatwoot-provision.ts`
+
+### Risco
+Médio
+
+### Teste esperado
+1. Criar org fake
+2. Criar membro fake
+3. Deletar membro
+4. Deletar org
+5. Validar se user/account somem do Chatwoot Admin
+6. Se não sumirem, validar contenção operacional
+
+### Critério de pronto
+- Sem conta fantasma relevante
+- Sem user fantasma operacional
+- Sem vínculo residual útil no Chatwoot após delete
+- CRM e Chatwoot coerentes o suficiente para seguir para Sprint C ou E
+
+---
+
+## 14. Observação final
 
 Este sprint não é para mexer em tudo.  
 É para estabilizar o core do atendimento com rastreabilidade.
 
 **Regra de ouro:**  
 menos alterações paralelas, mais validação real.
-
----
-
-Detalhamento da Tarefa 02
-
-## Tarefa 02 | Corrigir revogação de acesso ao deletar usuário e organização
-
-**Status:** EM ANDAMENTO  
-**Prioridade:** CRÍTICA  
-**Sprint:** B | Revogação de acesso e segurança
-
-### Objetivo
-Garantir que usuários deletados e organizações desativadas percam acesso ao CRM de forma previsível e sem vazamento de sessão.
-
-### Problema atual
-- Sessão pode continuar ativa por janela de revalidação
-- Organização desativada pode manter usuário com acesso residual
-- Base do sprint ainda não está segura para avançar para SSO
-
-### Escopo desta tarefa
-- Revisar exclusão de usuário
-- Revisar exclusão de organização
-- Garantir soft delete dos usuários da org
-- Garantir bloqueio confiável de navegação
-- Validar comportamento com conta fake
-
-### Arquivos alvo iniciais
-- `src/app/api/admin/organizations/[id]/route.ts`
-- `src/lib/auth.ts`
-- `middleware.ts`
-
-### Risco
-Médio
-
-### Teste esperado
-1. Criar / usar conta fake ativa
-2. Logar normalmente no CRM
-3. Deletar usuário ou organização
-4. Tentar continuar navegando
-5. Tentar atualizar a página
-6. Tentar novo login
-
-### Resultado esperado
-- Usuário deletado não acessa mais
-- Organização desativada não mantém usuários ativos
-- Sessão residual deixa de ser um problema operacional
-
-### Critério de pronto
-- Revogação funcionando com previsibilidade
-- Sem acesso residual após delete
-- Pronto para seguir para Sprint C (SSO)
-
-### Observações
-Nenhuma alteração paralela fora do escopo desta tarefa.
