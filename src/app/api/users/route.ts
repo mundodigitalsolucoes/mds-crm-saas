@@ -1,5 +1,5 @@
 // src/app/api/users/route.ts
-// Lista membros da organização do usuário logado
+// Lista membros ativos da organização do usuário logado
 // Protegido por permissão: módulo 'users', ação 'view'
 
 import { NextResponse } from 'next/server';
@@ -7,7 +7,6 @@ import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 
 export async function GET() {
-  // Verificar permissão (users.view)
   const { allowed, session, errorResponse } = await checkPermission('users', 'view');
   if (!allowed) return errorResponse!;
 
@@ -15,7 +14,10 @@ export async function GET() {
 
   try {
     const users = await prisma.user.findMany({
-      where: { organizationId },
+      where: {
+        organizationId,
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,

@@ -9,6 +9,10 @@ import {
 } from '@/lib/integrations/chatwoot-cleanup';
 import { disconnectInstance } from '@/lib/integrations/evolutionClient';
 
+function buildDeletedEmail(userId: string, deletedAt: Date): string {
+  return `deleted+${userId}.${deletedAt.getTime()}@deleted.local.invalid`;
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -61,7 +65,7 @@ export async function PUT(
     if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
 
     const { id } = await params;
-    const body   = await req.json();
+    const body = await req.json();
 
     const parsed = parseBody(adminOrgUpdateSchema, body);
     if (!parsed.success) return parsed.response;
@@ -100,7 +104,7 @@ export async function PUT(
 
 /**
  * DELETE /api/admin/organizations/:id
- * SOFT DELETE — marca deletedAt em vez de remover do banco.
+ * SOFT DELETE — marca deletedAt na org e em todos os usuários ativos da org.
  * Invalida sessões no Chatwoot e desconecta WhatsApp.
  */
 export async function DELETE(
@@ -121,13 +125,16 @@ export async function DELETE(
           where: { provider: 'chatwoot' },
           select: { data: true },
         },
+        users: {
+          where: { deletedAt: null },
+          select: { id: true },
+        },
       },
     });
 
     if (!existing) return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
     if (existing.deletedAt) return NextResponse.json({ error: 'Organização já está inativa' }, { status: 409 });
 
-    // Resolve chatwootAccountId
     let chatwootAccountId: number | null = existing.chatwootAccountId ?? null;
     if (!chatwootAccountId && existing.connectedAccounts?.[0]?.data) {
       try {
@@ -136,7 +143,6 @@ export async function DELETE(
       } catch {}
     }
 
-    // ── 1. Invalidar sessões Chatwoot via SQL ─────────────────────────────
     if (chatwootAccountId) {
       const { blocked, errors } = await invalidateChatwootUserSessions(chatwootAccountId);
       if (errors.length > 0) {
@@ -146,12 +152,12 @@ export async function DELETE(
       }
     }
 
-    // ── 2. Desconectar WhatsApp ───────────────────────────────────────────
     try {
       const waAccount = await prisma.connectedAccount.findUnique({
         where: { provider_organizationId: { provider: 'whatsapp', organizationId: id } },
         select: { data: true },
       });
+
       if (waAccount?.data) {
         const waData = JSON.parse(waAccount.data) as { instanceName?: string };
         if (waData.instanceName) {
@@ -164,20 +170,37 @@ export async function DELETE(
       warnings.push(`Falha ao desconectar WhatsApp: ${msg}`);
     }
 
-    // ── 3. Soft delete — marca deletedAt e desativa plano ────────────────
-    await prisma.organization.update({
-      where: { id },
-      data: {
-        deletedAt:  new Date(),
-        planStatus: 'inactive',
-      },
-    });
+    const deletedAt = new Date();
 
-    console.info(`[ADMIN ORGS] ✅ Org "${existing.name}" marcada como inativa (soft delete)`);
+    const softDeleteUsersOps = existing.users.map((user) =>
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          deletedAt,
+          email: buildDeletedEmail(user.id, deletedAt),
+        },
+      })
+    );
+
+    await prisma.$transaction([
+      prisma.organization.update({
+        where: { id },
+        data: {
+          deletedAt,
+          planStatus: 'inactive',
+        },
+      }),
+      ...softDeleteUsersOps,
+    ]);
+
+    console.info(
+      `[ADMIN ORGS] ✅ Org "${existing.name}" marcada como inativa (soft delete) e ${existing.users.length} usuário(s) foram bloqueados`
+    );
 
     return NextResponse.json({
       success: true,
       message: `Organização "${existing.name}" desativada com sucesso`,
+      blockedUsers: existing.users.length,
       ...(warnings.length > 0 && { warnings }),
     });
   } catch (error) {

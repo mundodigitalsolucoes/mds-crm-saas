@@ -4,9 +4,18 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const CRM_URL = process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br';
+
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    console.warn('[Email] RESEND_API_KEY não configurada');
+    return null;
+  }
+
+  return new Resend(apiKey);
+}
 
 // ============================================
 // EMAIL DE RECUPERAÇÃO DE SENHA
@@ -23,6 +32,15 @@ export async function sendPasswordResetEmail({
   userName,
   resetLink,
 }: SendPasswordResetEmailParams) {
+  const resend = getResendClient();
+
+  if (!resend) {
+    return {
+      success: false,
+      error: 'RESEND_API_KEY not configured',
+    };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: 'MDS CRM <noreply@mundodigitalsolucoes.com.br>',
@@ -133,6 +151,15 @@ export async function sendInviteEmail({
   invitedBy,
   organizationName,
 }: SendInviteEmailParams) {
+  const resend = getResendClient();
+
+  if (!resend) {
+    return {
+      success: false,
+      error: 'RESEND_API_KEY not configured',
+    };
+  }
+
   const loginUrl = `${CRM_URL}/auth/login`;
   const roleLabel = ROLE_LABELS[role] || role;
   const orgDisplay = organizationName || 'sua organização';
@@ -155,7 +182,6 @@ export async function sendInviteEmail({
               <td align="center">
                 <table role="presentation" width="480" cellspacing="0" cellpadding="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07);">
 
-                  <!-- Header -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);padding:32px 40px;text-align:center;">
                       <h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:700;">MDS CRM</h1>
@@ -163,7 +189,6 @@ export async function sendInviteEmail({
                     </td>
                   </tr>
 
-                  <!-- Body -->
                   <tr>
                     <td style="padding:40px;">
                       <p style="color:#18181b;font-size:16px;margin:0 0 8px;">
@@ -174,7 +199,6 @@ export async function sendInviteEmail({
                         <strong>${orgDisplay}</strong> no MDS CRM como <strong>${roleLabel}</strong>.
                       </p>
 
-                      <!-- Credenciais -->
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 24px;">
                         <tr>
                           <td style="background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:20px;">
@@ -199,7 +223,6 @@ export async function sendInviteEmail({
                         </tr>
                       </table>
 
-                      <!-- Button -->
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                         <tr>
                           <td align="center" style="padding:8px 0 32px;">
@@ -228,7 +251,6 @@ export async function sendInviteEmail({
                     </td>
                   </tr>
 
-                  <!-- Footer -->
                   <tr>
                     <td style="background-color:#fafafa;padding:24px 40px;text-align:center;border-top:1px solid #e4e4e7;">
                       <p style="color:#a1a1aa;font-size:11px;margin:0;">

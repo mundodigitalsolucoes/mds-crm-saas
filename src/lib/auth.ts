@@ -1,10 +1,10 @@
 // src/lib/auth.ts
 // Configuração CENTRALIZADA do NextAuth.js
 // Single source of truth — usado por route.ts e getServerSession()
-// Inclui permissões granulares + dados do plano no JWT e session  
+// Inclui permissões granulares + dados do plano no JWT e session
 
 import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials'; 
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -38,13 +38,13 @@ export const authOptions: NextAuthOptions = {
                 plan: true,
                 planStatus: true,
                 trialEndsAt: true,
+                deletedAt: true,
               },
             },
           },
         });
 
-        // Usuário não existe ou foi soft-deleted (LGPD)
-        if (!user || user.deletedAt) return null;
+        if (!user || user.deletedAt || user.organization.deletedAt) return null;
 
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
@@ -67,8 +67,7 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user, trigger, session: updateData }) {
-      // ─── Login inicial: gravar dados do user no token ───
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.organizationId = (user as any).organizationId;
@@ -77,74 +76,46 @@ export const authOptions: NextAuthOptions = {
         token.plan = (user as any).plan;
         token.planStatus = (user as any).planStatus;
         token.trialEndsAt = (user as any).trialEndsAt;
-        token.lastChecked = Date.now();
       }
 
-      // ─── Verificação periódica: usuário ainda existe? (a cada 5 min) ───
-      const FIVE_MINUTES = 5 * 60 * 1000;
-      const lastChecked = token.lastChecked as number | undefined;
-      if (!lastChecked || Date.now() - lastChecked > FIVE_MINUTES) {
+      if (token.id) {
         try {
-          const exists = await prisma.user.findUnique({
+          const freshUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { id: true, deletedAt: true },
-          });
-          if (!exists || exists.deletedAt) {
-            token.banned = true;
-          } else {
-            token.banned = false;
-            token.lastChecked = Date.now();
-          }
-        } catch {
-          // Em caso de erro de DB, mantém sessão mas não atualiza lastChecked
-        }
-      }
-
-      // ─── Session update: recarregar permissões e dados do plano ───
-      if (trigger === 'update') {
-        if (updateData && ('permissions' in updateData || 'role' in updateData)) {
-          if ('permissions' in updateData) {
-            token.permissions = updateData.permissions;
-          }
-          if ('role' in updateData) {
-            token.role = updateData.role;
-          }
-        }
-
-        // Atualizar dados do plano se enviados
-        if (updateData && ('plan' in updateData || 'planStatus' in updateData)) {
-          if ('plan' in updateData) token.plan = updateData.plan;
-          if ('planStatus' in updateData) token.planStatus = updateData.planStatus;
-          if ('trialEndsAt' in updateData) token.trialEndsAt = updateData.trialEndsAt;
-        }
-
-        // Se não enviou dados específicos, busca tudo do banco
-        if (!updateData || Object.keys(updateData).length === 0) {
-          try {
-            const freshUser = await prisma.user.findUnique({
-              where: { id: token.id as string },
-              select: {
-                role: true,
-                permissions: true,
-                organization: {
-                  select: {
-                    plan: true,
-                    planStatus: true,
-                    trialEndsAt: true,
-                  },
+            select: {
+              id: true,
+              role: true,
+              permissions: true,
+              organizationId: true,
+              deletedAt: true,
+              organization: {
+                select: {
+                  plan: true,
+                  planStatus: true,
+                  trialEndsAt: true,
+                  deletedAt: true,
                 },
               },
-            });
-            if (freshUser) {
-              token.role = freshUser.role;
-              token.permissions = freshUser.permissions;
-              token.plan = freshUser.organization.plan;
-              token.planStatus = freshUser.organization.planStatus;
-              token.trialEndsAt = freshUser.organization.trialEndsAt?.toISOString() || null;
-            }
-          } catch (error) {
-            console.error('[AUTH] Erro ao recarregar dados do token:', error);
+            },
+          });
+
+          if (!freshUser || freshUser.deletedAt || freshUser.organization.deletedAt) {
+            token.banned = true;
+            token.organizationDeleted = Boolean(freshUser?.organization.deletedAt);
+            return token;
           }
+
+          token.banned = false;
+          token.organizationDeleted = false;
+          token.organizationId = freshUser.organizationId;
+          token.role = freshUser.role;
+          token.permissions = freshUser.permissions;
+          token.plan = freshUser.organization.plan;
+          token.planStatus = freshUser.organization.planStatus;
+          token.trialEndsAt = freshUser.organization.trialEndsAt?.toISOString() || null;
+          token.lastChecked = Date.now();
+        } catch {
+          // Em caso de erro de DB, mantém o token atual
         }
       }
 
