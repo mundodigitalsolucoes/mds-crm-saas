@@ -218,7 +218,7 @@ Não iniciado / Em andamento / Validado / Bloqueado
 ## 10. Registro rápido de tarefas
 
 - [x] Tarefa 01 — Organizar sprint oficial do atendimento
-- [ ] Tarefa 02 — Corrigir revogação de acesso ao deletar usuário
+- [ ] Tarefa 02 — Corrigir revogação de acesso ao deletar usuário = em andamento
 - [ ] Tarefa 03 — Corrigir revogação de acesso ao deletar organização
 - [ ] Tarefa 04 — Implementar auto-login / SSO do Chatwoot
 - [ ] Tarefa 05 — Remover dependência do banner com senha
@@ -236,3 +236,57 @@ Este sprint não é para mexer em tudo.
 
 **Regra de ouro:**  
 menos alterações paralelas, mais validação real.
+
+---
+
+Detalhamento da Tarefa 02
+
+## Tarefa 02 | Corrigir revogação de acesso ao deletar usuário e organização
+
+**Status:** EM ANDAMENTO  
+**Prioridade:** CRÍTICA  
+**Sprint:** B | Revogação de acesso e segurança
+
+### Objetivo
+Garantir que usuários deletados e organizações desativadas percam acesso ao CRM de forma previsível e sem vazamento de sessão.
+
+### Problema atual
+- Sessão pode continuar ativa por janela de revalidação
+- Organização desativada pode manter usuário com acesso residual
+- Base do sprint ainda não está segura para avançar para SSO
+
+### Escopo desta tarefa
+- Revisar exclusão de usuário
+- Revisar exclusão de organização
+- Garantir soft delete dos usuários da org
+- Garantir bloqueio confiável de navegação
+- Validar comportamento com conta fake
+
+### Arquivos alvo iniciais
+- `src/app/api/admin/organizations/[id]/route.ts`
+- `src/lib/auth.ts`
+- `middleware.ts`
+
+### Risco
+Médio
+
+### Teste esperado
+1. Criar / usar conta fake ativa
+2. Logar normalmente no CRM
+3. Deletar usuário ou organização
+4. Tentar continuar navegando
+5. Tentar atualizar a página
+6. Tentar novo login
+
+### Resultado esperado
+- Usuário deletado não acessa mais
+- Organização desativada não mantém usuários ativos
+- Sessão residual deixa de ser um problema operacional
+
+### Critério de pronto
+- Revogação funcionando com previsibilidade
+- Sem acesso residual após delete
+- Pronto para seguir para Sprint C (SSO)
+
+### Observações
+Nenhuma alteração paralela fora do escopo desta tarefa.
