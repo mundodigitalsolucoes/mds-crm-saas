@@ -8,9 +8,11 @@ import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
 
 interface ChatwootCredentials {
-  email:             string;
-  password:          string;
-  chatwootUrl:       string;
+  organizationId: string;
+  cacheKey: string;
+  email: string;
+  password: string;
+  chatwootUrl: string;
   chatwootAccountId: number;
 }
 
@@ -39,11 +41,13 @@ function NotConfigured() {
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    navigator.clipboard.writeText(text);
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+
   return (
     <button
       onClick={copy}
@@ -56,35 +60,40 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const { chatwootUrl, chatwootAccountId, email, password } = creds;
+  const { chatwootUrl, chatwootAccountId, email, password, organizationId, cacheKey } = creds;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [showHint, setShowHint] = useState(true);
 
-  const iframeUrl = `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard`;
+  const SIDEBAR_WIDTH = 264;
+  const BANNER_HEIGHT = 40;
 
-  const SIDEBAR_WIDTH = 264; // largura do sidebar do CRM
-  const BANNER_HEIGHT = 40;  // altura do banner amarelo
+  const iframeUrl =
+    `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard` +
+    `?crm_org=${encodeURIComponent(organizationId)}` +
+    `&crm_ctx=${encodeURIComponent(cacheKey)}`;
+
+  useEffect(() => {
+    setShowHint(true);
+  }, [cacheKey]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     const handleLoad = () => {
-  try {
-    const href = iframe.contentWindow?.location?.href ?? '';
-    // Conseguiu ler a URL (mesmo origin) — verifica se saiu do login
-    if (!href.includes('/login') && href !== '') {
-      setShowHint(false);
-    }
-  } catch (_e) {
-    // Cross-origin block — NÃO some o banner automaticamente
-    // O usuário precisa fazer login manualmente
-  }
-};
+      try {
+        const href = iframe.contentWindow?.location?.href ?? '';
+        if (href && !href.includes('/login')) {
+          setShowHint(false);
+        }
+      } catch {
+        // Cross-origin. Mantém o banner.
+      }
+    };
 
     iframe.addEventListener('load', handleLoad);
     return () => iframe.removeEventListener('load', handleLoad);
-  }, []);
+  }, [cacheKey]);
 
   const topOffset = showHint ? BANNER_HEIGHT : 0;
 
@@ -109,7 +118,9 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
           <CopyButton text={password} />
         </div>
       )}
+
       <iframe
+        key={cacheKey}
         ref={iframeRef}
         src={iframeUrl}
         style={{
@@ -122,25 +133,61 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
           height: `calc(100vh - ${topOffset}px)`,
           border: 'none',
           zIndex: 40,
+          background: '#111827',
         }}
         allow="microphone; camera; clipboard-write"
-        title="Atendimento"
+        title={`Atendimento-${organizationId}-${chatwootAccountId}`}
       />
     </div>
   );
 }
 
 export default function AtendimentoPage() {
-  const [creds, setCreds]     = useState<ChatwootCredentials | null>(null);
+  const [creds, setCreds] = useState<ChatwootCredentials | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(false);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    axios
-      .get<ChatwootCredentials>('/api/integrations/chatwoot/credentials')
-      .then(({ data }) => setCreds(data))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    let mounted = true;
+    const controller = new AbortController();
+
+    async function loadCredentials() {
+      setLoading(true);
+      setError(false);
+      setCreds(null);
+
+      try {
+        const { data } = await axios.get<ChatwootCredentials>(
+          '/api/integrations/chatwoot/credentials',
+          {
+            signal: controller.signal,
+            params: {
+              t: Date.now(),
+            },
+            headers: {
+              'Cache-Control': 'no-store',
+              Pragma: 'no-cache',
+            },
+          }
+        );
+
+        if (!mounted) return;
+        setCreds(data);
+      } catch (err) {
+        if (!mounted || controller.signal.aborted) return;
+        setError(true);
+      } finally {
+        if (!mounted) return;
+        setLoading(false);
+      }
+    }
+
+    loadCredentials();
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
   }, []);
 
   return (
@@ -152,7 +199,7 @@ export default function AtendimentoPage() {
       ) : error || !creds ? (
         <NotConfigured />
       ) : (
-        <ChatwootIframe creds={creds} />
+        <ChatwootIframe key={creds.cacheKey} creds={creds} />
       )}
     </PermissionGate>
   );
