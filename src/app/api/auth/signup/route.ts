@@ -1,17 +1,4 @@
 // src/app/api/auth/signup/route.ts
-//
-// API de cadastro com provisionamento automático do Chatwoot.
-// Mantém falha silenciosa: Chatwoot não provisionado NUNCA bloqueia o signup.
-//
-// FLUXO:
-//   1. Valida dados e cria Organization + User (transação Prisma)
-//   2. Dispara provisionamento Chatwoot em background (sem await bloqueante)
-//   3. Retorna resposta ao usuário imediatamente
-//
-// CONTENÇÃO: se CHATWOOT_SUPER_ADMIN_EMAIL não estiver definido,
-// o step 2 é ignorado e o admin provisiona manualmente via:
-//   POST /api/admin/orgs/[orgId]/provision-chatwoot
-
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
@@ -47,8 +34,25 @@ export async function POST(request: Request) {
 
     const data = parsed.data
 
-    const existingUser = await prisma.user.findUnique({ where: { email: data.email } })
+    // ── Verifica se email já existe ──────────────────────────────────────────
+    const existingUser = await prisma.user.findFirst({
+      where: { email: data.email },
+      include: { organization: { select: { deletedAt: true, planStatus: true } } },
+    })
+
     if (existingUser) {
+      // Conta inativa — redireciona para reativação
+      if (existingUser.organization?.deletedAt) {
+        return NextResponse.json(
+          {
+            error: 'conta_inativa',
+            message: 'Você já possui uma conta inativa. Faça login para reativar seu plano.',
+            redirect: '/login?reactivate=true',
+          },
+          { status: 409 }
+        )
+      }
+      // Conta ativa — email em uso normal
       return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
     }
 
@@ -62,6 +66,7 @@ export async function POST(request: Request) {
     const baseSlug = slugify(data.companyName)
     let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`
     let i = 1
+    // Verifica slug incluindo orgs inativas
     while (await prisma.organization.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${i++}`
     }
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
       ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
       : null
 
-    // ── 1. Criar Organization + User (transação atômica) ────────────────────
+    // ── 1. Criar Organization + User ─────────────────────────────────────────
     const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
@@ -99,9 +104,7 @@ export async function POST(request: Request) {
       return { organization, user }
     })
 
-    // ── 2. Provisionar Chatwoot em background (falha silenciosa) ────────────
-    // Não usamos await aqui para não atrasar a resposta ao usuário.
-    // O provisionamento leva ~2-4s e não é crítico para o signup.
+    // ── 2. Provisionar Chatwoot em background ────────────────────────────────
     provisionChatwootForOrg({
       organizationId: result.organization.id,
       orgName:        result.organization.name,
@@ -112,7 +115,6 @@ export async function POST(request: Request) {
       ownerPassword:  `Tmp@${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}!Z`,
     }).then((provResult) => {
       if (!provResult.success) {
-        // Loga para monitoramento — admin pode reprovisionar manualmente
         console.warn(
           `[SIGNUP] Chatwoot não provisionado para org ${result.organization.slug}:`,
           provResult.error,
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
       console.error('[SIGNUP] Erro inesperado no provisionamento Chatwoot:', err)
     })
 
-    // ── 3. Responder imediatamente ───────────────────────────────────────────
+    // ── 3. Responder imediatamente ────────────────────────────────────────────
     return NextResponse.json({
       message: 'Conta criada com sucesso!',
       user: {
