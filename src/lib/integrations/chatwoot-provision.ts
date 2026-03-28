@@ -20,8 +20,7 @@ interface ProvisionResult {
 }
 
 /**
- * Confirma o usuário via endpoint customizado no SSO controller do Chatwoot.
- * Usa CHATWOOT_SUPER_ADMIN_TOKEN como segredo — sem SQL direto, sem ETIMEDOUT.
+ * Confirma o usuário via endpoint SSO customizado.
  */
 async function confirmChatwootUser(baseUrl: string, email: string): Promise<void> {
   const secret = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
@@ -29,7 +28,6 @@ async function confirmChatwootUser(baseUrl: string, email: string): Promise<void
     console.warn('[CHATWOOT PROVISION] CHATWOOT_SUPER_ADMIN_TOKEN não configurado')
     return
   }
-
   try {
     const res = await fetch(
       `${baseUrl}/sso/confirm-user?email=${encodeURIComponent(email)}&secret=${encodeURIComponent(secret)}`,
@@ -46,57 +44,117 @@ async function confirmChatwootUser(baseUrl: string, email: string): Promise<void
   }
 }
 
+/**
+ * Provisiona account + usuário no Chatwoot via Platform API.
+ * Requer CHATWOOT_PLATFORM_TOKEN (gerado em Super Admin → Aplicativos de plataforma).
+ */
 export async function provisionChatwootForOrg(
   input: ProvisionInput,
 ): Promise<ProvisionResult> {
-  const chatwootUrl = process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '')
-  const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-  const baseUrl     = internalUrl ?? chatwootUrl
+  const chatwootUrl   = process.env.CHATWOOT_API_URL?.replace(/\/$/, '') ||
+                        process.env.NEXT_PUBLIC_CHATWOOT_URL?.replace(/\/$/, '')
+  const platformToken = process.env.CHATWOOT_PLATFORM_TOKEN
 
-  if (!baseUrl) {
-    console.info('[CHATWOOT PROVISION] URL não configurada')
+  if (!chatwootUrl) {
+    console.warn('[CHATWOOT PROVISION] URL não configurada')
     return { success: false, error: 'super_admin_not_configured' }
   }
 
+  if (!platformToken) {
+    console.warn('[CHATWOOT PROVISION] CHATWOOT_PLATFORM_TOKEN não configurado')
+    return { success: false, error: 'platform_token_not_configured' }
+  }
+
   try {
-    // 1. Cria account + usuário via API pública do Chatwoot
-    const res = await fetch(`${baseUrl}/api/v1/accounts`, {
+    // ── 1. Cria Account via Platform API ──────────────────────────────────
+    const accountRes = await fetch(`${chatwootUrl}/platform/api/v1/accounts`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type':    'application/json',
+        'api_access_token': platformToken,
+      },
       body: JSON.stringify({
-        account_name:          input.orgName,
-        email:                 input.ownerEmail,
-        password:              input.ownerPassword,
-        password_confirmation: input.ownerPassword,
-        locale:                'pt_BR',
+        name:   input.orgName,
+        locale: 'pt_BR',
       }),
       signal: AbortSignal.timeout(15_000),
     })
 
-    if (!res.ok) {
-      const errText = await res.text()
-      console.warn('[CHATWOOT PROVISION] Falha criar account:', res.status, errText)
+    if (!accountRes.ok) {
+      const errText = await accountRes.text()
+      console.warn('[CHATWOOT PROVISION] Falha criar account:', accountRes.status, errText)
       return { success: false, error: 'account_creation_failed' }
     }
 
-    const json = await res.json()
-    const data = json?.data
+    const accountJson     = await accountRes.json()
+    const chatwootAccountId = accountJson?.id as number
 
-    if (!data?.account_id || !data?.access_token) {
-      console.warn('[CHATWOOT PROVISION] Resposta inesperada:', JSON.stringify(json))
+    if (!chatwootAccountId) {
+      console.warn('[CHATWOOT PROVISION] Resposta inesperada ao criar account:', JSON.stringify(accountJson))
       return { success: false, error: 'account_creation_failed' }
     }
 
-    const chatwootAccountId = data.account_id as number
-    const chatwootUserId    = data.id          as number
-    const accessToken       = data.access_token as string
+    console.info(`[CHATWOOT PROVISION] ✅ Account #${chatwootAccountId} criada`)
 
-    // 2. Confirma o usuário via endpoint SSO customizado
-    await confirmChatwootUser(baseUrl, input.ownerEmail)
+    // ── 2. Cria Usuário via Platform API ──────────────────────────────────
+    const userRes = await fetch(`${chatwootUrl}/platform/api/v1/users`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':    'application/json',
+        'api_access_token': platformToken,
+      },
+      body: JSON.stringify({
+        name:                  input.ownerName,
+        email:                 input.ownerEmail,
+        password:              input.ownerPassword,
+        password_confirmation: input.ownerPassword,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    })
 
-    // 3. Salva no banco do CRM
-    const publicUrl   = chatwootUrl ?? baseUrl
-    const encToken    = encryptToken(accessToken)
+    if (!userRes.ok) {
+      const errText = await userRes.text()
+      console.warn('[CHATWOOT PROVISION] Falha criar usuário:', userRes.status, errText)
+      // Conta criada mas usuário falhou — tenta continuar com o access token da conta
+      return { success: false, error: 'user_creation_failed' }
+    }
+
+    const userJson        = await userRes.json()
+    const chatwootUserId  = userJson?.id          as number
+    const accessToken     = userJson?.access_token as string
+
+    console.info(`[CHATWOOT PROVISION] ✅ Usuário #${chatwootUserId} criado`)
+
+    // ── 3. Vincula usuário à account ──────────────────────────────────────
+    const memberRes = await fetch(
+      `${chatwootUrl}/platform/api/v1/accounts/${chatwootAccountId}/account_users`,
+      {
+        method:  'POST',
+        headers: {
+          'Content-Type':    'application/json',
+          'api_access_token': platformToken,
+        },
+        body: JSON.stringify({
+          user_id: chatwootUserId,
+          role:    'administrator',
+        }),
+        signal: AbortSignal.timeout(15_000),
+      }
+    )
+
+    if (!memberRes.ok) {
+      const errText = await memberRes.text()
+      console.warn('[CHATWOOT PROVISION] Falha vincular usuário à account:', memberRes.status, errText)
+      // Não crítico — continua
+    } else {
+      console.info(`[CHATWOOT PROVISION] ✅ Usuário #${chatwootUserId} vinculado à account #${chatwootAccountId}`)
+    }
+
+    // ── 4. Confirma usuário via SSO ───────────────────────────────────────
+    await confirmChatwootUser(chatwootUrl, input.ownerEmail)
+
+    // ── 5. Salva no banco do CRM ──────────────────────────────────────────
+    const encToken    = encryptToken(accessToken || '')
     const encPassword = encryptToken(input.ownerPassword)
 
     await prisma.$transaction([
@@ -114,7 +172,7 @@ export async function provisionChatwootForOrg(
           accessTokenEnc: encToken,
           isActive:       true,
           data: JSON.stringify({
-            chatwootUrl:      publicUrl,
+            chatwootUrl:      chatwootUrl,
             chatwootAccountId,
             ownerEmail:       input.ownerEmail,
             ownerPasswordEnc: encPassword,
@@ -127,7 +185,7 @@ export async function provisionChatwootForOrg(
           lastError:      null,
           lastSyncAt:     new Date(),
           data: JSON.stringify({
-            chatwootUrl:      publicUrl,
+            chatwootUrl:      chatwootUrl,
             chatwootAccountId,
             ownerEmail:       input.ownerEmail,
             ownerPasswordEnc: encPassword,
@@ -142,9 +200,10 @@ export async function provisionChatwootForOrg(
       }),
     ])
 
-    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId}`)
+    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} provisionada com sucesso`)
 
     return { success: true, chatwootAccountId, chatwootUserId }
+
   } catch (err) {
     console.error('[CHATWOOT PROVISION] Erro inesperado:', err)
     return { success: false, error: 'unexpected_error' }
