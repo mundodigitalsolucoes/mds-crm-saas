@@ -1,7 +1,7 @@
 // src/app/(app)/atendimento/page.tsx
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare, Settings, Loader2, Copy, Check } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
@@ -9,6 +9,7 @@ import axios from 'axios';
 
 interface ChatwootCredentials {
   organizationId: string;
+  userId: string;
   cacheKey: string;
   email: string;
   password: string;
@@ -60,7 +61,16 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const { chatwootUrl, chatwootAccountId, email, password, organizationId, cacheKey } = creds;
+  const {
+    chatwootUrl,
+    chatwootAccountId,
+    email,
+    password,
+    organizationId,
+    userId,
+    cacheKey,
+  } = creds;
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [showHint, setShowHint] = useState(true);
 
@@ -70,11 +80,39 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   const iframeUrl =
     `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard` +
     `?crm_org=${encodeURIComponent(organizationId)}` +
-    `&crm_ctx=${encodeURIComponent(cacheKey)}`;
+    `&crm_user=${encodeURIComponent(userId)}` +
+    `&crm_ctx=${encodeURIComponent(cacheKey)}` +
+    `&t=${Date.now()}`;
+
+  const cleanupIframe = useCallback(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    try {
+      iframe.src = 'about:blank';
+    } catch {
+      // noop
+    }
+  }, []);
 
   useEffect(() => {
     setShowHint(true);
-  }, [cacheKey]);
+
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    iframe.src = 'about:blank';
+
+    const timer = window.setTimeout(() => {
+      if (!iframeRef.current) return;
+      iframeRef.current.src = iframeUrl;
+    }, 60);
+
+    return () => {
+      window.clearTimeout(timer);
+      cleanupIframe();
+    };
+  }, [cacheKey, iframeUrl, cleanupIframe]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -83,7 +121,7 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
     const handleLoad = () => {
       try {
         const href = iframe.contentWindow?.location?.href ?? '';
-        if (href && !href.includes('/login')) {
+        if (href && href !== 'about:blank' && !href.includes('/login')) {
           setShowHint(false);
         }
       } catch {
@@ -94,6 +132,19 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
     iframe.addEventListener('load', handleLoad);
     return () => iframe.removeEventListener('load', handleLoad);
   }, [cacheKey]);
+
+  useEffect(() => {
+    const handlePageHide = () => cleanupIframe();
+    const handleBeforeUnload = () => cleanupIframe();
+
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [cleanupIframe]);
 
   const topOffset = showHint ? BANNER_HEIGHT : 0;
 
@@ -122,7 +173,7 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
       <iframe
         key={cacheKey}
         ref={iframeRef}
-        src={iframeUrl}
+        src="about:blank"
         style={{
           position: 'fixed',
           top: topOffset,
@@ -136,7 +187,7 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
           background: '#111827',
         }}
         allow="microphone; camera; clipboard-write"
-        title={`Atendimento-${organizationId}-${chatwootAccountId}`}
+        title={`Atendimento-${organizationId}-${userId}-${chatwootAccountId}`}
       />
     </div>
   );
@@ -146,49 +197,68 @@ export default function AtendimentoPage() {
   const [creds, setCreds] = useState<ChatwootCredentials | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const requestSeqRef = useRef(0);
 
-  useEffect(() => {
-    let mounted = true;
-    const controller = new AbortController();
+  const loadCredentials = useCallback(async (silent = false) => {
+    const requestId = ++requestSeqRef.current;
 
-    async function loadCredentials() {
+    if (!silent) {
       setLoading(true);
       setError(false);
       setCreds(null);
+    }
 
-      try {
-        const { data } = await axios.get<ChatwootCredentials>(
-          '/api/integrations/chatwoot/credentials',
-          {
-            signal: controller.signal,
-            params: {
-              t: Date.now(),
-            },
-            headers: {
-              'Cache-Control': 'no-store',
-              Pragma: 'no-cache',
-            },
-          }
-        );
+    try {
+      const { data } = await axios.get<ChatwootCredentials>(
+        '/api/integrations/chatwoot/credentials',
+        {
+          params: {
+            t: Date.now(),
+          },
+          headers: {
+            'Cache-Control': 'no-store',
+            Pragma: 'no-cache',
+          },
+        }
+      );
 
-        if (!mounted) return;
-        setCreds(data);
-      } catch (err) {
-        if (!mounted || controller.signal.aborted) return;
-        setError(true);
-      } finally {
-        if (!mounted) return;
+      if (requestId !== requestSeqRef.current) return;
+
+      setCreds(data);
+      setError(false);
+    } catch {
+      if (requestId !== requestSeqRef.current) return;
+
+      setCreds(null);
+      setError(true);
+    } finally {
+      if (!silent && requestId === requestSeqRef.current) {
         setLoading(false);
       }
     }
+  }, []);
 
-    loadCredentials();
+  useEffect(() => {
+    void loadCredentials(false);
+
+    const handleFocus = () => {
+      void loadCredentials(true);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadCredentials(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      mounted = false;
-      controller.abort();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [loadCredentials]);
 
   return (
     <PermissionGate module="atendimento" action="view">

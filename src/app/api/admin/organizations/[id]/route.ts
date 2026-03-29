@@ -4,9 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { syncPlanLimits } from '@/lib/checkLimits';
 import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
-import {
-  invalidateChatwootUserSessions,
-} from '@/lib/integrations/chatwoot-cleanup';
+import { hardCleanupChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
 import { disconnectInstance } from '@/lib/integrations/evolutionClient';
 
 function buildDeletedEmail(userId: string, deletedAt: Date): string {
@@ -105,7 +103,7 @@ export async function PUT(
 /**
  * DELETE /api/admin/organizations/:id
  * SOFT DELETE — marca deletedAt na org e em todos os usuários ativos da org.
- * Invalida sessões no Chatwoot e desconecta WhatsApp.
+ * Faz hard cleanup do Chatwoot + desconecta WhatsApp.
  */
 export async function DELETE(
   req: NextRequest,
@@ -136,6 +134,7 @@ export async function DELETE(
     if (existing.deletedAt) return NextResponse.json({ error: 'Organização já está inativa' }, { status: 409 });
 
     let chatwootAccountId: number | null = existing.chatwootAccountId ?? null;
+
     if (!chatwootAccountId && existing.connectedAccounts?.[0]?.data) {
       try {
         const cwData = JSON.parse(existing.connectedAccounts[0].data) as { chatwootAccountId?: number };
@@ -144,11 +143,14 @@ export async function DELETE(
     }
 
     if (chatwootAccountId) {
-      const { blocked, errors } = await invalidateChatwootUserSessions(chatwootAccountId);
-      if (errors.length > 0) {
-        warnings.push(`Falha ao invalidar sessões Chatwoot: ${errors.join(', ')}`);
+      const cleanup = await hardCleanupChatwootAccount(chatwootAccountId);
+
+      if (!cleanup.contained || cleanup.errors.length > 0) {
+        warnings.push(`Falha no hard cleanup do Chatwoot: ${cleanup.errors.join(', ')}`);
       } else {
-        console.info(`[ADMIN ORGS] Sessões Chatwoot invalidadas: ${blocked.join(', ')}`);
+        console.info(
+          `[ADMIN ORGS] Hard cleanup Chatwoot concluído para account #${chatwootAccountId}. blocked=${cleanup.blocked.join(', ')} apiDeleted=${cleanup.apiDeleted} sqlPurged=${cleanup.sqlPurged}`
+        );
       }
     }
 
@@ -188,6 +190,17 @@ export async function DELETE(
         data: {
           deletedAt,
           planStatus: 'inactive',
+        },
+      }),
+      prisma.connectedAccount.updateMany({
+        where: {
+          organizationId: id,
+          provider: 'chatwoot',
+        },
+        data: {
+          isActive: false,
+          lastError: 'organization_deleted_cleanup_applied',
+          lastSyncAt: deletedAt,
         },
       }),
       ...softDeleteUsersOps,

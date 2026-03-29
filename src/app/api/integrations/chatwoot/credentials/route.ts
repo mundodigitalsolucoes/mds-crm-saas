@@ -12,6 +12,11 @@ type ChatwootAccountData = {
   chatwootUserId?: number | string
 }
 
+type SessionUserLike = {
+  id?: string
+  email?: string | null
+}
+
 function normalizeBaseUrl(url?: string | null) {
   return url?.trim().replace(/\/$/, '') || null
 }
@@ -31,6 +36,14 @@ function toPositiveInt(value: unknown): number | null {
   return num
 }
 
+function buildNoStoreHeaders() {
+  return {
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  }
+}
+
 export async function GET() {
   const perm = await checkPermission('integrations', 'view')
 
@@ -39,6 +52,11 @@ export async function GET() {
   }
 
   const organizationId = perm.session.user.organizationId
+  const sessionUser = perm.session.user as SessionUserLike
+  const crmUserId =
+    sessionUser.id?.trim() ||
+    sessionUser.email?.trim() ||
+    'unknown-user'
 
   const [organization, account] = await Promise.all([
     prisma.organization.findUnique({
@@ -70,36 +88,48 @@ export async function GET() {
   ])
 
   if (!organization || organization.deletedAt) {
-    return NextResponse.json({ error: 'organization_inactive' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'organization_inactive' },
+      { status: 403, headers: buildNoStoreHeaders() }
+    )
   }
 
   if (!account || !account.isActive) {
-    return NextResponse.json({ error: 'not_configured' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'not_configured' },
+      { status: 404, headers: buildNoStoreHeaders() }
+    )
   }
 
   if (account.organizationId !== organizationId) {
-    return NextResponse.json({ error: 'organization_mismatch' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'organization_mismatch' },
+      { status: 403, headers: buildNoStoreHeaders() }
+    )
   }
 
   const data = parseAccountData(account.data)
   if (!data) {
-    return NextResponse.json({ error: 'invalid_chatwoot_payload' }, { status: 409 })
+    return NextResponse.json(
+      { error: 'invalid_chatwoot_payload' },
+      { status: 409, headers: buildNoStoreHeaders() }
+    )
   }
 
   const connectedAccountId = toPositiveInt(data.chatwootAccountId)
   if (!connectedAccountId) {
-    return NextResponse.json({ error: 'no_credentials' }, { status: 404 })
+    return NextResponse.json(
+      { error: 'no_credentials' },
+      { status: 404, headers: buildNoStoreHeaders() }
+    )
   }
 
   const orgChatwootAccountId = toPositiveInt(organization.chatwootAccountId)
 
-  // Blindagem principal:
-  // se a organization já tem um accountId salvo e ele diverge do connectedAccount,
-  // bloqueia para não abrir atendimento herdado de outra org
   if (orgChatwootAccountId && orgChatwootAccountId !== connectedAccountId) {
     console.warn(
       `[CREDENTIALS] Divergência de account no Chatwoot para org ${organizationId}. ` +
-      `organization.chatwootAccountId=${orgChatwootAccountId} connectedAccount.data.chatwootAccountId=${connectedAccountId}`
+        `organization.chatwootAccountId=${orgChatwootAccountId} connectedAccount.data.chatwootAccountId=${connectedAccountId}`
     )
 
     return NextResponse.json(
@@ -107,7 +137,7 @@ export async function GET() {
         error: 'chatwoot_account_mismatch',
         detail: 'A integração do Chatwoot está inconsistente para esta organização',
       },
-      { status: 409 }
+      { status: 409, headers: buildNoStoreHeaders() }
     )
   }
 
@@ -126,11 +156,10 @@ export async function GET() {
         error: 'invalid_chatwoot_owner_credentials',
         detail: 'Credenciais do owner do Chatwoot ausentes ou inválidas',
       },
-      { status: 409 }
+      { status: 409, headers: buildNoStoreHeaders() }
     )
   }
 
-  // Confirma o usuário automaticamente antes de retornar as credenciais
   const secret = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
   if (secret) {
     try {
@@ -147,12 +176,18 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({
-    organizationId,
-    cacheKey: `${organizationId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
-    email,
-    password,
-    chatwootUrl,
-    chatwootAccountId: connectedAccountId,
-  })
+  return NextResponse.json(
+    {
+      organizationId,
+      userId: crmUserId,
+      cacheKey: `${organizationId}:${crmUserId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
+      email,
+      password,
+      chatwootUrl,
+      chatwootAccountId: connectedAccountId,
+    },
+    {
+      headers: buildNoStoreHeaders(),
+    }
+  )
 }
