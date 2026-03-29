@@ -4,7 +4,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { parseBody, adminUserUpdateSchema } from '@/lib/validations';
-import { deleteChatwootUser, deleteChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
+import {
+  invalidateChatwootUserSessions,
+  invalidateSingleChatwootUserSession,
+} from '@/lib/integrations/chatwoot-cleanup';
+
+type ChatwootAccountData = {
+  chatwootUserId?: number;
+  chatwootAccountId?: number;
+  ownerEmail?: string;
+  ownerPasswordEnc?: string;
+};
+
+function parseChatwootAccountData(raw?: string | null): ChatwootAccountData | null {
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as ChatwootAccountData;
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeEmail(email?: string | null) {
+  return email?.trim().toLowerCase() || '';
+}
 
 // PUT - Atualizar usuário (mudar role)
 export async function PUT(
@@ -45,7 +70,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Excluir usuário + limpeza no Chatwoot
+// DELETE - Excluir usuário + contenção no Chatwoot
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -58,51 +83,120 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // 1. Busca o usuário e dados do Chatwoot antes de deletar
+    const warnings: string[] = [];
+
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
+        id: true,
+        email: true,
+        role: true,
         organizationId: true,
         organization: {
           select: {
             chatwootAccountId: true,
             connectedAccounts: {
               where: { provider: 'chatwoot' },
-              select: { data: true },
+              select: {
+                data: true,
+              },
             },
           },
         },
       },
     });
 
-    // 2. Tenta limpar no Chatwoot
-    if (user?.organizationId) {
-      try {
-        const cwAccount = user.organization?.connectedAccounts?.[0];
-        if (cwAccount?.data) {
-          const cwData = JSON.parse(cwAccount.data) as {
-            chatwootUserId?: number;
-            chatwootAccountId?: number;
-          };
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    }
 
-          if (cwData.chatwootUserId && cwData.chatwootAccountId) {
-            // Passa accountId para deletar como owner (cascade deleta a conta)
-            await deleteChatwootUser(cwData.chatwootUserId, cwData.chatwootAccountId);
-          } else if (cwData.chatwootAccountId) {
-            await deleteChatwootAccount(cwData.chatwootAccountId);
+    const cwRaw = user.organization?.connectedAccounts?.[0]?.data ?? null;
+    const cwData = parseChatwootAccountData(cwRaw);
+
+    const chatwootAccountId =
+      user.organization?.chatwootAccountId ??
+      cwData?.chatwootAccountId ??
+      null;
+
+    const deletedUserEmail = normalizeEmail(user.email);
+    const ownerEmail = normalizeEmail(cwData?.ownerEmail);
+    const deletingChatwootOwner =
+      user.role === 'owner' || (!!ownerEmail && ownerEmail === deletedUserEmail);
+
+    if (chatwootAccountId) {
+      try {
+        if (deletingChatwootOwner) {
+          const { blocked, errors } = await invalidateChatwootUserSessions(chatwootAccountId);
+
+          if (errors.length > 0) {
+            warnings.push(`Falha ao conter sessões Chatwoot do owner: ${errors.join(', ')}`);
+          } else {
+            console.info(
+              `[ADMIN USERS] Sessões Chatwoot invalidadas após delete de owner: ${blocked.join(', ')}`
+            );
           }
-        } else if (user.organization?.chatwootAccountId) {
-          await deleteChatwootAccount(user.organization.chatwootAccountId);
+        } else if (deletedUserEmail) {
+          const { found, blocked, errors } = await invalidateSingleChatwootUserSession(
+            chatwootAccountId,
+            deletedUserEmail
+          );
+
+          if (errors.length > 0) {
+            warnings.push(`Falha ao conter usuário no Chatwoot: ${errors.join(', ')}`);
+          } else if (found) {
+            console.info(
+              `[ADMIN USERS] Usuário Chatwoot contido após delete individual: ${blocked.join(', ')}`
+            );
+          }
         }
       } catch (cwErr) {
-        console.warn('[ADMIN USERS] Aviso: falha ao deletar no Chatwoot:', cwErr);
+        console.warn('[ADMIN USERS] Aviso: falha no cleanup do Chatwoot:', cwErr);
+        warnings.push('Falha inesperada no cleanup do Chatwoot');
       }
     }
 
-    // 3. Deleta do CRM
-    await prisma.user.delete({ where: { id } });
+    const tx = [];
 
-    return NextResponse.json({ message: 'Usuário excluído com sucesso' });
+    if (user.organizationId) {
+      if (deletingChatwootOwner) {
+        tx.push(
+          prisma.connectedAccount.updateMany({
+            where: {
+              organizationId: user.organizationId,
+              provider: 'chatwoot',
+            },
+            data: {
+              isActive: false,
+              lastError: 'chatwoot_owner_deleted_requires_reprovision',
+              lastSyncAt: new Date(),
+            },
+          })
+        );
+      } else {
+        tx.push(
+          prisma.connectedAccount.updateMany({
+            where: {
+              organizationId: user.organizationId,
+              provider: 'chatwoot',
+            },
+            data: {
+              lastSyncAt: new Date(),
+            },
+          })
+        );
+      }
+    }
+
+    tx.push(prisma.user.delete({ where: { id } }));
+
+    await prisma.$transaction(tx);
+
+    return NextResponse.json({
+      message: deletingChatwootOwner
+        ? 'Usuário excluído com sucesso e Chatwoot marcado para reprovision'
+        : 'Usuário excluído com sucesso',
+      ...(warnings.length > 0 && { warnings }),
+    });
   } catch (error) {
     console.error('[ADMIN USERS] Erro ao excluir usuário:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
