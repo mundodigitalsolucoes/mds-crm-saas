@@ -45,7 +45,7 @@ function buildNoStoreHeaders() {
 }
 
 export async function GET() {
-  const perm = await checkPermission('integrations', 'view')
+  const perm = await checkPermission('atendimento', 'view')
 
   if (!perm.allowed || !perm.session) {
     return perm.errorResponse ?? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
