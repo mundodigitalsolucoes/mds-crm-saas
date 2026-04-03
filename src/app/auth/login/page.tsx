@@ -1,34 +1,35 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState, Suspense, type FormEvent, type CSSProperties } from 'react';
+import { useMemo, useState, Suspense, type FormEvent, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
-function getSafeRedirectPath(url?: string | null) {
-  if (!url) return '/dashboard';
-
-  try {
-    if (url.startsWith('/')) return url;
-
-    const parsed = new URL(url, window.location.origin);
-    const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`;
-
-    return safePath.startsWith('/') ? safePath : '/dashboard';
-  } catch {
-    return '/dashboard';
+function getErrorMessage(error: string | null) {
+  switch (error) {
+    case 'CredentialsSignin':
+      return 'Email ou senha inválidos.';
+    case 'AccessDenied':
+      return 'Acesso negado.';
+    case 'Configuration':
+      return 'Erro de configuração no login.';
+    default:
+      return null;
   }
 }
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered') === 'true';
+  const loginError = searchParams.get('error');
+
+  const searchErrorMessage = useMemo(() => getErrorMessage(loginError), [loginError]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -37,40 +38,22 @@ function LoginForm() {
     if (loading) return;
 
     setLoading(true);
-    setError(null);
+    setLocalError(null);
 
     try {
-      const res = await signIn('credentials', {
+      await signIn('credentials', {
         email: email.trim().toLowerCase(),
         password,
-        redirect: false,
         callbackUrl: '/dashboard',
       });
-
-      if (!res) {
-        setError('Não foi possível processar o login. Tente novamente.');
-        return;
-      }
-
-      if (res.error) {
-        setError('Email ou senha inválidos.');
-        return;
-      }
-
-      if (!res.ok) {
-        setError('Não foi possível entrar agora. Tente novamente em instantes.');
-        return;
-      }
-
-      const targetPath = getSafeRedirectPath(res.url);
-      window.location.assign(targetPath);
     } catch (err) {
       console.error('[LOGIN] Erro no signIn:', err);
-      setError('Erro ao tentar entrar. Aguarde alguns segundos e tente novamente.');
-    } finally {
+      setLocalError('Erro ao tentar entrar. Tente novamente.');
       setLoading(false);
     }
   }
+
+  const errorMessage = localError || searchErrorMessage;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
@@ -140,7 +123,7 @@ function LoginForm() {
             </Link>
           </div>
 
-          {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+          {errorMessage && <p className="text-sm text-red-600 mb-3">{errorMessage}</p>}
 
           <button
             disabled={loading}
