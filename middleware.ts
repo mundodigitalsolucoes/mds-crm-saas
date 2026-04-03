@@ -29,14 +29,6 @@ const AUTH_COOKIE_NAMES = [
   '__Secure-authjs.callback-url',
 ];
 
-type SessionValidationPayload = {
-  user?: {
-    id?: string | null;
-  };
-  banned?: boolean;
-  organizationDeleted?: boolean;
-};
-
 function buildLoginRedirect(req: NextRequest) {
   const response = NextResponse.redirect(new URL('/auth/login', req.url));
 
@@ -45,41 +37,6 @@ function buildLoginRedirect(req: NextRequest) {
   }
 
   return response;
-}
-
-async function validateSessionState(req: NextRequest) {
-  try {
-    const sessionUrl = new URL('/api/auth/session', req.url);
-
-    const response = await fetch(sessionUrl, {
-      headers: {
-        cookie: req.headers.get('cookie') ?? '',
-      },
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      return {
-        valid: false,
-        banned: true,
-        organizationDeleted: false,
-      };
-    }
-
-    const data = (await response.json()) as SessionValidationPayload | null;
-
-    return {
-      valid: Boolean(data?.user?.id),
-      banned: Boolean(data?.banned),
-      organizationDeleted: Boolean(data?.organizationDeleted),
-    };
-  } catch {
-    return {
-      valid: false,
-      banned: true,
-      organizationDeleted: false,
-    };
-  }
 }
 
 export default async function middleware(req: NextRequest) {
@@ -116,12 +73,6 @@ export default async function middleware(req: NextRequest) {
   }
 
   if (token.banned || token.organizationDeleted) {
-    return buildLoginRedirect(req);
-  }
-
-  const sessionState = await validateSessionState(req);
-
-  if (!sessionState.valid || sessionState.banned || sessionState.organizationDeleted) {
     return buildLoginRedirect(req);
   }
 
