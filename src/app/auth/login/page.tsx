@@ -1,13 +1,27 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState, Suspense, type FormEvent } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense, type FormEvent, type CSSProperties } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
+function getSafeRedirectPath(url?: string | null) {
+  if (!url) return '/dashboard';
+
+  try {
+    if (url.startsWith('/')) return url;
+
+    const parsed = new URL(url, window.location.origin);
+    const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+
+    return safePath.startsWith('/') ? safePath : '/dashboard';
+  } catch {
+    return '/dashboard';
+  }
+}
+
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered') === 'true';
 
@@ -48,11 +62,11 @@ function LoginForm() {
         return;
       }
 
-      router.replace(res.url || '/dashboard');
-      router.refresh();
+      const targetPath = getSafeRedirectPath(res.url);
+      window.location.assign(targetPath);
     } catch (err) {
       console.error('[LOGIN] Erro no signIn:', err);
-      setError('Erro ao tentar entrar. Verifique sua conexão e tente novamente.');
+      setError('Erro ao tentar entrar. Aguarde alguns segundos e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -89,7 +103,7 @@ function LoginForm() {
           <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
             className="w-full border rounded px-3 py-2 mb-3 focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': '#2f3453' } as React.CSSProperties}
+            style={{ '--tw-ring-color': '#2f3453' } as CSSProperties}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
