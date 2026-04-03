@@ -41,11 +41,26 @@ function LoginForm() {
     setLocalError(null);
 
     try {
-      await signIn('credentials', {
+      const result = await signIn('credentials', {
         email: email.trim().toLowerCase(),
         password,
         callbackUrl: '/dashboard',
+        redirect: false,
       });
+
+      if (!result) {
+        setLocalError('Erro ao tentar entrar. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+
+      if (result.error) {
+        setLocalError(getErrorMessage(result.error) || 'Erro ao tentar entrar. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+
+      window.location.href = result.url || '/dashboard';
     } catch (err) {
       console.error('[LOGIN] Erro no signIn:', err);
       setLocalError('Erro ao tentar entrar. Tente novamente.');
