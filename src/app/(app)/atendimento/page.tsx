@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, Settings, Loader2, Copy, Check } from 'lucide-react';
+import { MessageSquare, Settings, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { PermissionGate } from '@/components/PermissionGate';
 import axios from 'axios';
@@ -11,8 +11,7 @@ interface ChatwootCredentials {
   organizationId: string;
   userId: string;
   cacheKey: string;
-  email: string;
-  password: string;
+  ssoUrl: string;
   chatwootUrl: string;
   chatwootAccountId: number;
 }
@@ -24,9 +23,9 @@ function NotConfigured() {
         <MessageSquare className="w-8 h-8 text-gray-500" />
       </div>
       <div className="text-center">
-        <h2 className="text-lg font-semibold text-white mb-1">Atendimento não configurado</h2>
+        <h2 className="text-lg font-semibold text-white mb-1">Atendimento indisponível</h2>
         <p className="text-sm text-gray-400 max-w-sm">
-          Configure a integração com o Chatwoot para começar a atender seus clientes diretamente pelo CRM.
+          Não foi possível iniciar a sessão automática do Chatwoot para esta organização.
         </p>
       </div>
       <Link
@@ -34,55 +33,19 @@ function NotConfigured() {
         className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
       >
         <Settings className="w-4 h-4" />
-        Configurar Integração
+        Ver Integrações
       </Link>
     </div>
   );
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <button
-      onClick={copy}
-      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 rounded transition-colors"
-    >
-      {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
-      {copied ? 'Copiado!' : 'Copiar senha'}
-    </button>
-  );
-}
-
 function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
-  const {
-    chatwootUrl,
-    chatwootAccountId,
-    email,
-    password,
-    organizationId,
-    userId,
-    cacheKey,
-  } = creds;
+  const { ssoUrl, organizationId, userId, cacheKey, chatwootAccountId } = creds;
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [showHint, setShowHint] = useState(true);
+  const [booting, setBooting] = useState(true);
 
   const SIDEBAR_WIDTH = 264;
-  const BANNER_HEIGHT = 40;
-
-  const iframeUrl =
-    `${chatwootUrl}/app/accounts/${chatwootAccountId}/dashboard` +
-    `?crm_org=${encodeURIComponent(organizationId)}` +
-    `&crm_user=${encodeURIComponent(userId)}` +
-    `&crm_ctx=${encodeURIComponent(cacheKey)}` +
-    `&t=${Date.now()}`;
 
   const cleanupIframe = useCallback(() => {
     const iframe = iframeRef.current;
@@ -96,7 +59,7 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
   }, []);
 
   useEffect(() => {
-    setShowHint(true);
+    setBooting(true);
 
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -105,33 +68,26 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
 
     const timer = window.setTimeout(() => {
       if (!iframeRef.current) return;
-      iframeRef.current.src = iframeUrl;
+      iframeRef.current.src = ssoUrl;
     }, 60);
 
     return () => {
       window.clearTimeout(timer);
       cleanupIframe();
     };
-  }, [cacheKey, iframeUrl, cleanupIframe]);
+  }, [cacheKey, ssoUrl, cleanupIframe]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     const handleLoad = () => {
-      try {
-        const href = iframe.contentWindow?.location?.href ?? '';
-        if (href && href !== 'about:blank' && !href.includes('/login')) {
-          setShowHint(false);
-        }
-      } catch {
-        // Cross-origin. Mantém o banner.
-      }
+      setBooting(false);
     };
 
     iframe.addEventListener('load', handleLoad);
     return () => iframe.removeEventListener('load', handleLoad);
-  }, [cacheKey]);
+  }, [cacheKey, ssoUrl]);
 
   useEffect(() => {
     const handlePageHide = () => cleanupIframe();
@@ -146,27 +102,22 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
     };
   }, [cleanupIframe]);
 
-  const topOffset = showHint ? BANNER_HEIGHT : 0;
-
   return (
     <div className="w-full h-full relative">
-      {showHint && (
+      {booting && (
         <div
           style={{
             position: 'fixed',
             top: 0,
             left: SIDEBAR_WIDTH,
             right: 0,
-            height: BANNER_HEIGHT,
+            bottom: 0,
+            width: `calc(100vw - ${SIDEBAR_WIDTH}px)`,
             zIndex: 50,
           }}
-          className="flex items-center gap-3 px-6 border-b border-amber-200 bg-amber-50"
+          className="flex items-center justify-center bg-gray-950/60"
         >
-          <MessageSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
-          <span className="text-xs text-amber-800">
-            Faça login com: <strong>{email}</strong>
-          </span>
-          <CopyButton text={password} />
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
         </div>
       )}
 
@@ -176,12 +127,12 @@ function ChatwootIframe({ creds }: { creds: ChatwootCredentials }) {
         src="about:blank"
         style={{
           position: 'fixed',
-          top: topOffset,
+          top: 0,
           left: SIDEBAR_WIDTH,
           right: 0,
           bottom: 0,
           width: `calc(100vw - ${SIDEBAR_WIDTH}px)`,
-          height: `calc(100vh - ${topOffset}px)`,
+          height: '100vh',
           border: 'none',
           zIndex: 40,
           background: '#111827',
@@ -199,14 +150,12 @@ export default function AtendimentoPage() {
   const [error, setError] = useState(false);
   const requestSeqRef = useRef(0);
 
-  const loadCredentials = useCallback(async (silent = false) => {
+  const loadCredentials = useCallback(async () => {
     const requestId = ++requestSeqRef.current;
 
-    if (!silent) {
-      setLoading(true);
-      setError(false);
-      setCreds(null);
-    }
+    setLoading(true);
+    setError(false);
+    setCreds(null);
 
     try {
       const { data } = await axios.get<ChatwootCredentials>(
@@ -232,32 +181,14 @@ export default function AtendimentoPage() {
       setCreds(null);
       setError(true);
     } finally {
-      if (!silent && requestId === requestSeqRef.current) {
+      if (requestId === requestSeqRef.current) {
         setLoading(false);
       }
     }
   }, []);
 
   useEffect(() => {
-    void loadCredentials(false);
-
-    const handleFocus = () => {
-      void loadCredentials(true);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        void loadCredentials(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    void loadCredentials();
   }, [loadCredentials]);
 
   return (
