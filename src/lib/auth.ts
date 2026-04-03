@@ -3,10 +3,28 @@
 // Single source of truth — usado por route.ts e getServerSession()
 // Inclui permissões granulares + dados do plano no JWT e session
 
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+
+type AuthorizedUserPayload = {
+  id: string;
+  email: string;
+  name: string;
+  organizationId: string;
+  role: string;
+  permissions: string;
+  plan: string;
+  planStatus: string;
+  trialEndsAt: string | null;
+};
+
+type SessionWithFlags = Session & {
+  banned?: boolean;
+  organizationDeleted?: boolean;
+  lastChecked?: number | null;
+};
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -59,7 +77,7 @@ export const authOptions: NextAuthOptions = {
           plan: user.organization.plan,
           planStatus: user.organization.planStatus,
           trialEndsAt: user.organization.trialEndsAt?.toISOString() || null,
-        };
+        } satisfies AuthorizedUserPayload;
       },
     }),
   ],
@@ -69,13 +87,15 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
-        token.organizationId = (user as any).organizationId;
-        token.role = (user as any).role;
-        token.permissions = (user as any).permissions;
-        token.plan = (user as any).plan;
-        token.planStatus = (user as any).planStatus;
-        token.trialEndsAt = (user as any).trialEndsAt;
+        const authUser = user as AuthorizedUserPayload;
+
+        token.id = authUser.id;
+        token.organizationId = authUser.organizationId;
+        token.role = authUser.role;
+        token.permissions = authUser.permissions;
+        token.plan = authUser.plan;
+        token.planStatus = authUser.planStatus;
+        token.trialEndsAt = authUser.trialEndsAt;
       }
 
       if (token.id) {
@@ -102,6 +122,7 @@ export const authOptions: NextAuthOptions = {
           if (!freshUser || freshUser.deletedAt || freshUser.organization.deletedAt) {
             token.banned = true;
             token.organizationDeleted = Boolean(freshUser?.organization.deletedAt);
+            token.lastChecked = Date.now();
             return token;
           }
 
@@ -122,16 +143,24 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.organizationId = token.organizationId as string;
-        session.user.role = token.role as string;
-        session.user.permissions = token.permissions as string;
-        session.user.plan = token.plan as string;
-        session.user.planStatus = token.planStatus as string;
-        session.user.trialEndsAt = (token.trialEndsAt as string) || null;
+      const sessionWithFlags = session as SessionWithFlags;
+
+      if (sessionWithFlags.user) {
+        sessionWithFlags.user.id = token.id as string;
+        sessionWithFlags.user.organizationId = token.organizationId as string;
+        sessionWithFlags.user.role = token.role as string;
+        sessionWithFlags.user.permissions = token.permissions as string;
+        sessionWithFlags.user.plan = token.plan as string;
+        sessionWithFlags.user.planStatus = token.planStatus as string;
+        sessionWithFlags.user.trialEndsAt = (token.trialEndsAt as string) || null;
       }
-      return session;
+
+      sessionWithFlags.banned = Boolean(token.banned);
+      sessionWithFlags.organizationDeleted = Boolean(token.organizationDeleted);
+      sessionWithFlags.lastChecked =
+        typeof token.lastChecked === 'number' ? token.lastChecked : null;
+
+      return sessionWithFlags;
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith('/dashboard')) {
