@@ -1,8 +1,7 @@
-// src/app/auth/login/page.tsx
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
@@ -18,33 +17,50 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (loading) return;
+
     setLoading(true);
     setError(null);
 
-    const res = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-      callbackUrl: '/dashboard',
-    });
+    try {
+      const res = await signIn('credentials', {
+        email: email.trim().toLowerCase(),
+        password,
+        redirect: false,
+        callbackUrl: '/dashboard',
+      });
 
-    setLoading(false);
+      if (!res) {
+        setError('Não foi possível processar o login. Tente novamente.');
+        return;
+      }
 
-    if (res?.error) {
-      setError('Email ou senha inválidos.');
-      return;
+      if (res.error) {
+        setError('Email ou senha inválidos.');
+        return;
+      }
+
+      if (!res.ok) {
+        setError('Não foi possível entrar agora. Tente novamente em instantes.');
+        return;
+      }
+
+      router.replace(res.url || '/dashboard');
+      router.refresh();
+    } catch (err) {
+      console.error('[LOGIN] Erro no signIn:', err);
+      setError('Erro ao tentar entrar. Verifique sua conexão e tente novamente.');
+    } finally {
+      setLoading(false);
     }
-
-    router.push('/dashboard');
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-sm">
-
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <img
             src="/images/logo-mds.svg"
@@ -53,7 +69,6 @@ function LoginForm() {
           />
         </div>
 
-        {/* Banner pós-cadastro */}
         {registered && (
           <div className="mb-4 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
             <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
@@ -67,7 +82,9 @@ function LoginForm() {
         )}
 
         <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-xl font-bold mb-4" style={{ color: '#2f3453' }}>Entrar</h1>
+          <h1 className="text-xl font-bold mb-4" style={{ color: '#2f3453' }}>
+            Entrar
+          </h1>
 
           <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
@@ -76,6 +93,7 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
+            autoComplete="email"
             required
           />
 
@@ -86,6 +104,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               required
             />
             <button
@@ -98,7 +117,11 @@ function LoginForm() {
           </div>
 
           <div className="flex justify-end mb-3">
-            <Link href="/auth/forgot-password" className="text-sm hover:underline" style={{ color: '#2f3453' }}>
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm hover:underline"
+              style={{ color: '#2f3453' }}
+            >
               Esqueceu sua senha?
             </Link>
           </div>
@@ -117,7 +140,11 @@ function LoginForm() {
 
         <p className="text-center text-sm mt-4 text-gray-600">
           Não tem uma conta?{' '}
-          <Link href="/auth/signup" className="font-medium hover:underline" style={{ color: '#2f3453' }}>
+          <Link
+            href="/auth/signup"
+            className="font-medium hover:underline"
+            style={{ color: '#2f3453' }}
+          >
             Cadastre-se grátis
           </Link>
         </p>
@@ -128,11 +155,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#2f3453' }} />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-b-2"
+            style={{ borderColor: '#2f3453' }}
+          />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
