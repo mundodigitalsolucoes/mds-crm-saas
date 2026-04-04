@@ -99,8 +99,8 @@ export async function PUT(
 /**
  * DELETE /api/admin/organizations/:id
  * SOFT DELETE — marca deletedAt na org e em todos os usuários ativos da org.
- * Preserva o e-mail original para permitir reativação futura pelo mesmo e-mail.
  * Faz hard cleanup do Chatwoot + desconecta WhatsApp.
+ * Também limpa o vínculo local da org com o Chatwoot para evitar ponteiro stale.
  */
 export async function DELETE(
   req: NextRequest,
@@ -131,6 +131,28 @@ export async function DELETE(
     if (existing.deletedAt) return NextResponse.json({ error: 'Organização já está inativa' }, { status: 409 });
 
     let chatwootAccountId: number | null = existing.chatwootAccountId ?? null;
+    let chatwootCleanup:
+      | {
+          contained: boolean;
+          blocked: string[];
+          apiDeleted: boolean;
+          sqlPurged: boolean;
+          verified: boolean;
+          verification: {
+            accountExists: boolean;
+            accountUsers: number;
+            inboxes: number;
+            conversations: number;
+            contacts: number;
+            messages: number;
+            contactInboxes: number;
+            conversationParticipants: number;
+            inboxMembers: number;
+            hasResidualData: boolean;
+          };
+          errors: string[];
+        }
+      | null = null;
 
     if (!chatwootAccountId && existing.connectedAccounts?.[0]?.data) {
       try {
@@ -140,13 +162,15 @@ export async function DELETE(
     }
 
     if (chatwootAccountId) {
-      const cleanup = await hardCleanupChatwootAccount(chatwootAccountId);
+      chatwootCleanup = await hardCleanupChatwootAccount(chatwootAccountId);
 
-      if (!cleanup.contained || cleanup.errors.length > 0) {
-        warnings.push(`Falha no hard cleanup do Chatwoot: ${cleanup.errors.join(', ')}`);
+      if (!chatwootCleanup.verified || chatwootCleanup.errors.length > 0) {
+        warnings.push(
+          `Falha no hard cleanup do Chatwoot: ${chatwootCleanup.errors.join(', ')}`
+        );
       } else {
         console.info(
-          `[ADMIN ORGS] Hard cleanup Chatwoot concluído para account #${chatwootAccountId}. blocked=${cleanup.blocked.join(', ')} apiDeleted=${cleanup.apiDeleted} sqlPurged=${cleanup.sqlPurged}`
+          `[ADMIN ORGS] Hard cleanup Chatwoot concluído para account #${chatwootAccountId}. blocked=${chatwootCleanup.blocked.join(', ')} apiDeleted=${chatwootCleanup.apiDeleted} sqlPurged=${chatwootCleanup.sqlPurged}`,
         );
       }
     }
@@ -180,12 +204,24 @@ export async function DELETE(
       })
     );
 
+    const chatwootCleanupData = JSON.stringify({
+      cleanupAppliedAt: deletedAt.toISOString(),
+      previousChatwootAccountId: chatwootAccountId,
+      verified: chatwootCleanup?.verified ?? false,
+      apiDeleted: chatwootCleanup?.apiDeleted ?? false,
+      sqlPurged: chatwootCleanup?.sqlPurged ?? false,
+      blockedUsers: chatwootCleanup?.blocked ?? [],
+      verification: chatwootCleanup?.verification ?? null,
+    });
+
     await prisma.$transaction([
       prisma.organization.update({
         where: { id },
         data: {
           deletedAt,
           planStatus: 'inactive',
+          chatwootAccountId: null,
+          chatwootUrl: null,
         },
       }),
       prisma.connectedAccount.updateMany({
@@ -195,21 +231,34 @@ export async function DELETE(
         },
         data: {
           isActive: false,
-          lastError: 'organization_deleted_cleanup_applied',
+          lastError: chatwootCleanup && !chatwootCleanup.verified
+            ? 'organization_deleted_cleanup_incomplete'
+            : null,
           lastSyncAt: deletedAt,
+          data: chatwootCleanupData,
         },
       }),
       ...softDeleteUsersOps,
     ]);
 
     console.info(
-      `[ADMIN ORGS] ✅ Org "${existing.name}" marcada como inativa (soft delete) e ${existing.users.length} usuário(s) foram bloqueados`
+      `[ADMIN ORGS] ✅ Org "${existing.name}" marcada como inativa (soft delete) e ${existing.users.length} usuário(s) foram bloqueados`,
     );
 
     return NextResponse.json({
       success: true,
       message: `Organização "${existing.name}" desativada com sucesso`,
       blockedUsers: existing.users.length,
+      chatwootCleanup: chatwootCleanup
+        ? {
+            accountId: chatwootAccountId,
+            verified: chatwootCleanup.verified,
+            apiDeleted: chatwootCleanup.apiDeleted,
+            sqlPurged: chatwootCleanup.sqlPurged,
+            blockedUsers: chatwootCleanup.blocked.length,
+            residuals: chatwootCleanup.verification,
+          }
+        : null,
       ...(warnings.length > 0 && { warnings }),
     });
   } catch (error) {
