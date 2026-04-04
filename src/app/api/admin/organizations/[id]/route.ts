@@ -7,10 +7,6 @@ import { parseBody, adminOrgUpdateSchema } from '@/lib/validations';
 import { hardCleanupChatwootAccount } from '@/lib/integrations/chatwoot-cleanup';
 import { disconnectInstance } from '@/lib/integrations/evolutionClient';
 
-function buildDeletedEmail(userId: string, deletedAt: Date): string {
-  return `deleted+${userId}.${deletedAt.getTime()}@deleted.local.invalid`;
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -103,6 +99,7 @@ export async function PUT(
 /**
  * DELETE /api/admin/organizations/:id
  * SOFT DELETE — marca deletedAt na org e em todos os usuários ativos da org.
+ * Preserva o e-mail original para permitir reativação futura pelo mesmo e-mail.
  * Faz hard cleanup do Chatwoot + desconecta WhatsApp.
  */
 export async function DELETE(
@@ -179,7 +176,6 @@ export async function DELETE(
         where: { id: user.id },
         data: {
           deletedAt,
-          email: buildDeletedEmail(user.id, deletedAt),
         },
       })
     );

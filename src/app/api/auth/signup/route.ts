@@ -48,12 +48,13 @@ export async function POST(request: Request) {
       ? forwarded.split(',')[0].trim()
       : request.headers.get('x-real-ip') || 'unknown'
 
-    // ── Verifica se email já existe ──────────────────────────────────────────
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
       select: {
         id: true,
         email: true,
+        name: true,
+        role: true,
         organizationId: true,
         deletedAt: true,
         organization: {
@@ -68,8 +69,12 @@ export async function POST(request: Request) {
       },
     })
 
-    // Conta ativa continua bloqueada normalmente
-    if (existingUser && !existingUser.organization.deletedAt) {
+    const hasActiveAccount =
+      existingUser &&
+      !existingUser.deletedAt &&
+      !existingUser.organization.deletedAt
+
+    if (hasActiveAccount) {
       return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
     }
 
@@ -87,8 +92,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Reativar conta antiga/inativa ────────────────────────────────────────
-    if (existingUser && existingUser.organization.deletedAt) {
+    const canReactivate =
+      existingUser &&
+      (existingUser.deletedAt !== null || existingUser.organization.deletedAt !== null)
+
+    if (canReactivate) {
       result = await prisma.$transaction(async (tx) => {
         const organization = await tx.organization.update({
           where: { id: existingUser.organizationId },
@@ -167,7 +175,6 @@ export async function POST(request: Request) {
       })
     }
 
-    // ── Criar conta nova ─────────────────────────────────────────────────────
     const baseSlug = slugify(data.companyName)
     let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`
     let i = 1
