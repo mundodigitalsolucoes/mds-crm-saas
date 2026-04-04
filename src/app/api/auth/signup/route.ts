@@ -15,46 +15,31 @@ function slugify(input: string) {
 }
 
 const PLAN_MAP: Record<string, string> = {
-  starter:      'starter',
+  starter: 'starter',
   professional: 'professional',
-  enterprise:   'enterprise',
-  pro:          'professional',
-  trial:        'trial',
+  enterprise: 'enterprise',
+  pro: 'professional',
+  trial: 'trial',
 }
 
 export async function POST(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const planParam = searchParams.get('plan') ?? 'trial'
-    const cidParam  = searchParams.get('cid')  ?? null
+    const cidParam = searchParams.get('cid') ?? null
 
-    const body   = await request.json()
+    const body = await request.json()
     const parsed = parseBody(signupSchema, body)
     if (!parsed.success) return parsed.response
 
     const data = parsed.data
+    const normalizedEmail = data.email.trim().toLowerCase()
 
-    // ── Verifica se email já existe ──────────────────────────────────────────
-    const existingUser = await prisma.user.findFirst({
-      where: { email: data.email },
-      include: { organization: { select: { deletedAt: true, planStatus: true } } },
-    })
-
-    if (existingUser) {
-      // Conta inativa — redireciona para reativação
-      if (existingUser.organization?.deletedAt) {
-        return NextResponse.json(
-          {
-            error: 'conta_inativa',
-            message: 'Você já possui uma conta inativa. Faça login para reativar seu plano.',
-            redirect: '/login?reactivate=true',
-          },
-          { status: 409 }
-        )
-      }
-      // Conta ativa — email em uso normal
-      return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
-    }
+    const plan = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
+    const trialEndsAt =
+      plan === 'trial'
+        ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        : null
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
@@ -63,77 +48,202 @@ export async function POST(request: Request) {
       ? forwarded.split(',')[0].trim()
       : request.headers.get('x-real-ip') || 'unknown'
 
+    // ── Verifica se email já existe ──────────────────────────────────────────
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        organizationId: true,
+        deletedAt: true,
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            deletedAt: true,
+            planStatus: true,
+          },
+        },
+      },
+    })
+
+    // Conta ativa continua bloqueada normalmente
+    if (existingUser && !existingUser.organization.deletedAt) {
+      return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
+    }
+
+    let result: {
+      organization: {
+        id: string
+        name: string
+        slug: string
+        plan: string
+      }
+      user: {
+        id: string
+        name: string
+        email: string
+      }
+    }
+
+    // ── Reativar conta antiga/inativa ────────────────────────────────────────
+    if (existingUser && existingUser.organization.deletedAt) {
+      result = await prisma.$transaction(async (tx) => {
+        const organization = await tx.organization.update({
+          where: { id: existingUser.organizationId },
+          data: {
+            name: data.companyName,
+            deletedAt: null,
+            plan,
+            planStatus: 'active',
+            trialEndsAt,
+            ...(cidParam ? { asaasCustomerId: cidParam } : {}),
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            plan: true,
+          },
+        })
+
+        const user = await tx.user.update({
+          where: { id: existingUser.id },
+          data: {
+            name: data.name,
+            email: normalizedEmail,
+            passwordHash: hashedPassword,
+            role: 'owner',
+            deletedAt: null,
+            consentAt: new Date(),
+            consentIp,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        })
+
+        return { organization, user }
+      })
+
+      provisionChatwootForOrg({
+        organizationId: result.organization.id,
+        orgName: result.organization.name,
+        orgSlug: result.organization.slug,
+        ownerUserId: result.user.id,
+        ownerName: result.user.name,
+        ownerEmail: result.user.email,
+        ownerPassword: `Tmp@${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}!Z`,
+      })
+        .then((provResult) => {
+          if (!provResult.success) {
+            console.warn(
+              `[SIGNUP] Chatwoot não reprovisionado para org ${result.organization.slug}:`,
+              provResult.error,
+            )
+          }
+        })
+        .catch((err) => {
+          console.error('[SIGNUP] Erro inesperado no reprovisionamento Chatwoot:', err)
+        })
+
+      return NextResponse.json({
+        message: 'Conta reativada com sucesso!',
+        reactivated: true,
+        user: {
+          id: result.user.id,
+          name: result.user.name,
+          email: result.user.email,
+        },
+        organization: {
+          id: result.organization.id,
+          name: result.organization.name,
+          slug: result.organization.slug,
+          plan: result.organization.plan,
+        },
+      })
+    }
+
+    // ── Criar conta nova ─────────────────────────────────────────────────────
     const baseSlug = slugify(data.companyName)
     let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`
     let i = 1
-    // Verifica slug incluindo orgs inativas
+
     while (await prisma.organization.findUnique({ where: { slug } })) {
       slug = `${baseSlug}-${i++}`
     }
 
-    const plan        = PLAN_MAP[planParam.toLowerCase()] ?? 'trial'
-    const trialEndsAt = plan === 'trial'
-      ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-      : null
-
-    // ── 1. Criar Organization + User ─────────────────────────────────────────
-    const result = await prisma.$transaction(async (tx) => {
+    result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
-          name:            data.companyName,
+          name: data.companyName,
           slug,
           plan,
-          planStatus:      'active',
+          planStatus: 'active',
           trialEndsAt,
           asaasCustomerId: cidParam,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          plan: true,
         },
       })
 
       const user = await tx.user.create({
         data: {
-          name:           data.name,
-          email:          data.email,
-          passwordHash:   hashedPassword,
-          role:           'owner',
+          name: data.name,
+          email: normalizedEmail,
+          passwordHash: hashedPassword,
+          role: 'owner',
           organizationId: organization.id,
-          consentAt:      new Date(),
+          consentAt: new Date(),
           consentIp,
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
         },
       })
 
       return { organization, user }
     })
 
-    // ── 2. Provisionar Chatwoot em background ────────────────────────────────
     provisionChatwootForOrg({
       organizationId: result.organization.id,
-      orgName:        result.organization.name,
-      orgSlug:        result.organization.slug,
-      ownerUserId:    result.user.id,
-      ownerName:      result.user.name,
-      ownerEmail:     result.user.email,
-      ownerPassword:  `Tmp@${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}!Z`,
-    }).then((provResult) => {
-      if (!provResult.success) {
-        console.warn(
-          `[SIGNUP] Chatwoot não provisionado para org ${result.organization.slug}:`,
-          provResult.error,
-        )
-      }
-    }).catch((err) => {
-      console.error('[SIGNUP] Erro inesperado no provisionamento Chatwoot:', err)
+      orgName: result.organization.name,
+      orgSlug: result.organization.slug,
+      ownerUserId: result.user.id,
+      ownerName: result.user.name,
+      ownerEmail: result.user.email,
+      ownerPassword: `Tmp@${crypto.randomUUID().replace(/-/g, '').slice(0, 10)}!Z`,
     })
+      .then((provResult) => {
+        if (!provResult.success) {
+          console.warn(
+            `[SIGNUP] Chatwoot não provisionado para org ${result.organization.slug}:`,
+            provResult.error,
+          )
+        }
+      })
+      .catch((err) => {
+        console.error('[SIGNUP] Erro inesperado no provisionamento Chatwoot:', err)
+      })
 
-    // ── 3. Responder imediatamente ────────────────────────────────────────────
     return NextResponse.json({
       message: 'Conta criada com sucesso!',
       user: {
-        id:    result.user.id,
-        name:  result.user.name,
+        id: result.user.id,
+        name: result.user.name,
         email: result.user.email,
       },
       organization: {
-        id:   result.organization.id,
+        id: result.organization.id,
         name: result.organization.name,
         slug: result.organization.slug,
         plan: result.organization.plan,
