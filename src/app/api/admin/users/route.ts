@@ -1,9 +1,10 @@
 // src/app/api/admin/users/route.ts
+import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 
-// GET - Listar todos os usuários do sistema
+// GET - Listar todos os usuários ativos do sistema
 export async function GET(req: NextRequest) {
   const admin = await verifyAdminToken();
   if (!admin) {
@@ -15,8 +16,14 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search') || '';
     const orgId = searchParams.get('organizationId') || '';
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      organization: {
+        is: {
+          deletedAt: null,
+        },
+      },
+    };
 
     if (search) {
       where.OR = [
