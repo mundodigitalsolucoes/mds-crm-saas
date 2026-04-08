@@ -1,6 +1,7 @@
 // src/components/Sidebar.tsx
 // Sidebar reorganizada por blocos
 // Menu recolhível no desktop
+// Blocos em acordeão
 // "Aparência" oculto da navegação
 // Branding fixo da MDS no menu (sem frase / sem nome textual)
 
@@ -29,6 +30,7 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  ChevronDown,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
@@ -49,7 +51,9 @@ interface MenuItem {
 }
 
 interface MenuSection {
+  key: string;
   title: string;
+  icon: LucideIcon;
   items: MenuItem[];
 }
 
@@ -67,6 +71,7 @@ function makePalette() {
     bgDarker: '#252c45',
     active: BRAND.secondary,
     hover: 'rgba(255,255,255,0.08)',
+    hoverSoft: 'rgba(255,255,255,0.05)',
     border: 'rgba(255,255,255,0.10)',
     textMuted: 'rgba(255,255,255,0.78)',
     textLabel: 'rgba(255,255,255,0.42)',
@@ -107,89 +112,30 @@ function SidebarSkeleton({
   isCollapsed: boolean;
 }) {
   return (
-    <div className="animate-pulse">
-      {!isCollapsed && (
-        <>
-          <p className="text-[11px] font-semibold mb-3 px-3 tracking-[0.18em]" style={{ color: palette.textLabel }}>
-            ATENDIMENTO
-          </p>
-          <ul className="space-y-1 mb-5">
-            {Array.from({ length: 1 }).map((_, i) => (
-              <li key={`a-${i}`}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
-                  <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
-                  <div className="h-4 rounded flex-1" style={{ backgroundColor: palette.hover, maxWidth: '110px' }} />
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <p className="text-[11px] font-semibold mb-3 px-3 tracking-[0.18em]" style={{ color: palette.textLabel }}>
-            VENDAS
-          </p>
-        </>
-      )}
-
-      <ul className="space-y-1 mb-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <li key={`v-${i}`}>
-            <div
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl`}
-            >
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
-              {!isCollapsed && (
-                <div
-                  className="h-4 rounded flex-1"
-                  style={{ backgroundColor: palette.hover, maxWidth: `${70 + i * 12}px` }}
-                />
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      {!isCollapsed && (
-        <>
-          <p className="text-[11px] font-semibold mb-3 px-3 tracking-[0.18em]" style={{ color: palette.textLabel }}>
-            MARKETING
-          </p>
-          <ul className="space-y-1 mb-5">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <li key={`m-${i}`}>
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
-                  <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
-                  <div
-                    className="h-4 rounded flex-1"
-                    style={{ backgroundColor: palette.hover, maxWidth: `${80 + i * 10}px` }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          <p className="text-[11px] font-semibold mb-3 px-3 tracking-[0.18em]" style={{ color: palette.textLabel }}>
-            CONFIGURAÇÕES
-          </p>
-        </>
-      )}
-
-      <ul className="space-y-1">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <li key={`c-${i}`}>
-            <div
-              className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl`}
-            >
-              <div className="w-5 h-5 rounded" style={{ backgroundColor: palette.hover }} />
-              {!isCollapsed && (
-                <div
-                  className="h-4 rounded flex-1"
-                  style={{ backgroundColor: palette.hover, maxWidth: `${90 + i * 8}px` }}
-                />
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="animate-pulse space-y-2">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div
+          key={i}
+          className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} rounded-xl px-3 py-3`}
+          style={{ backgroundColor: palette.hover }}
+        >
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className="h-5 w-5 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.18)' }} />
+            {!isCollapsed && (
+              <div
+                className="h-4 rounded"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  width: `${95 + i * 12}px`,
+                }}
+              />
+            )}
+          </div>
+          {!isCollapsed && (
+            <div className="h-4 w-4 rounded" style={{ backgroundColor: 'rgba(255,255,255,0.18)' }} />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -201,6 +147,7 @@ export default function Sidebar() {
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const palette = useMemo(() => makePalette(), []);
 
@@ -229,10 +176,30 @@ export default function Sidebar() {
     if (isLoading) return [];
 
     const sections: MenuSection[] = [
-      { title: 'Atendimento', items: serviceItems },
-      { title: 'Vendas', items: salesItems },
-      { title: 'Marketing', items: marketingItems },
-      { title: 'Configurações', items: settingsItems },
+      {
+        key: 'atendimento',
+        title: 'Atendimento',
+        icon: MessageSquare,
+        items: serviceItems,
+      },
+      {
+        key: 'vendas',
+        title: 'Vendas',
+        icon: LayoutDashboard,
+        items: salesItems,
+      },
+      {
+        key: 'marketing',
+        title: 'Marketing',
+        icon: FolderKanban,
+        items: marketingItems,
+      },
+      {
+        key: 'configuracoes',
+        title: 'Configurações',
+        icon: Shield,
+        items: settingsItems,
+      },
     ];
 
     return sections
@@ -242,6 +209,40 @@ export default function Sidebar() {
       }))
       .filter((section) => section.items.length > 0);
   }, [canAccess, isAdmin, isLoading, isOwnerOrAdmin]);
+
+  useEffect(() => {
+    if (!visibleSections.length) return;
+
+    const nextState: Record<string, boolean> = {};
+
+    for (const section of visibleSections) {
+      const hasActiveItem = section.items.some(
+        (item) => pathname === item.path || pathname?.startsWith(item.path + '/')
+      );
+      nextState[section.key] = hasActiveItem;
+    }
+
+    setOpenSections((prev) => {
+      const merged = { ...prev };
+
+      for (const section of visibleSections) {
+        if (typeof merged[section.key] === 'undefined') {
+          merged[section.key] = nextState[section.key];
+        } else if (nextState[section.key]) {
+          merged[section.key] = true;
+        }
+      }
+
+      return merged;
+    });
+  }, [pathname, visibleSections]);
+
+  const toggleSection = (key: string) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const handleLogout = () => signOut({ callbackUrl: '/auth/login' });
 
@@ -262,7 +263,7 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 text-white rounded-xl shadow-lg transition-opacity hover:opacity-80"
+        className="fixed left-4 top-4 z-50 rounded-xl p-2 text-white shadow-lg transition-opacity hover:opacity-80 lg:hidden"
         style={{ backgroundColor: BRAND.primary }}
         aria-label={isMobileOpen ? 'Fechar menu' : 'Abrir menu'}
       >
@@ -271,25 +272,23 @@ export default function Sidebar() {
 
       {isMobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40
-          text-white flex flex-col overflow-hidden
+          fixed inset-y-0 left-0 z-40 flex flex-col overflow-hidden text-white
           transform transition-all duration-300 ease-in-out
           w-72 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           ${isDesktopCollapsed ? 'lg:w-[88px]' : 'lg:w-72'}
+          lg:static
         `}
         style={{ backgroundColor: palette.bg }}
       >
         <div
-          className={`border-b transition-all duration-300 ${
-            isDesktopCollapsed ? 'p-3' : 'p-5'
-          }`}
+          className={`border-b transition-all duration-300 ${isDesktopCollapsed ? 'p-3' : 'p-5'}`}
           style={{ borderColor: palette.border }}
         >
           <div
@@ -301,14 +300,14 @@ export default function Sidebar() {
               <img
                 src={BRAND.logo}
                 alt="MDS"
-                className={`${isDesktopCollapsed ? 'w-10 h-10' : 'w-11 h-11'} object-contain`}
+                className={`${isDesktopCollapsed ? 'h-10 w-10' : 'h-11 w-11'} object-contain`}
               />
             </div>
 
             <button
               type="button"
               onClick={() => setIsCollapsed((prev) => !prev)}
-              className="hidden lg:inline-flex items-center justify-center rounded-xl border w-10 h-10 transition-colors"
+              className="hidden h-10 w-10 items-center justify-center rounded-xl border transition-colors lg:inline-flex"
               style={{
                 borderColor: palette.border,
                 backgroundColor: palette.hover,
@@ -322,78 +321,108 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex-1 p-3 overflow-y-auto">
+        <nav className="flex-1 overflow-y-auto p-3">
           {isLoading ? (
             <SidebarSkeleton palette={palette} isCollapsed={isDesktopCollapsed} />
           ) : (
-            <div className="space-y-5">
-              {visibleSections.map((section) => (
-                <div key={section.title}>
-                  {!isDesktopCollapsed && (
-                    <p
-                      className="text-[11px] font-semibold mb-2 px-3 tracking-[0.18em] uppercase"
-                      style={{ color: palette.textLabel }}
+            <div className="space-y-2">
+              {visibleSections.map((section) => {
+                const SectionIcon = section.icon;
+                const isOpen = !!openSections[section.key];
+                const hasActiveItem = section.items.some(
+                  (item) => pathname === item.path || pathname?.startsWith(item.path + '/')
+                );
+
+                return (
+                  <div
+                    key={section.key}
+                    className="overflow-hidden rounded-2xl"
+                    style={{
+                      backgroundColor: isOpen || hasActiveItem ? palette.hoverSoft : 'transparent',
+                      border: `1px solid ${isOpen || hasActiveItem ? palette.border : 'transparent'}`,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.key)}
+                      className={`flex w-full items-center rounded-2xl transition-colors ${
+                        isDesktopCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-3 py-3'
+                      }`}
+                      style={{
+                        backgroundColor: hasActiveItem && !isOpen ? palette.hover : 'transparent',
+                        color: BRAND.white,
+                      }}
+                      title={isDesktopCollapsed ? section.title : undefined}
                     >
-                      {section.title}
-                    </p>
-                  )}
+                      <div className={`flex items-center ${isDesktopCollapsed ? 'justify-center' : 'gap-3'}`}>
+                        <SectionIcon size={20} />
+                        {!isDesktopCollapsed && (
+                          <span className="text-sm font-semibold tracking-[0.01em]">{section.title}</span>
+                        )}
+                      </div>
 
-                  <ul className="space-y-1">
-                    {section.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive =
-                        pathname === item.path || pathname?.startsWith(item.path + '/');
+                      {!isDesktopCollapsed && (
+                        <ChevronDown
+                          size={18}
+                          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      )}
+                    </button>
 
-                      return (
-                        <li key={item.path}>
-                          <Link
-                            href={item.path}
-                            onClick={() => setIsMobileOpen(false)}
-                            className={`flex items-center rounded-xl transition-colors ${
-                              isDesktopCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-2.5'
-                            }`}
-                            style={{
-                              backgroundColor: isActive ? palette.active : 'transparent',
-                              color: isActive ? BRAND.white : palette.textMuted,
-                              fontWeight: isActive ? 600 : 500,
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isActive) {
-                                (e.currentTarget as HTMLElement).style.backgroundColor = palette.hover;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isActive) {
-                                (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
-                              }
-                            }}
-                            title={isDesktopCollapsed ? item.name : undefined}
-                          >
-                            <Icon size={20} />
-                            {!isDesktopCollapsed && <span>{item.name}</span>}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
+                    {!isDesktopCollapsed && isOpen && (
+                      <ul className="space-y-1 px-2 pb-2">
+                        {section.items.map((item) => {
+                          const Icon = item.icon;
+                          const isActive =
+                            pathname === item.path || pathname?.startsWith(item.path + '/');
+
+                          return (
+                            <li key={item.path}>
+                              <Link
+                                href={item.path}
+                                onClick={() => setIsMobileOpen(false)}
+                                className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
+                                style={{
+                                  backgroundColor: isActive ? palette.active : 'transparent',
+                                  color: isActive ? BRAND.white : palette.textMuted,
+                                  fontWeight: isActive ? 600 : 500,
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (!isActive) {
+                                    (e.currentTarget as HTMLElement).style.backgroundColor = palette.hover;
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (!isActive) {
+                                    (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                                  }
+                                }}
+                              >
+                                <Icon size={18} />
+                                <span className="text-sm">{item.name}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </nav>
 
         {!isDesktopCollapsed && <UsageBanner />}
 
-        <div className="p-3 border-t" style={{ borderColor: palette.border }}>
+        <div className="border-t p-3" style={{ borderColor: palette.border }}>
           <div
             className={`rounded-xl ${isDesktopCollapsed ? 'p-2' : 'p-3'}`}
             style={{ backgroundColor: palette.bgDarker }}
           >
-            <div
-              className={`flex items-center ${isDesktopCollapsed ? 'justify-center' : 'gap-3'}`}
-            >
+            <div className={`flex items-center ${isDesktopCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div
-                className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0 text-sm"
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                 style={{ backgroundColor: palette.active }}
                 title={userName}
               >
@@ -401,8 +430,8 @@ export default function Sidebar() {
               </div>
 
               {!isDesktopCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate text-white">{userName}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-white">{userName}</p>
                   <p className="text-xs" style={{ color: palette.textMuted }}>
                     {ROLE_DISPLAY[userRole] || userRole}
                   </p>
@@ -412,7 +441,7 @@ export default function Sidebar() {
 
             <button
               onClick={handleLogout}
-              className={`mt-3 w-full flex items-center justify-center gap-2 rounded-xl text-white font-medium transition-opacity hover:opacity-80 ${
+              className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl text-white font-medium transition-opacity hover:opacity-80 ${
                 isDesktopCollapsed ? 'px-2 py-2.5' : 'px-3 py-2.5'
               }`}
               style={{ backgroundColor: '#c0392b' }}
