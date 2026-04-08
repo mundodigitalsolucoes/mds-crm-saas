@@ -1,6 +1,6 @@
 // src/app/(app)/layout.tsx
-// ✅ 3.4 White-label: injeta primaryColor/secondaryColor no <head> via branding da org
-// ✅ WhatsAppStatusBanner: notificação visual quando WA desconecta
+// Shell visual do app autenticado alinhado com a identidade MDS
+// Sem tocar em auth, sessão, /atendimento ou comportamento do Chatwoot
 
 import Sidebar from '@/components/Sidebar';
 import PermissionSync from '@/components/PermissionSync';
@@ -13,9 +13,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
 
-// ✅ metadata estático (fallback)
 export const metadata: Metadata = {
-  title:       'MDS CRM - Dashboard',
+  title: 'MDS CRM - Dashboard',
   description: 'Sistema de Gestão de Leads e Projetos',
 };
 
@@ -25,8 +24,8 @@ async function getOrgBranding() {
     if (!session?.user) return null;
 
     const org = await prisma.organization.findUnique({
-      where:  { id: (session.user as any).organizationId },
-      select: { primaryColor: true, secondaryColor: true, favicon: true, name: true },
+      where: { id: (session.user as any).organizationId },
+      select: { favicon: true },
     });
 
     return org;
@@ -42,38 +41,37 @@ export default async function AppLayout({
 }) {
   const branding = await getOrgBranding();
 
-  const primaryColor   = branding?.primaryColor   ?? '#6366f1';
-  const secondaryColor = branding?.secondaryColor  ?? '#4f46e5';
-  const favicon        = branding?.favicon         ?? '/favicon.ico';
+  const favicon = branding?.favicon ?? '/favicon.ico';
 
-  const cssVars = `:root { --color-primary: ${primaryColor}; --color-secondary: ${secondaryColor}; }`;
+  const cssVars = `
+    :root {
+      --color-primary: #2f3453;
+      --color-secondary: #374b89;
+    }
+  `;
 
   return (
     <NextAuthSessionProvider>
       <Providers>
-        {/* ✅ CSS vars white-label injetadas via <style> */}
         <style dangerouslySetInnerHTML={{ __html: cssVars }} />
-
-        {/* ✅ favicon dinâmico */}
         <link rel="icon" href={favicon} />
 
         <PermissionSync />
-
-        {/* ✅ Banner de status WhatsApp — floating, não interfere no layout */}
         <WhatsAppStatusBanner />
 
-        <div className="flex min-h-screen bg-gray-50">
+        <div className="flex min-h-screen bg-[#f6f8fc]">
           <Sidebar />
-          <div className="flex-1 flex flex-col lg:ml-0 min-w-0">
 
-            <header className="sticky top-0 z-30 flex items-center justify-end gap-2 px-4 py-2.5 bg-gray-900/80 backdrop-blur border-b border-white/5">
-              <NotificationBellWrapper />
+          <div className="flex min-w-0 flex-1 flex-col bg-[#f6f8fc]">
+            <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
+                <NotificationBellWrapper />
+              </div>
             </header>
 
-            <main className="flex-1">
+            <main className="flex-1 overflow-x-hidden bg-[#f6f8fc]">
               {children}
             </main>
-
           </div>
         </div>
       </Providers>
