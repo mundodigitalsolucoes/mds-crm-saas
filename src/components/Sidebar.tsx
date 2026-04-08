@@ -151,15 +151,28 @@ export default function Sidebar() {
 
   const palette = useMemo(() => makePalette(), []);
 
-  useEffect(() => {
+    useEffect(() => {
     const savedState = window.localStorage.getItem('mds:sidebar:collapsed');
-    if (savedState === '1') {
-      setIsCollapsed(true);
-    }
+    const collapsed = savedState === '1';
+
+    setIsCollapsed(collapsed);
+    document.documentElement.style.setProperty(
+      '--app-sidebar-width',
+      collapsed ? '88px' : '288px'
+    );
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem('mds:sidebar:collapsed', isCollapsed ? '1' : '0');
+
+    const width = isCollapsed ? '88px' : '288px';
+    document.documentElement.style.setProperty('--app-sidebar-width', width);
+
+    window.dispatchEvent(
+      new CustomEvent('mds:sidebar-width-change', {
+        detail: { collapsed: isCollapsed, width },
+      })
+    );
   }, [isCollapsed]);
 
   const role = (session?.user as any)?.role ?? '';
