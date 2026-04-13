@@ -2,7 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
-import { Edit, X, Plus, Settings, Trash2, FileText, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Edit,
+  X,
+  Plus,
+  Settings,
+  Trash2,
+  FileText,
+  Loader2,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 import { useLeadsStore, type Lead, type Stage } from '@/store/leadsStore';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
@@ -70,35 +83,35 @@ function StageModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between rounded-t-xl border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
           <h2 className="text-lg font-bold text-white">
             {stage ? 'Editar Estágio' : 'Novo Estágio'}
           </h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-lg">
+          <button onClick={onClose} className="rounded-lg p-1 text-white hover:bg-white/20">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Estágio *</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Nome do Estágio *</label>
             <input
               required
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               placeholder="Ex: Qualificado, Proposta, Fechado..."
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cor</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Cor</label>
             <select
               value={form.color}
               onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
               <option value="blue">Azul</option>
               <option value="green">Verde</option>
@@ -114,13 +127,13 @@ function StageModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
             >
               {stage ? 'Salvar' : 'Criar'}
             </button>
@@ -160,7 +173,6 @@ function LeadEditModal({
     notes: '',
   });
 
-  // ✅ useEffect ANTES de qualquer early return
   useEffect(() => {
     if (!isOpen || !lead) return;
     setForm({
@@ -176,7 +188,6 @@ function LeadEditModal({
     });
   }, [isOpen, lead]);
 
-  // ✅ Early returns DEPOIS dos hooks
   if (!isOpen || !lead) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -197,83 +208,83 @@ function LeadEditModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl my-8">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600 rounded-t-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+      <div className="my-8 w-full max-w-xl rounded-xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between rounded-t-xl border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
           <h2 className="text-lg font-bold text-white">Editar Lead</h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-lg">
+          <button onClick={onClose} className="rounded-lg p-1 text-white hover:bg-white/20">
             <X size={22} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nome *</label>
               <input
                 required
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Telefone</label>
               <input
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Empresa</label>
               <input
                 value={form.company}
                 onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Cargo</label>
               <input
                 value={form.position}
                 onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Valor (R$)</label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={form.value}
                 onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                 placeholder="0.00"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Origem</label>
               <select
                 value={form.source}
                 onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">Selecione...</option>
                 <option value="manual">Manual</option>
@@ -288,11 +299,11 @@ function LeadEditModal({
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estágio</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Estágio</label>
               <select
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
               >
                 {availableStatuses.map((stage) => (
                   <option key={stage.id} value={stage.id}>
@@ -303,12 +314,12 @@ function LeadEditModal({
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notas / Observações</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Notas / Observações</label>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-y"
+                className="w-full resize-y rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                 placeholder="Adicione detalhes importantes sobre este lead..."
               />
             </div>
@@ -319,14 +330,14 @@ function LeadEditModal({
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
             >
               {isSaving && <Loader2 size={16} className="animate-spin" />}
               Salvar
@@ -358,10 +369,10 @@ export default function KanbanPage() {
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [showStageModal, setShowStageModal] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [, setIsDragging] = useState(false);
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
   const { canAccess, isLoading: permLoading } = usePermission();
 
-  // ✅ Hooks ANTES de qualquer early return
   useEffect(() => {
     fetchLeads();
   }, [fetchLeads]);
@@ -377,17 +388,18 @@ export default function KanbanPage() {
     return leadsById.get(selectedLeadId) ?? null;
   }, [selectedLeadId, leadsById]);
 
-  const columns = useMemo(() => {
-    return stages
-      .sort((a, b) => a.order - b.order)
-      .map((stage) => {
-        const stageLeads = leads.filter((l) => l.status === stage.id);
-        const totalValue = stageLeads.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
-        return { ...stage, items: stageLeads, totalValue };
-      });
-  }, [stages, leads]);
+  const orderedStages = useMemo(() => {
+    return [...stages].sort((a, b) => a.order - b.order);
+  }, [stages]);
 
-  // ✅ Early returns DEPOIS de todos os hooks
+  const columns = useMemo(() => {
+    return orderedStages.map((stage) => {
+      const stageLeads = leads.filter((l) => l.status === stage.id);
+      const totalValue = stageLeads.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
+      return { ...stage, items: stageLeads, totalValue };
+    });
+  }, [orderedStages, leads]);
+
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
 
@@ -395,18 +407,16 @@ export default function KanbanPage() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kanban - Pipeline</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-800">Kanban - Pipeline</h1>
           <p className="text-gray-600">Gerencie seu funil de vendas</p>
         </div>
         <div className="flex items-center justify-center py-24">
-          <Loader2 className="animate-spin text-indigo-600 mr-3" size={28} />
-          <span className="text-gray-600 text-lg">Carregando pipeline...</span>
+          <Loader2 className="mr-3 animate-spin text-indigo-600" size={28} />
+          <span className="text-lg text-gray-600">Carregando pipeline...</span>
         </div>
       </div>
     );
   }
-
-  // ==================== DRAG & DROP ====================
 
   const onDragEnd = async (result: DropResult) => {
     setIsDragging(false);
@@ -422,8 +432,6 @@ export default function KanbanPage() {
       await moveLeadInKanban(draggableId, toStage);
     }
   };
-
-  // ==================== HANDLERS ====================
 
   const handleCreateStage = () => {
     setSelectedStage(null);
@@ -452,14 +460,30 @@ export default function KanbanPage() {
     }
   };
 
-  // ==================== RENDER ====================
+  const toggleColumn = (stageId: string) => {
+    setCollapsedColumns((prev) => ({
+      ...prev,
+      [stageId]: !prev[stageId],
+    }));
+  };
+
+  const collapseAllColumns = () => {
+    const nextState: Record<string, boolean> = {};
+    for (const stage of orderedStages) {
+      nextState[stage.id] = true;
+    }
+    setCollapsedColumns(nextState);
+  };
+
+  const expandAllColumns = () => {
+    setCollapsedColumns({});
+  };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+    <div className="flex h-[calc(100vh-5rem)] flex-col p-6">
+      <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Kanban - Pipeline</h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-800">Kanban - Pipeline</h1>
           <p className="text-gray-600">
             Gerencie seu funil de vendas •{' '}
             <span className="font-medium">{leads.length} lead(s)</span> •{' '}
@@ -468,17 +492,35 @@ export default function KanbanPage() {
             </span>
           </p>
         </div>
-        <div className="flex gap-3">
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={collapseAllColumns}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50"
+          >
+            <ChevronsLeft size={18} />
+            Recolher colunas
+          </button>
+
+          <button
+            onClick={expandAllColumns}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50"
+          >
+            <ChevronsRight size={18} />
+            Expandir colunas
+          </button>
+
           <button
             onClick={() => fetchLeads()}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition hover:bg-gray-50"
           >
             <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
             Atualizar
           </button>
+
           <button
             onClick={handleCreateStage}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white transition hover:bg-indigo-700"
           >
             <Plus size={20} />
             Novo Estágio
@@ -486,143 +528,192 @@ export default function KanbanPage() {
         </div>
       </div>
 
-      {/* Error */}
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm text-indigo-700">
+        <span className="font-medium">Dica:</span>
+        role o pipeline dentro desta área. Cada coluna agora tem rolagem própria.
+      </div>
+
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
           {error}
         </div>
       )}
 
-      {/* Kanban Board */}
-      <DragDropContext
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={onDragEnd}
-      >
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {columns.map((col) => (
-            <div key={col.id} className="min-w-[320px] w-[320px] flex-shrink-0">
-              <div className={`bg-white rounded-lg border-2 ${COLUMN_COLORS[col.color] || COLUMN_COLORS.blue}`}>
-                {/* Column Header */}
-                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-800">{col.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {col.items.length} lead(s) • {formatBRL(col.totalValue)}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleEditStage(col)}
-                      className="p-1 rounded-md border border-gray-200 hover:bg-gray-50"
-                      title="Editar estágio"
-                    >
-                      <Settings size={14} />
-                    </button>
-                    {stages.length > 1 && (
-                      <button
-                        onClick={() => deleteStage(col.id)}
-                        className="p-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50"
-                        title="Excluir estágio"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <DragDropContext
+          onDragStart={() => setIsDragging(true)}
+          onDragEnd={onDragEnd}
+        >
+          <div className="h-full overflow-x-auto overflow-y-hidden pb-2">
+            <div className="flex h-full min-w-max gap-4">
+              {columns.map((col) => {
+                const isCollapsed = collapsedColumns[col.id] === true;
 
-                {/* Droppable Area */}
-                <Droppable droppableId={col.id}>
-                  {(provided, snapshot) => (
+                return (
+                  <div
+                    key={col.id}
+                    className={`h-full flex-shrink-0 transition-all duration-200 ${
+                      isCollapsed ? 'w-[88px]' : 'w-[320px]'
+                    }`}
+                  >
                     <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`p-3 space-y-3 min-h-[120px] transition-colors ${
-                        snapshot.isDraggingOver ? 'bg-indigo-100/60' : ''
-                      }`}
+                      className={`flex h-full flex-col rounded-lg border-2 ${COLUMN_COLORS[col.color] || COLUMN_COLORS.blue}`}
                     >
-                      {col.items.map((lead, index) => (
-                        <Draggable key={lead.id} draggableId={lead.id} index={index}>
-                          {(prov, snap) => (
-                            <div
-                              ref={prov.innerRef}
-                              {...prov.draggableProps}
-                              {...prov.dragHandleProps}
-                              className={`rounded-lg border border-gray-200 bg-white p-3 shadow-sm hover:shadow transition ${
-                                snap.isDragging ? 'ring-2 ring-indigo-500 shadow-lg' : ''
-                              }`}
+                      <div className="border-b border-gray-200 bg-white/90 px-3 py-3 backdrop-blur-sm">
+                        <div className={`flex ${isCollapsed ? 'flex-col items-start gap-2' : 'items-start justify-between gap-2'}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className={`font-semibold text-gray-800 ${isCollapsed ? 'text-xs leading-tight' : ''}`}>
+                              {col.title}
+                            </p>
+                            <p className={`text-gray-500 ${isCollapsed ? 'text-[10px] leading-tight' : 'text-xs'}`}>
+                              {col.items.length} lead(s)
+                              {!isCollapsed && <> • {formatBRL(col.totalValue)}</>}
+                            </p>
+                          </div>
+
+                          <div className={`flex ${isCollapsed ? 'w-full flex-col gap-1' : 'gap-1'}`}>
+                            <button
+                              onClick={() => toggleColumn(col.id)}
+                              className="rounded-md border border-gray-200 p-1 hover:bg-gray-50"
+                              title={isCollapsed ? 'Expandir coluna' : 'Recolher coluna'}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm font-semibold text-gray-800 truncate">
-                                    {lead.name}
-                                  </p>
-                                  <p className="text-xs text-gray-500 truncate">
-                                    {lead.company || '—'}
-                                    {lead.position ? ` • ${lead.position}` : ''}
-                                  </p>
-                                </div>
+                              {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                            </button>
+
+                            {!isCollapsed && (
+                              <>
                                 <button
-                                  onClick={() => setSelectedLeadId(lead.id)}
-                                  className="p-1 rounded-md border border-gray-200 hover:bg-gray-50 flex-shrink-0"
-                                  title="Editar lead"
+                                  onClick={() => handleEditStage(col)}
+                                  className="rounded-md border border-gray-200 p-1 hover:bg-gray-50"
+                                  title="Editar estágio"
                                 >
-                                  <Edit size={14} />
+                                  <Settings size={14} />
                                 </button>
-                              </div>
 
-                              <div className="mt-2 space-y-1">
-                                {lead.email && (
-                                  <p className="text-xs text-gray-600 truncate">
-                                    <span className="font-medium">Email:</span> {lead.email}
-                                  </p>
+                                {stages.length > 1 && (
+                                  <button
+                                    onClick={() => deleteStage(col.id)}
+                                    className="rounded-md border border-red-200 p-1 text-red-600 hover:bg-red-50"
+                                    title="Excluir estágio"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 )}
-                                {lead.phone && (
-                                  <p className="text-xs text-gray-600 truncate">
-                                    <span className="font-medium">Tel:</span> {lead.phone}
-                                  </p>
-                                )}
-                                <div className="flex justify-between items-center pt-1">
-                                  <p className="text-xs text-gray-600">
-                                    <span className="font-medium text-green-700">
-                                      {formatBRL(Number(lead.value) || 0)}
-                                    </span>
-                                  </p>
-                                  <div className="flex items-center gap-1">
-                                    {lead.source && (
-                                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                                        {SOURCE_LABELS[lead.source] || lead.source}
-                                      </span>
-                                    )}
-                                    {lead.notes && lead.notes.trim().length > 0 && (
-                                      <span className="text-gray-400" title={lead.notes}>
-                                        <FileText size={14} />
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-
-                      {/* Empty state */}
-                      {col.items.length === 0 && !snapshot.isDraggingOver && (
-                        <div className="text-center py-6 text-gray-400 text-sm">
-                          Arraste leads para cá
+                              </>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </Droppable>
-              </div>
-            </div>
-          ))}
-        </div>
-      </DragDropContext>
+                      </div>
 
-      {/* Stage Modal */}
+                      <Droppable droppableId={col.id}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className={`min-h-0 flex-1 overflow-y-auto transition-colors ${
+                              snapshot.isDraggingOver ? 'bg-indigo-100/60' : ''
+                            }`}
+                          >
+                            {isCollapsed ? (
+                              <div className="flex h-full min-h-[140px] items-center justify-center p-2 text-center text-[11px] text-gray-500">
+                                Clique para expandir
+                              </div>
+                            ) : (
+                              <div className="flex min-h-full flex-col gap-3 p-3">
+                                {col.items.map((lead, index) => (
+                                  <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                                    {(prov, snap) => (
+                                      <div
+                                        ref={prov.innerRef}
+                                        {...prov.draggableProps}
+                                        {...prov.dragHandleProps}
+                                        className={`rounded-lg border border-gray-200 bg-white p-3 shadow-sm transition hover:shadow ${
+                                          snap.isDragging ? 'shadow-lg ring-2 ring-indigo-500' : ''
+                                        }`}
+                                      >
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="min-w-0 flex-1">
+                                            <p className="truncate text-sm font-semibold text-gray-800">
+                                              {lead.name}
+                                            </p>
+                                            <p className="truncate text-xs text-gray-500">
+                                              {lead.company || '—'}
+                                              {lead.position ? ` • ${lead.position}` : ''}
+                                            </p>
+                                          </div>
+
+                                          <button
+                                            onClick={() => setSelectedLeadId(lead.id)}
+                                            className="flex-shrink-0 rounded-md border border-gray-200 p-1 hover:bg-gray-50"
+                                            title="Editar lead"
+                                          >
+                                            <Edit size={14} />
+                                          </button>
+                                        </div>
+
+                                        <div className="mt-2 space-y-1">
+                                          {lead.email && (
+                                            <p className="truncate text-xs text-gray-600">
+                                              <span className="font-medium">Email:</span> {lead.email}
+                                            </p>
+                                          )}
+
+                                          {lead.phone && (
+                                            <p className="truncate text-xs text-gray-600">
+                                              <span className="font-medium">Tel:</span> {lead.phone}
+                                            </p>
+                                          )}
+
+                                          <div className="flex items-center justify-between pt-1">
+                                            <p className="text-xs text-gray-600">
+                                              <span className="font-medium text-green-700">
+                                                {formatBRL(Number(lead.value) || 0)}
+                                              </span>
+                                            </p>
+
+                                            <div className="flex items-center gap-1">
+                                              {lead.source && (
+                                                <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                                                  {SOURCE_LABELS[lead.source] || lead.source}
+                                                </span>
+                                              )}
+
+                                              {lead.notes && lead.notes.trim().length > 0 && (
+                                                <span className="text-gray-400" title={lead.notes}>
+                                                  <FileText size={14} />
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))}
+
+                                {provided.placeholder}
+
+                                {col.items.length === 0 && !snapshot.isDraggingOver && (
+                                  <div className="flex min-h-[120px] flex-1 items-center justify-center text-center text-sm text-gray-400">
+                                    Arraste leads para cá
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {isCollapsed && provided.placeholder}
+                          </div>
+                        )}
+                      </Droppable>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </DragDropContext>
+      </div>
+
       <StageModal
         isOpen={showStageModal}
         onClose={() => setShowStageModal(false)}
@@ -630,7 +721,6 @@ export default function KanbanPage() {
         onSave={handleSaveStage}
       />
 
-      {/* Lead Edit Modal */}
       <LeadEditModal
         isOpen={selectedLeadId !== null}
         onClose={() => setSelectedLeadId(null)}
