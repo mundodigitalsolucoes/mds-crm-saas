@@ -1,17 +1,14 @@
 // src/app/api/leads/[id]/route.ts
-// Detalhe, atualização e exclusão de lead com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, leadUpdateSchema } from '@/lib/validations';
 
-// ==================== GET /api/leads/[id] ====================
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Permissão granular: leads.view
     const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
     if (!allowed) return errorResponse!;
 
@@ -47,25 +44,21 @@ export async function GET(
   }
 }
 
-// ==================== PUT /api/leads/[id] ====================
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Permissão granular: leads.edit
     const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada (.strict() rejeita campos não permitidos)
     const parsed = parseBody(leadUpdateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // Verifica se o lead pertence à organização
     const existing = await prisma.lead.findFirst({
       where: {
         id,
@@ -77,12 +70,12 @@ export async function PUT(
       return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
     }
 
-    // Montar objeto de atualização apenas com campos enviados (undefined = não altera)
     const updateData: Record<string, any> = {};
 
     if (data.name !== undefined) updateData.name = data.name;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.phone !== undefined) updateData.phone = data.phone;
+    if (data.whatsapp !== undefined) updateData.whatsapp = data.whatsapp;
     if (data.company !== undefined) updateData.company = data.company;
     if (data.position !== undefined) updateData.position = data.position;
     if (data.source !== undefined) updateData.source = data.source;
@@ -90,6 +83,12 @@ export async function PUT(
     if (data.inKanban !== undefined) updateData.inKanban = data.inKanban;
     if (data.score !== undefined) updateData.score = data.score ?? 0;
     if (data.value !== undefined) updateData.value = data.value;
+    if (data.productOrService !== undefined) updateData.productOrService = data.productOrService;
+    if (data.city !== undefined) updateData.city = data.city;
+    if (data.website !== undefined) updateData.website = data.website;
+    if (data.instagram !== undefined) updateData.instagram = data.instagram;
+    if (data.facebook !== undefined) updateData.facebook = data.facebook;
+    if (data.linkedin !== undefined) updateData.linkedin = data.linkedin;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
 
@@ -109,19 +108,16 @@ export async function PUT(
   }
 }
 
-// ==================== DELETE /api/leads/[id] ====================
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // ✅ Permissão granular: leads.delete
     const { allowed, session, errorResponse } = await checkPermission('leads', 'delete');
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
 
-    // Verifica se o lead pertence à organização
     const existing = await prisma.lead.findFirst({
       where: {
         id,

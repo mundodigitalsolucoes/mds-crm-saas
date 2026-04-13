@@ -2,10 +2,11 @@ import { create } from 'zustand';
 
 // Interface alinhada com o schema Prisma
 export interface Lead {
-  id: string; // UUID do banco
+  id: string;
   name: string;
   email: string | null;
   phone: string | null;
+  whatsapp: string | null;
   company: string | null;
   position: string | null;
   source: string | null;
@@ -13,6 +14,12 @@ export interface Lead {
   inKanban: boolean;
   score: number;
   value: number | null;
+  productOrService: string | null;
+  city: string | null;
+  website: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  linkedin: string | null;
   notes: string | null;
   assignedToId: string | null;
   assignedTo?: { id: string; name: string; email: string } | null;
@@ -30,7 +37,6 @@ export interface Stage {
 }
 
 interface LeadsStore {
-  // State
   leads: Lead[];
   stages: Stage[];
   isLoading: boolean;
@@ -42,25 +48,21 @@ interface LeadsStore {
     totalPages: number;
   };
 
-  // API actions (assíncronos)
   fetchLeads: (params?: { search?: string; status?: string; page?: number }) => Promise<void>;
   addLead: (data: Partial<Lead>) => Promise<Lead | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   deleteLead: (id: string) => Promise<boolean>;
   bulkDeleteLeads: (ids: string[], confirmationText: string) => Promise<number | null>;
 
-  // Stages (local por enquanto — pode virar API depois)
   addStage: (stage: Omit<Stage, 'id'>) => void;
   updateStage: (id: string, updates: Partial<Stage>) => void;
   deleteStage: (id: string) => void;
   reorderStages: (newOrder: Stage[]) => void;
 
-  // Kanban column order (derivado do status dos leads)
   moveLeadInKanban: (leadId: string, toStatus: string) => Promise<Lead | null>;
 }
 
 export const useLeadsStore = create<LeadsStore>((set, get) => ({
-  // Initial state
   leads: [],
   isLoading: false,
   error: null,
@@ -75,8 +77,6 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     { id: 'won', title: 'Ganho', order: 5, color: 'green' },
     { id: 'lost', title: 'Perdido', order: 6, color: 'red' },
   ],
-
-  // ==================== API ACTIONS ====================
 
   fetchLeads: async (params) => {
     set({ isLoading: true, error: null });
@@ -159,6 +159,10 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
       set((state) => ({
         leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
+.json();
+
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
       }));
 
       return updatedLead;
@@ -232,13 +236,9 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     }
   },
 
-  // ==================== KANBAN ====================
-
   moveLeadInKanban: async (leadId, toStatus) => {
     return get().updateLead(leadId, { status: toStatus });
   },
-
-  // ==================== STAGES (local) ====================
 
   addStage: (stageData) => {
     const newStage: Stage = {

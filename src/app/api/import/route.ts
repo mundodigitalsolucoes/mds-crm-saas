@@ -1,21 +1,50 @@
 // src/app/api/import/route.ts
-// Importação de leads via CSV/JSON com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, importLeadsSchema } from '@/lib/validations';
 
+function getString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function getNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null;
+
+  if (typeof value === 'number' && !Number.isNaN(value)) return value;
+
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').trim();
+    if (normalized === '') return null;
+    const parsed = Number(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function getScore(value: unknown): number {
+  const parsed = getNumber(value);
+  if (parsed === null) return 0;
+  const score = Math.round(parsed);
+  if (score < 0) return 0;
+  if (score > 100) return 100;
+  return score;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    // ✅ Permissão granular: leads.create (importar é criar leads em massa)
     const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
 
     const body = await request.json();
-
-    // ✅ Validação Zod centralizada (array obrigatório, max 10k)
     const parsed = parseBody(importLeadsSchema, body);
     if (!parsed.success) return parsed.response;
     const { leads } = parsed.data;
@@ -25,37 +54,27 @@ export async function POST(request: NextRequest) {
 
     for (const lead of leads) {
       try {
-        const name =
-          (typeof lead?.name === 'string' && lead.name) ||
-          (typeof lead?.nome === 'string' && lead.nome) ||
-          '';
+        const name = getString(lead?.name, lead?.nome);
 
-        if (!name.trim()) {
+        if (!name) {
           falhas++;
           continue;
         }
 
-        const email = typeof lead?.email === 'string' ? lead.email : null;
-
-        const phone =
-          (typeof lead?.phone === 'string' && lead.phone) ||
-          (typeof lead?.telefone === 'string' && lead.telefone) ||
-          null;
-
-        const company =
-          (typeof lead?.company === 'string' && lead.company) ||
-          (typeof lead?.empresa === 'string' && lead.empresa) ||
-          null;
-
-        const source =
-          (typeof lead?.source === 'string' && lead.source) ||
-          (typeof lead?.origem === 'string' && lead.origem) ||
-          'csv_import';
-
-        const status =
-          typeof lead?.status === 'string' && lead.status
-            ? lead.status
-            : 'new';
+        const email = getString(lead?.email);
+        const phone = getString(lead?.phone, lead?.telefone, lead?.telefone_fixo);
+        const whatsapp = getString(lead?.whatsapp);
+        const company = getString(lead?.company, lead?.empresa);
+        const source = getString(lead?.source, lead?.origem) || 'csv_import';
+        const status = getString(lead?.status) || 'new';
+        const score = getScore(lead?.score);
+        const value = getNumber(lead?.value ?? lead?.valor);
+        const productOrService = getString(lead?.product_or_service, lead?.produto_servico);
+        const city = getString(lead?.city, lead?.cidade);
+        const website = getString(lead?.website, lead?.site);
+        const instagram = getString(lead?.instagram);
+        const facebook = getString(lead?.facebook);
+        const linkedin = getString(lead?.linkedin);
 
         const inKanban =
           typeof lead?.inKanban === 'boolean'
@@ -65,13 +84,22 @@ export async function POST(request: NextRequest) {
         await prisma.lead.create({
           data: {
             organizationId,
-            name: name.trim(),
+            name,
             email,
             phone,
+            whatsapp,
             company,
             source,
             status,
             inKanban,
+            score,
+            value,
+            productOrService,
+            city,
+            website,
+            instagram,
+            facebook,
+            linkedin,
           },
         });
 

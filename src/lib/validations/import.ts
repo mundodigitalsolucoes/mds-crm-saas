@@ -1,31 +1,46 @@
 // src/lib/validations/import.ts
-// Schemas Zod para API de Importação de Leads — MDS CRM
 import { z } from 'zod';
 
-// ============================================
-// IMPORT — POST /api/import
-// ============================================
-
-/** Schema de cada lead individual no payload de importação */
 const importLeadItemSchema = z
   .object({
-    // Aceita "name" ou "nome"
     name: z.string().optional(),
     nome: z.string().optional(),
+
     email: z.preprocess(
       (val) => (typeof val === 'string' && val.trim() === '' ? null : val),
       z.string().email().nullable().optional()
     ),
-    // Aceita "phone" ou "telefone"
+
     phone: z.string().nullable().optional(),
     telefone: z.string().nullable().optional(),
-    // Aceita "company" ou "empresa"
+    telefone_fixo: z.string().nullable().optional(),
+
+    whatsapp: z.string().nullable().optional(),
+
     company: z.string().nullable().optional(),
     empresa: z.string().nullable().optional(),
-    // Aceita "source" ou "origem"
+
     source: z.string().nullable().optional(),
     origem: z.string().nullable().optional(),
+
     status: z.string().optional().default('new'),
+    score: z.union([z.string(), z.number()]).optional(),
+    value: z.union([z.string(), z.number()]).optional(),
+    valor: z.union([z.string(), z.number()]).optional(),
+
+    product_or_service: z.string().nullable().optional(),
+    produto_servico: z.string().nullable().optional(),
+
+    city: z.string().nullable().optional(),
+    cidade: z.string().nullable().optional(),
+
+    website: z.string().nullable().optional(),
+    site: z.string().nullable().optional(),
+
+    instagram: z.string().nullable().optional(),
+    facebook: z.string().nullable().optional(),
+    linkedin: z.string().nullable().optional(),
+
     inKanban: z.preprocess(
       (val) => {
         if (val === undefined || val === null || val === '') return undefined;

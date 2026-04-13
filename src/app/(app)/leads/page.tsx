@@ -38,9 +38,7 @@ function DeleteConfirmationModal({
   const [confirmationText, setConfirmationText] = useState('');
 
   useEffect(() => {
-    if (isOpen) {
-      setConfirmationText('');
-    }
+    if (isOpen) setConfirmationText('');
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -66,9 +64,7 @@ function DeleteConfirmationModal({
 
         <div className="space-y-4 p-6">
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            <p className="font-semibold">
-              Esta ação é permanente e não poderá ser desfeita.
-            </p>
+            <p className="font-semibold">Esta ação é permanente e não poderá ser desfeita.</p>
             <p className="mt-1">
               {isSingle
                 ? 'Você está prestes a excluir 1 lead.'
@@ -133,6 +129,30 @@ function DeleteConfirmationModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function normalizeUrl(value: string | null) {
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://${value}`;
+}
+
+function LinkCell({ value }: { value: string | null }) {
+  if (!value) return <span className="text-gray-400">—</span>;
+
+  const href = normalizeUrl(value);
+
+  return (
+    <a
+      href={href || '#'}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-block max-w-[180px] truncate text-sm text-indigo-600 hover:underline"
+      title={value}
+    >
+      {value}
+    </a>
   );
 }
 
@@ -300,6 +320,7 @@ export default function LeadsPage() {
       google_ads: 'Google Ads',
       chatwoot: 'Chatwoot',
       instagram: 'Instagram',
+      facebook: 'Facebook',
       linkedin: 'LinkedIn',
       csv_import: 'Importação CSV',
     };
@@ -307,7 +328,7 @@ export default function LeadsPage() {
   };
 
   const formatCurrency = (value: number | null) => {
-    if (!value) return '—';
+    if (value === null || value === undefined) return '—';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
@@ -349,9 +370,7 @@ export default function LeadsPage() {
       {selectedLeadIds.length > 0 && (
         <div className="mb-4 flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="font-medium text-red-800">
-              {selectedLeadIds.length} lead(s) selecionado(s)
-            </p>
+            <p className="font-medium text-red-800">{selectedLeadIds.length} lead(s) selecionado(s)</p>
             <p className="text-sm text-red-700">
               A exclusão em massa exige confirmação digitando EXCLUIR.
             </p>
@@ -380,7 +399,7 @@ export default function LeadsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Buscar leads por nome, email, empresa..."
+              placeholder="Buscar por nome, empresa, telefone, WhatsApp, cidade..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
@@ -448,7 +467,7 @@ export default function LeadsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[2200px]">
               <thead className="border-b border-gray-200 bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left">
@@ -460,15 +479,23 @@ export default function LeadsPage() {
                       className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Nome</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Telefone</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Empresa</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Origem</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Valor</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Data</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase text-gray-600">Ações</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Nome</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Telefone Fixo</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">WhatsApp</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Empresa</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Score</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Origem</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Valor</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Produto/Serviço</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Cidade</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Site</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Instagram</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Facebook</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">LinkedIn</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Data</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -483,25 +510,29 @@ export default function LeadsPage() {
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-800">{lead.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{lead.email || '—'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{lead.phone || '—'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{lead.company || '—'}</td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(lead.status)}`}
-                      >
+                    <td className="px-4 py-4 text-sm font-medium text-gray-800">{lead.name}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.email || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.phone || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.whatsapp || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.company || '—'}</td>
+                    <td className="px-4 py-4">
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(lead.status)}`}>
                         {getStatusDisplay(lead.status)}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{getSourceDisplay(lead.source)}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-600">
-                      {formatCurrency(lead.value)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.score}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{getSourceDisplay(lead.source)}</td>
+                    <td className="px-4 py-4 text-sm font-medium text-gray-600">{formatCurrency(lead.value)}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.productOrService || '—'}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{lead.city || '—'}</td>
+                    <td className="px-4 py-4"><LinkCell value={lead.website} /></td>
+                    <td className="px-4 py-4"><LinkCell value={lead.instagram} /></td>
+                    <td className="px-4 py-4"><LinkCell value={lead.facebook} /></td>
+                    <td className="px-4 py-4"><LinkCell value={lead.linkedin} /></td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
                       {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-4">
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(lead)}
@@ -524,7 +555,7 @@ export default function LeadsPage() {
 
                 {!isLoading && leads.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={18} className="px-6 py-8 text-center text-gray-500">
                       {debouncedSearch
                         ? 'Nenhum lead encontrado para a busca.'
                         : 'Nenhum lead cadastrado ainda. Clique em "Novo Lead" para começar.'}
@@ -568,7 +599,23 @@ export default function LeadsPage() {
         <CSVImport
           isOpen={true}
           entityName="Leads"
-          templateFields={['name', 'email', 'phone', 'company', 'status', 'source', 'value']}
+          templateFields={[
+            'name',
+            'email',
+            'phone',
+            'whatsapp',
+            'company',
+            'status',
+            'score',
+            'source',
+            'value',
+            'product_or_service',
+            'city',
+            'website',
+            'instagram',
+            'facebook',
+            'linkedin',
+          ]}
           requiredFields={['name']}
           onImport={handleImport}
           onClose={() => setShowImport(false)}

@@ -1,5 +1,4 @@
 // src/app/api/leads/route.ts
-// CRUD de leads com rate limiting, permissões granulares, limites de plano e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
@@ -8,20 +7,16 @@ import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, leadCreateSchema } from '@/lib/validations';
 import { createNotification } from '@/lib/notify';
 
-// GET /api/leads — Lista leads da organização
 export async function GET(req: NextRequest) {
   try {
-    // Rate limiting: 60 req/min por IP
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    // ✅ Permissão granular: leads.view
     const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
 
-    // Query params para filtros
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search');
@@ -29,10 +24,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    // Monta filtro dinâmico
-    const where: any = {
-      organizationId,
-    };
+    const where: any = { organizationId };
 
     if (status) {
       where.status = status;
@@ -44,6 +36,10 @@ export async function GET(req: NextRequest) {
         { email: { contains: search, mode: 'insensitive' } },
         { company: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search, mode: 'insensitive' } },
+        { whatsapp: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { productOrService: { contains: search, mode: 'insensitive' } },
+        { website: { contains: search, mode: 'insensitive' } },
       ];
     }
 
@@ -76,31 +72,24 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/leads — Cria um novo lead
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting: 60 req/min por IP
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    // ✅ Permissão granular: leads.create
     const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
 
-    // ✅ Verificar se plano está ativo
     const planCheck = await checkPlanActive(organizationId);
     if (!planCheck.active) return planCheck.errorResponse!;
 
-    // ✅ Verificar limite de leads do plano
     const limitCheck = await checkOrganizationLimit(organizationId, 'leads');
     if (!limitCheck.allowed) return limitCheck.errorResponse!;
 
     const body = await req.json();
-
-    // ✅ Validação Zod centralizada
     const parsed = parseBody(leadCreateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
@@ -111,6 +100,7 @@ export async function POST(req: NextRequest) {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        whatsapp: data.whatsapp,
         company: data.company,
         position: data.position,
         source: data.source,
@@ -118,6 +108,12 @@ export async function POST(req: NextRequest) {
         inKanban: data.inKanban,
         score: data.score as number,
         value: data.value,
+        productOrService: data.productOrService,
+        city: data.city,
+        website: data.website,
+        instagram: data.instagram,
+        facebook: data.facebook,
+        linkedin: data.linkedin,
         notes: data.notes,
         assignedToId: data.assignedToId,
         createdById: userId,
@@ -133,7 +129,6 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ✅ Notificar responsável atribuído (se diferente de quem criou)
     if (data.assignedToId && data.assignedToId !== userId) {
       await createNotification({
         userId: data.assignedToId,
