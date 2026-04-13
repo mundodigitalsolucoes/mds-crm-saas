@@ -50,12 +50,17 @@ export async function POST(request: NextRequest) {
         const source =
           (typeof lead?.source === 'string' && lead.source) ||
           (typeof lead?.origem === 'string' && lead.origem) ||
-          null;
+          'csv_import';
 
         const status =
           typeof lead?.status === 'string' && lead.status
             ? lead.status
             : 'new';
+
+        const inKanban =
+          typeof lead?.inKanban === 'boolean'
+            ? lead.inKanban
+            : true;
 
         await prisma.lead.create({
           data: {
@@ -66,6 +71,7 @@ export async function POST(request: NextRequest) {
             company,
             source,
             status,
+            inKanban,
           },
         });
 

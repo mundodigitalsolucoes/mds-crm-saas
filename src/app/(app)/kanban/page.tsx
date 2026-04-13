@@ -392,13 +392,17 @@ export default function KanbanPage() {
     return [...stages].sort((a, b) => a.order - b.order);
   }, [stages]);
 
+  const pipelineLeads = useMemo(() => {
+    return leads.filter((lead) => lead.inKanban);
+  }, [leads]);
+
   const columns = useMemo(() => {
     return orderedStages.map((stage) => {
-      const stageLeads = leads.filter((l) => l.status === stage.id);
+      const stageLeads = pipelineLeads.filter((l) => l.status === stage.id);
       const totalValue = stageLeads.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
       return { ...stage, items: stageLeads, totalValue };
     });
-  }, [orderedStages, leads]);
+  }, [orderedStages, pipelineLeads]);
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
@@ -479,6 +483,8 @@ export default function KanbanPage() {
     setCollapsedColumns({});
   };
 
+  const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
+
   return (
     <div className="flex h-[calc(100vh-5rem)] flex-col p-6">
       <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -486,10 +492,8 @@ export default function KanbanPage() {
           <h1 className="mb-2 text-3xl font-bold text-gray-800">Kanban - Pipeline</h1>
           <p className="text-gray-600">
             Gerencie seu funil de vendas •{' '}
-            <span className="font-medium">{leads.length} lead(s)</span> •{' '}
-            <span className="font-medium text-green-700">
-              {formatBRL(leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0))}
-            </span>
+            <span className="font-medium">{pipelineLeads.length} lead(s) no pipeline</span> •{' '}
+            <span className="font-medium text-green-700">{formatBRL(totalPipelineValue)}</span>
           </p>
         </div>
 
@@ -540,10 +544,7 @@ export default function KanbanPage() {
       )}
 
       <div className="min-h-0 flex-1 overflow-hidden">
-        <DragDropContext
-          onDragStart={() => setIsDragging(true)}
-          onDragEnd={onDragEnd}
-        >
+        <DragDropContext onDragStart={() => setIsDragging(true)} onDragEnd={onDragEnd}>
           <div className="h-full overflow-x-auto overflow-y-hidden pb-2">
             <div className="flex h-full min-w-max gap-4">
               {columns.map((col) => {
@@ -557,10 +558,16 @@ export default function KanbanPage() {
                     }`}
                   >
                     <div
-                      className={`flex h-full flex-col rounded-lg border-2 ${COLUMN_COLORS[col.color] || COLUMN_COLORS.blue}`}
+                      className={`flex h-full flex-col rounded-lg border-2 ${
+                        COLUMN_COLORS[col.color] || COLUMN_COLORS.blue
+                      }`}
                     >
                       <div className="border-b border-gray-200 bg-white/90 px-3 py-3 backdrop-blur-sm">
-                        <div className={`flex ${isCollapsed ? 'flex-col items-start gap-2' : 'items-start justify-between gap-2'}`}>
+                        <div
+                          className={`flex ${
+                            isCollapsed ? 'flex-col items-start gap-2' : 'items-start justify-between gap-2'
+                          }`}
+                        >
                           <div className="min-w-0 flex-1">
                             <p className={`font-semibold text-gray-800 ${isCollapsed ? 'text-xs leading-tight' : ''}`}>
                               {col.title}

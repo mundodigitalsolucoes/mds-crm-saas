@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Upload, FileText, AlertCircle, CheckCircle2, Download, Loader2 } from 'lucide-react';
-import { useLeadsStore, type Lead, type Stage } from '@/store/leadsStore';
+import { useLeadsStore, type Lead } from '@/store/leadsStore';
 import { useUsage } from '@/hooks/useUsage';
 import LimitAlert from '@/components/LimitAlert';
 
@@ -24,6 +24,7 @@ interface FormData {
   source: string;
   value: string;
   notes: string;
+  inKanban: boolean;
 }
 
 const emptyForm: FormData = {
@@ -36,6 +37,7 @@ const emptyForm: FormData = {
   source: '',
   value: '',
   notes: '',
+  inKanban: true,
 };
 
 export default function NewLeadModal({
@@ -55,6 +57,7 @@ export default function NewLeadModal({
   // CSV state
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvSendToKanban, setCsvSendToKanban] = useState(true);
   const [importStatus, setImportStatus] = useState<'idle' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [importResults, setImportResults] = useState({ success: 0, errors: 0, total: 0 });
 
@@ -77,6 +80,7 @@ export default function NewLeadModal({
         source: initialData.source ?? '',
         value: initialData.value ? String(initialData.value) : '',
         notes: initialData.notes ?? '',
+        inKanban: initialData.inKanban ?? true,
       });
     } else {
       setActiveTab('manual');
@@ -87,6 +91,7 @@ export default function NewLeadModal({
     setIsSaving(false);
     setCsvFile(null);
     setCsvData([]);
+    setCsvSendToKanban(true);
     setImportStatus('idle');
     setImportResults({ success: 0, errors: 0, total: 0 });
   }, [isOpen, mode, initialData]);
@@ -97,7 +102,7 @@ export default function NewLeadModal({
     e.preventDefault();
     setFormError(null);
 
-    if (limitReached) return; // Segurança extra
+    if (limitReached) return;
 
     if (!formData.name.trim()) {
       setFormError('Nome é obrigatório');
@@ -117,6 +122,7 @@ export default function NewLeadModal({
         source: formData.source.trim() || 'manual',
         value: formData.value ? parseFloat(formData.value) : null,
         notes: formData.notes.trim() || null,
+        inKanban: formData.inKanban,
       };
 
       let result;
@@ -193,14 +199,18 @@ export default function NewLeadModal({
   };
 
   const handleCsvImport = async () => {
-    if (limitReached) return; // Segurança extra
+    if (limitReached) return;
 
     setImportStatus('importing');
     let successCount = 0;
     let errorCount = 0;
 
     for (const lead of csvData) {
-      const result = await addLead(lead);
+      const result = await addLead({
+        ...lead,
+        inKanban: csvSendToKanban,
+      });
+
       if (result) {
         successCount++;
       } else {
@@ -220,13 +230,14 @@ export default function NewLeadModal({
   const resetCsvImport = () => {
     setCsvFile(null);
     setCsvData([]);
+    setCsvSendToKanban(true);
     setImportStatus('idle');
     setImportResults({ success: 0, errors: 0, total: 0 });
   };
 
   const downloadTemplate = () => {
     const template =
-      'name,email,phone,company,status,source,value\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,new,site,2500\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contacted,indicacao,5000';
+      'name,email,phone,company,status,source,value\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,new,website,2500\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contacted,referral,5000';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -236,14 +247,14 @@ export default function NewLeadModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-indigo-600 to-purple-600">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
           <h2 className="text-xl font-bold text-white">
             {mode === 'edit' ? 'Editar Lead' : 'Adicionar Leads'}
           </h2>
-          <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-lg transition-colors">
+          <button onClick={onClose} className="rounded-lg p-1 text-white transition-colors hover:bg-white/20">
             <X size={24} />
           </button>
         </div>
@@ -254,11 +265,11 @@ export default function NewLeadModal({
             onClick={() => setActiveTab('manual')}
             className={`flex-1 px-6 py-3 font-medium transition-colors ${
               activeTab === 'manual'
-                ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                ? 'border-b-2 border-indigo-600 bg-indigo-50 text-indigo-600'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <FileText className="inline mr-2" size={18} />
+            <FileText className="mr-2 inline" size={18} />
             Manual
           </button>
           <button
@@ -266,20 +277,19 @@ export default function NewLeadModal({
             onClick={() => (mode === 'edit' ? null : setActiveTab('csv'))}
             className={`flex-1 px-6 py-3 font-medium transition-colors ${
               mode === 'edit'
-                ? 'text-gray-300 bg-gray-50 cursor-not-allowed'
+                ? 'cursor-not-allowed bg-gray-50 text-gray-300'
                 : activeTab === 'csv'
-                  ? 'text-indigo-600 border-b-2 border-indigo-600 bg-indigo-50'
+                  ? 'border-b-2 border-indigo-600 bg-indigo-50 text-indigo-600'
                   : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <Upload className="inline mr-2" size={18} />
+            <Upload className="mr-2 inline" size={18} />
             Importar CSV
           </button>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* ✅ Alerta de limite atingido */}
           {limitReached && (
             <LimitAlert
               resource="leads"
@@ -291,80 +301,80 @@ export default function NewLeadModal({
           {activeTab === 'manual' ? (
             <form onSubmit={handleManualSubmit} className="space-y-4">
               {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
                   <AlertCircle size={18} />
                   {formError}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo *</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Nome Completo *</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="João Silva"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">E-mail</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="joao@email.com"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Telefone</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="(19) 99999-9999"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Empresa</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Empresa</label>
                   <input
                     type="text"
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="Empresa Exemplo"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Cargo</label>
                   <input
                     type="text"
                     value={formData.position}
                     onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="Diretor Comercial"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     disabled={limitReached}
                   >
                     {stages.map((stage) => (
@@ -376,11 +386,11 @@ export default function NewLeadModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Origem</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Origem</label>
                   <select
                     value={formData.source}
                     onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     disabled={limitReached}
                   >
                     <option value="">Selecione...</option>
@@ -396,27 +406,45 @@ export default function NewLeadModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor Estimado (R$)</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Valor Estimado (R$)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     placeholder="5000.00"
                     disabled={limitReached}
                   />
                 </div>
               </div>
 
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={formData.inKanban}
+                    onChange={(e) => setFormData({ ...formData, inKanban: e.target.checked })}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                  <div>
+                    <p className="font-medium text-indigo-900">Enviar para o pipeline agora</p>
+                    <p className="text-sm text-indigo-700">
+                      Desmarcado, o lead será salvo na base e ficará fora do Kanban.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Observações</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                   placeholder="Notas sobre o lead..."
                   disabled={limitReached}
                 />
@@ -427,14 +455,14 @@ export default function NewLeadModal({
                   type="button"
                   onClick={onClose}
                   disabled={isSaving}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSaving || limitReached}
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {isSaving && <Loader2 size={18} className="animate-spin" />}
                   {limitReached
@@ -446,20 +474,19 @@ export default function NewLeadModal({
               </div>
             </form>
           ) : (
-            /* ==================== ABA CSV ==================== */
             <div className="space-y-6">
               {/* Download Template */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
-                  <Download className="text-blue-600 flex-shrink-0 mt-0.5" size={20} />
+                  <Download className="mt-0.5 flex-shrink-0 text-blue-600" size={20} />
                   <div className="flex-1">
-                    <h3 className="font-medium text-blue-900 mb-1">Baixar Template CSV</h3>
-                    <p className="text-sm text-blue-700 mb-3">
+                    <h3 className="mb-1 font-medium text-blue-900">Baixar Template CSV</h3>
+                    <p className="mb-3 text-sm text-blue-700">
                       Use nosso template para garantir que seu CSV está no formato correto.
                     </p>
                     <button
                       onClick={downloadTemplate}
-                      className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
                     >
                       Baixar Template
                     </button>
@@ -467,27 +494,45 @@ export default function NewLeadModal({
                 </div>
               </div>
 
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={csvSendToKanban}
+                    onChange={(e) => setCsvSendToKanban(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                  <div>
+                    <p className="font-medium text-indigo-900">Enviar leads importados para o pipeline agora</p>
+                    <p className="text-sm text-indigo-700">
+                      Desmarcado, os leads serão importados na base e ficarão fora do Kanban.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               {/* Upload Area */}
               {importStatus === 'idle' && (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-indigo-400 transition-colors">
-                  <Upload className="mx-auto text-gray-400 mb-4" size={48} />
+                <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-indigo-400">
+                  <Upload className="mx-auto mb-4 text-gray-400" size={48} />
                   <label className={`cursor-pointer ${limitReached ? 'pointer-events-none opacity-50' : ''}`}>
-                    <span className="text-indigo-600 hover:text-indigo-700 font-medium">Clique para selecionar</span>
+                    <span className="font-medium text-indigo-600 hover:text-indigo-700">Clique para selecionar</span>
                     <span className="text-gray-600"> ou arraste o arquivo CSV aqui</span>
                     <input type="file" accept=".csv" onChange={handleFileChange} className="hidden" disabled={limitReached} />
                   </label>
-                  <p className="text-sm text-gray-500 mt-2">Formatos aceitos: CSV (máx. 10MB)</p>
+                  <p className="mt-2 text-sm text-gray-500">Formatos aceitos: CSV (máx. 10MB)</p>
                 </div>
               )}
 
               {/* Preview */}
               {importStatus === 'preview' && (
                 <div className="space-y-4">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={20} />
+                      <AlertCircle className="mt-0.5 flex-shrink-0 text-yellow-600" size={20} />
                       <div>
-                        <h3 className="font-medium text-yellow-900 mb-1">Preview da Importação</h3>
+                        <h3 className="mb-1 font-medium text-yellow-900">Preview da Importação</h3>
                         <p className="text-sm text-yellow-700">
                           {csvData.length} lead(s) encontrado(s). Revise os dados antes de importar.
                         </p>
@@ -495,10 +540,10 @@ export default function NewLeadModal({
                     </div>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
                     <div className="max-h-64 overflow-y-auto">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
+                        <thead className="sticky top-0 bg-gray-50">
                           <tr>
                             <th className="px-4 py-2 text-left font-medium text-gray-700">Nome</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
@@ -519,7 +564,7 @@ export default function NewLeadModal({
                       </table>
                     </div>
                     {csvData.length > 5 && (
-                      <div className="px-4 py-2 bg-gray-50 text-sm text-gray-600 border-t border-gray-200">
+                      <div className="border-t border-gray-200 bg-gray-50 px-4 py-2 text-sm text-gray-600">
                         + {csvData.length - 5} lead(s) adicional(is)
                       </div>
                     )}
@@ -528,14 +573,14 @@ export default function NewLeadModal({
                   <div className="flex gap-3">
                     <button
                       onClick={resetCsvImport}
-                      className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleCsvImport}
                       disabled={limitReached}
-                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
                     >
                       {limitReached ? 'Limite Atingido' : `Importar ${csvData.length} Lead(s)`}
                     </button>
@@ -545,20 +590,20 @@ export default function NewLeadModal({
 
               {/* Importing */}
               {importStatus === 'importing' && (
-                <div className="text-center py-8">
-                  <Loader2 className="mx-auto text-indigo-600 mb-4 animate-spin" size={48} />
-                  <p className="text-gray-700 font-medium">Importando leads...</p>
+                <div className="py-8 text-center">
+                  <Loader2 className="mx-auto mb-4 animate-spin text-indigo-600" size={48} />
+                  <p className="font-medium text-gray-700">Importando leads...</p>
                 </div>
               )}
 
               {/* Success */}
               {importStatus === 'success' && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                  <CheckCircle2 className="mx-auto text-green-600 mb-4" size={48} />
-                  <h3 className="font-medium text-green-900 mb-2">Importação Concluída!</h3>
+                <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
+                  <CheckCircle2 className="mx-auto mb-4 text-green-600" size={48} />
+                  <h3 className="mb-2 font-medium text-green-900">Importação Concluída!</h3>
                   <p className="text-sm text-green-700">{importResults.success} lead(s) importado(s) com sucesso!</p>
                   {importResults.errors > 0 && (
-                    <p className="text-sm text-red-600 mt-1">{importResults.errors} erro(s) encontrado(s)</p>
+                    <p className="mt-1 text-sm text-red-600">{importResults.errors} erro(s) encontrado(s)</p>
                   )}
                 </div>
               )}

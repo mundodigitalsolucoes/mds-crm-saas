@@ -25,6 +25,7 @@ export default function CSVImport({
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sendToKanban, setSendToKanban] = useState(true);
   const [importResult, setImportResult] = useState<{
     success: number;
     failed: number;
@@ -62,9 +63,9 @@ export default function CSVImport({
 
   const validateData = () => {
     const errors: string[] = [];
-    
+
     // Verifica se todos os campos obrigatórios estão presentes
-    requiredFields.forEach(field => {
+    requiredFields.forEach((field) => {
       if (!headers.includes(field)) {
         errors.push(`Campo obrigatório "${field}" não encontrado no CSV`);
       }
@@ -72,7 +73,7 @@ export default function CSVImport({
 
     // Valida cada linha
     parsedData.forEach((row, index) => {
-      requiredFields.forEach(field => {
+      requiredFields.forEach((field) => {
         if (!row[field] || row[field].toString().trim() === '') {
           errors.push(`Linha ${index + 2}: Campo "${field}" está vazio`);
         }
@@ -84,21 +85,26 @@ export default function CSVImport({
 
   const handleImport = async () => {
     const validationErrors = validateData();
-    
+
     if (validationErrors.length > 0) {
       setImportResult({
         success: 0,
         failed: parsedData.length,
-        errors: validationErrors.slice(0, 10), // Mostra apenas os primeiros 10 erros
+        errors: validationErrors.slice(0, 10),
       });
       setStep('result');
       return;
     }
 
     setIsProcessing(true);
-    
+
     try {
-      const result = await onImport(parsedData);
+      const preparedData = parsedData.map((row) => ({
+        ...row,
+        inKanban: sendToKanban,
+      }));
+
+      const result = await onImport(preparedData);
       setImportResult(result);
       setStep('result');
     } catch (error) {
@@ -128,6 +134,7 @@ export default function CSVImport({
     setHeaders([]);
     setImportResult(null);
     setStep('upload');
+    setSendToKanban(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -139,17 +146,17 @@ export default function CSVImport({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-gray-200 p-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">Importar {entityName}</h2>
-            <p className="text-sm text-gray-600 mt-1">Faça upload de um arquivo CSV para importar dados</p>
+            <p className="mt-1 text-sm text-gray-600">Faça upload de um arquivo CSV para importar dados</p>
           </div>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 transition-colors hover:text-gray-600"
           >
             <X size={24} />
           </button>
@@ -161,17 +168,17 @@ export default function CSVImport({
           {step === 'upload' && (
             <div className="space-y-6">
               {/* Download Template */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
-                  <Download className="text-blue-600 mt-1" size={20} />
+                  <Download className="mt-1 text-blue-600" size={20} />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-blue-900 mb-1">Baixe o modelo CSV</h3>
-                    <p className="text-sm text-blue-700 mb-3">
+                    <h3 className="mb-1 font-semibold text-blue-900">Baixe o modelo CSV</h3>
+                    <p className="mb-3 text-sm text-blue-700">
                       Use nosso modelo para garantir que seu arquivo esteja no formato correto
                     </p>
                     <button
                       onClick={downloadTemplate}
-                      className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white transition-colors hover:bg-blue-700"
                     >
                       Baixar Modelo CSV
                     </button>
@@ -179,13 +186,30 @@ export default function CSVImport({
                 </div>
               </div>
 
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={sendToKanban}
+                    onChange={(e) => setSendToKanban(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <p className="font-medium text-indigo-900">Enviar para o pipeline agora</p>
+                    <p className="text-sm text-indigo-700">
+                      Desmarcado, os leads serão importados na base e ficarão fora do Kanban.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               {/* Upload Area */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-indigo-500 transition-colors">
-                <Upload className="mx-auto text-gray-400 mb-4" size={48} />
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center transition-colors hover:border-indigo-500">
+                <Upload className="mx-auto mb-4 text-gray-400" size={48} />
+                <h3 className="mb-2 text-lg font-semibold text-gray-700">
                   Arraste seu arquivo CSV aqui
                 </h3>
-                <p className="text-sm text-gray-500 mb-4">ou clique para selecionar</p>
+                <p className="mb-4 text-sm text-gray-500">ou clique para selecionar</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -196,20 +220,20 @@ export default function CSVImport({
                 />
                 <label
                   htmlFor="csv-upload"
-                  className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 cursor-pointer transition-colors"
+                  className="inline-block cursor-pointer rounded-lg bg-indigo-600 px-6 py-2 text-white transition-colors hover:bg-indigo-700"
                 >
                   Selecionar Arquivo
                 </label>
               </div>
 
               {/* Required Fields */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-800 mb-2">Campos Obrigatórios:</h3>
+              <div className="rounded-lg bg-gray-50 p-4">
+                <h3 className="mb-2 font-semibold text-gray-800">Campos Obrigatórios:</h3>
                 <div className="flex flex-wrap gap-2">
                   {requiredFields.map((field) => (
                     <span
                       key={field}
-                      className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm"
+                      className="rounded-full bg-red-100 px-3 py-1 text-sm text-red-800"
                     >
                       {field}
                     </span>
@@ -222,7 +246,7 @@ export default function CSVImport({
           {/* Step 2: Preview */}
           {step === 'preview' && (
             <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="text-green-600" size={20} />
                   <div>
@@ -234,9 +258,26 @@ export default function CSVImport({
                 </div>
               </div>
 
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={sendToKanban}
+                    onChange={(e) => setSendToKanban(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <p className="font-medium text-indigo-900">Enviar para o pipeline agora</p>
+                    <p className="text-sm text-indigo-700">
+                      Desmarcado, os leads serão importados na base e ficarão fora do Kanban.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               {/* Preview Table */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
                   <h3 className="font-semibold text-gray-800">Preview dos Dados (primeiras 5 linhas)</h3>
                 </div>
                 <div className="overflow-x-auto">
@@ -246,21 +287,21 @@ export default function CSVImport({
                         {headers.map((header) => (
                           <th
                             key={header}
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                           >
                             {header}
                             {requiredFields.includes(header) && (
-                              <span className="text-red-500 ml-1">*</span>
+                              <span className="ml-1 text-red-500">*</span>
                             )}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {parsedData.slice(0, 5).map((row, index) => (
                         <tr key={index}>
                           {headers.map((header) => (
-                            <td key={header} className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            <td key={header} className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
                               {row[header] || <span className="text-gray-400">-</span>}
                             </td>
                           ))}
@@ -272,7 +313,7 @@ export default function CSVImport({
               </div>
 
               {parsedData.length > 5 && (
-                <p className="text-sm text-gray-500 text-center">
+                <p className="text-center text-sm text-gray-500">
                   ... e mais {parsedData.length - 5} registro(s)
                 </p>
               )}
@@ -283,20 +324,22 @@ export default function CSVImport({
           {step === 'result' && importResult && (
             <div className="space-y-6">
               {/* Success/Error Summary */}
-              <div className={`border rounded-lg p-6 ${
-                importResult.success > 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-              }`}>
+              <div
+                className={`rounded-lg border p-6 ${
+                  importResult.success > 0 ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                }`}
+              >
                 <div className="flex items-start gap-3">
                   {importResult.success > 0 ? (
-                    <CheckCircle className="text-green-600 mt-1" size={24} />
+                    <CheckCircle className="mt-1 text-green-600" size={24} />
                   ) : (
-                    <AlertCircle className="text-red-600 mt-1" size={24} />
+                    <AlertCircle className="mt-1 text-red-600" size={24} />
                   )}
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2">
+                    <h3 className="mb-2 text-lg font-semibold">
                       {importResult.success > 0 ? 'Importação Concluída!' : 'Falha na Importação'}
                     </h3>
-                    <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div className="mb-3 grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-600">Importados com sucesso:</p>
                         <p className="text-2xl font-bold text-green-600">{importResult.success}</p>
@@ -312,21 +355,21 @@ export default function CSVImport({
 
               {/* Errors */}
               {importResult.errors.length > 0 && (
-                <div className="bg-white border border-red-200 rounded-lg overflow-hidden">
-                  <div className="bg-red-50 px-4 py-2 border-b border-red-200">
+                <div className="overflow-hidden rounded-lg border border-red-200 bg-white">
+                  <div className="border-b border-red-200 bg-red-50 px-4 py-2">
                     <h3 className="font-semibold text-red-900">Erros Encontrados:</h3>
                   </div>
-                  <div className="p-4 max-h-60 overflow-y-auto">
+                  <div className="max-h-60 overflow-y-auto p-4">
                     <ul className="space-y-2">
                       {importResult.errors.map((error, index) => (
-                        <li key={index} className="text-sm text-red-700 flex items-start gap-2">
-                          <span className="text-red-500 mt-0.5">•</span>
+                        <li key={index} className="flex items-start gap-2 text-sm text-red-700">
+                          <span className="mt-0.5 text-red-500">•</span>
                           <span>{error}</span>
                         </li>
                       ))}
                     </ul>
                     {importResult.failed > importResult.errors.length && (
-                      <p className="text-sm text-gray-500 mt-3">
+                      <p className="mt-3 text-sm text-gray-500">
                         ... e mais {importResult.failed - importResult.errors.length} erro(s)
                       </p>
                     )}
@@ -338,12 +381,12 @@ export default function CSVImport({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-between">
+        <div className="flex justify-between border-t border-gray-200 bg-gray-50 p-6">
           <div>
             {step !== 'upload' && step !== 'result' && (
               <button
                 onClick={resetImport}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-gray-700 transition-colors hover:text-gray-900"
               >
                 ← Voltar
               </button>
@@ -352,7 +395,7 @@ export default function CSVImport({
           <div className="flex gap-3">
             <button
               onClick={handleClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              className="rounded-lg border border-gray-300 px-6 py-2 text-gray-700 transition-colors hover:bg-gray-100"
             >
               {step === 'result' ? 'Fechar' : 'Cancelar'}
             </button>
@@ -360,11 +403,11 @@ export default function CSVImport({
               <button
                 onClick={handleImport}
                 disabled={isProcessing}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-2 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-400"
               >
                 {isProcessing ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                     Importando...
                   </>
                 ) : (
@@ -378,7 +421,7 @@ export default function CSVImport({
             {step === 'result' && importResult && importResult.failed > 0 && (
               <button
                 onClick={resetImport}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="rounded-lg bg-indigo-600 px-6 py-2 text-white transition-colors hover:bg-indigo-700"
               >
                 Tentar Novamente
               </button>

@@ -10,13 +10,14 @@ export interface Lead {
   position: string | null;
   source: string | null;
   status: string;
+  inKanban: boolean;
   score: number;
   value: number | null;
   notes: string | null;
   assignedToId: string | null;
   assignedTo?: { id: string; name: string; email: string } | null;
   createdById: string | null;
-  createdBy?: { id: string; name: string } | null;
+  createdBy?: { id: true; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -227,9 +228,9 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     const state = get();
     if (state.stages.length <= 1) return;
 
-    const hasLeads = state.leads.some((l) => l.status === id);
+    const hasLeads = state.leads.some((l) => l.status === id && l.inKanban);
     if (hasLeads) {
-      alert('Não é possível excluir um estágio que contém leads. Mova os leads primeiro.');
+      alert('Não é possível excluir um estágio que contém leads no pipeline. Mova os leads primeiro.');
       return;
     }
 

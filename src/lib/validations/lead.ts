@@ -14,11 +14,25 @@ import {
 // ============================================
 
 const leadStatusEnum = z.enum([
-  'new', 'contacted', 'qualified', 'proposal', 'negotiation', 'won', 'lost',
+  'new',
+  'contacted',
+  'qualified',
+  'proposal',
+  'negotiation',
+  'won',
+  'lost',
 ]);
 
 const leadSourceEnum = z.enum([
-  'manual', 'chatwoot', 'website', 'referral', 'meta_ads', 'google_ads',
+  'manual',
+  'chatwoot',
+  'website',
+  'referral',
+  'meta_ads',
+  'google_ads',
+  'instagram',
+  'linkedin',
+  'csv_import',
 ]);
 
 // ============================================
@@ -58,6 +72,7 @@ export const leadCreateSchema = z.object({
     .transform((v) => v?.trim() || null),
   source: leadSourceEnum.optional().default('manual'),
   status: leadStatusEnum.optional().default('new'),
+  inKanban: z.boolean().optional().default(true),
   score: z.preprocess(
     (val) => {
       if (val === undefined || val === null || val === '') return 0;
@@ -89,49 +104,52 @@ export type LeadCreateInput = z.infer<typeof leadCreateSchema>;
 // UPDATE — PUT /api/leads/[id]
 // ============================================
 
-export const leadUpdateSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Nome não pode ser vazio')
-    .max(255)
-    .transform((v) => v.trim())
-    .optional(),
-  email: z
-    .string()
-    .email('E-mail inválido')
-    .max(255)
-    .nullable()
-    .transform((v) => v?.trim() || null)
-    .optional(),
-  phone: z
-    .string()
-    .max(50)
-    .nullable()
-    .transform((v) => v?.trim() || null)
-    .optional(),
-  company: z
-    .string()
-    .max(255)
-    .nullable()
-    .transform((v) => v?.trim() || null)
-    .optional(),
-  position: z
-    .string()
-    .max(255)
-    .nullable()
-    .transform((v) => v?.trim() || null)
-    .optional(),
-  source: leadSourceEnum.optional(),
-  status: leadStatusEnum.optional(),
-  score: optionalNumberNullable,
-  value: optionalDecimalNullable,
-  notes: z
-    .string()
-    .max(5000)
-    .nullable()
-    .transform((v) => v?.trim() || null)
-    .optional(),
-  assignedToId: optionalUuidNullable,
-}).strict('Campo não permitido na atualização de lead');
+export const leadUpdateSchema = z
+  .object({
+    name: z
+      .string()
+      .min(1, 'Nome não pode ser vazio')
+      .max(255)
+      .transform((v) => v.trim())
+      .optional(),
+    email: z
+      .string()
+      .email('E-mail inválido')
+      .max(255)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+    phone: z
+      .string()
+      .max(50)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+    company: z
+      .string()
+      .max(255)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+    position: z
+      .string()
+      .max(255)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+    source: leadSourceEnum.nullable().optional(),
+    status: leadStatusEnum.optional(),
+    inKanban: z.boolean().optional(),
+    score: optionalNumberNullable,
+    value: optionalDecimalNullable,
+    notes: z
+      .string()
+      .max(5000)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+    assignedToId: optionalUuidNullable,
+  })
+  .strict('Campo não permitido na atualização de lead');
 
 export type LeadUpdateInput = z.infer<typeof leadUpdateSchema>;
