@@ -141,37 +141,33 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
   },
 
   updateLead: async (id, updates) => {
-    set({ error: null });
+  set({ error: null });
 
-    try {
-      const res = await fetch(`/api/leads/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
+  try {
+    const res = await fetch(`/api/leads/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao atualizar lead');
-      }
-
-      const updatedLead = await res.json();
-
-      set((state) => ({
-        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
-.json();
-
-      set((state) => ({
-        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
-      }));
-
-      return updatedLead;
-    } catch (error: any) {
-      console.error('Erro ao atualizar lead:', error);
-      set({ error: error.message });
-      return null;
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Erro ao atualizar lead');
     }
-  },
+
+    const updatedLead = await res.json();
+
+    set((state) => ({
+      leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
+    }));
+
+    return updatedLead;
+  } catch (error: any) {
+    console.error('Erro ao atualizar lead:', error);
+    set({ error: error.message });
+    return null;
+  }
+},
 
   deleteLead: async (id) => {
     set({ error: null });
