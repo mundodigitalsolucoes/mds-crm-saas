@@ -1,4 +1,3 @@
-// src/components/NewLeadModal.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -18,11 +17,18 @@ interface FormData {
   name: string;
   email: string;
   phone: string;
+  whatsapp: string;
   company: string;
-  position: string;
   status: string;
+  score: string;
   source: string;
   value: string;
+  productOrService: string;
+  city: string;
+  website: string;
+  instagram: string;
+  facebook: string;
+  linkedin: string;
   notes: string;
   inKanban: boolean;
 }
@@ -31,11 +37,18 @@ const emptyForm: FormData = {
   name: '',
   email: '',
   phone: '',
+  whatsapp: '',
   company: '',
-  position: '',
   status: 'new',
+  score: '0',
   source: '',
   value: '',
+  productOrService: '',
+  city: '',
+  website: '',
+  instagram: '',
+  facebook: '',
+  linkedin: '',
   notes: '',
   inKanban: true,
 };
@@ -54,17 +67,14 @@ export default function NewLeadModal({
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // CSV state
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
   const [csvSendToKanban, setCsvSendToKanban] = useState(true);
   const [importStatus, setImportStatus] = useState<'idle' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [importResults, setImportResults] = useState({ success: 0, errors: 0, total: 0 });
 
-  // ✅ Verificar limite (só bloqueia criação, edição sempre OK)
   const limitReached = mode === 'create' && (isAtLimit('leads') || isPlanInactive());
 
-  // Preenche/reseta form ao abrir
   useEffect(() => {
     if (!isOpen) return;
 
@@ -74,11 +84,18 @@ export default function NewLeadModal({
         name: initialData.name ?? '',
         email: initialData.email ?? '',
         phone: initialData.phone ?? '',
+        whatsapp: initialData.whatsapp ?? '',
         company: initialData.company ?? '',
-        position: initialData.position ?? '',
         status: initialData.status ?? 'new',
+        score: String(initialData.score ?? 0),
         source: initialData.source ?? '',
-        value: initialData.value ? String(initialData.value) : '',
+        value: initialData.value !== null && initialData.value !== undefined ? String(initialData.value) : '',
+        productOrService: initialData.productOrService ?? '',
+        city: initialData.city ?? '',
+        website: initialData.website ?? '',
+        instagram: initialData.instagram ?? '',
+        facebook: initialData.facebook ?? '',
+        linkedin: initialData.linkedin ?? '',
         notes: initialData.notes ?? '',
         inKanban: initialData.inKanban ?? true,
       });
@@ -109,6 +126,12 @@ export default function NewLeadModal({
       return;
     }
 
+    const numericScore = Number(formData.score || '0');
+    if (Number.isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
+      setFormError('Score deve ser um número entre 0 e 100');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -116,11 +139,18 @@ export default function NewLeadModal({
         name: formData.name.trim(),
         email: formData.email.trim() || null,
         phone: formData.phone.trim() || null,
+        whatsapp: formData.whatsapp.trim() || null,
         company: formData.company.trim() || null,
-        position: formData.position.trim() || null,
         status: formData.status,
+        score: Math.round(numericScore),
         source: formData.source.trim() || 'manual',
         value: formData.value ? parseFloat(formData.value) : null,
+        productOrService: formData.productOrService.trim() || null,
+        city: formData.city.trim() || null,
+        website: formData.website.trim() || null,
+        instagram: formData.instagram.trim() || null,
+        facebook: formData.facebook.trim() || null,
+        linkedin: formData.linkedin.trim() || null,
         notes: formData.notes.trim() || null,
         inKanban: formData.inKanban,
       };
@@ -143,8 +173,6 @@ export default function NewLeadModal({
       setIsSaving(false);
     }
   };
-
-  // ==================== CSV ====================
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,25 +198,32 @@ export default function NewLeadModal({
 
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map((v) => v.trim());
-        const row: any = {};
+        const row: Record<string, string> = {};
+
         headers.forEach((header, index) => {
           row[header] = values[index] || '';
         });
 
         const name = row.name || row.nome || '';
-        const email = row.email || '';
+        if (!name) continue;
 
-        if (name) {
-          data.push({
-            name,
-            email: email || null,
-            phone: row.phone || row.telefone || null,
-            company: row.company || row.empresa || null,
-            source: row.source || row.origem || 'csv_import',
-            status: row.status || 'new',
-            value: row.value || row.valor || null,
-          });
-        }
+        data.push({
+          name,
+          email: row.email || null,
+          phone: row.phone || row.telefone || row.telefone_fixo || null,
+          whatsapp: row.whatsapp || null,
+          company: row.company || row.empresa || null,
+          status: row.status || 'new',
+          score: row.score || '0',
+          source: row.source || row.origem || 'csv_import',
+          value: row.value || row.valor || null,
+          productOrService: row.product_or_service || row.produto_servico || null,
+          city: row.city || row.cidade || null,
+          website: row.website || row.site || null,
+          instagram: row.instagram || null,
+          facebook: row.facebook || null,
+          linkedin: row.linkedin || null,
+        });
       }
 
       setCsvData(data);
@@ -208,14 +243,13 @@ export default function NewLeadModal({
     for (const lead of csvData) {
       const result = await addLead({
         ...lead,
+        score: Number(lead.score || 0),
+        value: lead.value ? parseFloat(lead.value) : null,
         inKanban: csvSendToKanban,
       });
 
-      if (result) {
-        successCount++;
-      } else {
-        errorCount++;
-      }
+      if (result) successCount++;
+      else errorCount++;
     }
 
     setImportResults({ success: successCount, errors: errorCount, total: csvData.length });
@@ -237,19 +271,20 @@ export default function NewLeadModal({
 
   const downloadTemplate = () => {
     const template =
-      'name,email,phone,company,status,source,value\nJoão Silva,joao@email.com,(19) 99999-9999,Empresa A,new,website,2500\nMaria Santos,maria@email.com,(19) 98888-8888,Empresa B,contacted,referral,5000';
+      'name,email,phone,whatsapp,company,status,score,source,value,product_or_service,city,website,instagram,facebook,linkedin\n' +
+      'João Silva,joao@empresa.com.br,(17) 3232-0000,(17) 99123-4567,Empresa Exemplo,new,75,manual,3500,Consultoria de Marketing,São José do Rio Preto,https://empresaexemplo.com.br,https://instagram.com/empresaexemplo,https://facebook.com/empresaexemplo,https://linkedin.com/company/empresaexemplo';
+
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'template-leads.csv';
+    a.download = 'template-leads-completo.csv';
     a.click();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
-        {/* Header */}
+      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
           <h2 className="text-xl font-bold text-white">
             {mode === 'edit' ? 'Editar Lead' : 'Adicionar Leads'}
@@ -259,7 +294,6 @@ export default function NewLeadModal({
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-gray-200">
           <button
             onClick={() => setActiveTab('manual')}
@@ -288,14 +322,9 @@ export default function NewLeadModal({
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
           {limitReached && (
-            <LimitAlert
-              resource="leads"
-              usage={formatUsage('leads')}
-              planName={usageData?.plan}
-            />
+            <LimitAlert resource="leads" usage={formatUsage('leads')} planName={usageData?.plan} />
           )}
 
           {activeTab === 'manual' ? (
@@ -307,40 +336,48 @@ export default function NewLeadModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Nome Completo *</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Nome *</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="João Silva"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">E-mail</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="joao@email.com"
                     disabled={limitReached}
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Telefone</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Telefone Fixo</label>
                   <input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="(19) 99999-9999"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">WhatsApp</label>
+                  <input
+                    type="tel"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     disabled={limitReached}
                   />
                 </div>
@@ -352,19 +389,6 @@ export default function NewLeadModal({
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Empresa Exemplo"
-                    disabled={limitReached}
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Cargo</label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Diretor Comercial"
                     disabled={limitReached}
                   />
                 </div>
@@ -386,6 +410,19 @@ export default function NewLeadModal({
                 </div>
 
                 <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Score</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.score}
+                    onChange={(e) => setFormData({ ...formData, score: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Origem</label>
                   <select
                     value={formData.source}
@@ -401,12 +438,14 @@ export default function NewLeadModal({
                     <option value="google_ads">Google Ads</option>
                     <option value="chatwoot">Chatwoot</option>
                     <option value="instagram">Instagram</option>
+                    <option value="facebook">Facebook</option>
                     <option value="linkedin">LinkedIn</option>
+                    <option value="csv_import">Importação CSV</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Valor Estimado (R$)</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Valor</label>
                   <input
                     type="number"
                     step="0.01"
@@ -414,7 +453,72 @@ export default function NewLeadModal({
                     value={formData.value}
                     onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                    placeholder="5000.00"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Produto/Serviço</label>
+                  <input
+                    type="text"
+                    value={formData.productOrService}
+                    onChange={(e) => setFormData({ ...formData, productOrService: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Site</label>
+                  <input
+                    type="text"
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Instagram</label>
+                  <input
+                    type="text"
+                    value={formData.instagram}
+                    onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Facebook</label>
+                  <input
+                    type="text"
+                    value={formData.facebook}
+                    onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+                    disabled={limitReached}
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">LinkedIn</label>
+                  <input
+                    type="text"
+                    value={formData.linkedin}
+                    onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
                     disabled={limitReached}
                   />
                 </div>
@@ -445,7 +549,6 @@ export default function NewLeadModal({
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={3}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Notas sobre o lead..."
                   disabled={limitReached}
                 />
               </div>
@@ -475,14 +578,13 @@ export default function NewLeadModal({
             </form>
           ) : (
             <div className="space-y-6">
-              {/* Download Template */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start gap-3">
                   <Download className="mt-0.5 flex-shrink-0 text-blue-600" size={20} />
                   <div className="flex-1">
                     <h3 className="mb-1 font-medium text-blue-900">Baixar Template CSV</h3>
                     <p className="mb-3 text-sm text-blue-700">
-                      Use nosso template para garantir que seu CSV está no formato correto.
+                      Use o template completo para subir a base já com os novos campos.
                     </p>
                     <button
                       onClick={downloadTemplate}
@@ -512,7 +614,6 @@ export default function NewLeadModal({
                 </label>
               </div>
 
-              {/* Upload Area */}
               {importStatus === 'idle' && (
                 <div className="rounded-lg border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-indigo-400">
                   <Upload className="mx-auto mb-4 text-gray-400" size={48} />
@@ -525,7 +626,6 @@ export default function NewLeadModal({
                 </div>
               )}
 
-              {/* Preview */}
               {importStatus === 'preview' && (
                 <div className="space-y-4">
                   <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
@@ -546,18 +646,18 @@ export default function NewLeadModal({
                         <thead className="sticky top-0 bg-gray-50">
                           <tr>
                             <th className="px-4 py-2 text-left font-medium text-gray-700">Nome</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
-                            <th className="px-4 py-2 text-left font-medium text-gray-700">Telefone</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700">WhatsApp</th>
                             <th className="px-4 py-2 text-left font-medium text-gray-700">Empresa</th>
+                            <th className="px-4 py-2 text-left font-medium text-gray-700">Produto/Serviço</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {csvData.slice(0, 5).map((lead, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="px-4 py-2">{lead.name}</td>
-                              <td className="px-4 py-2">{lead.email}</td>
-                              <td className="px-4 py-2">{lead.phone}</td>
-                              <td className="px-4 py-2">{lead.company}</td>
+                              <td className="px-4 py-2">{lead.whatsapp || '—'}</td>
+                              <td className="px-4 py-2">{lead.company || '—'}</td>
+                              <td className="px-4 py-2">{lead.productOrService || '—'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -588,7 +688,6 @@ export default function NewLeadModal({
                 </div>
               )}
 
-              {/* Importing */}
               {importStatus === 'importing' && (
                 <div className="py-8 text-center">
                   <Loader2 className="mx-auto mb-4 animate-spin text-indigo-600" size={48} />
@@ -596,7 +695,6 @@ export default function NewLeadModal({
                 </div>
               )}
 
-              {/* Success */}
               {importStatus === 'success' && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
                   <CheckCircle2 className="mx-auto mb-4 text-green-600" size={48} />

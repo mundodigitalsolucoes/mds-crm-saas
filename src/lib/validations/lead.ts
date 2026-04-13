@@ -1,17 +1,11 @@
 // src/lib/validations/lead.ts
-// Schemas Zod para API de Leads — MDS CRM
 import { z } from 'zod';
 import {
   optionalStringNullable,
   optionalUuid,
   optionalUuidNullable,
-  optionalNumberNullable,
   optionalDecimalNullable,
 } from './helpers';
-
-// ============================================
-// ENUMS
-// ============================================
 
 const leadStatusEnum = z.enum([
   'new',
@@ -32,12 +26,28 @@ const leadSourceEnum = z.enum([
   'google_ads',
   'instagram',
   'linkedin',
+  'facebook',
   'csv_import',
 ]);
 
-// ============================================
-// CREATE — POST /api/leads
-// ============================================
+const optionalScoreCreate = z.preprocess(
+  (val) => {
+    if (val === undefined || val === null || val === '') return 0;
+    const num = typeof val === 'string' ? Number(val) : val;
+    return typeof num === 'number' && !isNaN(num) ? num : 0;
+  },
+  z.number().int().min(0).max(100)
+);
+
+const optionalScoreUpdate = z.preprocess(
+  (val) => {
+    if (val === undefined) return undefined;
+    if (val === null || val === '') return null;
+    const num = typeof val === 'string' ? Number(val) : val;
+    return typeof num === 'number' && !isNaN(num) ? num : val;
+  },
+  z.number().int().min(0).max(100).nullable()
+);
 
 export const leadCreateSchema = z.object({
   name: z
@@ -45,6 +55,7 @@ export const leadCreateSchema = z.object({
     .min(1, 'Nome é obrigatório')
     .max(255, 'Nome deve ter no máximo 255 caracteres')
     .transform((v) => v.trim()),
+
   email: z
     .string()
     .email('E-mail inválido')
@@ -52,45 +63,92 @@ export const leadCreateSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => v?.trim() || null),
+
   phone: z
     .string()
-    .max(50, 'Telefone deve ter no máximo 50 caracteres')
+    .max(50, 'Telefone fixo deve ter no máximo 50 caracteres')
     .optional()
     .nullable()
     .transform((v) => v?.trim() || null),
+
+  whatsapp: z
+    .string()
+    .max(50, 'WhatsApp deve ter no máximo 50 caracteres')
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
   company: z
     .string()
     .max(255)
     .optional()
     .nullable()
     .transform((v) => v?.trim() || null),
+
   position: z
     .string()
     .max(255)
     .optional()
     .nullable()
     .transform((v) => v?.trim() || null),
+
   source: leadSourceEnum.optional().default('manual'),
   status: leadStatusEnum.optional().default('new'),
   inKanban: z.boolean().optional().default(true),
-  score: z.preprocess(
-    (val) => {
-      if (val === undefined || val === null || val === '') return 0;
-      const num = typeof val === 'string' ? Number(val) : val;
-      return typeof num === 'number' && !isNaN(num) ? num : 0;
-    },
-    z.number().int().min(0).max(100)
-  ),
+  score: optionalScoreCreate,
   value: optionalDecimalNullable,
+
+  productOrService: z
+    .string()
+    .max(255)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
+  city: z
+    .string()
+    .max(255)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
+  website: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
+  instagram: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
+  facebook: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
+  linkedin: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => v?.trim() || null),
+
   notes: z
     .string()
     .max(5000, 'Notas devem ter no máximo 5000 caracteres')
     .optional()
     .nullable()
     .transform((v) => v?.trim() || null),
+
   assignedToId: optionalUuid.transform((v) => v || null),
 
-  // UTM tracking
   utmSource: optionalStringNullable,
   utmMedium: optionalStringNullable,
   utmCampaign: optionalStringNullable,
@@ -100,10 +158,6 @@ export const leadCreateSchema = z.object({
 
 export type LeadCreateInput = z.infer<typeof leadCreateSchema>;
 
-// ============================================
-// UPDATE — PUT /api/leads/[id]
-// ============================================
-
 export const leadUpdateSchema = z
   .object({
     name: z
@@ -112,6 +166,7 @@ export const leadUpdateSchema = z
       .max(255)
       .transform((v) => v.trim())
       .optional(),
+
     email: z
       .string()
       .email('E-mail inválido')
@@ -119,35 +174,90 @@ export const leadUpdateSchema = z
       .nullable()
       .transform((v) => v?.trim() || null)
       .optional(),
+
     phone: z
       .string()
       .max(50)
       .nullable()
       .transform((v) => v?.trim() || null)
       .optional(),
+
+    whatsapp: z
+      .string()
+      .max(50)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
     company: z
       .string()
       .max(255)
       .nullable()
       .transform((v) => v?.trim() || null)
       .optional(),
+
     position: z
       .string()
       .max(255)
       .nullable()
       .transform((v) => v?.trim() || null)
       .optional(),
+
     source: leadSourceEnum.nullable().optional(),
     status: leadStatusEnum.optional(),
     inKanban: z.boolean().optional(),
-    score: optionalNumberNullable,
+    score: optionalScoreUpdate,
     value: optionalDecimalNullable,
+
+    productOrService: z
+      .string()
+      .max(255)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
+    city: z
+      .string()
+      .max(255)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
+    website: z
+      .string()
+      .max(500)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
+    instagram: z
+      .string()
+      .max(500)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
+    facebook: z
+      .string()
+      .max(500)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
+    linkedin: z
+      .string()
+      .max(500)
+      .nullable()
+      .transform((v) => v?.trim() || null)
+      .optional(),
+
     notes: z
       .string()
       .max(5000)
       .nullable()
       .transform((v) => v?.trim() || null)
       .optional(),
+
     assignedToId: optionalUuidNullable,
   })
   .strict('Campo não permitido na atualização de lead');

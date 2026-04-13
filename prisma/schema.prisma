@@ -198,52 +198,59 @@ model User {
 // ============================================
 
 model Lead {
-  id                    String    @id @default(uuid())
+  id                     String    @id @default(uuid())
 
   // Multi-tenant
-  organizationId        String    @map("organization_id")
-  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId         String    @map("organization_id")
+  organization           Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  name                  String
-  email                 String?
-  phone                 String?
-  company               String?
-  position              String?
-  source                String?
-  status                String    @default("new")
-  inKanban              Boolean   @default(true) @map("in_kanban")
-  score                 Int       @default(0)
-  value                 Decimal?
+  name                   String
+  email                  String?
+  phone                  String?   // Telefone fixo
+  whatsapp               String?
+  company                String?
+  position               String?
+  source                 String?
+  status                 String    @default("new")
+  inKanban               Boolean   @default(true) @map("in_kanban")
+  score                  Int       @default(0)
+  value                  Decimal?
+  productOrService       String?   @map("product_or_service")
+  city                   String?
+  website                String?
+  instagram              String?
+  facebook               String?
+  linkedin               String?
 
   // Chatwoot integration
-  chatwootContactId     Int?      @map("chatwoot_contact_id")
-  chatwootConversationId Int?     @map("chatwoot_conversation_id")
-  chatwootInboxId       Int?      @map("chatwoot_inbox_id")
+  chatwootContactId      Int?      @map("chatwoot_contact_id")
+  chatwootConversationId Int?      @map("chatwoot_conversation_id")
+  chatwootInboxId        Int?      @map("chatwoot_inbox_id")
 
   // Ads tracking
-  utmSource             String?   @map("utm_source")
-  utmMedium             String?   @map("utm_medium")
-  utmCampaign           String?   @map("utm_campaign")
-  utmContent            String?   @map("utm_content")
-  utmTerm               String?   @map("utm_term")
+  utmSource              String?   @map("utm_source")
+  utmMedium              String?   @map("utm_medium")
+  utmCampaign            String?   @map("utm_campaign")
+  utmContent             String?   @map("utm_content")
+  utmTerm                String?   @map("utm_term")
 
-  customFields          String    @default("{}") @map("custom_fields")
-  notes                 String?
+  customFields           String    @default("{}") @map("custom_fields")
+  notes                  String?
 
-  assignedToId          String?   @map("assigned_to")
-  assignedTo            User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
+  assignedToId           String?   @map("assigned_to")
+  assignedTo             User?     @relation("AssignedLeads", fields: [assignedToId], references: [id])
 
-  createdById           String?   @map("created_by")
-  createdBy             User?     @relation("CreatedLeads", fields: [createdById], references: [id])
+  createdById            String?   @map("created_by")
+  createdBy              User?     @relation("CreatedLeads", fields: [createdById], references: [id])
 
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  tasks                 Task[]
-  activities            Activity[]
-  agendaEvents          AgendaEvent[]
-  chatwootConversations ChatwootConversation[]
+  tasks                  Task[]
+  activities             Activity[]
+  agendaEvents           AgendaEvent[]
+  chatwootConversations  ChatwootConversation[]
 
   @@index([organizationId])
   @@index([status])
