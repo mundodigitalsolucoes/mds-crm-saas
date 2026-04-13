@@ -87,6 +87,7 @@ export async function PUT(
     if (data.position !== undefined) updateData.position = data.position;
     if (data.source !== undefined) updateData.source = data.source;
     if (data.status !== undefined) updateData.status = data.status;
+    if (data.inKanban !== undefined) updateData.inKanban = data.inKanban;
     if (data.score !== undefined) updateData.score = data.score ?? 0;
     if (data.value !== undefined) updateData.value = data.value;
     if (data.notes !== undefined) updateData.notes = data.notes;

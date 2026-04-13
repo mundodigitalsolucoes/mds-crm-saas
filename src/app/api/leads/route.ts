@@ -115,6 +115,7 @@ export async function POST(req: NextRequest) {
         position: data.position,
         source: data.source,
         status: data.status,
+        inKanban: data.inKanban,
         score: data.score as number,
         value: data.value,
         notes: data.notes,
