@@ -17,7 +17,7 @@ export interface Lead {
   assignedToId: string | null;
   assignedTo?: { id: string; name: string; email: string } | null;
   createdById: string | null;
-  createdBy?: { id: true; name: string } | null;
+  createdBy?: { id: string; name: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -47,6 +47,7 @@ interface LeadsStore {
   addLead: (data: Partial<Lead>) => Promise<Lead | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   deleteLead: (id: string) => Promise<boolean>;
+  bulkDeleteLeads: (ids: string[], confirmationText: string) => Promise<number | null>;
 
   // Stages (local por enquanto — pode virar API depois)
   addStage: (stage: Omit<Stage, 'id'>) => void;
@@ -123,7 +124,6 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
       const newLead = await res.json();
 
-      // Adiciona no estado local imediatamente (otimista)
       set((state) => ({
         leads: [newLead, ...state.leads],
         pagination: {
@@ -157,7 +157,6 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
       const updatedLead = await res.json();
 
-      // Atualiza no estado local
       set((state) => ({
         leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
       }));
@@ -183,12 +182,11 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
         throw new Error(err.error || 'Erro ao excluir lead');
       }
 
-      // Remove do estado local
       set((state) => ({
         leads: state.leads.filter((l) => l.id !== id),
         pagination: {
           ...state.pagination,
-          total: state.pagination.total - 1,
+          total: Math.max(0, state.pagination.total - 1),
         },
       }));
 
@@ -197,6 +195,40 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       console.error('Erro ao excluir lead:', error);
       set({ error: error.message });
       return false;
+    }
+  },
+
+  bulkDeleteLeads: async (ids, confirmationText) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch('/api/leads/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, confirmationText }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao excluir leads em massa');
+      }
+
+      const data = await res.json();
+      const deletedCount = Number(data.deletedCount || 0);
+
+      set((state) => ({
+        leads: state.leads.filter((l) => !ids.includes(l.id)),
+        pagination: {
+          ...state.pagination,
+          total: Math.max(0, state.pagination.total - deletedCount),
+        },
+      }));
+
+      return deletedCount;
+    } catch (error: any) {
+      console.error('Erro ao excluir leads em massa:', error);
+      set({ error: error.message });
+      return null;
     }
   },
 
