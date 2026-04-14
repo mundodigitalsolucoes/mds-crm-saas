@@ -80,109 +80,8 @@ interface QRCodeData {
   count?: number
 }
 
-function FeedbackBanner({
-  msg,
-  onClose,
-}: {
-  msg: MessageState
-  onClose: () => void
-}) {
-  if (!msg) return null
-
-  const styles = {
-    success: 'bg-green-900/30 text-green-400 border-green-800',
-    error: 'bg-red-900/30 text-red-400 border-red-800',
-    info: 'bg-blue-900/30 text-blue-400 border-blue-800',
-  }
-
-  const icons = {
-    success: <CheckCircle className="w-4 h-4 shrink-0" />,
-    error: <AlertCircle className="w-4 h-4 shrink-0" />,
-    info: <Info className="w-4 h-4 shrink-0" />,
-  }
-
-  return (
-    <div
-      className={`mb-6 p-4 rounded-lg flex items-center justify-between gap-2 border ${styles[msg.type]}`}
-    >
-      <div className="flex items-center gap-2">
-        {icons[msg.type]}
-        <span className="text-sm">{msg.text}</span>
-      </div>
-      <button onClick={onClose} className="text-current opacity-60 hover:opacity-100">
-        <XCircle className="w-4 h-4" />
-      </button>
-    </div>
-  )
-}
-
-function UsageBadge({
-  current,
-  max,
-  isUnlimited,
-}: {
-  current: number
-  max: number
-  isUnlimited: boolean
-}) {
-  return (
-    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-800 bg-indigo-900/20 text-indigo-300 text-xs font-medium">
-      <Crown className="w-3.5 h-3.5" />
-      {isUnlimited ? 'Números ilimitados' : `${current} de ${max} números em uso`}
-    </div>
-  )
-}
-
-function StatusBadge({
-  status,
-}: {
-  status: InstanceStatus
-}) {
-  const map: Record<
-    InstanceStatus,
-    {
-      label: string
-      className: string
-      icon: React.ReactNode
-    }
-  > = {
-    connected: {
-      label: 'Conectado',
-      className: 'bg-green-900/40 text-green-400 border border-green-800',
-      icon: <CheckCircle className="w-3.5 h-3.5" />,
-    },
-    connecting: {
-      label: 'Conectando',
-      className: 'bg-blue-900/40 text-blue-400 border border-blue-800',
-      icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-    },
-    offline: {
-      label: 'Offline',
-      className: 'bg-yellow-900/40 text-yellow-400 border border-yellow-800',
-      icon: <WifiOff className="w-3.5 h-3.5" />,
-    },
-    missing: {
-      label: 'Instância ausente',
-      className: 'bg-red-900/40 text-red-400 border border-red-800',
-      icon: <AlertCircle className="w-3.5 h-3.5" />,
-    },
-    disconnected: {
-      label: 'Desconectado',
-      className: 'bg-gray-800 text-gray-400 border border-gray-700',
-      icon: <XCircle className="w-3.5 h-3.5" />,
-    },
-  }
-
-  const config = map[status]
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${config.className}`}
-    >
-      {config.icon}
-      {config.label}
-    </span>
-  )
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ')
 }
 
 function formatDateTime(value: string | null) {
@@ -199,6 +98,114 @@ function formatDateTime(value: string | null) {
   } catch {
     return null
   }
+}
+
+function FeedbackBanner({
+  msg,
+  onClose,
+}: {
+  msg: MessageState
+  onClose: () => void
+}) {
+  if (!msg) return null
+
+  const styles = {
+    success: {
+      wrap: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      icon: <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />,
+    },
+    error: {
+      wrap: 'border-red-200 bg-red-50 text-red-800',
+      icon: <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />,
+    },
+    info: {
+      wrap: 'border-blue-200 bg-blue-50 text-blue-800',
+      icon: <Info className="w-4 h-4 shrink-0 text-blue-600" />,
+    },
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border px-4 py-3 flex items-start justify-between gap-3 shadow-sm',
+        styles[msg.type].wrap
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {styles[msg.type].icon}
+        <span className="text-sm leading-5">{msg.text}</span>
+      </div>
+
+      <button
+        onClick={onClose}
+        className="opacity-60 hover:opacity-100 transition-opacity"
+      >
+        <XCircle className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}
+
+function UsageBadge({
+  current,
+  max,
+  isUnlimited,
+}: {
+  current: number
+  max: number
+  isUnlimited: boolean
+}) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-[#374b89]/30 bg-white px-3 py-2 text-xs font-medium text-[#2f3453] shadow-sm">
+      <Crown className="w-3.5 h-3.5 text-[#374b89]" />
+      {isUnlimited ? 'Números ilimitados' : `${current} de ${max} números em uso`}
+    </div>
+  )
+}
+
+function StatusBadge({ status }: { status: InstanceStatus }) {
+  if (status === 'connected') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+        <CheckCircle className="w-3.5 h-3.5" />
+        Conectado
+      </span>
+    )
+  }
+
+  if (status === 'connecting') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        Conectando
+      </span>
+    )
+  }
+
+  if (status === 'offline') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700">
+        <WifiOff className="w-3.5 h-3.5" />
+        Offline
+      </span>
+    )
+  }
+
+  if (status === 'missing') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+        <AlertCircle className="w-3.5 h-3.5" />
+        Instância ausente
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+      <XCircle className="w-3.5 h-3.5" />
+      Desconectado
+    </span>
+  )
 }
 
 function QRCodeModal({
@@ -230,7 +237,7 @@ function QRCodeModal({
     try {
       const { data } = await axios.get<QRCodeData>(
         `/api/integrations/evolution/qrcode?instance=${instanceName}`,
-        { timeout: 15_000 }
+        { timeout: 15000 }
       )
 
       attemptRef.current = 0
@@ -262,11 +269,11 @@ function QRCodeModal({
   }, [instanceName, onConnected])
 
   const startTimers = useCallback(() => {
-    intervalRef.current = setInterval(fetchQR, 3_000)
+    intervalRef.current = setInterval(fetchQR, 3000)
     expireTimerRef.current = setTimeout(() => {
       setExpired(true)
       if (intervalRef.current) clearInterval(intervalRef.current)
-    }, 60_000)
+    }, 60000)
   }, [fetchQR])
 
   useEffect(() => {
@@ -287,31 +294,33 @@ function QRCodeModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-sm p-6 flex flex-col items-center gap-5">
-        <div className="text-center">
-          <div className="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <div className="text-center mb-5">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-600">
             <QrCode className="w-7 h-7 text-white" />
           </div>
-          <h2 className="text-lg font-bold text-white">{label}</h2>
-          <p className="text-xs text-gray-400 mt-1">Escaneie o QR Code com seu WhatsApp</p>
+          <h2 className="text-xl font-bold text-[#2f3453]">{label}</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Escaneie o QR Code com o WhatsApp do número que deseja conectar
+          </p>
         </div>
 
-        <div className="w-56 h-56 bg-white rounded-xl flex items-center justify-center relative overflow-hidden">
+        <div className="mx-auto mb-5 flex h-64 w-64 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {loading && !fetchError && (
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-              <span className="text-xs text-gray-500">Gerando QR...</span>
+              <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+              <span className="text-xs text-slate-500">Gerando QR...</span>
             </div>
           )}
 
           {!loading && fetchError && (
-            <div className="flex flex-col items-center gap-3 p-4 text-center">
-              <AlertCircle className="w-10 h-10 text-red-400" />
-              <p className="text-sm text-gray-600 font-medium">{fetchError}</p>
+            <div className="flex flex-col items-center gap-3 px-4 text-center">
+              <AlertCircle className="w-10 h-10 text-red-500" />
+              <p className="text-sm font-medium text-slate-700">{fetchError}</p>
               <button
                 onClick={handleRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Tentar novamente
@@ -320,12 +329,12 @@ function QRCodeModal({
           )}
 
           {!loading && !fetchError && expired && (
-            <div className="flex flex-col items-center gap-3 p-4 text-center">
-              <XCircle className="w-10 h-10 text-red-400" />
-              <p className="text-sm text-gray-600 font-medium">QR Code expirado</p>
+            <div className="flex flex-col items-center gap-3 px-4 text-center">
+              <XCircle className="w-10 h-10 text-red-500" />
+              <p className="text-sm font-medium text-slate-700">QR Code expirado</p>
               <button
                 onClick={handleRefresh}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700"
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Gerar novo
@@ -337,50 +346,70 @@ function QRCodeModal({
             <Image
               src={qrData.qrcode}
               alt="QR Code WhatsApp"
-              width={224}
-              height={224}
-              className="w-full h-full object-contain"
+              width={256}
+              height={256}
+              className="h-full w-full object-contain"
               unoptimized
             />
           )}
         </div>
 
         {!expired && !fetchError && (
-          <ol className="text-xs text-gray-400 space-y-1.5 self-start w-full">
-            <li className="flex items-start gap-2">
-              <span className="w-4 h-4 rounded-full bg-green-600 text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
-                1
-              </span>
-              Abra o WhatsApp no seu celular
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-4 h-4 rounded-full bg-green-600 text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
-                2
-              </span>
-              Toque em <strong className="text-gray-300">Menu → Aparelhos conectados</strong>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-4 h-4 rounded-full bg-green-600 text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
-                3
-              </span>
-              Toque em <strong className="text-gray-300">Conectar um aparelho</strong> e escaneie
-            </li>
-          </ol>
+          <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 space-y-2">
+            <p className="font-semibold text-[#2f3453]">Como conectar</p>
+            <p>1. Abra o WhatsApp no celular</p>
+            <p>2. Vá em <strong>Aparelhos conectados</strong></p>
+            <p>3. Toque em <strong>Conectar um aparelho</strong> e escaneie o QR</p>
+          </div>
         )}
 
         {!loading && !expired && !fetchError && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
             Aguardando conexão...
           </div>
         )}
 
         <button
           onClick={onClose}
-          className="w-full py-2.5 border border-gray-700 text-gray-400 rounded-lg hover:bg-gray-800 text-sm transition-colors"
+          className="mt-5 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
           Fechar
         </button>
+      </div>
+    </div>
+  )
+}
+
+function StatsRow({ data }: { data: InstancesResponse | null }) {
+  const total = data?.instances.length ?? 0
+  const connected = data?.instances.filter((item) => item.isConnected).length ?? 0
+  const offline =
+    data?.instances.filter(
+      (item) => item.status === 'offline' || item.status === 'missing' || item.status === 'connecting'
+    ).length ?? 0
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Total de números
+        </p>
+        <p className="mt-2 text-2xl font-bold text-[#2f3453]">{total}</p>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          Conectados
+        </p>
+        <p className="mt-2 text-2xl font-bold text-emerald-700">{connected}</p>
+      </div>
+
+      <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-yellow-700">
+          Pedem atenção
+        </p>
+        <p className="mt-2 text-2xl font-bold text-yellow-700">{offline}</p>
       </div>
     </div>
   )
@@ -401,95 +430,93 @@ function WhatsAppCard({
   const disconnectedAt = formatDateTime(item.disconnectedAt)
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className="p-5 border-b border-gray-800 flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 bg-green-600 rounded-xl flex items-center justify-center shrink-0">
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-green-600">
             <MessageCircle className="w-6 h-6 text-white" />
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white truncate">{item.label}</h3>
-            <p className="text-xs text-gray-400 truncate">{item.instanceName}</p>
+            <h3 className="truncate text-lg font-bold text-[#2f3453]">{item.label}</h3>
+            <p className="truncate text-sm text-slate-500">{item.instanceName}</p>
           </div>
         </div>
 
         <StatusBadge status={item.status} />
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         {item.isConnected ? (
-          <div className="flex items-center gap-4 p-4 bg-green-900/20 border border-green-800 rounded-xl">
-            <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center shrink-0">
-              <Smartphone className="w-6 h-6 text-white" />
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+              <Wifi className="w-5 h-5 text-emerald-700" />
             </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-green-400 flex items-center gap-1.5">
-                <Wifi className="w-4 h-4" />
-                WhatsApp conectado
-              </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-emerald-700">WhatsApp conectado</p>
               {item.phoneNumber && (
-                <p className="text-xs text-gray-400 mt-0.5">+{item.phoneNumber}</p>
+                <p className="mt-1 text-sm text-slate-700">Número: +{item.phoneNumber}</p>
               )}
               {connectedAt && (
-                <p className="text-[11px] text-gray-500 mt-1">Conectado em {connectedAt}</p>
-              )}
-            </div>
-          </div>
-        ) : item.status === 'offline' || item.status === 'connecting' || item.status === 'missing' ? (
-          <div className="flex items-center gap-3 p-4 bg-yellow-900/20 border border-yellow-800 rounded-xl">
-            <WifiOff className="w-5 h-5 text-yellow-400 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-yellow-400">
-                {item.status === 'connecting'
-                  ? 'Instância iniciando'
-                  : item.status === 'missing'
-                    ? 'Instância não encontrada na Evolution'
-                    : 'WhatsApp offline'}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {item.lastError ??
-                  'Clique em reconectar para gerar um novo QR Code para este número.'}
-              </p>
-              {disconnectedAt && (
-                <p className="text-[11px] text-gray-500 mt-1">Última queda em {disconnectedAt}</p>
+                <p className="mt-1 text-xs text-slate-500">Conectado em {connectedAt}</p>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 p-4 bg-gray-800/50 border border-gray-700 rounded-xl">
-            <QrCode className="w-5 h-5 text-gray-400 shrink-0" />
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-yellow-100">
+              <WifiOff className="w-5 h-5 text-yellow-700" />
+            </div>
+
             <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-300">Instância desconectada</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Você pode criar uma nova conexão usando este mesmo rótulo.
+              <p className="text-sm font-semibold text-yellow-700">
+                {item.status === 'connecting'
+                  ? 'Instância iniciando'
+                  : item.status === 'missing'
+                    ? 'Instância não encontrada na Evolution'
+                    : item.status === 'disconnected'
+                      ? 'Instância desconectada'
+                      : 'WhatsApp offline'}
               </p>
+
+              <p className="mt-1 text-sm text-slate-600">
+                {item.lastError ??
+                  'Clique em reconectar para gerar um novo QR Code desse número.'}
+              </p>
+
+              {disconnectedAt && (
+                <p className="mt-1 text-xs text-slate-500">Última queda em {disconnectedAt}</p>
+              )}
             </div>
           </div>
         )}
+      </div>
 
-        <div className="flex gap-3">
-          {item.isActive && (
-            <button
-              onClick={() => onDisconnect(item)}
-              disabled={busy}
-              className="flex items-center gap-2 px-4 py-2.5 bg-red-900/40 text-red-400 border border-red-800 rounded-lg hover:bg-red-900/60 disabled:opacity-50 text-sm font-medium transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              Desconectar
-            </button>
-          )}
-
+      <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {item.isActive && (
           <button
-            onClick={() => onReconnect(item)}
+            onClick={() => onDisconnect(item)}
             disabled={busy}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
-            <QrCode className="w-4 h-4" />
-            {item.isActive ? 'Reconectar' : 'Conectar novamente'}
+            {busy ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            Desconectar
           </button>
-        </div>
+        )}
+
+        <button
+          onClick={() => onReconnect(item)}
+          disabled={busy}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+        >
+          <QrCode className="w-4 h-4" />
+          {item.isActive ? 'Reconectar' : 'Conectar novamente'}
+        </button>
       </div>
     </div>
   )
@@ -502,7 +529,7 @@ export default function IntegrationsPage() {
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrInstanceName, setQrInstanceName] = useState<string | null>(null)
-  const [qrLabel, setQrLabel] = useState<string>('WhatsApp')
+  const [qrLabel, setQrLabel] = useState('WhatsApp')
   const [message, setMessage] = useState<MessageState>(null)
 
   const showMsg = (type: 'success' | 'error' | 'info', text: string) => {
@@ -626,77 +653,90 @@ export default function IntegrationsPage() {
   const planUsage = data?.usage
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Plug className="w-7 h-7 text-indigo-400" />
-            Integrações
-          </h1>
-          <p className="text-gray-400 mt-1">
-            Gerencie as integrações do seu CRM com serviços externos
-          </p>
-        </div>
-
-        {planUsage && (
-          <div className="flex flex-wrap items-center gap-3">
-            <UsageBadge
-              current={planUsage.current}
-              max={planUsage.max}
-              isUnlimited={planUsage.isUnlimited}
-            />
-
-            <button
-              onClick={() => handleConnect()}
-              disabled={connectLoading || loading || !planUsage.canAddMore}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
-            >
-              {connectLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Iniciando...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Adicionar número
-                </>
-              )}
-            </button>
+    <div className="mx-auto max-w-6xl p-6 space-y-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#374b89]/10">
+                <Plug className="w-6 h-6 text-[#374b89]" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-[#2f3453]">Integrações</h1>
+                <p className="mt-1 text-sm text-slate-600">
+                  Gerencie os números de WhatsApp conectados ao seu CRM
+                </p>
+              </div>
+            </div>
           </div>
-        )}
+
+          {planUsage && (
+            <div className="flex flex-wrap items-center gap-3">
+              <UsageBadge
+                current={planUsage.current}
+                max={planUsage.max}
+                isUnlimited={planUsage.isUnlimited}
+              />
+
+              <button
+                onClick={() => handleConnect()}
+                disabled={connectLoading || loading || !planUsage.canAddMore}
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
+                  planUsage.canAddMore
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                )}
+              >
+                {connectLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Iniciando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Adicionar número
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <FeedbackBanner msg={message} onClose={() => setMessage(null)} />
 
+      <StatsRow data={data} />
+
       {planUsage && !planUsage.canAddMore && !planUsage.isUnlimited && (
-        <div className="mb-6 p-4 rounded-lg border border-yellow-800 bg-yellow-900/20 text-yellow-300">
-          <p className="text-sm font-medium">
+        <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 shadow-sm">
+          <p className="text-sm font-semibold text-yellow-800">
             Seu plano atingiu o limite de números de WhatsApp.
           </p>
-          <p className="text-xs text-yellow-200/80 mt-1">
+          <p className="mt-1 text-sm text-yellow-700">
             Desconecte um número atual ou faça upgrade para liberar mais instâncias.
           </p>
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="flex items-center justify-between gap-3">
         <button
           onClick={loadInstances}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 text-gray-300 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 text-sm transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 shadow-sm"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
           Atualizar status
         </button>
       </div>
 
       {loading ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : data?.instances?.length ? (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           {data.instances.map((item) => (
             <WhatsAppCard
               key={item.id}
@@ -708,35 +748,25 @@ export default function IntegrationsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
-          <div className="p-5 border-b border-gray-800 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-green-600 rounded-xl flex items-center justify-center shrink-0">
-                <MessageCircle className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold text-white">WhatsApp</h2>
-                <p className="text-xs text-gray-400">Conecte seu WhatsApp via QR Code</p>
-              </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="flex flex-col items-center justify-center text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+              <QrCode className="w-8 h-8 text-slate-500" />
             </div>
-            <StatusBadge status="disconnected" />
-          </div>
 
-          <div className="p-5">
-            <div className="flex items-center gap-3 p-4 bg-gray-800/50 border border-gray-700 rounded-xl mb-4">
-              <QrCode className="w-5 h-5 text-gray-400 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-gray-300">Nenhum número conectado</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Clique em adicionar número para escanear o QR Code com seu celular.
-                </p>
-              </div>
-            </div>
+            <h2 className="mt-4 text-xl font-bold text-[#2f3453]">
+              Nenhum número conectado
+            </h2>
+
+            <p className="mt-2 max-w-md text-sm text-slate-600">
+              Clique em adicionar número para criar uma nova instância e escanear o QR Code
+              com seu celular.
+            </p>
 
             <button
               onClick={() => handleConnect()}
               disabled={connectLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
             >
               {connectLoading ? (
                 <>
@@ -754,8 +784,8 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      <div className="mt-6 p-5 bg-gray-900 rounded-xl border-2 border-dashed border-gray-700">
-        <p className="text-center text-gray-500 text-sm">
+      <div className="rounded-3xl border-2 border-dashed border-slate-300 bg-white p-5 shadow-sm">
+        <p className="text-center text-sm text-slate-500">
           🚀 Mais integrações em breve: Instagram, Google Ads, Google Business, Email Marketing...
         </p>
       </div>
