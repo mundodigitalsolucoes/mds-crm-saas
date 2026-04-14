@@ -36,6 +36,18 @@ export interface Stage {
   color: string;
 }
 
+export interface LeadFilters {
+  search?: string;
+  status?: string;
+  source?: string;
+  city?: string;
+  inKanban?: string;
+  hasWhatsapp?: string;
+  hasWebsite?: string;
+  minScore?: number | '';
+  page?: number;
+}
+
 interface LeadsStore {
   leads: Lead[];
   stages: Stage[];
@@ -48,7 +60,7 @@ interface LeadsStore {
     totalPages: number;
   };
 
-  fetchLeads: (params?: { search?: string; status?: string; page?: number }) => Promise<void>;
+  fetchLeads: (params?: LeadFilters) => Promise<void>;
   addLead: (data: Partial<Lead>) => Promise<Lead | null>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   deleteLead: (id: string) => Promise<boolean>;
@@ -83,8 +95,17 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
     try {
       const query = new URLSearchParams();
+
       if (params?.search) query.set('search', params.search);
       if (params?.status) query.set('status', params.status);
+      if (params?.source) query.set('source', params.source);
+      if (params?.city) query.set('city', params.city);
+      if (params?.inKanban) query.set('inKanban', params.inKanban);
+      if (params?.hasWhatsapp) query.set('hasWhatsapp', params.hasWhatsapp);
+      if (params?.hasWebsite) query.set('hasWebsite', params.hasWebsite);
+      if (params?.minScore !== '' && params?.minScore !== undefined) {
+        query.set('minScore', String(params.minScore));
+      }
       if (params?.page) query.set('page', String(params.page));
 
       const res = await fetch(`/api/leads?${query.toString()}`);
@@ -141,33 +162,33 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
   },
 
   updateLead: async (id, updates) => {
-  set({ error: null });
+    set({ error: null });
 
-  try {
-    const res = await fetch(`/api/leads/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    });
+    try {
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Erro ao atualizar lead');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao atualizar lead');
+      }
+
+      const updatedLead = await res.json();
+
+      set((state) => ({
+        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
+      }));
+
+      return updatedLead;
+    } catch (error: any) {
+      console.error('Erro ao atualizar lead:', error);
+      set({ error: error.message });
+      return null;
     }
-
-    const updatedLead = await res.json();
-
-    set((state) => ({
-      leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
-    }));
-
-    return updatedLead;
-  } catch (error: any) {
-    console.error('Erro ao atualizar lead:', error);
-    set({ error: error.message });
-    return null;
-  }
-},
+  },
 
   deleteLead: async (id) => {
     set({ error: null });

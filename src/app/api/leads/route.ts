@@ -1,4 +1,3 @@
-// src/app/api/leads/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
@@ -19,28 +18,86 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
+    const source = searchParams.get('source');
+    const city = searchParams.get('city');
+    const inKanban = searchParams.get('inKanban');
+    const hasWhatsapp = searchParams.get('hasWhatsapp');
+    const hasWebsite = searchParams.get('hasWebsite');
+    const minScoreRaw = searchParams.get('minScore');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const skip = (page - 1) * limit;
 
-    const where: any = { organizationId };
+    const where: any = {
+      organizationId,
+      AND: [],
+    };
 
     if (status) {
-      where.status = status;
+      where.AND.push({ status });
+    }
+
+    if (source) {
+      where.AND.push({ source });
+    }
+
+    if (city) {
+      where.AND.push({
+        city: { contains: city, mode: 'insensitive' },
+      });
+    }
+
+    if (inKanban === 'true') {
+      where.AND.push({ inKanban: true });
+    }
+
+    if (inKanban === 'false') {
+      where.AND.push({ inKanban: false });
+    }
+
+    if (hasWhatsapp === 'true') {
+      where.AND.push({
+        whatsapp: { not: null },
+      });
+      where.AND.push({
+        NOT: { whatsapp: '' },
+      });
+    }
+
+    if (hasWebsite === 'true') {
+      where.AND.push({
+        website: { not: null },
+      });
+      where.AND.push({
+        NOT: { website: '' },
+      });
+    }
+
+    const minScore = minScoreRaw ? Number(minScoreRaw) : null;
+    if (minScoreRaw && !Number.isNaN(minScore)) {
+      where.AND.push({
+        score: { gte: minScore },
+      });
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { company: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { whatsapp: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { productOrService: { contains: search, mode: 'insensitive' } },
-        { website: { contains: search, mode: 'insensitive' } },
-      ];
+      where.AND.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { company: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search, mode: 'insensitive' } },
+          { whatsapp: { contains: search, mode: 'insensitive' } },
+          { city: { contains: search, mode: 'insensitive' } },
+          { productOrService: { contains: search, mode: 'insensitive' } },
+          { website: { contains: search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    if (where.AND.length === 0) {
+      delete where.AND;
     }
 
     const [leads, total] = await Promise.all([
