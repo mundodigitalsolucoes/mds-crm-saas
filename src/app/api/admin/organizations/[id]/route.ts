@@ -13,7 +13,9 @@ export async function GET(
 ) {
   try {
     const admin = await verifyAdminToken();
-    if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    if (!admin) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
 
     const { id } = await params;
 
@@ -31,17 +33,33 @@ export async function GET(
       },
     });
 
-    if (!org) return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
+    if (!org) {
+      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
+    }
+
+    const whatsappCount = await prisma.whatsappInstance.count({
+      where: {
+        organizationId: id,
+        isActive: true,
+      },
+    });
 
     return NextResponse.json({
       ...org,
-      limits: { maxUsers: org.maxUsers, maxLeads: org.maxLeads, maxProjects: org.maxProjects, maxOs: org.maxOs },
+      limits: {
+        maxUsers: org.maxUsers,
+        maxLeads: org.maxLeads,
+        maxProjects: org.maxProjects,
+        maxOs: org.maxOs,
+        maxWhatsappInstances: org.maxWhatsappInstances,
+      },
       usage: {
         users: org.users.length,
         leads: org._count.leads,
         projects: org._count.projects,
         tasks: org._count.tasks,
         serviceOrders: org._count.serviceOrders,
+        whatsappInstances: whatsappCount,
       },
     });
   } catch (error) {
@@ -56,7 +74,9 @@ export async function PUT(
 ) {
   try {
     const admin = await verifyAdminToken();
-    if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    if (!admin) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
 
     const { id } = await params;
     const body = await req.json();
@@ -66,29 +86,71 @@ export async function PUT(
     const data = parsed.data;
 
     const existing = await prisma.organization.findUnique({ where: { id } });
-    if (!existing) return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
+    if (!existing) {
+      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
+    }
 
     if (data.slug && data.slug !== existing.slug) {
-      const slugExists = await prisma.organization.findFirst({ where: { slug: data.slug, NOT: { id } } });
-      if (slugExists) return NextResponse.json({ error: 'Já existe uma organização com este slug' }, { status: 409 });
+      const slugExists = await prisma.organization.findFirst({
+        where: { slug: data.slug, NOT: { id } },
+      });
+
+      if (slugExists) {
+        return NextResponse.json(
+          { error: 'Já existe uma organização com este slug' },
+          { status: 409 }
+        );
+      }
     }
 
     const { syncFromPlan, ...updateData } = data;
-    const planChanged = data.plan && data.plan !== existing.plan;
+    const targetPlan = data.plan ?? existing.plan;
 
-    if (syncFromPlan && planChanged) {
-      const { maxUsers, maxLeads, maxProjects, maxOs, ...nonLimitData } = updateData;
+    /**
+     * REGRA NOVA:
+     * se syncFromPlan=true e tiver plano definido (novo ou atual),
+     * sempre sincroniza os limites do Plan para a Organization.
+     *
+     * Isso corrige o caso da org já estar com plan="enterprise",
+     * mas ainda carregar limites antigos como maxWhatsappInstances=1.
+     */
+    if (syncFromPlan && targetPlan) {
+      const {
+        maxUsers,
+        maxLeads,
+        maxProjects,
+        maxOs,
+        trialEndsAt,
+        ...nonLimitData
+      } = updateData;
+
       if (Object.keys(nonLimitData).length > 0) {
-        await prisma.organization.update({ where: { id }, data: nonLimitData });
+        await prisma.organization.update({
+          where: { id },
+          data: nonLimitData,
+        });
       }
-      const synced = await syncPlanLimits(id, data.plan!);
+
+      const synced = await syncPlanLimits(id, targetPlan);
+
       if (synced) {
-        return NextResponse.json({ ...synced, _syncedFromPlan: true, message: `Limites sincronizados do plano "${data.plan}"` });
+        return NextResponse.json({
+          ...synced,
+          _syncedFromPlan: true,
+          message: `Limites sincronizados do plano "${targetPlan}"`,
+        });
       }
-      console.warn(`[ADMIN ORGS] Plano "${data.plan}" não encontrado. Usando valores manuais.`);
+
+      console.warn(
+        `[ADMIN ORGS] Plano "${targetPlan}" não encontrado. Usando valores manuais.`
+      );
     }
 
-    const org = await prisma.organization.update({ where: { id }, data: updateData });
+    const org = await prisma.organization.update({
+      where: { id },
+      data: updateData,
+    });
+
     return NextResponse.json({ ...org, _syncedFromPlan: false });
   } catch (error) {
     console.error('[ADMIN ORGS] Erro ao atualizar:', error);
@@ -231,9 +293,10 @@ export async function DELETE(
         },
         data: {
           isActive: false,
-          lastError: chatwootCleanup && !chatwootCleanup.verified
-            ? 'organization_deleted_cleanup_incomplete'
-            : null,
+          lastError:
+            chatwootCleanup && !chatwootCleanup.verified
+              ? 'organization_deleted_cleanup_incomplete'
+              : null,
           lastSyncAt: deletedAt,
           data: chatwootCleanupData,
         },
