@@ -22,10 +22,15 @@ import {
   BadgeDollarSign,
   Star,
   Link as LinkIcon,
+  CheckCheck,
 } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
-import { useLeadsStore, type Lead, type LeadFilters } from '@/store/leadsStore';
+import {
+  useLeadsStore,
+  type Lead,
+  type LeadFilters,
+} from '@/store/leadsStore';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
 import PermissionLoading from '@/components/PermissionLoading';
@@ -373,6 +378,7 @@ export default function LeadsPage() {
     pagination,
     fetchLeads,
     bulkDeleteLeads,
+    bulkUpdateLeads,
     updateLead,
   } = useLeadsStore();
 
@@ -389,6 +395,8 @@ export default function LeadsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState('');
   const [filters, setFilters] = useState(emptyFilters);
 
   const { canAccess, isLoading: permLoading } = usePermission();
@@ -513,6 +521,32 @@ export default function LeadsPage() {
 
     if (updated) {
       setDrawerLead(updated);
+    }
+  };
+
+  const handleBulkSetKanban = async (value: boolean) => {
+    if (selectedLeadIds.length === 0) return;
+
+    setIsBulkUpdating(true);
+    await bulkUpdateLeads(selectedLeadIds, {
+      action: 'setInKanban',
+      inKanban: value,
+    });
+    setIsBulkUpdating(false);
+  };
+
+  const handleBulkSetStatus = async () => {
+    if (selectedLeadIds.length === 0 || !bulkStatusValue) return;
+
+    setIsBulkUpdating(true);
+    const result = await bulkUpdateLeads(selectedLeadIds, {
+      action: 'setStatus',
+      status: bulkStatusValue,
+    });
+    setIsBulkUpdating(false);
+
+    if (result !== null) {
+      setBulkStatusValue('');
     }
   };
 
@@ -652,27 +686,76 @@ export default function LeadsPage() {
       )}
 
       {selectedLeadIds.length > 0 && (
-        <div className="mb-4 flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-medium text-red-800">{selectedLeadIds.length} lead(s) selecionado(s)</p>
-            <p className="text-sm text-red-700">
-              A exclusão em massa exige confirmação digitando EXCLUIR.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setSelectedLeadIds([])}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              Limpar seleção
-            </button>
-            <button
-              onClick={openBulkDeleteModal}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
-            >
-              <Trash2 size={16} />
-              Excluir selecionados
-            </button>
+        <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <p className="font-medium text-indigo-900">
+                {selectedLeadIds.length} lead(s) selecionado(s)
+              </p>
+              <p className="text-sm text-indigo-700">
+                Ações em lote para acelerar tua operação.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap">
+              <button
+                onClick={() => handleBulkSetKanban(true)}
+                disabled={isBulkUpdating}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {isBulkUpdating ? <Loader2 size={16} className="animate-spin" /> : <FolderKanban size={16} />}
+                Mandar pro Kanban
+              </button>
+
+              <button
+                onClick={() => handleBulkSetKanban(false)}
+                disabled={isBulkUpdating}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-300 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+              >
+                {isBulkUpdating ? <Loader2 size={16} className="animate-spin" /> : <FolderKanban size={16} />}
+                Tirar do Kanban
+              </button>
+
+              <div className="flex gap-2">
+                <select
+                  value={bulkStatusValue}
+                  onChange={(e) => setBulkStatusValue(e.target.value)}
+                  disabled={isBulkUpdating}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  <option value="">Alterar status...</option>
+                  {stages.map((stage) => (
+                    <option key={stage.id} value={stage.id}>
+                      {stage.title}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={handleBulkSetStatus}
+                  disabled={isBulkUpdating || !bulkStatusValue}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {isBulkUpdating ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={16} />}
+                  Aplicar status
+                </button>
+              </div>
+
+              <button
+                onClick={() => setSelectedLeadIds([])}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Limpar seleção
+              </button>
+
+              <button
+                onClick={openBulkDeleteModal}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700"
+              >
+                <Trash2 size={16} />
+                Excluir selecionados
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 
-// Interface alinhada com o schema Prisma
 export interface Lead {
   id: string;
   name: string;
@@ -48,6 +47,10 @@ export interface LeadFilters {
   page?: number;
 }
 
+export type BulkLeadUpdatePayload =
+  | { action: 'setInKanban'; inKanban: boolean }
+  | { action: 'setStatus'; status: string };
+
 interface LeadsStore {
   leads: Lead[];
   stages: Stage[];
@@ -65,6 +68,7 @@ interface LeadsStore {
   updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
   deleteLead: (id: string) => Promise<boolean>;
   bulkDeleteLeads: (ids: string[], confirmationText: string) => Promise<number | null>;
+  bulkUpdateLeads: (ids: string[], payload: BulkLeadUpdatePayload) => Promise<number | null>;
 
   addStage: (stage: Omit<Stage, 'id'>) => void;
   updateStage: (id: string, updates: Partial<Stage>) => void;
@@ -248,6 +252,48 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       return deletedCount;
     } catch (error: any) {
       console.error('Erro ao excluir leads em massa:', error);
+      set({ error: error.message });
+      return null;
+    }
+  },
+
+  bulkUpdateLeads: async (ids, payload) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch('/api/leads/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, ...payload }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao atualizar leads em massa');
+      }
+
+      const data = await res.json();
+      const updatedCount = Number(data.updatedCount || 0);
+
+      set((state) => ({
+        leads: state.leads.map((lead) => {
+          if (!ids.includes(lead.id)) return lead;
+
+          if (payload.action === 'setInKanban') {
+            return { ...lead, inKanban: payload.inKanban };
+          }
+
+          if (payload.action === 'setStatus') {
+            return { ...lead, status: payload.status };
+          }
+
+          return lead;
+        }),
+      }));
+
+      return updatedCount;
+    } catch (error: any) {
+      console.error('Erro ao atualizar leads em massa:', error);
       set({ error: error.message });
       return null;
     }
