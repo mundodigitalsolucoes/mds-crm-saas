@@ -467,10 +467,10 @@ export default function LeadsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[2200px]">
-              <thead className="border-b border-gray-200 bg-gray-50">
+            <table className="w-full min-w-[2200px] border-separate border-spacing-0">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left">
+                  <th className="sticky left-0 z-30 border-b border-r border-gray-200 bg-gray-50 px-4 py-3 text-left">
                     <input
                       type="checkbox"
                       checked={allSelectedOnPage}
@@ -479,29 +479,67 @@ export default function LeadsPage() {
                       className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Nome</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Telefone Fixo</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">WhatsApp</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Empresa</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Score</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Origem</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Valor</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Produto/Serviço</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Cidade</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Site</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Instagram</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Facebook</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">LinkedIn</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Data</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">Ações</th>
+
+                  <th className="sticky left-[49px] z-30 min-w-[220px] border-b border-r border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Nome
+                  </th>
+
+                  <th className="min-w-[220px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Email
+                  </th>
+                  <th className="min-w-[150px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Telefone Fixo
+                  </th>
+                  <th className="min-w-[150px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    WhatsApp
+                  </th>
+                  <th className="min-w-[220px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Empresa
+                  </th>
+                  <th className="min-w-[120px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Status
+                  </th>
+                  <th className="min-w-[90px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Score
+                  </th>
+                  <th className="min-w-[140px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Origem
+                  </th>
+                  <th className="min-w-[120px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Valor
+                  </th>
+                  <th className="min-w-[220px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Produto/Serviço
+                  </th>
+                  <th className="min-w-[180px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Cidade
+                  </th>
+                  <th className="min-w-[180px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Site
+                  </th>
+                  <th className="min-w-[180px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Instagram
+                  </th>
+                  <th className="min-w-[180px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Facebook
+                  </th>
+                  <th className="min-w-[180px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    LinkedIn
+                  </th>
+                  <th className="min-w-[120px] border-b border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Data
+                  </th>
+
+                  <th className="sticky right-0 z-30 min-w-[170px] border-b border-l border-gray-200 bg-gray-50 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                    Ações
+                  </th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-200">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4">
+                  <tr key={lead.id} className="group hover:bg-gray-50">
+                    <td className="sticky left-0 z-20 border-r border-gray-200 bg-white px-4 py-4 group-hover:bg-gray-50">
                       <input
                         type="checkbox"
                         checked={selectedLeadIds.includes(lead.id)}
@@ -510,7 +548,11 @@ export default function LeadsPage() {
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-gray-800">{lead.name}</td>
+
+                    <td className="sticky left-[49px] z-20 min-w-[220px] border-r border-gray-200 bg-white px-4 py-4 text-sm font-medium text-gray-800 group-hover:bg-gray-50">
+                      {lead.name}
+                    </td>
+
                     <td className="px-4 py-4 text-sm text-gray-600">{lead.email || '—'}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{lead.phone || '—'}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">{lead.whatsapp || '—'}</td>
@@ -532,18 +574,19 @@ export default function LeadsPage() {
                     <td className="px-4 py-4 text-sm text-gray-600">
                       {new Date(lead.createdAt).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-4 py-4">
+
+                    <td className="sticky right-0 z-20 border-l border-gray-200 bg-white px-4 py-4 group-hover:bg-gray-50">
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(lead)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50"
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-3 py-1 text-sm transition-colors hover:bg-gray-50"
                         >
                           <Edit size={14} />
                           Editar
                         </button>
                         <button
                           onClick={() => openSingleDeleteModal(lead)}
-                          className="inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1 text-sm text-white transition-colors hover:bg-red-700"
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-md bg-red-600 px-3 py-1 text-sm text-white transition-colors hover:bg-red-700"
                         >
                           <Trash2 size={14} />
                           Excluir
