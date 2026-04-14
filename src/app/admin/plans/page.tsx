@@ -2,7 +2,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { CreditCard, Plus, Pencil, Trash2, Users, X, Check } from 'lucide-react';
+import {
+  CreditCard,
+  Plus,
+  Pencil,
+  Trash2,
+  Users,
+  X,
+  Check,
+  Smartphone,
+} from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -14,6 +23,8 @@ interface Plan {
   maxUsers: number;
   maxLeads: number;
   maxProjects: number;
+  maxOs?: number;
+  maxWhatsappInstances: number;
   features: string;
   isActive: boolean;
   createdAt: string;
@@ -47,6 +58,7 @@ export default function PlansPage() {
     maxUsers: '5',
     maxLeads: '100',
     maxProjects: '10',
+    maxWhatsappInstances: '1',
     features: [] as string[],
   });
   const [saving, setSaving] = useState(false);
@@ -89,6 +101,7 @@ export default function PlansPage() {
       maxUsers: '5',
       maxLeads: '100',
       maxProjects: '10',
+      maxWhatsappInstances: '1',
       features: [],
     });
     setShowModal(true);
@@ -105,6 +118,7 @@ export default function PlansPage() {
       maxUsers: String(plan.maxUsers),
       maxLeads: String(plan.maxLeads),
       maxProjects: String(plan.maxProjects),
+      maxWhatsappInstances: String(plan.maxWhatsappInstances ?? 1),
       features: parseFeatures(plan.features),
     });
     setShowModal(true);
@@ -122,6 +136,7 @@ export default function PlansPage() {
         body: JSON.stringify({
           ...form,
           features: JSON.stringify(form.features),
+          propagateToOrgs: !!editingPlan,
         }),
       });
 
@@ -180,7 +195,6 @@ export default function PlansPage() {
     }));
   };
 
-  // Gera slug automaticamente a partir do displayName
   const handleDisplayNameChange = (displayName: string) => {
     setForm((prev) => ({
       ...prev,
@@ -196,7 +210,6 @@ export default function PlansPage() {
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Planos</h1>
@@ -211,7 +224,6 @@ export default function PlansPage() {
         </button>
       </div>
 
-      {/* Grid de Planos */}
       {loading ? (
         <div className="text-center text-gray-400 py-12">Carregando...</div>
       ) : plans.length === 0 ? (
@@ -229,6 +241,7 @@ export default function PlansPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {plans.map((plan) => {
             const features = parseFeatures(plan.features);
+
             return (
               <div
                 key={plan.id}
@@ -236,7 +249,6 @@ export default function PlansPage() {
                   plan.isActive ? 'border-gray-700' : 'border-red-900/50 opacity-60'
                 }`}
               >
-                {/* Cabeçalho do card */}
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-white">{plan.displayName}</h3>
@@ -245,6 +257,7 @@ export default function PlansPage() {
                       <p className="text-sm text-gray-400 mt-1">{plan.description}</p>
                     )}
                   </div>
+
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleToggleActive(plan)}
@@ -257,12 +270,14 @@ export default function PlansPage() {
                     >
                       <Check size={16} />
                     </button>
+
                     <button
                       onClick={() => openEditModal(plan)}
                       className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       <Pencil size={16} />
                     </button>
+
                     <button
                       onClick={() => handleDelete(plan)}
                       className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
@@ -272,7 +287,6 @@ export default function PlansPage() {
                   </div>
                 </div>
 
-                {/* Preço */}
                 <div className="mb-4">
                   <span className="text-3xl font-bold text-white">
                     {Number(plan.price) === 0 ? 'Grátis' : `R$ ${Number(plan.price).toFixed(2)}`}
@@ -284,23 +298,30 @@ export default function PlansPage() {
                   )}
                 </div>
 
-                {/* Limites */}
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Usuários</span>
                     <span className="text-white">{plan.maxUsers}</span>
                   </div>
+
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">WhatsApps</span>
+                    <span className="text-white">
+                      {plan.maxWhatsappInstances <= 0 ? 'Ilimitado' : plan.maxWhatsappInstances}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Leads</span>
                     <span className="text-white">{plan.maxLeads}</span>
                   </div>
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Projetos</span>
                     <span className="text-white">{plan.maxProjects}</span>
                   </div>
                 </div>
 
-                {/* Features */}
                 {features.length > 0 && (
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-1.5">
@@ -316,12 +337,12 @@ export default function PlansPage() {
                   </div>
                 )}
 
-                {/* Rodapé */}
                 <div className="pt-4 border-t border-gray-700 flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-sm text-gray-400">
                     <Users size={14} />
                     <span>{plan._count.organizations} org(s)</span>
                   </div>
+
                   <span
                     className={`text-xs px-2 py-1 rounded-full ${
                       plan.isActive
@@ -338,11 +359,9 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Modal Criar/Editar */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            {/* Header do modal */}
             <div className="flex items-center justify-between p-6 border-b border-gray-700 sticky top-0 bg-gray-800 z-10">
               <h2 className="text-lg font-semibold text-white">
                 {editingPlan ? 'Editar Plano' : 'Novo Plano'}
@@ -355,7 +374,6 @@ export default function PlansPage() {
               </button>
             </div>
 
-            {/* Body do modal */}
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -409,8 +427,11 @@ export default function PlansPage() {
                     step="0.01"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Intervalo</label>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Intervalo
+                  </label>
                   <select
                     value={form.interval}
                     onChange={(e) => setForm((prev) => ({ ...prev, interval: e.target.value }))}
@@ -422,7 +443,7 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Máx. Usuários
@@ -432,9 +453,28 @@ export default function PlansPage() {
                     value={form.maxUsers}
                     onChange={(e) => setForm((prev) => ({ ...prev, maxUsers: e.target.value }))}
                     className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
-                    min="1"
+                    min="-1"
                   />
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
+                    Máx. WhatsApps
+                  </label>
+                  <input
+                    type="number"
+                    value={form.maxWhatsappInstances}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        maxWhatsappInstances: e.target.value,
+                      }))
+                    }
+                    className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
+                    min="-1"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Máx. Leads
@@ -444,9 +484,10 @@ export default function PlansPage() {
                     value={form.maxLeads}
                     onChange={(e) => setForm((prev) => ({ ...prev, maxLeads: e.target.value }))}
                     className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
-                    min="1"
+                    min="-1"
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Máx. Projetos
@@ -458,12 +499,11 @@ export default function PlansPage() {
                       setForm((prev) => ({ ...prev, maxProjects: e.target.value }))
                     }
                     className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-blue-500 focus:outline-none"
-                    min="1"
+                    min="-1"
                   />
                 </div>
               </div>
 
-              {/* Features */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Features</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -483,9 +523,17 @@ export default function PlansPage() {
                   ))}
                 </div>
               </div>
+
+              {editingPlan && (
+                <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3">
+                  <p className="text-xs text-blue-300">
+                    Ao salvar, os novos limites deste plano serão propagados para as organizações
+                    que já usam este plano.
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Footer do modal */}
             <div className="flex justify-end gap-3 p-6 border-t border-gray-700 sticky bottom-0 bg-gray-800">
               <button
                 onClick={() => setShowModal(false)}
@@ -493,6 +541,7 @@ export default function PlansPage() {
               >
                 Cancelar
               </button>
+
               <button
                 onClick={handleSave}
                 disabled={saving || !form.name || !form.displayName}

@@ -125,6 +125,7 @@ export const adminPlanCreateSchema = z.object({
   maxLeads: z.coerce.number().int().min(-1).optional().default(100),
   maxProjects: z.coerce.number().int().min(-1).optional().default(10),
   maxOs: z.coerce.number().int().min(-1).optional().default(20),
+  maxWhatsappInstances: z.coerce.number().int().min(-1).optional().default(1),
   features: z.string().max(5000).optional().default('[]'),
 });
 
@@ -154,6 +155,7 @@ export const adminPlanUpdateSchema = z.object({
   maxLeads: z.coerce.number().int().min(-1).optional(),
   maxProjects: z.coerce.number().int().min(-1).optional(),
   maxOs: z.coerce.number().int().min(-1).optional(),
+  maxWhatsappInstances: z.coerce.number().int().min(-1).optional(),
   features: z.string().max(5000).optional(),
   isActive: z.boolean().optional(),
   // Se true, propaga os novos limites para TODAS as orgs que usam este plano
