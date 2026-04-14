@@ -1,81 +1,259 @@
 /**
  * src/app/api/integrations/evolution/connect/route.ts
  *
- * Inicia conexão WhatsApp para a organização.
- * Usa evolutionClient centralizado — nunca chama a Evolution diretamente.
+ * Conecta uma NOVA instância WhatsApp para a organização.
  *
- * Fluxo:
- *  1. Verifica se já existe outra instância ativa → bloqueia (regra: 1 número por org)
- *  2. Verifica estado atual na Evolution
- *  3a. Já online         → retorna alreadyExists=true
- *  3b. Offline/pendente  → tenta restart, cai para delete+create se falhar
- *  3c. Não existe        → cria instância nova
- *  4. Configura Chatwoot automaticamente (não bloqueia em caso de falha)
+ * Regras:
+ *  1. Verifica permissão de integrações
+ *  2. Verifica status do plano
+ *  3. Espelha legado (connected_accounts.whatsapp) em whatsapp_instances, se existir
+ *  4. Verifica limite do plano para maxWhatsappInstances
+ *  5. Cria uma instância nova com nome único
+ *  6. Configura Chatwoot automaticamente (não bloqueia em caso de falha)
+ *  7. Salva em whatsapp_instances
+ *  8. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { checkPlanActive, checkWhatsappInstanceLimit } from '@/lib/checkLimits'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
 import { setupChatwootEvolution } from '@/lib/integrations/chatwoot-evo'
 import {
   getInstanceState,
   createInstance,
-  restartInstance,
-  disconnectInstance,
 } from '@/lib/integrations/evolutionClient'
+
+// ─── Tipos locais ──────────────────────────────────────────────────────────────
+
+type ConnectBody = {
+  label?: string
+}
+
+type LegacyWhatsappData = {
+  instanceId?: string
+  label?: string | null
+  instanceName?: string
+  serverUrl?: string
+  phone?: string | null
+  connectedAt?: string | null
+  chatwootInboxId?: number | null
+}
 
 // ─── Helpers locais ───────────────────────────────────────────────────────────
 
-async function upsertWhatsappAccount(params: {
-  organizationId:  string
-  userId:          string
-  accessTokenEnc:  string
-  instanceName:    string
-  evoUrl:          string
-  chatwootInboxId: number | null
-  phone:           string | null
-}) {
-  const { organizationId, userId, accessTokenEnc, instanceName, evoUrl, chatwootInboxId, phone } = params
+function safeJsonParse<T>(value: string | null | undefined): T | null {
+  if (!value) return null
 
-  const data = JSON.stringify({
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return null
+  }
+}
+
+function sanitizeLabel(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback
+
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  if (!normalized) return fallback
+
+  return normalized.slice(0, 60)
+}
+
+function buildInstanceName(slug: string): string {
+  const suffix = crypto.randomUUID().replace(/-/g, '').slice(0, 10)
+  return `org-${slug}-${suffix}`.toLowerCase()
+}
+
+function serializeLegacyShadow(params: {
+  instanceId: string | null
+  label: string | null
+  instanceName: string | null
+  evoUrl: string
+  phone: string | null
+  connectedAt: string | null
+  chatwootInboxId: number | null
+}) {
+  const {
+    instanceId,
+    label,
     instanceName,
-    serverUrl:       evoUrl,
-    phone:           phone ?? null,
-    connectedAt:     null,
-    chatwootInboxId: chatwootInboxId ?? null,
+    evoUrl,
+    phone,
+    connectedAt,
+    chatwootInboxId,
+  } = params
+
+  return JSON.stringify({
+    instanceId,
+    label,
+    instanceName,
+    serverUrl: evoUrl,
+    phone,
+    connectedAt,
+    chatwootInboxId,
+  })
+}
+
+async function ensureLegacyWhatsappMirrored(params: {
+  organizationId: string
+  userId: string
+  evoUrl: string
+}) {
+  const { organizationId, userId, evoUrl } = params
+
+  const legacy = await prisma.connectedAccount.findUnique({
+    where: { provider_organizationId: { provider: 'whatsapp', organizationId } },
+    select: {
+      data: true,
+      isActive: true,
+      lastError: true,
+    },
   })
 
+  if (!legacy?.isActive) return
+
+  const parsed = safeJsonParse<LegacyWhatsappData>(legacy.data)
+  if (!parsed?.instanceName) return
+
+  const exists = await prisma.whatsappInstance.findUnique({
+    where: { instanceName: parsed.instanceName },
+    select: { id: true },
+  })
+
+  if (exists) return
+
+  await prisma.whatsappInstance.create({
+    data: {
+      organizationId,
+      connectedById: userId,
+      label: parsed.label ?? 'WhatsApp principal',
+      instanceName: parsed.instanceName,
+      phoneNumber: parsed.phone ?? null,
+      status: 'open',
+      chatwootInboxId: parsed.chatwootInboxId ?? null,
+      serverUrl: parsed.serverUrl ?? evoUrl,
+      metadata: JSON.stringify(parsed),
+      isActive: true,
+      lastError: legacy.lastError,
+      connectedAt: parsed.connectedAt ? new Date(parsed.connectedAt) : null,
+    },
+  })
+}
+
+async function syncLegacyWhatsappShadow(params: {
+  organizationId: string
+  userId: string
+  accessTokenEnc: string
+  evoUrl: string
+}) {
+  const { organizationId, userId, accessTokenEnc, evoUrl } = params
+
+  const latestActive = await prisma.whatsappInstance.findFirst({
+    where: {
+      organizationId,
+      isActive: true,
+    },
+    orderBy: [
+      { updatedAt: 'desc' },
+      { createdAt: 'desc' },
+    ],
+  })
+
+  if (!latestActive) {
+    await prisma.connectedAccount.upsert({
+      where: { provider_organizationId: { provider: 'whatsapp', organizationId } },
+      create: {
+        provider: 'whatsapp',
+        organizationId,
+        connectedById: userId,
+        accessTokenEnc,
+        isActive: false,
+        data: serializeLegacyShadow({
+          instanceId: null,
+          label: null,
+          instanceName: null,
+          evoUrl,
+          phone: null,
+          connectedAt: null,
+          chatwootInboxId: null,
+        }),
+      },
+      update: {
+        connectedById: userId,
+        accessTokenEnc,
+        isActive: false,
+        lastError: null,
+        lastSyncAt: new Date(),
+        data: serializeLegacyShadow({
+          instanceId: null,
+          label: null,
+          instanceName: null,
+          evoUrl,
+          phone: null,
+          connectedAt: null,
+          chatwootInboxId: null,
+        }),
+      },
+    })
+
+    return
+  }
+
   await prisma.connectedAccount.upsert({
-    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
+    where: { provider_organizationId: { provider: 'whatsapp', organizationId } },
     create: {
-      provider:      'whatsapp',
+      provider: 'whatsapp',
       organizationId,
       connectedById: userId,
       accessTokenEnc,
-      isActive:      true,
-      data,
+      isActive: true,
+      data: serializeLegacyShadow({
+        instanceId: latestActive.id,
+        label: latestActive.label ?? null,
+        instanceName: latestActive.instanceName,
+        evoUrl: latestActive.serverUrl ?? evoUrl,
+        phone: latestActive.phoneNumber ?? null,
+        connectedAt: latestActive.connectedAt
+          ? latestActive.connectedAt.toISOString()
+          : null,
+        chatwootInboxId: latestActive.chatwootInboxId ?? null,
+      }),
     },
     update: {
+      connectedById: userId,
       accessTokenEnc,
-      isActive:   true,
-      lastError:  null,
+      isActive: true,
+      lastError: null,
       lastSyncAt: new Date(),
-      data,
+      data: serializeLegacyShadow({
+        instanceId: latestActive.id,
+        label: latestActive.label ?? null,
+        instanceName: latestActive.instanceName,
+        evoUrl: latestActive.serverUrl ?? evoUrl,
+        phone: latestActive.phoneNumber ?? null,
+        connectedAt: latestActive.connectedAt
+          ? latestActive.connectedAt.toISOString()
+          : null,
+        chatwootInboxId: latestActive.chatwootInboxId ?? null,
+      }),
     },
   })
 }
 
 async function tryChatwootSetup(params: {
   organizationId: string
-  orgSlug:        string
-  instanceName:   string
-  evoUrl:         string
-  evoKey:         string
-  phoneNumber:    string | null
+  orgSlug: string
+  instanceName: string
+  evoUrl: string
+  evoKey: string
+  phoneNumber: string | null
 }): Promise<number | null> {
   try {
     const result = await setupChatwootEvolution(params)
+
     if (result.skipped) {
       console.log('[Connect] Chatwoot não configurado, pulando setup.')
     } else if (!result.success) {
@@ -83,6 +261,7 @@ async function tryChatwootSetup(params: {
     } else {
       console.log('[Connect] Chatwoot configurado. InboxId:', result.chatwootInboxId)
     }
+
     return result.chatwootInboxId
   } catch (err) {
     console.error('[Connect] Erro no setup Chatwoot (ignorado):', err)
@@ -92,135 +271,134 @@ async function tryChatwootSetup(params: {
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
   if (!allowed) return errorResponse!
 
   const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '') ?? ''
   const EVO_KEY = process.env.EVOLUTION_API_KEY ?? ''
+
   if (!EVO_URL || !EVO_KEY) {
     return NextResponse.json({ error: 'Servidor WhatsApp não configurado.' }, { status: 500 })
   }
 
   const organizationId = session!.user.organizationId
+  const userId = session!.user.id
+
+  const planCheck = await checkPlanActive(organizationId)
+  if (!planCheck.active) return planCheck.errorResponse!
+
+  const body = await req.json().catch(() => ({} as ConnectBody))
 
   const org = await prisma.organization.findUnique({
-    where:  { id: organizationId },
-    select: { slug: true, chatwootAccountId: true },
+    where: { id: organizationId },
+    select: {
+      slug: true,
+      chatwootAccountId: true,
+    },
   })
+
   if (!org) {
     return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
   }
 
-  const instanceName   = `org-${org.slug}`
   const accessTokenEnc = encryptToken(EVO_KEY)
 
-  // ── Busca dados existentes do WhatsApp ──────────────────────────────────────
-  const existingWa = await prisma.connectedAccount.findUnique({
-    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-    select: { data: true, isActive: true },
+  // 1. Espelha eventual legado em whatsapp_instances
+  await ensureLegacyWhatsappMirrored({
+    organizationId,
+    userId,
+    evoUrl: EVO_URL,
   })
-  const existingData     = existingWa ? (JSON.parse(existingWa.data) as { chatwootInboxId?: number | null; phone?: string | null; instanceName?: string }) : null
-  const existingInboxId  = existingData?.chatwootInboxId ?? null
-  const existingPhone    = existingData?.phone ?? null
-  const existingInstance = existingData?.instanceName ?? null
 
-  // ── REGRA: bloqueia 2º número se já existe instância ativa com nome diferente ─
-  if (existingWa?.isActive && existingInstance && existingInstance !== instanceName) {
-    return NextResponse.json(
-      { error: 'Já existe um número WhatsApp conectado. Desconecte o número atual antes de conectar outro.' },
-      { status: 409 }
-    )
-  }
-
-  // ── Verifica estado real na Evolution ────────────────────────────────────────
-  const state = await getInstanceState(instanceName)
-
-  if (state === 'open') {
-    // Caso 1: já conectado
-    const chatwootInboxId = existingInboxId ?? await tryChatwootSetup({
+  // 2. Verifica uso atual e limite do plano
+  const activeCount = await prisma.whatsappInstance.count({
+    where: {
       organizationId,
-      orgSlug:     org.slug,
-      instanceName,
-      evoUrl:      EVO_URL,
-      evoKey:      EVO_KEY,
-      phoneNumber: existingPhone,
-    })
+      isActive: true,
+    },
+  })
 
-    await upsertWhatsappAccount({
-      organizationId,
-      userId:         session!.user.id,
-      accessTokenEnc,
-      instanceName,
-      evoUrl:         EVO_URL,
-      chatwootInboxId,
-      phone:          existingPhone,
-    })
+  const limitCheck = await checkWhatsappInstanceLimit(organizationId, activeCount)
+  if (!limitCheck.allowed) return limitCheck.errorResponse!
 
-    return NextResponse.json({ instanceName, alreadyExists: true })
+  const label = sanitizeLabel(body.label, `WhatsApp ${activeCount + 1}`)
+
+  // 3. Gera nome único
+  let instanceName = ''
+  let created = false
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    instanceName = buildInstanceName(org.slug)
+
+    const state = await getInstanceState(instanceName)
+    if (state !== 'not_found') continue
+
+    created = await createInstance(instanceName)
+    if (created) break
   }
 
-  if (state === 'close' || state === 'connecting') {
-    // Caso 2: instância existe mas offline — tenta restart sempre
-    const restarted = await restartInstance(instanceName)
-
-    if (restarted) {
-      await new Promise(r => setTimeout(r, 2_000))
-
-      const chatwootInboxId = existingInboxId ?? await tryChatwootSetup({
-        organizationId,
-        orgSlug:     org.slug,
-        instanceName,
-        evoUrl:      EVO_URL,
-        evoKey:      EVO_KEY,
-        phoneNumber: existingPhone,
-      })
-
-      await upsertWhatsappAccount({
-        organizationId,
-        userId:         session!.user.id,
-        accessTokenEnc,
-        instanceName,
-        evoUrl:         EVO_URL,
-        chatwootInboxId,
-        phone:          existingPhone,
-      })
-
-      return NextResponse.json({ instanceName, alreadyExists: false })
-    }
-
-    // Restart falhou → deleta e recria
-    await disconnectInstance(instanceName)
-    await new Promise(r => setTimeout(r, 1_500))
-  }
-
-  // Caso 3: cria instância nova (not_found ou restart falhou)
-  const created = await createInstance(instanceName)
-  if (!created) {
+  if (!created || !instanceName) {
     return NextResponse.json(
       { error: 'Erro ao criar instância WhatsApp. Tente novamente.' },
       { status: 502 }
     )
   }
 
+  // 4. Chatwoot automático
   const chatwootInboxId = await tryChatwootSetup({
     organizationId,
-    orgSlug:     org.slug,
+    orgSlug: org.slug,
     instanceName,
-    evoUrl:      EVO_URL,
-    evoKey:      EVO_KEY,
+    evoUrl: EVO_URL,
+    evoKey: EVO_KEY,
     phoneNumber: null,
   })
 
-  await upsertWhatsappAccount({
-    organizationId,
-    userId:         session!.user.id,
-    accessTokenEnc,
-    instanceName,
-    evoUrl:         EVO_URL,
-    chatwootInboxId,
-    phone:          null,
+  // 5. Salva nova instância
+  const whatsappInstance = await prisma.whatsappInstance.create({
+    data: {
+      organizationId,
+      connectedById: userId,
+      label,
+      instanceName,
+      phoneNumber: null,
+      status: 'connecting',
+      chatwootInboxId,
+      serverUrl: EVO_URL,
+      metadata: JSON.stringify({
+        label,
+        instanceName,
+        serverUrl: EVO_URL,
+        phone: null,
+        connectedAt: null,
+        chatwootInboxId,
+      }),
+      isActive: true,
+      connectedAt: null,
+    },
   })
 
-  return NextResponse.json({ instanceName, alreadyExists: false })
+  // 6. Atualiza sombra compatível
+  await syncLegacyWhatsappShadow({
+    organizationId,
+    userId,
+    accessTokenEnc,
+    evoUrl: EVO_URL,
+  })
+
+  return NextResponse.json({
+    success: true,
+    alreadyExists: false,
+    instanceId: whatsappInstance.id,
+    instanceName: whatsappInstance.instanceName,
+    label: whatsappInstance.label,
+    chatwootInboxId,
+    usage: limitCheck.usage
+      ? {
+          current: activeCount + 1,
+          max: limitCheck.usage.max,
+        }
+      : undefined,
+  })
 }
