@@ -11,6 +11,17 @@ import {
   RefreshCw,
   AlertTriangle,
   X,
+  Mail,
+  Phone,
+  MessageCircle,
+  Building2,
+  MapPin,
+  Globe,
+  CalendarDays,
+  FolderKanban,
+  BadgeDollarSign,
+  Star,
+  Link as LinkIcon,
 } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
@@ -47,7 +58,7 @@ function DeleteConfirmationModal({
   const isSingle = selectedCount === 1;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between rounded-t-xl border-b border-gray-200 bg-red-600 px-6 py-4">
           <h2 className="text-lg font-bold text-white">
@@ -156,6 +167,193 @@ function LinkCell({ value }: { value: string | null }) {
   );
 }
 
+function InfoItem({
+  icon,
+  label,
+  value,
+  isLink = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number | null | undefined;
+  isLink?: boolean;
+}) {
+  if (value === null || value === undefined || value === '') {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+          {icon}
+          {label}
+        </div>
+        <div className="text-sm text-gray-400">—</div>
+      </div>
+    );
+  }
+
+  if (isLink && typeof value === 'string') {
+    const href = normalizeUrl(value);
+    return (
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+          {icon}
+          {label}
+        </div>
+        <a
+          href={href || '#'}
+          target="_blank"
+          rel="noreferrer"
+          className="block truncate text-sm font-medium text-indigo-600 hover:underline"
+          title={value}
+        >
+          {value}
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+      <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+        {icon}
+        {label}
+      </div>
+      <div className="break-words text-sm font-medium text-gray-800">{value}</div>
+    </div>
+  );
+}
+
+function LeadDrawer({
+  lead,
+  isOpen,
+  onClose,
+  onEdit,
+  onDelete,
+  onToggleKanban,
+  isUpdatingKanban,
+}: {
+  lead: Lead | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onEdit: (lead: Lead) => void;
+  onDelete: (lead: Lead) => void;
+  onToggleKanban: (lead: Lead) => void;
+  isUpdatingKanban: boolean;
+}) {
+  if (!isOpen || !lead) return null;
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[55] bg-black/35" onClick={onClose} />
+      <aside className="fixed right-0 top-0 z-[60] flex h-full w-full max-w-xl flex-col border-l border-gray-200 bg-white shadow-2xl">
+        <div className="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100">
+              Ficha do Lead
+            </p>
+            <h2 className="mt-1 truncate text-2xl font-bold">{lead.name}</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+                {lead.inKanban ? 'No Kanban' : 'Fora do Kanban'}
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+                Status: {lead.status}
+              </span>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium">
+                Score: {lead.score}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="rounded-lg p-2 text-white transition hover:bg-white/15"
+          >
+            <X size={22} />
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-3 border-b border-gray-200 bg-white px-6 py-4">
+          <button
+            onClick={() => onEdit(lead)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Edit size={16} />
+            Editar
+          </button>
+
+          <button
+            onClick={() => onToggleKanban(lead)}
+            disabled={isUpdatingKanban}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isUpdatingKanban ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <FolderKanban size={16} />
+            )}
+            {lead.inKanban ? 'Tirar do Kanban' : 'Mandar pro Kanban'}
+          </button>
+
+          <button
+            onClick={() => onDelete(lead)}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+          >
+            <Trash2 size={16} />
+            Excluir
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <InfoItem icon={<Mail size={14} />} label="Email" value={lead.email} />
+            <InfoItem icon={<Phone size={14} />} label="Telefone Fixo" value={lead.phone} />
+            <InfoItem icon={<MessageCircle size={14} />} label="WhatsApp" value={lead.whatsapp} />
+            <InfoItem icon={<Building2 size={14} />} label="Empresa" value={lead.company} />
+            <InfoItem icon={<FolderKanban size={14} />} label="Origem" value={lead.source} />
+            <InfoItem icon={<Star size={14} />} label="Score" value={lead.score} />
+            <InfoItem
+              icon={<BadgeDollarSign size={14} />}
+              label="Valor"
+              value={
+                lead.value === null || lead.value === undefined
+                  ? null
+                  : new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }).format(lead.value)
+              }
+            />
+            <InfoItem icon={<MapPin size={14} />} label="Cidade" value={lead.city} />
+            <InfoItem
+              icon={<LinkIcon size={14} />}
+              label="Produto/Serviço"
+              value={lead.productOrService}
+            />
+            <InfoItem
+              icon={<CalendarDays size={14} />}
+              label="Criado em"
+              value={new Date(lead.createdAt).toLocaleDateString('pt-BR')}
+            />
+            <InfoItem icon={<Globe size={14} />} label="Site" value={lead.website} isLink />
+            <InfoItem icon={<Globe size={14} />} label="Instagram" value={lead.instagram} isLink />
+            <InfoItem icon={<Globe size={14} />} label="Facebook" value={lead.facebook} isLink />
+            <InfoItem icon={<Globe size={14} />} label="LinkedIn" value={lead.linkedin} isLink />
+          </div>
+
+          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Observações
+            </p>
+            <div className="min-h-[120px] rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+              {lead.notes?.trim() ? lead.notes : 'Sem observações cadastradas.'}
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
 const emptyFilters: Omit<LeadFilters, 'search' | 'page'> = {
   status: '',
   source: '',
@@ -175,6 +373,7 @@ export default function LeadsPage() {
     pagination,
     fetchLeads,
     bulkDeleteLeads,
+    updateLead,
   } = useLeadsStore();
 
   const [showImport, setShowImport] = useState(false);
@@ -182,6 +381,9 @@ export default function LeadsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [drawerLead, setDrawerLead] = useState<Lead | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isUpdatingDrawerKanban, setIsUpdatingDrawerKanban] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -206,7 +408,17 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads(buildFetchParams(1));
-  }, [debouncedSearch, filters.status, filters.source, filters.city, filters.inKanban, filters.hasWhatsapp, filters.hasWebsite, filters.minScore, fetchLeads]);
+  }, [
+    debouncedSearch,
+    filters.status,
+    filters.source,
+    filters.city,
+    filters.inKanban,
+    filters.hasWhatsapp,
+    filters.hasWebsite,
+    filters.minScore,
+    fetchLeads,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -218,6 +430,19 @@ export default function LeadsPage() {
   useEffect(() => {
     setSelectedLeadIds((prev) => prev.filter((id) => leads.some((lead) => lead.id === id)));
   }, [leads]);
+
+  useEffect(() => {
+    if (!drawerLead) return;
+
+    const updatedLeadFromList = leads.find((lead) => lead.id === drawerLead.id);
+    if (!updatedLeadFromList) {
+      setDrawerLead(null);
+      setIsDrawerOpen(false);
+      return;
+    }
+
+    setDrawerLead(updatedLeadFromList);
+  }, [leads, drawerLead]);
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('leads')) return <AccessDenied module="leads" />;
@@ -256,9 +481,39 @@ export default function LeadsPage() {
     setShowNewLead(true);
   };
 
+  const openDrawer = (lead: Lead) => {
+    setDrawerLead(lead);
+    setIsDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setIsDrawerOpen(false);
+    setDrawerLead(null);
+  };
+
   const openSingleDeleteModal = (lead: Lead) => {
     setPendingDeleteIds([lead.id]);
     setShowDeleteModal(true);
+  };
+
+  const handleDeleteFromDrawer = (lead: Lead) => {
+    closeDrawer();
+    openSingleDeleteModal(lead);
+  };
+
+  const handleEditFromDrawer = (lead: Lead) => {
+    closeDrawer();
+    openEditModal(lead);
+  };
+
+  const handleToggleKanbanFromDrawer = async (lead: Lead) => {
+    setIsUpdatingDrawerKanban(true);
+    const updated = await updateLead(lead.id, { inKanban: !lead.inKanban });
+    setIsUpdatingDrawerKanban(false);
+
+    if (updated) {
+      setDrawerLead(updated);
+    }
   };
 
   const openBulkDeleteModal = () => {
@@ -693,7 +948,13 @@ export default function LeadsPage() {
                     </td>
 
                     <td className="sticky left-[49px] z-20 min-w-[220px] border-r border-gray-200 bg-white px-4 py-4 text-sm font-medium text-gray-800 group-hover:bg-gray-50">
-                      {lead.name}
+                      <button
+                        onClick={() => openDrawer(lead)}
+                        className="max-w-[200px] truncate text-left text-indigo-600 hover:underline"
+                        title={lead.name}
+                      >
+                        {lead.name}
+                      </button>
                     </td>
 
                     <td className="px-4 py-4 text-sm text-gray-600">{lead.email || '—'}</td>
@@ -742,7 +1003,14 @@ export default function LeadsPage() {
                 {!isLoading && leads.length === 0 && (
                   <tr>
                     <td colSpan={18} className="px-6 py-8 text-center text-gray-500">
-                      {debouncedSearch || filters.status || filters.source || filters.city || filters.inKanban || filters.hasWhatsapp || filters.hasWebsite || filters.minScore !== ''
+                      {debouncedSearch ||
+                      filters.status ||
+                      filters.source ||
+                      filters.city ||
+                      filters.inKanban ||
+                      filters.hasWhatsapp ||
+                      filters.hasWebsite ||
+                      filters.minScore !== ''
                         ? 'Nenhum lead encontrado para os filtros aplicados.'
                         : 'Nenhum lead cadastrado ainda. Clique em "Novo Lead" para começar.'}
                     </td>
@@ -825,6 +1093,16 @@ export default function LeadsPage() {
         isDeleting={isDeleting}
         selectedCount={pendingDeleteIds.length}
         selectedNames={selectedLeadNames}
+      />
+
+      <LeadDrawer
+        lead={drawerLead}
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+        onEdit={handleEditFromDrawer}
+        onDelete={handleDeleteFromDrawer}
+        onToggleKanban={handleToggleKanbanFromDrawer}
+        isUpdatingKanban={isUpdatingDrawerKanban}
       />
     </div>
   );
