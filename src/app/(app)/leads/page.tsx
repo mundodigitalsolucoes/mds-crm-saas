@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
-import { useLeadsStore, type Lead } from '@/store/leadsStore';
+import { useLeadsStore, type Lead, type LeadFilters } from '@/store/leadsStore';
 import { usePermission } from '@/hooks/usePermission';
 import AccessDenied from '@/components/AccessDenied';
 import PermissionLoading from '@/components/PermissionLoading';
@@ -156,6 +156,16 @@ function LinkCell({ value }: { value: string | null }) {
   );
 }
 
+const emptyFilters: Omit<LeadFilters, 'search' | 'page'> = {
+  status: '',
+  source: '',
+  city: '',
+  inKanban: '',
+  hasWhatsapp: '',
+  hasWebsite: '',
+  minScore: '',
+};
+
 export default function LeadsPage() {
   const {
     leads,
@@ -177,13 +187,26 @@ export default function LeadsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filters, setFilters] = useState(emptyFilters);
 
   const { canAccess, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
+  const buildFetchParams = (page = 1): LeadFilters => ({
+    search: debouncedSearch,
+    status: filters.status || undefined,
+    source: filters.source || undefined,
+    city: filters.city || undefined,
+    inKanban: filters.inKanban || undefined,
+    hasWhatsapp: filters.hasWhatsapp || undefined,
+    hasWebsite: filters.hasWebsite || undefined,
+    minScore: filters.minScore,
+    page,
+  });
+
   useEffect(() => {
-    fetchLeads({ search: debouncedSearch });
-  }, [debouncedSearch, fetchLeads]);
+    fetchLeads(buildFetchParams(1));
+  }, [debouncedSearch, filters.status, filters.source, filters.city, filters.inKanban, filters.hasWhatsapp, filters.hasWebsite, filters.minScore, fetchLeads]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -264,6 +287,12 @@ export default function LeadsPage() {
     }
   };
 
+  const clearFilters = () => {
+    setFilters(emptyFilters);
+    setSearchQuery('');
+    setDebouncedSearch('');
+  };
+
   const handleImport = async (
     data: any[]
   ): Promise<{ success: number; failed: number; errors: string[] }> => {
@@ -280,7 +309,7 @@ export default function LeadsPage() {
         return { success: 0, failed: data.length, errors: [json.error || 'Erro na importação'] };
       }
 
-      fetchLeads({ search: debouncedSearch });
+      fetchLeads(buildFetchParams(1));
 
       return {
         success: json.sucesso ?? 0,
@@ -358,7 +387,7 @@ export default function LeadsPage() {
         <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
           <span>{error}</span>
           <button
-            onClick={() => fetchLeads({ search: debouncedSearch })}
+            onClick={() => fetchLeads(buildFetchParams(pagination.page))}
             className="flex items-center gap-1 font-medium text-red-700 hover:text-red-900"
           >
             <RefreshCw size={16} />
@@ -393,18 +422,132 @@ export default function LeadsPage() {
         </div>
       )}
 
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row">
-        <div className="max-w-md flex-1">
+      <div className="mb-4 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-white p-4 lg:grid-cols-4 xl:grid-cols-8">
+        <div className="xl:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-gray-700">Busca</label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Buscar por nome, empresa, telefone, WhatsApp, cidade..."
+              placeholder="Nome, empresa, WhatsApp, cidade..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todos</option>
+            {stages.map((stage) => (
+              <option key={stage.id} value={stage.id}>
+                {stage.title}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Origem</label>
+          <select
+            value={filters.source}
+            onChange={(e) => setFilters((prev) => ({ ...prev, source: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todas</option>
+            <option value="manual">Manual</option>
+            <option value="website">Website</option>
+            <option value="referral">Indicação</option>
+            <option value="meta_ads">Meta Ads</option>
+            <option value="google_ads">Google Ads</option>
+            <option value="chatwoot">Chatwoot</option>
+            <option value="instagram">Instagram</option>
+            <option value="facebook">Facebook</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="csv_import">Importação CSV</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Cidade</label>
+          <input
+            type="text"
+            placeholder="Ex: Rio Preto"
+            value={filters.city}
+            onChange={(e) => setFilters((prev) => ({ ...prev, city: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">No Kanban</label>
+          <select
+            value={filters.inKanban}
+            onChange={(e) => setFilters((prev) => ({ ...prev, inKanban: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todos</option>
+            <option value="true">Sim</option>
+            <option value="false">Não</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Com WhatsApp</label>
+          <select
+            value={filters.hasWhatsapp}
+            onChange={(e) => setFilters((prev) => ({ ...prev, hasWhatsapp: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todos</option>
+            <option value="true">Só com WhatsApp</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Com Site</label>
+          <select
+            value={filters.hasWebsite}
+            onChange={(e) => setFilters((prev) => ({ ...prev, hasWebsite: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Todos</option>
+            <option value="true">Só com site</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Score mínimo</label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={filters.minScore}
+            onChange={(e) =>
+              setFilters((prev) => ({
+                ...prev,
+                minScore: e.target.value === '' ? '' : Number(e.target.value),
+              }))
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+      </div>
+
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={clearFilters}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Limpar filtros
+          </button>
         </div>
 
         <div className="flex gap-3">
@@ -599,8 +742,8 @@ export default function LeadsPage() {
                 {!isLoading && leads.length === 0 && (
                   <tr>
                     <td colSpan={18} className="px-6 py-8 text-center text-gray-500">
-                      {debouncedSearch
-                        ? 'Nenhum lead encontrado para a busca.'
+                      {debouncedSearch || filters.status || filters.source || filters.city || filters.inKanban || filters.hasWhatsapp || filters.hasWebsite || filters.minScore !== ''
+                        ? 'Nenhum lead encontrado para os filtros aplicados.'
                         : 'Nenhum lead cadastrado ainda. Clique em "Novo Lead" para começar.'}
                     </td>
                   </tr>
@@ -618,7 +761,7 @@ export default function LeadsPage() {
             <div className="flex gap-2">
               <button
                 disabled={pagination.page <= 1}
-                onClick={() => fetchLeads({ search: debouncedSearch, page: pagination.page - 1 })}
+                onClick={() => fetchLeads(buildFetchParams(pagination.page - 1))}
                 className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Anterior
@@ -628,7 +771,7 @@ export default function LeadsPage() {
               </span>
               <button
                 disabled={pagination.page >= pagination.totalPages}
-                onClick={() => fetchLeads({ search: debouncedSearch, page: pagination.page + 1 })}
+                onClick={() => fetchLeads(buildFetchParams(pagination.page + 1))}
                 className="rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Próxima
