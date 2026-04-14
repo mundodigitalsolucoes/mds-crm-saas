@@ -1,5 +1,5 @@
 // src/app/api/admin/plans/route.ts
-// API Admin — Listagem e Criação de Planos (com maxOs)
+// API Admin — Listagem e Criação de Planos
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
@@ -17,7 +17,6 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Conta organizações por plano manualmente (plan é String na Organization, não FK)
     const plansWithCount = await Promise.all(
       plans.map(async (plan) => {
         const orgCount = await prisma.organization.count({
@@ -49,12 +48,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada (coerce de price/maxUsers/maxLeads/maxProjects/maxOs)
     const parsed = parseBody(adminPlanCreateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // Verifica se name já existe
     const existing = await prisma.plan.findUnique({ where: { name: data.name } });
     if (existing) {
       return NextResponse.json(
@@ -74,6 +71,7 @@ export async function POST(req: NextRequest) {
         maxLeads: data.maxLeads,
         maxProjects: data.maxProjects,
         maxOs: data.maxOs,
+        maxWhatsappInstances: data.maxWhatsappInstances,
         features: data.features,
       },
     });

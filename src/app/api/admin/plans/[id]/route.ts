@@ -1,5 +1,5 @@
 // src/app/api/admin/plans/[id]/route.ts
-// API Admin — Atualização e Exclusão de Plano (com maxOs e propagateToOrgs)
+// API Admin — Atualização e Exclusão de Plano
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
@@ -20,18 +20,15 @@ export async function PUT(
   try {
     const body = await req.json();
 
-    // ✅ Validação Zod centralizada (coerce automático de números)
     const parsed = parseBody(adminPlanUpdateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // Buscar plano atual para obter o name (slug)
     const currentPlan = await prisma.plan.findUnique({ where: { id } });
     if (!currentPlan) {
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 });
     }
 
-    // Extrai propagateToOrgs antes de enviar pro Prisma (não é coluna)
     const { propagateToOrgs, ...updateData } = data;
 
     const plan = await prisma.plan.update({
@@ -39,21 +36,18 @@ export async function PUT(
       data: updateData,
     });
 
-    // ✅ Se propagateToOrgs=true, atualiza limites de TODAS as orgs desse plano
     let propagatedCount = 0;
-    if (propagateToOrgs) {
-      const planName = data.name || currentPlan.name; // usa o novo name se mudou
 
+    if (propagateToOrgs) {
       const result = await prisma.organization.updateMany({
-        where: { plan: currentPlan.name }, // busca pelo name antigo
+        where: { plan: currentPlan.name },
         data: {
-          // Se o name do plano mudou, atualiza também
           ...(data.name && data.name !== currentPlan.name ? { plan: data.name } : {}),
-          // Propaga apenas os limites que foram enviados (ou os do plano atualizado)
           maxUsers: plan.maxUsers,
           maxLeads: plan.maxLeads,
           maxProjects: plan.maxProjects,
           maxOs: plan.maxOs,
+          maxWhatsappInstances: plan.maxWhatsappInstances,
           features: plan.features,
         },
       });
@@ -91,13 +85,11 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    // Busca o plano para pegar o name (slug)
     const plan = await prisma.plan.findUnique({ where: { id } });
     if (!plan) {
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 });
     }
 
-    // Verifica se há organizações usando este plano (campo plan é String, não FK)
     const orgsCount = await prisma.organization.count({ where: { plan: plan.name } });
     if (orgsCount > 0) {
       return NextResponse.json(
