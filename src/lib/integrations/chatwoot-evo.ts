@@ -24,6 +24,13 @@ interface EvoWebhookResult {
   error?: string
 }
 
+type ChatwootCreds = {
+  baseUrl: string
+  publicUrl: string
+  accountId: number
+  apiToken: string
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildChatwootInboxName(orgSlug: string, instanceName: string): string {
@@ -31,14 +38,32 @@ function buildChatwootInboxName(orgSlug: string, instanceName: string): string {
   return `WhatsApp - ${orgSlug} - ${suffix}`.slice(0, 120)
 }
 
+async function listChatwootInboxes(
+  baseUrl: string,
+  accountId: number,
+  apiToken: string
+): Promise<Array<{ id: number; name: string }> | null> {
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
+      headers: { api_access_token: apiToken },
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!res.ok) return null
+
+    const json = await res.json() as {
+      payload?: Array<{ id: number; name: string }>
+    }
+
+    return json.payload ?? []
+  } catch {
+    return null
+  }
+}
+
 // ─── Busca credenciais Chatwoot da organização ────────────────────────────────
 
-async function getChatwootCreds(organizationId: string): Promise<{
-  baseUrl: string
-  publicUrl: string
-  accountId: number
-  apiToken: string
-} | null> {
+async function getChatwootCreds(organizationId: string): Promise<ChatwootCreds | null> {
   const account = await prisma.connectedAccount.findUnique({
     where: {
       provider_organizationId: { provider: 'chatwoot', organizationId },
@@ -56,7 +81,6 @@ async function getChatwootCreds(organizationId: string): Promise<{
 
     const apiToken = decryptToken(account.accessTokenEnc)
     const publicUrl = data.chatwootUrl.replace(/\/$/, '')
-
     const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
     const baseUrl = internalUrl ?? publicUrl
 
@@ -79,26 +103,34 @@ async function findExistingInbox(
   apiToken: string,
   inboxName: string
 ): Promise<number | null> {
-  try {
-    const res = await fetch(`${baseUrl}/api/v1/accounts/${accountId}/inboxes`, {
-      headers: { api_access_token: apiToken },
-      signal: AbortSignal.timeout(10_000),
-    })
+  const inboxes = await listChatwootInboxes(baseUrl, accountId, apiToken)
+  if (!inboxes) return null
 
-    if (!res.ok) return null
+  const inbox = inboxes.find(
+    (item) => item.name.toLowerCase() === inboxName.toLowerCase()
+  )
 
-    const json = await res.json() as {
-      payload?: Array<{ id: number; name: string }>
-    }
+  return inbox?.id ?? null
+}
 
-    const inbox = json.payload?.find(
-      (item) => item.name.toLowerCase() === inboxName.toLowerCase()
-    )
+// ─── Verifica se inbox por id ainda existe ────────────────────────────────────
 
-    return inbox?.id ?? null
-  } catch {
-    return null
-  }
+export async function doesChatwootInboxExist(
+  organizationId: string,
+  inboxId: number
+): Promise<boolean | null> {
+  const creds = await getChatwootCreds(organizationId)
+  if (!creds) return null
+
+  const inboxes = await listChatwootInboxes(
+    creds.baseUrl,
+    creds.accountId,
+    creds.apiToken
+  )
+
+  if (!inboxes) return null
+
+  return inboxes.some((item) => item.id === inboxId)
 }
 
 // ─── Cria inbox WhatsApp no Chatwoot ──────────────────────────────────────────
