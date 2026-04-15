@@ -265,7 +265,8 @@ export async function POST(req: NextRequest) {
     if (activeInstances.length > 1) {
       return NextResponse.json(
         {
-          error: 'Mais de uma instância ativa encontrada. Informe o instanceId para desconectar a instância correta.',
+          error:
+            'Mais de uma instância ativa encontrada. Informe o instanceId para desconectar a instância correta.',
           code: 'INSTANCE_ID_REQUIRED',
         },
         { status: 400 }
@@ -284,51 +285,76 @@ export async function POST(req: NextRequest) {
 
   console.log(`[Disconnect] Iniciando disconnect para: ${targetInstance.instanceName}`)
 
-  // 1. Remove inbox do Chatwoot
+  // 1. Remove inbox do Chatwoot, mas só se não estiver compartilhado por erro legado
   if (targetInstance.chatwootInboxId) {
-    const cwAccount = await prisma.connectedAccount.findUnique({
-      where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
-      select: { accessTokenEnc: true, data: true, isActive: true },
+    const sharedInboxRefs = await prisma.whatsappInstance.count({
+      where: {
+        organizationId,
+        isActive: true,
+        chatwootInboxId: targetInstance.chatwootInboxId,
+        NOT: {
+          id: targetInstance.id,
+        },
+      },
     })
 
-    if (cwAccount?.isActive) {
-      try {
-        const cwData = JSON.parse(cwAccount.data) as {
-          chatwootUrl: string
-          chatwootAccountId: number
+    if (sharedInboxRefs > 0) {
+      console.warn(
+        `[Disconnect] Inbox Chatwoot id=${targetInstance.chatwootInboxId} ainda referenciado por ${sharedInboxRefs} outra(s) instância(s). Delete ignorado para evitar derrubar outro número.`
+      )
+    } else {
+      const cwAccount = await prisma.connectedAccount.findUnique({
+        where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
+        select: { accessTokenEnc: true, data: true, isActive: true },
+      })
+
+      if (cwAccount?.isActive) {
+        try {
+          const cwData = JSON.parse(cwAccount.data) as {
+            chatwootUrl: string
+            chatwootAccountId: number
+          }
+
+          const apiToken = decryptToken(cwAccount.accessTokenEnc)
+          const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
+          const baseUrl = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
+
+          const deleteUrl = `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${targetInstance.chatwootInboxId}`
+
+          console.log(
+            `[Disconnect] Removendo inbox Chatwoot id=${targetInstance.chatwootInboxId}`
+          )
+
+          const res = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: { api_access_token: apiToken },
+            signal: AbortSignal.timeout(8_000),
+          })
+
+          if (res.ok || res.status === 404) {
+            console.log(`[Disconnect] Inbox Chatwoot removido (status=${res.status})`)
+          } else {
+            const responseBody = await res.text().catch(() => '')
+            console.warn(
+              `[Disconnect] Falha ao remover inbox: status=${res.status} body=${responseBody}`
+            )
+          }
+        } catch (err) {
+          console.warn('[Disconnect] Exceção ao remover inbox Chatwoot (ignorado):', err)
         }
-
-        const apiToken = decryptToken(cwAccount.accessTokenEnc)
-        const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-        const baseUrl = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
-
-        const deleteUrl = `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${targetInstance.chatwootInboxId}`
-        console.log(`[Disconnect] Removendo inbox Chatwoot id=${targetInstance.chatwootInboxId}`)
-
-        const res = await fetch(deleteUrl, {
-          method: 'DELETE',
-          headers: { api_access_token: apiToken },
-          signal: AbortSignal.timeout(8_000),
-        })
-
-        if (res.ok || res.status === 404) {
-          console.log(`[Disconnect] Inbox Chatwoot removido (status=${res.status})`)
-        } else {
-          const responseBody = await res.text().catch(() => '')
-          console.warn(`[Disconnect] Falha ao remover inbox: status=${res.status} body=${responseBody}`)
-        }
-      } catch (err) {
-        console.warn('[Disconnect] Exceção ao remover inbox Chatwoot (ignorado):', err)
       }
     }
   }
 
   // 2. Logout + delete na Evolution
   await disconnectInstance(targetInstance.instanceName)
-  console.log(`[Disconnect] Evolution logout+delete concluído para: ${targetInstance.instanceName}`)
+  console.log(
+    `[Disconnect] Evolution logout+delete concluído para: ${targetInstance.instanceName}`
+  )
 
   // 3. Desativa no banco
-  const previousMetadata = safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
+  const previousMetadata =
+    safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
 
   await prisma.whatsappInstance.update({
     where: { id: targetInstance.id },

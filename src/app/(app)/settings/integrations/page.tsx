@@ -73,6 +73,15 @@ interface ConnectResponse {
   }
 }
 
+interface ReconnectResponse {
+  success: boolean
+  instanceId: string
+  instanceName: string
+  label: string | null
+  chatwootInboxId: number | null
+  alreadyConnected: boolean
+}
+
 interface QRCodeData {
   connected: boolean
   qrcode?: string
@@ -386,7 +395,10 @@ function StatsRow({ data }: { data: InstancesResponse | null }) {
   const connected = data?.instances.filter((item) => item.isConnected).length ?? 0
   const offline =
     data?.instances.filter(
-      (item) => item.status === 'offline' || item.status === 'missing' || item.status === 'connecting'
+      (item) =>
+        item.status === 'offline' ||
+        item.status === 'missing' ||
+        item.status === 'connecting'
     ).length ?? 0
 
   return (
@@ -417,17 +429,20 @@ function StatsRow({ data }: { data: InstancesResponse | null }) {
 
 function WhatsAppCard({
   item,
-  busy,
+  disconnecting,
+  reconnecting,
   onReconnect,
   onDisconnect,
 }: {
   item: WhatsAppInstanceItem
-  busy: boolean
+  disconnecting: boolean
+  reconnecting: boolean
   onReconnect: (item: WhatsAppInstanceItem) => void
   onDisconnect: (item: WhatsAppInstanceItem) => void
 }) {
   const connectedAt = formatDateTime(item.connectedAt)
   const disconnectedAt = formatDateTime(item.disconnectedAt)
+  const busy = disconnecting || reconnecting
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -500,7 +515,7 @@ function WhatsAppCard({
             disabled={busy}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
-            {busy ? (
+            {disconnecting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <Trash2 className="w-4 h-4" />
@@ -514,7 +529,11 @@ function WhatsAppCard({
           disabled={busy}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
         >
-          <QrCode className="w-4 h-4" />
+          {reconnecting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <QrCode className="w-4 h-4" />
+          )}
           {item.isActive ? 'Reconectar' : 'Conectar novamente'}
         </button>
       </div>
@@ -527,6 +546,7 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true)
   const [connectLoading, setConnectLoading] = useState(false)
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null)
+  const [reconnectingId, setReconnectingId] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrInstanceName, setQrInstanceName] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState('WhatsApp')
@@ -603,14 +623,35 @@ export default function IntegrationsPage() {
   }
 
   const handleReconnect = async (item: WhatsAppInstanceItem) => {
-    if (item.isActive) {
-      setQrInstanceName(item.instanceName)
-      setQrLabel(item.label)
-      setShowQRModal(true)
-      return
-    }
+    setReconnectingId(item.id)
 
-    await handleConnect(item.label)
+    try {
+      const { data: response } = await axios.post<ReconnectResponse>(
+        '/api/integrations/evolution/reconnect',
+        { instanceId: item.id }
+      )
+
+      await loadInstances()
+
+      if (response.alreadyConnected) {
+        showMsg('success', `WhatsApp "${item.label}" já está conectado.`)
+        return
+      }
+
+      setQrInstanceName(response.instanceName)
+      setQrLabel(response.label || item.label)
+      setShowQRModal(true)
+
+      showMsg('info', 'Instância preparada. Escaneie o QR Code para concluir a conexão.')
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Erro ao reconectar.'
+        : 'Erro ao reconectar.'
+
+      showMsg('error', errorText)
+    } finally {
+      setReconnectingId(null)
+    }
   }
 
   const handleDisconnect = async (item: WhatsAppInstanceItem) => {
@@ -741,7 +782,8 @@ export default function IntegrationsPage() {
             <WhatsAppCard
               key={item.id}
               item={item}
-              busy={connectLoading || disconnectingId === item.id}
+              disconnecting={disconnectingId === item.id}
+              reconnecting={reconnectingId === item.id}
               onReconnect={handleReconnect}
               onDisconnect={handleDisconnect}
             />
