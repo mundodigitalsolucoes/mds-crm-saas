@@ -132,6 +132,7 @@ async function syncLegacyWhatsappShadow(params: {
     where: {
       organizationId,
       isActive: true,
+      NOT: { status: 'archived' },
     },
     orderBy: [
       { updatedAt: 'desc' },
@@ -297,6 +298,7 @@ export async function POST(req: NextRequest) {
     where: {
       id: body.instanceId,
       organizationId,
+      NOT: { status: 'archived' },
     },
   })
 

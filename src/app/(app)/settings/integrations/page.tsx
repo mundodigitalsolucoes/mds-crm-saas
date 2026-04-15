@@ -7,7 +7,6 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Smartphone,
   QrCode,
   Wifi,
   WifiOff,
@@ -431,18 +430,22 @@ function WhatsAppCard({
   item,
   disconnecting,
   reconnecting,
+  deleting,
   onReconnect,
   onDisconnect,
+  onDelete,
 }: {
   item: WhatsAppInstanceItem
   disconnecting: boolean
   reconnecting: boolean
+  deleting: boolean
   onReconnect: (item: WhatsAppInstanceItem) => void
   onDisconnect: (item: WhatsAppInstanceItem) => void
+  onDelete: (item: WhatsAppInstanceItem) => void
 }) {
   const connectedAt = formatDateTime(item.connectedAt)
   const disconnectedAt = formatDateTime(item.disconnectedAt)
-  const busy = disconnecting || reconnecting
+  const busy = disconnecting || reconnecting || deleting
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -509,33 +512,63 @@ function WhatsAppCard({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {item.isActive && (
-          <button
-            onClick={() => onDisconnect(item)}
-            disabled={busy}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-          >
-            {disconnecting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-            Desconectar
-          </button>
-        )}
+        {item.isActive ? (
+          <>
+            <button
+              onClick={() => onDisconnect(item)}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+            >
+              {disconnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Desconectar
+            </button>
 
-        <button
-          onClick={() => onReconnect(item)}
-          disabled={busy}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-        >
-          {reconnecting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <QrCode className="w-4 h-4" />
-          )}
-          {item.isActive ? 'Reconectar' : 'Conectar novamente'}
-        </button>
+            <button
+              onClick={() => onReconnect(item)}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {reconnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <QrCode className="w-4 h-4" />
+              )}
+              Reconectar
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => onReconnect(item)}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {reconnecting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <QrCode className="w-4 h-4" />
+              )}
+              Conectar novamente
+            </button>
+
+            <button
+              onClick={() => onDelete(item)}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {deleting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Excluir do CRM
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -547,6 +580,7 @@ export default function IntegrationsPage() {
   const [connectLoading, setConnectLoading] = useState(false)
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null)
   const [reconnectingId, setReconnectingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrInstanceName, setQrInstanceName] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState('WhatsApp')
@@ -681,6 +715,33 @@ export default function IntegrationsPage() {
     }
   }
 
+  const handleDelete = async (item: WhatsAppInstanceItem) => {
+    const confirmed = window.confirm(
+      `Deseja excluir "${item.label}" da lista do CRM? Essa ação remove o canal da operação visível.`
+    )
+
+    if (!confirmed) return
+
+    setDeletingId(item.id)
+
+    try {
+      await axios.post('/api/integrations/evolution/delete', {
+        instanceId: item.id,
+      })
+
+      showMsg('success', `Canal "${item.label}" removido da lista do CRM.`)
+      await loadInstances()
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Erro ao excluir canal.'
+        : 'Erro ao excluir canal.'
+
+      showMsg('error', errorText)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const handleQRConnected = useCallback(async () => {
     setShowQRModal(false)
     setQrInstanceName(null)
@@ -784,8 +845,10 @@ export default function IntegrationsPage() {
               item={item}
               disconnecting={disconnectingId === item.id}
               reconnecting={reconnectingId === item.id}
+              deleting={deletingId === item.id}
               onReconnect={handleReconnect}
               onDisconnect={handleDisconnect}
+              onDelete={handleDelete}
             />
           ))}
         </div>
