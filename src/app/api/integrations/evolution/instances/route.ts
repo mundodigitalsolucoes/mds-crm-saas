@@ -3,8 +3,12 @@
  *
  * Lista as instâncias WhatsApp da organização para a UI de Integrações.
  * Compatível com o legado:
- * - se existir ConnectedAccount(provider='whatsapp') antigo e ainda não houver
- *   whatsapp_instances, espelha automaticamente para a tabela nova.
+ * - só espelha ConnectedAccount(provider='whatsapp') se a organização ainda não
+ *   tiver nenhum registro em whatsapp_instances.
+ *
+ * IMPORTANTE:
+ * - esta rota NÃO deve ressuscitar canais antigos em organizações que já estão
+ *   operando com a tabela nova.
  */
 
 import { NextResponse } from 'next/server'
@@ -42,7 +46,13 @@ function safeJsonParse<T>(value: string | null | undefined): T | null {
   }
 }
 
-async function ensureLegacyWhatsappMirrored(organizationId: string) {
+async function ensureLegacyWhatsappMirroredIfNeeded(organizationId: string) {
+  const currentCount = await prisma.whatsappInstance.count({
+    where: { organizationId },
+  })
+
+  if (currentCount > 0) return
+
   const legacy = await prisma.connectedAccount.findUnique({
     where: {
       provider_organizationId: { provider: 'whatsapp', organizationId },
@@ -58,13 +68,6 @@ async function ensureLegacyWhatsappMirrored(organizationId: string) {
 
   const parsed = safeJsonParse<LegacyWhatsappData>(legacy.data)
   if (!parsed?.instanceName) return
-
-  const exists = await prisma.whatsappInstance.findUnique({
-    where: { instanceName: parsed.instanceName },
-    select: { id: true },
-  })
-
-  if (exists) return
 
   await prisma.whatsappInstance.create({
     data: {
@@ -104,7 +107,7 @@ export async function GET() {
 
   const organizationId = session!.user.organizationId
 
-  await ensureLegacyWhatsappMirrored(organizationId)
+  await ensureLegacyWhatsappMirroredIfNeeded(organizationId)
 
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
@@ -178,29 +181,33 @@ export async function GET() {
               })
             }
           } catch {
-            // Número é opcional, segue o baile
+            // número opcional
           }
         }
 
-        if (!isConnected && !disconnectedAt) {
-          disconnectedAt = new Date()
+        if (!isConnected) {
+          const nextDisconnectedAt = disconnectedAt ?? new Date()
+          const nextLastError = lastError ?? 'WhatsApp desconectado. Verifique o celular.'
 
-          const parsedMetadata =
-            safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
+          if (!disconnectedAt || !lastError) {
+            const parsedMetadata =
+              safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
 
-          await prisma.whatsappInstance.update({
-            where: { id: instance.id },
-            data: {
-              disconnectedAt,
-              lastError: lastError ?? 'WhatsApp desconectado. Verifique o celular.',
-              metadata: JSON.stringify({
-                ...parsedMetadata,
-                disconnectedAt: disconnectedAt.toISOString(),
-              }),
-            },
-          })
+            await prisma.whatsappInstance.update({
+              where: { id: instance.id },
+              data: {
+                disconnectedAt: nextDisconnectedAt,
+                lastError: nextLastError,
+                metadata: JSON.stringify({
+                  ...parsedMetadata,
+                  disconnectedAt: nextDisconnectedAt.toISOString(),
+                }),
+              },
+            })
+          }
 
-          lastError = lastError ?? 'WhatsApp desconectado. Verifique o celular.'
+          disconnectedAt = nextDisconnectedAt
+          lastError = nextLastError
         }
 
         if (isConnected && disconnectedAt) {

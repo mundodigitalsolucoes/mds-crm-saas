@@ -6,8 +6,8 @@
  *  2. Espelha legado em whatsapp_instances, se existir
  *  3. Resolve a instância alvo por instanceId
  *  4. Remove inbox do Chatwoot
- *  5. Logout + delete da instância na Evolution
- *  6. Desativa a instância no banco
+ *  5. Logout + delete da instância na Evolution (best effort)
+ *  6. Desativa a instância no banco mesmo se a Evolution já estiver torta
  *  7. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
@@ -261,7 +261,6 @@ export async function POST(req: NextRequest) {
     })
 
     if (activeInstances.length === 0) {
-      console.log('[Disconnect] Nenhuma instância WA no banco - já desconectado.')
       return NextResponse.json({ success: true })
     }
 
@@ -285,9 +284,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  console.log(`[Disconnect] Iniciando disconnect para: ${targetInstance.instanceName}`)
+  const previousMetadata =
+    safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
 
-  // 1. Remove inbox do Chatwoot, mas só se não estiver compartilhado por erro legado
+  // 1. Remove inbox do Chatwoot, mas sem falhar o fluxo inteiro
   if (targetInstance.chatwootInboxId) {
     const sharedInboxRefs = await prisma.whatsappInstance.count({
       where: {
@@ -298,11 +298,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    if (sharedInboxRefs > 0) {
-      console.warn(
-        `[Disconnect] Inbox Chatwoot id=${targetInstance.chatwootInboxId} ainda referenciado por ${sharedInboxRefs} outra(s) instância(s). Delete ignorado para evitar derrubar outro número.`
-      )
-    } else {
+    if (sharedInboxRefs === 0) {
       const cwAccount = await prisma.connectedAccount.findUnique({
         where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
         select: { accessTokenEnc: true, data: true, isActive: true },
@@ -318,44 +314,28 @@ export async function POST(req: NextRequest) {
           const apiToken = decryptToken(cwAccount.accessTokenEnc)
           const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
           const baseUrl = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
-
           const deleteUrl = `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${targetInstance.chatwootInboxId}`
 
-          console.log(
-            `[Disconnect] Removendo inbox Chatwoot id=${targetInstance.chatwootInboxId}`
-          )
-
-          const res = await fetch(deleteUrl, {
+          await fetch(deleteUrl, {
             method: 'DELETE',
             headers: { api_access_token: apiToken },
             signal: AbortSignal.timeout(8_000),
           })
-
-          if (res.ok || res.status === 404) {
-            console.log(`[Disconnect] Inbox Chatwoot removido (status=${res.status})`)
-          } else {
-            const responseBody = await res.text().catch(() => '')
-            console.warn(
-              `[Disconnect] Falha ao remover inbox: status=${res.status} body=${responseBody}`
-            )
-          }
         } catch (err) {
-          console.warn('[Disconnect] Exceção ao remover inbox Chatwoot (ignorado):', err)
+          console.warn('[Disconnect] Falha ao remover inbox Chatwoot (ignorado):', err)
         }
       }
     }
   }
 
-  // 2. Logout + delete na Evolution
-  await disconnectInstance(targetInstance.instanceName)
-  console.log(
-    `[Disconnect] Evolution logout+delete concluído para: ${targetInstance.instanceName}`
-  )
+  // 2. Limpa Evolution em best effort
+  try {
+    await disconnectInstance(targetInstance.instanceName)
+  } catch (err) {
+    console.warn('[Disconnect] Falha ao limpar instância na Evolution (seguindo com cleanup local):', err)
+  }
 
-  // 3. Desativa no banco
-  const previousMetadata =
-    safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
-
+  // 3. Sempre desativa no banco
   await prisma.whatsappInstance.update({
     where: { id: targetInstance.id },
     data: {
@@ -373,7 +353,6 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // 4. Atualiza sombra compatível
   const accessTokenEnc = EVO_KEY ? encryptToken(EVO_KEY) : ''
 
   await syncLegacyWhatsappShadow({
@@ -382,8 +361,6 @@ export async function POST(req: NextRequest) {
     accessTokenEnc,
     evoUrl: EVO_URL,
   })
-
-  console.log(`[Disconnect] Concluído para: ${targetInstance.instanceName}`)
 
   return NextResponse.json({
     success: true,
