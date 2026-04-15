@@ -5,6 +5,10 @@
  * Compatível com o legado:
  * - se existir ConnectedAccount(provider='whatsapp') antigo e ainda não houver
  *   whatsapp_instances, espelha automaticamente para a tabela nova.
+ *
+ * CORREÇÃO:
+ * - se a instância estiver ativa e conectada na Evolution, mas sem inbox válido no Chatwoot,
+ *   auto-repara a amarração individual por instância
  */
 
 import { NextResponse } from 'next/server'
@@ -14,6 +18,10 @@ import {
   getInstanceState,
   fetchInstanceInfo,
 } from '@/lib/integrations/evolutionClient'
+import {
+  doesChatwootInboxExist,
+  setupChatwootEvolution,
+} from '@/lib/integrations/chatwoot-evo'
 
 type LegacyWhatsappData = {
   label?: string | null
@@ -103,6 +111,8 @@ export async function GET() {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '') ?? ''
+  const EVO_KEY = process.env.EVOLUTION_API_KEY ?? ''
 
   await ensureLegacyWhatsappMirrored(organizationId)
 
@@ -111,6 +121,7 @@ export async function GET() {
     select: {
       plan: true,
       maxWhatsappInstances: true,
+      slug: true,
     },
   })
 
@@ -135,6 +146,7 @@ export async function GET() {
       let connectedAt = instance.connectedAt
       let disconnectedAt = instance.disconnectedAt
       let lastError = instance.lastError
+      let chatwootInboxId = instance.chatwootInboxId
 
       if (instance.isActive) {
         try {
@@ -175,7 +187,65 @@ export async function GET() {
               })
             }
           } catch {
-            // Número é opcional, segue o baile
+            // número opcional
+          }
+        }
+
+        // AUTO-REPAIR: instância conectada na Evolution mas sem inbox válido no Chatwoot
+        if (isConnected && EVO_URL && EVO_KEY) {
+          let shouldRepairChatwoot = false
+
+          if (!chatwootInboxId) {
+            shouldRepairChatwoot = true
+          } else {
+            const inboxExists = await doesChatwootInboxExist(organizationId, chatwootInboxId)
+            if (inboxExists === false) {
+              shouldRepairChatwoot = true
+            }
+          }
+
+          if (shouldRepairChatwoot) {
+            try {
+              const repair = await setupChatwootEvolution({
+                organizationId,
+                orgSlug: org.slug,
+                instanceName: instance.instanceName,
+                evoUrl: EVO_URL,
+                evoKey: EVO_KEY,
+                phoneNumber,
+              })
+
+              if (repair.chatwootInboxId) {
+                chatwootInboxId = repair.chatwootInboxId
+                lastError = null
+
+                const parsedMetadata =
+                  safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
+
+                await prisma.whatsappInstance.update({
+                  where: { id: instance.id },
+                  data: {
+                    chatwootInboxId,
+                    lastError: null,
+                    metadata: JSON.stringify({
+                      ...parsedMetadata,
+                      phone: phoneNumber,
+                      chatwootInboxId,
+                      chatwootRepairedAt: new Date().toISOString(),
+                    }),
+                  },
+                })
+
+                console.log(
+                  `[Instances] Auto-repair Chatwoot OK para ${instance.instanceName} | inboxId=${chatwootInboxId}`
+                )
+              }
+            } catch (err) {
+              console.warn(
+                `[Instances] Auto-repair Chatwoot falhou para ${instance.instanceName}:`,
+                err
+              )
+            }
           }
         }
 
@@ -237,7 +307,7 @@ export async function GET() {
         status,
         isActive: instance.isActive,
         isConnected,
-        chatwootInboxId: instance.chatwootInboxId,
+        chatwootInboxId,
         connectedAt: connectedAt ? connectedAt.toISOString() : null,
         disconnectedAt: disconnectedAt ? disconnectedAt.toISOString() : null,
         lastError,
