@@ -1,23 +1,26 @@
 /**
- * src/app/api/integrations/evolution/disconnect/route.ts
+ * src/app/api/integrations/evolution/reconnect/route.ts
  *
- * Desconecta UMA instância WhatsApp da organização:
+ * Reconecta UMA instância WhatsApp existente da organização:
  *  1. Verifica permissão
- *  2. Espelha legado em whatsapp_instances, se existir
- *  3. Resolve a instância alvo por instanceId
- *  4. Remove inbox do Chatwoot
- *  5. Logout + delete da instância na Evolution
- *  6. Desativa a instância no banco
- *  7. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
+ *  2. Resolve a instância por instanceId
+ *  3. Recria a instância na Evolution se ela não existir mais
+ *  4. Garante inbox individual no Chatwoot para a própria instância
+ *  5. Reativa a mesma linha em whatsapp_instances
+ *  6. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
-import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
-import { disconnectInstance } from '@/lib/integrations/evolutionClient'
+import { encryptToken } from '@/lib/integrations/crypto'
+import { setupChatwootEvolution } from '@/lib/integrations/chatwoot-evo'
+import {
+  createInstance,
+  getInstanceState,
+} from '@/lib/integrations/evolutionClient'
 
-type DisconnectBody = {
+type ReconnectBody = {
   instanceId?: string
 }
 
@@ -217,12 +220,49 @@ async function syncLegacyWhatsappShadow(params: {
   })
 }
 
+async function tryChatwootSetup(params: {
+  organizationId: string
+  orgSlug: string
+  instanceName: string
+  evoUrl: string
+  evoKey: string
+  phoneNumber: string | null
+}): Promise<number | null> {
+  try {
+    const result = await setupChatwootEvolution(params)
+
+    if (result.skipped) {
+      console.log('[Reconnect] Chatwoot não configurado, pulando setup.')
+    } else if (!result.success) {
+      console.warn(
+        '[Reconnect] Setup Chatwoot parcialmente falhou. InboxId:',
+        result.chatwootInboxId
+      )
+    } else {
+      console.log('[Reconnect] Chatwoot configurado. InboxId:', result.chatwootInboxId)
+    }
+
+    return result.chatwootInboxId
+  } catch (err) {
+    console.error('[Reconnect] Erro no setup Chatwoot (ignorado):', err)
+    return null
+  }
+}
+
 export async function POST(req: NextRequest) {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
   if (!allowed) return errorResponse!
 
   const EVO_URL = process.env.EVOLUTION_API_URL?.replace(/\/$/, '') ?? ''
   const EVO_KEY = process.env.EVOLUTION_API_KEY ?? ''
+
+  if (!EVO_URL || !EVO_KEY) {
+    return NextResponse.json(
+      { error: 'Servidor WhatsApp não configurado.' },
+      { status: 500 }
+    )
+  }
+
   const organizationId = session!.user.organizationId
   const userId = session!.user.id
 
@@ -232,49 +272,33 @@ export async function POST(req: NextRequest) {
     evoUrl: EVO_URL,
   })
 
-  const body = await req.json().catch(() => ({} as DisconnectBody))
+  const body = await req.json().catch(() => ({} as ReconnectBody))
 
-  let targetInstance = null
-
-  if (body.instanceId) {
-    targetInstance = await prisma.whatsappInstance.findFirst({
-      where: {
-        id: body.instanceId,
-        organizationId,
-        isActive: true,
-      },
-    })
-  } else {
-    const activeInstances = await prisma.whatsappInstance.findMany({
-      where: {
-        organizationId,
-        isActive: true,
-      },
-      orderBy: [
-        { updatedAt: 'desc' },
-        { createdAt: 'desc' },
-      ],
-      take: 2,
-    })
-
-    if (activeInstances.length === 0) {
-      console.log('[Disconnect] Nenhuma instância WA no banco - já desconectado.')
-      return NextResponse.json({ success: true })
-    }
-
-    if (activeInstances.length > 1) {
-      return NextResponse.json(
-        {
-          error:
-            'Mais de uma instância ativa encontrada. Informe o instanceId para desconectar a instância correta.',
-          code: 'INSTANCE_ID_REQUIRED',
-        },
-        { status: 400 }
-      )
-    }
-
-    targetInstance = activeInstances[0]
+  if (!body.instanceId) {
+    return NextResponse.json(
+      { error: 'instanceId é obrigatório para reconectar.' },
+      { status: 400 }
+    )
   }
+
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: { slug: true },
+  })
+
+  if (!org) {
+    return NextResponse.json(
+      { error: 'Organização não encontrada.' },
+      { status: 404 }
+    )
+  }
+
+  const targetInstance = await prisma.whatsappInstance.findFirst({
+    where: {
+      id: body.instanceId,
+      organizationId,
+    },
+  })
 
   if (!targetInstance) {
     return NextResponse.json(
@@ -283,98 +307,71 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  console.log(`[Disconnect] Iniciando disconnect para: ${targetInstance.instanceName}`)
+  console.log(`[Reconnect] Iniciando reconnect para: ${targetInstance.instanceName}`)
 
-  // 1. Remove inbox do Chatwoot, mas só se não estiver compartilhado por erro legado
-  if (targetInstance.chatwootInboxId) {
-    const sharedInboxRefs = await prisma.whatsappInstance.count({
-      where: {
-        organizationId,
-        isActive: true,
-        chatwootInboxId: targetInstance.chatwootInboxId,
-        NOT: {
-          id: targetInstance.id,
-        },
-      },
-    })
+  let state = await getInstanceState(targetInstance.instanceName)
 
-    if (sharedInboxRefs > 0) {
-      console.warn(
-        `[Disconnect] Inbox Chatwoot id=${targetInstance.chatwootInboxId} ainda referenciado por ${sharedInboxRefs} outra(s) instância(s). Delete ignorado para evitar derrubar outro número.`
+  if (state === 'not_found') {
+    const created = await createInstance(targetInstance.instanceName)
+
+    if (!created) {
+      return NextResponse.json(
+        { error: 'Erro ao recriar instância WhatsApp na Evolution.' },
+        { status: 502 }
       )
-    } else {
-      const cwAccount = await prisma.connectedAccount.findUnique({
-        where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
-        select: { accessTokenEnc: true, data: true, isActive: true },
-      })
-
-      if (cwAccount?.isActive) {
-        try {
-          const cwData = JSON.parse(cwAccount.data) as {
-            chatwootUrl: string
-            chatwootAccountId: number
-          }
-
-          const apiToken = decryptToken(cwAccount.accessTokenEnc)
-          const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-          const baseUrl = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
-
-          const deleteUrl = `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${targetInstance.chatwootInboxId}`
-
-          console.log(
-            `[Disconnect] Removendo inbox Chatwoot id=${targetInstance.chatwootInboxId}`
-          )
-
-          const res = await fetch(deleteUrl, {
-            method: 'DELETE',
-            headers: { api_access_token: apiToken },
-            signal: AbortSignal.timeout(8_000),
-          })
-
-          if (res.ok || res.status === 404) {
-            console.log(`[Disconnect] Inbox Chatwoot removido (status=${res.status})`)
-          } else {
-            const responseBody = await res.text().catch(() => '')
-            console.warn(
-              `[Disconnect] Falha ao remover inbox: status=${res.status} body=${responseBody}`
-            )
-          }
-        } catch (err) {
-          console.warn('[Disconnect] Exceção ao remover inbox Chatwoot (ignorado):', err)
-        }
-      }
     }
+
+    state = 'connecting'
+    console.log(
+      `[Reconnect] Instância recriada na Evolution: ${targetInstance.instanceName}`
+    )
   }
 
-  // 2. Logout + delete na Evolution
-  await disconnectInstance(targetInstance.instanceName)
-  console.log(
-    `[Disconnect] Evolution logout+delete concluído para: ${targetInstance.instanceName}`
-  )
+  const chatwootInboxId = await tryChatwootSetup({
+    organizationId,
+    orgSlug: org.slug,
+    instanceName: targetInstance.instanceName,
+    evoUrl: EVO_URL,
+    evoKey: EVO_KEY,
+    phoneNumber: targetInstance.phoneNumber ?? null,
+  })
 
-  // 3. Desativa no banco
+  const nextChatwootInboxId =
+    chatwootInboxId ?? targetInstance.chatwootInboxId ?? null
+
+  const alreadyConnected = state === 'open'
   const previousMetadata =
     safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
 
-  await prisma.whatsappInstance.update({
+  const updatedInstance = await prisma.whatsappInstance.update({
     where: { id: targetInstance.id },
     data: {
-      isActive: false,
-      status: 'disconnected',
-      chatwootInboxId: null,
-      phoneNumber: null,
+      isActive: true,
+      status: alreadyConnected ? 'open' : 'connecting',
+      serverUrl: EVO_URL,
+      chatwootInboxId: nextChatwootInboxId,
       lastError: null,
-      disconnectedAt: new Date(),
+      disconnectedAt: null,
+      phoneNumber: alreadyConnected ? targetInstance.phoneNumber : null,
+      connectedAt: alreadyConnected
+        ? targetInstance.connectedAt ?? new Date()
+        : null,
       metadata: JSON.stringify({
         ...previousMetadata,
-        disconnectedAt: new Date().toISOString(),
-        lastChatwootInboxId: targetInstance.chatwootInboxId ?? null,
+        instanceName: targetInstance.instanceName,
+        serverUrl: EVO_URL,
+        chatwootInboxId: nextChatwootInboxId,
+        reconnectRequestedAt: new Date().toISOString(),
+        disconnectedAt: null,
+        phone: alreadyConnected ? targetInstance.phoneNumber : null,
+        connectedAt: alreadyConnected
+          ? (targetInstance.connectedAt ?? new Date()).toISOString()
+          : null,
       }),
     },
   })
 
-  // 4. Atualiza sombra compatível
-  const accessTokenEnc = EVO_KEY ? encryptToken(EVO_KEY) : ''
+  const accessTokenEnc = encryptToken(EVO_KEY)
 
   await syncLegacyWhatsappShadow({
     organizationId,
@@ -383,11 +380,16 @@ export async function POST(req: NextRequest) {
     evoUrl: EVO_URL,
   })
 
-  console.log(`[Disconnect] Concluído para: ${targetInstance.instanceName}`)
+  console.log(
+    `[Reconnect] Concluído para: ${updatedInstance.instanceName} | alreadyConnected=${alreadyConnected}`
+  )
 
   return NextResponse.json({
     success: true,
-    instanceId: targetInstance.id,
-    instanceName: targetInstance.instanceName,
+    instanceId: updatedInstance.id,
+    instanceName: updatedInstance.instanceName,
+    label: updatedInstance.label,
+    chatwootInboxId: updatedInstance.chatwootInboxId,
+    alreadyConnected,
   })
 }
