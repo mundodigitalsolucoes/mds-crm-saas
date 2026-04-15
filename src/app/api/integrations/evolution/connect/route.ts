@@ -7,7 +7,7 @@
  *  1. Verifica permissão de integrações
  *  2. Verifica status do plano
  *  3. Espelha legado (connected_accounts.whatsapp) em whatsapp_instances, se existir
- *  4. Verifica limite do plano para maxWhatsappInstances
+ *  4. Verifica limite do plano para maxWhatsappInstances ignorando canais arquivados
  *  5. Cria uma instância nova com nome único
  *  6. Configura Chatwoot automaticamente (não bloqueia em caso de falha)
  *  7. Salva em whatsapp_instances
@@ -155,6 +155,7 @@ async function syncLegacyWhatsappShadow(params: {
     where: {
       organizationId,
       isActive: true,
+      NOT: { status: 'archived' },
     },
     orderBy: [
       { updatedAt: 'desc' },
@@ -294,7 +295,6 @@ export async function POST(req: NextRequest) {
     where: { id: organizationId },
     select: {
       slug: true,
-      chatwootAccountId: true,
     },
   })
 
@@ -316,6 +316,7 @@ export async function POST(req: NextRequest) {
     where: {
       organizationId,
       isActive: true,
+      NOT: { status: 'archived' },
     },
   })
 
