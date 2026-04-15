@@ -59,17 +59,17 @@ export default async function AppLayout({
         <PermissionSync />
         <WhatsAppStatusBanner />
 
-        <div className="flex min-h-screen bg-[#f6f8fc]">
+        <div className="flex h-screen overflow-hidden bg-[#f6f8fc]">
           <Sidebar />
 
-          <div className="flex min-w-0 flex-1 flex-col bg-[#f6f8fc]">
+          <div className="flex min-w-0 min-h-0 flex-1 flex-col bg-[#f6f8fc]">
             <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
                 <NotificationBellWrapper />
               </div>
             </header>
 
-            <main className="flex-1 overflow-x-hidden bg-[#f6f8fc]">
+            <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-[#f6f8fc]">
               {children}
             </main>
           </div>

@@ -4,17 +4,21 @@
  * Exclui um canal do CRM sem misturar com disconnect operacional.
  *
  * Regras:
- *  1. Só permite excluir canal já desconectado/inativo
- *  2. Faz best effort de cleanup residual em Chatwoot/Evolution
- *  3. Marca a instância como arquivada no CRM
- *  4. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
+ *  1. Permite excluir canal já desconectado OU canal zumbi/offline/missing
+ *  2. Bloqueia exclusão apenas quando a instância estiver realmente OPEN
+ *  3. Faz best effort de cleanup residual em Chatwoot/Evolution
+ *  4. Marca a instância como arquivada no CRM
+ *  5. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
-import { disconnectInstance } from '@/lib/integrations/evolutionClient'
+import {
+  disconnectInstance,
+  getInstanceState,
+} from '@/lib/integrations/evolutionClient'
 
 type DeleteBody = {
   instanceId?: string
@@ -256,14 +260,21 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (targetInstance.isActive) {
+  let state = 'inactive'
+
+  try {
+    state = await getInstanceState(targetInstance.instanceName)
+  } catch {
+    state = 'unknown'
+  }
+
+  if (targetInstance.isActive && state === 'open') {
     return NextResponse.json(
-      { error: 'Desconecte o canal antes de excluir do CRM.' },
+      { error: 'Desconecte o canal ativo antes de excluir do CRM.' },
       { status: 400 }
     )
   }
 
-  // Best effort: remove inbox residual do Chatwoot
   if (targetInstance.chatwootInboxId) {
     const cwAccount = await prisma.connectedAccount.findUnique({
       where: { provider_organizationId: { provider: 'chatwoot', organizationId } },
@@ -280,34 +291,23 @@ export async function POST(req: NextRequest) {
         const apiToken = decryptToken(cwAccount.accessTokenEnc)
         const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
         const baseUrl = internalUrl ?? cwData.chatwootUrl.replace(/\/$/, '')
-
         const deleteUrl = `${baseUrl}/api/v1/accounts/${cwData.chatwootAccountId}/inboxes/${targetInstance.chatwootInboxId}`
 
-        const res = await fetch(deleteUrl, {
+        await fetch(deleteUrl, {
           method: 'DELETE',
           headers: { api_access_token: apiToken },
           signal: AbortSignal.timeout(8_000),
         })
-
-        if (res.ok || res.status === 404) {
-          console.log(`[DeleteChannel] Inbox Chatwoot removido (status=${res.status})`)
-        } else {
-          const responseBody = await res.text().catch(() => '')
-          console.warn(
-            `[DeleteChannel] Falha ao remover inbox residual: status=${res.status} body=${responseBody}`
-          )
-        }
       } catch (err) {
-        console.warn('[DeleteChannel] Exceção ao remover inbox residual (ignorado):', err)
+        console.warn('[DeleteChannel] Falha ao remover inbox residual (ignorado):', err)
       }
     }
   }
 
-  // Best effort: limpa instância residual na Evolution
   try {
     await disconnectInstance(targetInstance.instanceName)
   } catch (err) {
-    console.warn('[DeleteChannel] Exceção ao limpar instância residual (ignorado):', err)
+    console.warn('[DeleteChannel] Falha ao limpar instância residual (ignorado):', err)
   }
 
   const previousMetadata =

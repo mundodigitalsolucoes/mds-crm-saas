@@ -446,6 +446,8 @@ function WhatsAppCard({
   const connectedAt = formatDateTime(item.connectedAt)
   const disconnectedAt = formatDateTime(item.disconnectedAt)
   const busy = disconnecting || reconnecting || deleting
+  const canDeleteFromCrm = !item.isConnected
+  const showOperationalDisconnect = item.isConnected
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -512,7 +514,7 @@ function WhatsAppCard({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {item.isActive ? (
+        {showOperationalDisconnect ? (
           <>
             <button
               onClick={() => onDisconnect(item)}
@@ -557,7 +559,7 @@ function WhatsAppCard({
 
             <button
               onClick={() => onDelete(item)}
-              disabled={busy}
+              disabled={busy || !canDeleteFromCrm}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               {deleting ? (
@@ -838,7 +840,7 @@ export default function IntegrationsPage() {
           <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
         </div>
       ) : data?.instances?.length ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 pb-6">
           {data.instances.map((item) => (
             <WhatsAppCard
               key={item.id}
