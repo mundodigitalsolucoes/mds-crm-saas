@@ -129,6 +129,7 @@ async function syncLegacyWhatsappShadow(params: {
     where: {
       organizationId,
       isActive: true,
+      NOT: { status: 'archived' },
     },
     orderBy: [
       { updatedAt: 'desc' },
@@ -242,6 +243,7 @@ export async function POST(req: NextRequest) {
         id: body.instanceId,
         organizationId,
         isActive: true,
+        NOT: { status: 'archived' },
       },
     })
   } else {
@@ -249,6 +251,7 @@ export async function POST(req: NextRequest) {
       where: {
         organizationId,
         isActive: true,
+        NOT: { status: 'archived' },
       },
       orderBy: [
         { updatedAt: 'desc' },
@@ -265,8 +268,7 @@ export async function POST(req: NextRequest) {
     if (activeInstances.length > 1) {
       return NextResponse.json(
         {
-          error:
-            'Mais de uma instância ativa encontrada. Informe o instanceId para desconectar a instância correta.',
+          error: 'Mais de uma instância ativa encontrada. Informe o instanceId para desconectar a instância correta.',
           code: 'INSTANCE_ID_REQUIRED',
         },
         { status: 400 }
@@ -292,9 +294,7 @@ export async function POST(req: NextRequest) {
         organizationId,
         isActive: true,
         chatwootInboxId: targetInstance.chatwootInboxId,
-        NOT: {
-          id: targetInstance.id,
-        },
+        NOT: { id: targetInstance.id },
       },
     })
 
