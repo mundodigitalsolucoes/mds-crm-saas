@@ -25,7 +25,7 @@ interface Props {
 }
 
 export default function WhatsAppStatusBanner({
-  pollInterval = 60_000,
+  pollInterval = 180_000,
   onStatusChange,
 }: Props) {
   const [status, setStatus] = useState<WAStatus | null>(null)

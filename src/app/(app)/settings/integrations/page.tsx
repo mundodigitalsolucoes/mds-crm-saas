@@ -212,7 +212,7 @@ function StatusBadge({ status }: { status: InstanceStatus }) {
     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
       <XCircle className="w-3.5 h-3.5" />
       Desconectado
-    </span>
+      </span>
   )
 }
 
@@ -612,29 +612,7 @@ export default function IntegrationsPage() {
 
   useEffect(() => {
     loadInstances()
-
-    if (showQRModal) return
-
-    const interval = setInterval(() => {
-      if (
-        !connectLoading &&
-        !disconnectingId &&
-        !reconnectingId &&
-        !deletingId
-      ) {
-        loadInstances()
-      }
-    }, 30_000)
-
-    return () => clearInterval(interval)
-  }, [
-    loadInstances,
-    showQRModal,
-    connectLoading,
-    disconnectingId,
-    reconnectingId,
-    deletingId,
-  ])
+  }, [loadInstances])
 
   const handleConnect = async (suggestedLabel?: string) => {
     if (!data?.usage.canAddMore) {
