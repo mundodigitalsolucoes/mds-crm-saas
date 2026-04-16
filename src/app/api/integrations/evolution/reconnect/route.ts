@@ -1,13 +1,5 @@
 /**
  * src/app/api/integrations/evolution/reconnect/route.ts
- *
- * Reconecta UMA instância WhatsApp existente da organização:
- *  1. Verifica permissão
- *  2. Resolve a instância por instanceId
- *  3. Recria a instância na Evolution se ela não existir mais
- *  4. Garante inbox individual no Chatwoot para a própria instância
- *  5. Reativa a mesma linha em whatsapp_instances
- *  6. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -228,6 +220,7 @@ async function tryChatwootSetup(params: {
   evoUrl: string
   evoKey: string
   phoneNumber: string | null
+  inboxName: string
 }): Promise<number | null> {
   try {
     const result = await setupChatwootEvolution(params)
@@ -309,8 +302,6 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  console.log(`[Reconnect] Iniciando reconnect para: ${targetInstance.instanceName}`)
-
   let state = await getInstanceState(targetInstance.instanceName)
 
   if (state === 'not_found') {
@@ -324,10 +315,9 @@ export async function POST(req: NextRequest) {
     }
 
     state = 'connecting'
-    console.log(
-      `[Reconnect] Instância recriada na Evolution: ${targetInstance.instanceName}`
-    )
   }
+
+  const reconnectRequestedAt = new Date().toISOString()
 
   const chatwootInboxId = await tryChatwootSetup({
     organizationId,
@@ -336,6 +326,7 @@ export async function POST(req: NextRequest) {
     evoUrl: EVO_URL,
     evoKey: EVO_KEY,
     phoneNumber: targetInstance.phoneNumber ?? null,
+    inboxName: targetInstance.label ?? 'WA',
   })
 
   const nextChatwootInboxId =
@@ -363,7 +354,8 @@ export async function POST(req: NextRequest) {
         instanceName: targetInstance.instanceName,
         serverUrl: EVO_URL,
         chatwootInboxId: nextChatwootInboxId,
-        reconnectRequestedAt: new Date().toISOString(),
+        inboxDisplayName: targetInstance.label ?? 'WA',
+        reconnectRequestedAt,
         disconnectedAt: null,
         phone: alreadyConnected ? targetInstance.phoneNumber : null,
         connectedAt: alreadyConnected
@@ -381,10 +373,6 @@ export async function POST(req: NextRequest) {
     accessTokenEnc,
     evoUrl: EVO_URL,
   })
-
-  console.log(
-    `[Reconnect] Concluído para: ${updatedInstance.instanceName} | alreadyConnected=${alreadyConnected}`
-  )
 
   return NextResponse.json({
     success: true,

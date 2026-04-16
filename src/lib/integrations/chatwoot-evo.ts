@@ -2,15 +2,10 @@
 /**
  * Helper: integração Evolution API ↔ Chatwoot
  *
- * Estratégia segura:
- * - seguir a lógica oficial da Evolution para /chatwoot/set/{instance}
- * - deixar a Evolution criar/amarra a inbox no Chatwoot (autoCreate: true)
- * - depois localizar a inbox criada no Chatwoot e persistir o inboxId
- *
- * REGRA:
- * - usar /api/v1/ no Chatwoot
- * - token Chatwoot sempre vem do banco
- * - URL pública do Chatwoot vai para a Evolution
+ * Regra:
+ * - instanceName = nome técnico estável
+ * - inboxName/label = nome amigável visível no Chatwoot e no CRM
+ * - seguir /chatwoot/set/{instance} da Evolution
  */
 
 import { prisma } from '@/lib/prisma'
@@ -28,9 +23,16 @@ type ChatwootCreds = {
   apiToken: string
 }
 
-function buildChatwootInboxName(orgSlug: string, instanceName: string): string {
-  const suffix = instanceName.split('-').pop()?.slice(-10) ?? instanceName.slice(-10)
-  return `WhatsApp - ${orgSlug} - ${suffix}`.slice(0, 120)
+function buildDefaultChatwootInboxName(orgSlug: string, instanceName: string): string {
+  const suffix = instanceName.split('-').pop()?.slice(-8) ?? instanceName.slice(-8)
+  return `WA - ${orgSlug} - ${suffix}`.slice(0, 120)
+}
+
+function sanitizeInboxName(value: string | null | undefined, fallback: string): string {
+  if (!value || typeof value !== 'string') return fallback
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  if (!normalized) return fallback
+  return normalized.slice(0, 120)
 }
 
 function sleep(ms: number) {
@@ -111,9 +113,7 @@ async function findExistingInbox(
     (item) => item.name.toLowerCase().trim() === normalizedTarget
   )
 
-  if (exact) return exact.id
-
-  return null
+  return exact?.id ?? null
 }
 
 async function findInboxWithRetries(params: {
@@ -129,7 +129,7 @@ async function findInboxWithRetries(params: {
     accountId,
     apiToken,
     inboxName,
-    retries = 5,
+    retries = 6,
     delayMs = 1500,
   } = params
 
@@ -169,8 +169,9 @@ export async function setEvolutionWebhook(params: {
   instanceName: string
   organizationId: string
   orgSlug: string
+  inboxName?: string | null
 }): Promise<EvoWebhookResult> {
-  const { evoUrl, evoKey, instanceName, organizationId, orgSlug } = params
+  const { evoUrl, evoKey, instanceName, organizationId, orgSlug, inboxName } = params
 
   const creds = await getChatwootCreds(organizationId)
 
@@ -178,7 +179,10 @@ export async function setEvolutionWebhook(params: {
     return { success: false, error: 'Credenciais Chatwoot não encontradas' }
   }
 
-  const inboxName = buildChatwootInboxName(orgSlug, instanceName)
+  const resolvedInboxName = sanitizeInboxName(
+    inboxName,
+    buildDefaultChatwootInboxName(orgSlug, instanceName)
+  )
 
   const payload = {
     enabled: true,
@@ -188,16 +192,12 @@ export async function setEvolutionWebhook(params: {
     signMsg: true,
     reopenConversation: true,
     conversationPending: false,
-    nameInbox: inboxName,
     mergeBrazilContacts: true,
     importContacts: true,
     importMessages: true,
     daysLimitImportMessages: 2,
-    signDelimiter: '\n',
     autoCreate: true,
-    organization: 'MDS CRM',
-    logo: `${creds.publicUrl.replace(/\/$/, '')}/favicon.ico`,
-    ignoreJids: [],
+    nameInbox: resolvedInboxName,
   }
 
   try {
@@ -226,7 +226,7 @@ export async function setEvolutionWebhook(params: {
     }
 
     console.log(
-      `[ChatwootEvo] /chatwoot/set OK para instância ${instanceName} | inbox=${inboxName}`
+      `[ChatwootEvo] /chatwoot/set OK para ${instanceName} | inbox=${resolvedInboxName}`
     )
 
     return { success: true }
@@ -243,6 +243,7 @@ export async function setupChatwootEvolution(params: {
   evoUrl: string
   evoKey: string
   phoneNumber: string | null
+  inboxName?: string | null
 }): Promise<{
   success: boolean
   chatwootInboxId: number | null
@@ -254,6 +255,7 @@ export async function setupChatwootEvolution(params: {
     instanceName,
     evoUrl,
     evoKey,
+    inboxName,
   } = params
 
   const creds = await getChatwootCreds(organizationId)
@@ -267,23 +269,25 @@ export async function setupChatwootEvolution(params: {
     }
   }
 
-  const inboxName = buildChatwootInboxName(orgSlug, instanceName)
+  const resolvedInboxName = sanitizeInboxName(
+    inboxName,
+    buildDefaultChatwootInboxName(orgSlug, instanceName)
+  )
 
-  // 1. Primeiro tenta achar inbox já existente
   let inboxId = await findExistingInbox(
     creds.baseUrl,
     creds.accountId,
     creds.apiToken,
-    inboxName
+    resolvedInboxName
   )
 
-  // 2. Configura integração oficial da Evolution
   const webhookResult = await setEvolutionWebhook({
     evoUrl,
     evoKey,
     instanceName,
     organizationId,
     orgSlug,
+    inboxName: resolvedInboxName,
   })
 
   if (!webhookResult.success) {
@@ -294,13 +298,12 @@ export async function setupChatwootEvolution(params: {
     }
   }
 
-  // 3. Se a inbox ainda não existia, espera e busca novamente
   if (!inboxId) {
     inboxId = await findInboxWithRetries({
       baseUrl: creds.baseUrl,
       accountId: creds.accountId,
       apiToken: creds.apiToken,
-      inboxName,
+      inboxName: resolvedInboxName,
       retries: 6,
       delayMs: 1500,
     })
@@ -308,11 +311,11 @@ export async function setupChatwootEvolution(params: {
 
   if (!inboxId) {
     console.warn(
-      `[ChatwootEvo] Integração configurada, mas inbox ainda não apareceu no Chatwoot: ${inboxName}`
+      `[ChatwootEvo] Integração configurada, mas inbox ainda não apareceu no Chatwoot: ${resolvedInboxName}`
     )
   } else {
     console.log(
-      `[ChatwootEvo] Inbox confirmada no Chatwoot: ${inboxName} (id=${inboxId})`
+      `[ChatwootEvo] Inbox confirmada no Chatwoot: ${resolvedInboxName} (id=${inboxId})`
     )
   }
 

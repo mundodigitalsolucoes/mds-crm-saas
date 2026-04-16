@@ -613,12 +613,28 @@ export default function IntegrationsPage() {
   useEffect(() => {
     loadInstances()
 
+    if (showQRModal) return
+
     const interval = setInterval(() => {
-      loadInstances()
-    }, 15000)
+      if (
+        !connectLoading &&
+        !disconnectingId &&
+        !reconnectingId &&
+        !deletingId
+      ) {
+        loadInstances()
+      }
+    }, 30_000)
 
     return () => clearInterval(interval)
-  }, [loadInstances])
+  }, [
+    loadInstances,
+    showQRModal,
+    connectLoading,
+    disconnectingId,
+    reconnectingId,
+    deletingId,
+  ])
 
   const handleConnect = async (suggestedLabel?: string) => {
     if (!data?.usage.canAddMore) {
@@ -626,8 +642,8 @@ export default function IntegrationsPage() {
       return
     }
 
-    const defaultLabel = suggestedLabel ?? `WhatsApp ${data.usage.current + 1}`
-    const labelInput = window.prompt('Nome interno do número no CRM:', defaultLabel)
+    const defaultLabel = suggestedLabel ?? `WA ${data.usage.current + 1}`
+    const labelInput = window.prompt('Nome da caixa de entrada no CRM e no Chatwoot:', defaultLabel)
 
     if (labelInput === null) return
 
