@@ -5,11 +5,12 @@ import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
 import { z } from 'zod'
 import { parseBody } from '@/lib/validations'
+import { validateChatwootCredentials } from '@/lib/chatwoot'
 
 const schema = z.object({
-  chatwootUrl:       z.string().url('URL inválida'),
+  chatwootUrl: z.string().url('URL inválida'),
   chatwootAccountId: z.coerce.number().int().positive('Account ID inválido'),
-  apiToken:          z.string().min(1, 'Token obrigatório'),
+  apiToken: z.string().min(1, 'Token obrigatório'),
 })
 
 export async function POST(req: NextRequest) {
@@ -23,55 +24,44 @@ export async function POST(req: NextRequest) {
   const { chatwootUrl, chatwootAccountId, apiToken } = parsed.data
   const organizationId = session!.user.organizationId
 
-  // URL interna Docker para validação server-side (evita hairpin NAT)
-  // Se não definida, cai na URL pública informada pelo usuário
-  const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-  const baseUrl     = internalUrl ?? chatwootUrl.replace(/\/$/, '')
+  const isValid = await validateChatwootCredentials({
+    chatwootUrl,
+    accountId: chatwootAccountId,
+    token: apiToken,
+  })
 
-  try {
-    const url = `${baseUrl}/api/v1/accounts/${chatwootAccountId}/conversations?page=1`
-    const res = await fetch(url, {
-      headers: { api_access_token: apiToken },
-      signal: AbortSignal.timeout(8_000),
-    })
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: 'Credenciais inválidas. Verifique a URL, Account ID e Token.' },
-        { status: 422 }
-      )
-    }
-  } catch {
+  if (!isValid) {
     return NextResponse.json(
-      { error: 'Não foi possível conectar ao Chatwoot. Verifique a URL.' },
+      { error: 'Credenciais inválidas. Verifique a URL, Account ID e Token.' },
       { status: 422 }
     )
   }
 
   const accessTokenEnc = encryptToken(apiToken)
+  const normalizedPublicUrl = chatwootUrl.replace(/\/$/, '')
 
-  // Salva sempre a URL pública no banco (usada pelo frontend e webhooks)
   await prisma.connectedAccount.upsert({
     where: {
       provider_organizationId: { provider: 'chatwoot', organizationId },
     },
     create: {
-      provider:      'chatwoot',
+      provider: 'chatwoot',
       organizationId,
       connectedById: session!.user.id,
       accessTokenEnc,
-      isActive:      true,
+      isActive: true,
       data: JSON.stringify({
-        chatwootUrl:       chatwootUrl.replace(/\/$/, ''),
+        chatwootUrl: normalizedPublicUrl,
         chatwootAccountId,
       }),
     },
     update: {
       accessTokenEnc,
-      isActive:   true,
-      lastError:  null,
+      isActive: true,
+      lastError: null,
       lastSyncAt: new Date(),
       data: JSON.stringify({
-        chatwootUrl:       chatwootUrl.replace(/\/$/, ''),
+        chatwootUrl: normalizedPublicUrl,
         chatwootAccountId,
       }),
     },
