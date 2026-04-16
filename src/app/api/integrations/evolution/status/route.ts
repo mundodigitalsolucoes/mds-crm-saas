@@ -1,15 +1,34 @@
 /**
  * src/app/api/integrations/evolution/status/route.ts
  *
- * Verifica status do WhatsApp da organização.
- * Retorna isConnected=false com disconnectedAt quando a instância cai,
- * permitindo que o frontend mostre notificação visual.
+ * Status global para banner do app.
+ * Multi-WA:
+ * - se ao menos uma instância ativa estiver OPEN, considera conectado
+ * - se houver instância em janela de conexão, não dispara banner vermelho
+ * - não usa connected_accounts legado como fonte primária
  */
 
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
-import { getInstanceState, fetchInstanceInfo } from '@/lib/integrations/evolutionClient'
+import { getInstanceState } from '@/lib/integrations/evolutionClient'
+
+const CONNECTION_GRACE_MS = 90_000
+
+function safeJsonParse<T>(value: string | null | undefined): T | null {
+  if (!value) return null
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return null
+  }
+}
+
+function parseIsoDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
 
 export async function GET() {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
@@ -17,98 +36,94 @@ export async function GET() {
 
   const organizationId = session!.user.organizationId
 
-  const account = await prisma.connectedAccount.findUnique({
-    where:  { provider_organizationId: { provider: 'whatsapp', organizationId } },
-    select: { isActive: true, data: true, lastSyncAt: true, lastError: true },
+  const activeInstances = await prisma.whatsappInstance.findMany({
+    where: {
+      organizationId,
+      isActive: true,
+      NOT: { status: 'archived' },
+    },
+    orderBy: [
+      { updatedAt: 'desc' },
+      { createdAt: 'desc' },
+    ],
   })
 
-  if (!account || !account.isActive) {
+  if (!activeInstances.length) {
     return NextResponse.json({ connected: false })
   }
 
-  const data = JSON.parse(account.data) as {
-    instanceName:    string
-    serverUrl:       string
-    phone:           string | null
-    connectedAt:     string | null
-    disconnectedAt?: string | null
-  }
+  const now = Date.now()
 
-  // ── Verifica estado real na Evolution ────────────────────────────────────────
-  const state = await getInstanceState(data.instanceName)
+  const states = await Promise.all(
+    activeInstances.map(async (instance) => {
+      let state = 'unknown'
 
-  if (state === 'not_found') {
-    // Instância sumiu da Evolution → marca como inativa no banco
-    await prisma.connectedAccount.updateMany({
-      where: { provider: 'whatsapp', organizationId },
-      data:  {
-        isActive:  false,
-        lastError: 'Instância não encontrada na Evolution API.',
-        data:      JSON.stringify({ ...data, disconnectedAt: new Date().toISOString() }),
-      },
-    })
-    return NextResponse.json({ connected: false, lostConnection: true })
-  }
-
-  const isConnected = state === 'open'
-
-  // ── Se conectado e sem número, tenta buscar ──────────────────────────────────
-  let phone = data.phone
-  if (isConnected && !phone) {
-    try {
-      const info = await fetchInstanceInfo(data.instanceName)
-      const wuid = info?.instance?.wuid ?? null
-      if (wuid) {
-        phone = wuid.split('@')[0] ?? null
-        await prisma.connectedAccount.updateMany({
-          where: { provider: 'whatsapp', organizationId },
-          data: {
-            lastSyncAt: new Date(),
-            lastError:  null,
-            data:       JSON.stringify({
-              ...data,
-              phone,
-              connectedAt:     new Date().toISOString(),
-              disconnectedAt:  null,
-            }),
-          },
-        })
+      try {
+        state = await getInstanceState(instance.instanceName)
+      } catch {
+        state = 'unknown'
       }
-    } catch {
-      // Número é opcional — silencioso
-    }
-  }
 
-  // ── Se desconectou (celular sem internet, etc.) → salva disconnectedAt ───────
-  if (!isConnected && !data.disconnectedAt) {
-    await prisma.connectedAccount.updateMany({
-      where: { provider: 'whatsapp', organizationId },
-      data: {
-        lastError: 'WhatsApp desconectado. Verifique o celular.',
-        data:      JSON.stringify({ ...data, disconnectedAt: new Date().toISOString() }),
-      },
+      const metadata =
+        safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
+
+      const transitionAt =
+        parseIsoDate(metadata.reconnectRequestedAt) ??
+        parseIsoDate(metadata.connectRequestedAt)
+
+      const inGrace =
+        !!transitionAt && now - transitionAt.getTime() < CONNECTION_GRACE_MS
+
+      return {
+        instance,
+        state,
+        inGrace,
+      }
+    })
+  )
+
+  const openState = states.find((item) => item.state === 'open')
+  if (openState) {
+    return NextResponse.json({
+      connected: true,
+      isConnected: true,
+      instanceName: openState.instance.instanceName,
+      label: openState.instance.label ?? null,
+      disconnectedAt: null,
+      activeCount: activeInstances.length,
+      connectedCount: states.filter((item) => item.state === 'open').length,
     })
   }
 
-  // ── Se reconectou → limpa disconnectedAt ────────────────────────────────────
-  if (isConnected && data.disconnectedAt) {
-    await prisma.connectedAccount.updateMany({
-      where: { provider: 'whatsapp', organizationId },
-      data: {
-        lastError: null,
-        data:      JSON.stringify({ ...data, disconnectedAt: null, connectedAt: new Date().toISOString() }),
-      },
+  const connectingState = states.find(
+    (item) => item.state === 'connecting' || item.inGrace
+  )
+
+  if (connectingState) {
+    return NextResponse.json({
+      connected: true,
+      isConnected: true,
+      unstable: true,
+      instanceName: connectingState.instance.instanceName,
+      label: connectingState.instance.label ?? null,
+      disconnectedAt: null,
+      activeCount: activeInstances.length,
+      connectedCount: 0,
     })
   }
+
+  const reference = states[0]?.instance ?? null
 
   return NextResponse.json({
-    connected:      true,
-    isConnected,
-    instanceName:   data.instanceName,
-    phone,
-    connectedAt:    data.connectedAt,
-    disconnectedAt: isConnected ? null : (data.disconnectedAt ?? new Date().toISOString()),
-    lastSyncAt:     account.lastSyncAt,
-    lastError:      account.lastError,
+    connected: true,
+    isConnected: false,
+    instanceName: reference?.instanceName ?? null,
+    label: reference?.label ?? null,
+    disconnectedAt:
+      reference?.disconnectedAt?.toISOString?.() ??
+      new Date().toISOString(),
+    activeCount: activeInstances.length,
+    connectedCount: 0,
+    lostConnection: states.every((item) => item.state === 'not_found'),
   })
 }

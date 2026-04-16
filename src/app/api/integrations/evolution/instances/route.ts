@@ -2,13 +2,7 @@
  * src/app/api/integrations/evolution/instances/route.ts
  *
  * Lista as instâncias WhatsApp da organização para a UI de Integrações.
- * Compatível com o legado:
- * - só espelha ConnectedAccount(provider='whatsapp') se a organização ainda não
- *   tiver nenhum registro em whatsapp_instances.
- *
- * IMPORTANTE:
- * - esta rota NÃO deve ressuscitar canais antigos em organizações que já estão
- *   operando com a tabela nova.
+ * Não ressuscita canais antigos quando a org já usa whatsapp_instances.
  */
 
 import { NextResponse } from 'next/server'
@@ -36,6 +30,8 @@ type InstanceStatus =
   | 'missing'
   | 'disconnected'
 
+const CONNECTION_GRACE_MS = 90_000
+
 function safeJsonParse<T>(value: string | null | undefined): T | null {
   if (!value) return null
 
@@ -44,6 +40,12 @@ function safeJsonParse<T>(value: string | null | undefined): T | null {
   } catch {
     return null
   }
+}
+
+function parseIsoDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 async function ensureLegacyWhatsappMirroredIfNeeded(organizationId: string) {
@@ -133,14 +135,28 @@ export async function GET() {
     ],
   })
 
+  const now = Date.now()
+
   const instances = await Promise.all(
     dbInstances.map(async (instance) => {
       let state = 'inactive'
+      let effectiveState = 'inactive'
       let isConnected = false
       let phoneNumber = instance.phoneNumber
       let connectedAt = instance.connectedAt
       let disconnectedAt = instance.disconnectedAt
       let lastError = instance.lastError
+
+      const parsedMetadata =
+        safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
+
+      const connectRequestedAt =
+        parseIsoDate(parsedMetadata.connectRequestedAt) ??
+        parseIsoDate(parsedMetadata.reconnectRequestedAt)
+
+      const inGraceWindow =
+        !!connectRequestedAt &&
+        now - connectRequestedAt.getTime() < CONNECTION_GRACE_MS
 
       if (instance.isActive) {
         try {
@@ -149,7 +165,13 @@ export async function GET() {
           state = 'unknown'
         }
 
-        isConnected = state === 'open'
+        effectiveState = state
+
+        if (state !== 'open' && (state === 'connecting' || inGraceWindow)) {
+          effectiveState = 'connecting'
+        }
+
+        isConnected = effectiveState === 'open'
 
         if (isConnected && !phoneNumber) {
           try {
@@ -161,9 +183,6 @@ export async function GET() {
               phoneNumber = fetchedPhone
               connectedAt = connectedAt ?? new Date()
 
-              const parsedMetadata =
-                safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
-
               await prisma.whatsappInstance.update({
                 where: { id: instance.id },
                 data: {
@@ -171,6 +190,7 @@ export async function GET() {
                   connectedAt,
                   disconnectedAt: null,
                   lastError: null,
+                  status: 'open',
                   metadata: JSON.stringify({
                     ...parsedMetadata,
                     phone: fetchedPhone,
@@ -185,19 +205,21 @@ export async function GET() {
           }
         }
 
-        if (!isConnected) {
+        if (effectiveState === 'connecting') {
+          lastError = null
+        }
+
+        if (!isConnected && effectiveState !== 'connecting') {
           const nextDisconnectedAt = disconnectedAt ?? new Date()
           const nextLastError = lastError ?? 'WhatsApp desconectado. Verifique o celular.'
 
-          if (!disconnectedAt || !lastError) {
-            const parsedMetadata =
-              safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
-
+          if (!disconnectedAt || !lastError || instance.status !== effectiveState) {
             await prisma.whatsappInstance.update({
               where: { id: instance.id },
               data: {
                 disconnectedAt: nextDisconnectedAt,
                 lastError: nextLastError,
+                status: effectiveState,
                 metadata: JSON.stringify({
                   ...parsedMetadata,
                   disconnectedAt: nextDisconnectedAt.toISOString(),
@@ -210,13 +232,10 @@ export async function GET() {
           lastError = nextLastError
         }
 
-        if (isConnected && disconnectedAt) {
+        if (isConnected && (disconnectedAt || instance.status !== 'open')) {
           connectedAt = connectedAt ?? new Date()
           disconnectedAt = null
           lastError = null
-
-          const parsedMetadata =
-            safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
 
           await prisma.whatsappInstance.update({
             where: { id: instance.id },
@@ -224,6 +243,7 @@ export async function GET() {
               connectedAt,
               disconnectedAt: null,
               lastError: null,
+              status: 'open',
               metadata: JSON.stringify({
                 ...parsedMetadata,
                 connectedAt: connectedAt.toISOString(),
@@ -232,11 +252,21 @@ export async function GET() {
             },
           })
         }
+
+        if (effectiveState === 'connecting' && instance.status !== 'connecting') {
+          await prisma.whatsappInstance.update({
+            where: { id: instance.id },
+            data: {
+              status: 'connecting',
+              lastError: null,
+            },
+          })
+        }
       }
 
       const status = resolveStatus({
         isActive: instance.isActive,
-        state,
+        state: effectiveState,
       })
 
       return {

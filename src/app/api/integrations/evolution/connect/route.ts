@@ -1,17 +1,5 @@
 /**
  * src/app/api/integrations/evolution/connect/route.ts
- *
- * Conecta uma NOVA instância WhatsApp para a organização.
- *
- * Regras:
- *  1. Verifica permissão de integrações
- *  2. Verifica status do plano
- *  3. Espelha legado (connected_accounts.whatsapp) em whatsapp_instances, se existir
- *  4. Verifica limite do plano para maxWhatsappInstances ignorando canais arquivados
- *  5. Cria uma instância nova com nome único
- *  6. Configura Chatwoot automaticamente (não bloqueia em caso de falha)
- *  7. Salva em whatsapp_instances
- *  8. Atualiza connected_accounts(provider='whatsapp') como sombra compatível
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -24,8 +12,6 @@ import {
   getInstanceState,
   createInstance,
 } from '@/lib/integrations/evolutionClient'
-
-// ─── Tipos locais ──────────────────────────────────────────────────────────────
 
 type ConnectBody = {
   label?: string
@@ -40,8 +26,6 @@ type LegacyWhatsappData = {
   connectedAt?: string | null
   chatwootInboxId?: number | null
 }
-
-// ─── Helpers locais ───────────────────────────────────────────────────────────
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
   if (!value) return null
@@ -251,6 +235,7 @@ async function tryChatwootSetup(params: {
   evoUrl: string
   evoKey: string
   phoneNumber: string | null
+  inboxName: string
 }): Promise<number | null> {
   try {
     const result = await setupChatwootEvolution(params)
@@ -269,8 +254,6 @@ async function tryChatwootSetup(params: {
     return null
   }
 }
-
-// ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
@@ -304,14 +287,12 @@ export async function POST(req: NextRequest) {
 
   const accessTokenEnc = encryptToken(EVO_KEY)
 
-  // 1. Espelha eventual legado em whatsapp_instances
   await ensureLegacyWhatsappMirrored({
     organizationId,
     userId,
     evoUrl: EVO_URL,
   })
 
-  // 2. Verifica uso atual e limite do plano
   const activeCount = await prisma.whatsappInstance.count({
     where: {
       organizationId,
@@ -323,9 +304,8 @@ export async function POST(req: NextRequest) {
   const limitCheck = await checkWhatsappInstanceLimit(organizationId, activeCount)
   if (!limitCheck.allowed) return limitCheck.errorResponse!
 
-  const label = sanitizeLabel(body.label, `WhatsApp ${activeCount + 1}`)
+  const label = sanitizeLabel(body.label, `WA ${activeCount + 1}`)
 
-  // 3. Gera nome único
   let instanceName = ''
   let created = false
 
@@ -346,7 +326,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 4. Chatwoot automático
+  const connectRequestedAt = new Date().toISOString()
+
   const chatwootInboxId = await tryChatwootSetup({
     organizationId,
     orgSlug: org.slug,
@@ -354,9 +335,9 @@ export async function POST(req: NextRequest) {
     evoUrl: EVO_URL,
     evoKey: EVO_KEY,
     phoneNumber: null,
+    inboxName: label,
   })
 
-  // 5. Salva nova instância
   const whatsappInstance = await prisma.whatsappInstance.create({
     data: {
       organizationId,
@@ -374,13 +355,14 @@ export async function POST(req: NextRequest) {
         phone: null,
         connectedAt: null,
         chatwootInboxId,
+        inboxDisplayName: label,
+        connectRequestedAt,
       }),
       isActive: true,
       connectedAt: null,
     },
   })
 
-  // 6. Atualiza sombra compatível
   await syncLegacyWhatsappShadow({
     organizationId,
     userId,
