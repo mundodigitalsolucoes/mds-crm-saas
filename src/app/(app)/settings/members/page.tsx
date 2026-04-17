@@ -4,6 +4,7 @@
 
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users,
@@ -27,6 +28,7 @@ import {
   Clock,
   MessagesSquare,
   Trash2,
+  ArrowRight,
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import { useUsage } from '@/hooks/useUsage';
@@ -43,7 +45,6 @@ import type {
   UserPermissions,
   UserRole,
 } from '@/types/permissions';
-import ChatwootTeamsTab from '@/components/settings/ChatwootTeamsTab';
 
 // ============================================
 // TIPOS
@@ -59,7 +60,7 @@ interface OrgUser {
 }
 
 interface ChatwootTeam {
-  id:   number;
+  id: number;
   name: string;
 }
 
@@ -68,34 +69,32 @@ interface ChatwootTeam {
 // ============================================
 
 const ROLE_LABELS: Record<string, string> = {
-  owner:   'Proprietário',
-  admin:   'Administrador',
+  owner: 'Proprietário',
+  admin: 'Administrador',
   manager: 'Gerente',
-  user:    'Usuário',
+  user: 'Usuário',
 };
 
 const ROLE_COLORS: Record<string, string> = {
-  owner:   'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  admin:   'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  owner: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  admin: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   manager: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  user:    'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  user: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
 };
 
 const ROLE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  owner:   Crown,
-  admin:   ShieldCheck,
+  owner: Crown,
+  admin: ShieldCheck,
   manager: UserCog,
-  user:    UserIcon,
+  user: UserIcon,
 };
 
 const ROLE_HIERARCHY: Record<string, number> = {
-  user:    1,
+  user: 1,
   manager: 2,
-  admin:   3,
-  owner:   4,
+  admin: 3,
+  owner: 4,
 };
-
-type ActiveTab = 'members' | 'teams';
 
 // ============================================
 // COMPONENTE PRINCIPAL
@@ -105,43 +104,42 @@ export default function MembersPage() {
   const { role: currentRole, isAdmin, isLoading: permLoading } = usePermission();
   const { isAtLimit, isPlanInactive, formatUsage } = useUsage();
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>('members');
-  const [users, setUsers]         = useState<OrgUser[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
+  const [users, setUsers] = useState<OrgUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Modal de permissões
-  const [editingUser, setEditingUser]         = useState<OrgUser | null>(null);
+  const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
   const [editPermissions, setEditPermissions] = useState<UserPermissions | null>(null);
-  const [saving, setSaving]                   = useState(false);
-  const [saveMessage, setSaveMessage]         = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   // Modal de convite
   const [showInvite, setShowInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({
-    name:           '',
-    email:          '',
-    password:       '',
-    role:           'user' as string,
+    name: '',
+    email: '',
+    password: '',
+    role: 'user' as string,
     chatwootTeamId: undefined as number | undefined,
   });
-  const [inviting, setInviting]           = useState(false);
+  const [inviting, setInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [showPassword, setShowPassword]   = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Times do Chatwoot para o select do convite
-  const [chatwootTeams, setChatwootTeams]         = useState<ChatwootTeam[]>([]);
+  const [chatwootTeams, setChatwootTeams] = useState<ChatwootTeam[]>([]);
   const [chatwootConnected, setChatwootConnected] = useState(false);
-  const [loadingTeams, setLoadingTeams]           = useState(false);
+  const [loadingTeams, setLoadingTeams] = useState(false);
 
   // Exclusão de membro
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
-  const [deleteUserMsg, setDeleteUserMsg]   = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [deleteUserMsg, setDeleteUserMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // ✅ Bloqueio de criação quando limite atingido ou plano inativo
-  const limitReached  = isAtLimit('users');
-  const planInactive  = isPlanInactive();
+  const limitReached = isAtLimit('users');
+  const planInactive = isPlanInactive();
   const createBlocked = limitReached || planInactive;
 
   const inviteTooltip = planInactive
@@ -185,7 +183,7 @@ export default function MembersPage() {
   const fetchChatwootTeams = useCallback(async () => {
     try {
       setLoadingTeams(true);
-      const res  = await fetch('/api/integrations/chatwoot/teams');
+      const res = await fetch('/api/integrations/chatwoot/teams');
       const data = await res.json();
       setChatwootConnected(data.connected ?? false);
       setChatwootTeams(data.teams ?? []);
@@ -206,7 +204,7 @@ export default function MembersPage() {
     if (targetUser.role === 'owner') return false;
     if (currentRole !== 'owner') {
       const currentPower = ROLE_HIERARCHY[currentRole || ''] || 0;
-      const targetPower  = ROLE_HIERARCHY[targetUser.role] || 0;
+      const targetPower = ROLE_HIERARCHY[targetUser.role] || 0;
       if (targetPower >= currentPower) return false;
     }
     return true;
@@ -267,9 +265,9 @@ export default function MembersPage() {
     setSaveMessage(null);
     try {
       const res = await fetch(`/api/users/${editingUser.id}/permissions`, {
-        method:  'PUT',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ permissions: editPermissions }),
+        body: JSON.stringify({ permissions: editPermissions }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
@@ -308,7 +306,7 @@ export default function MembersPage() {
 
   const isPartialEnabled = (module: PermissionModule): boolean => {
     if (!editPermissions) return false;
-    const m     = editPermissions[module];
+    const m = editPermissions[module];
     const count = [m.view, m.create, m.edit, m.delete].filter(Boolean).length;
     return count > 0 && count < 4;
   };
@@ -340,19 +338,19 @@ export default function MembersPage() {
 
     try {
       const payload: Record<string, unknown> = {
-        name:     inviteForm.name,
-        email:    inviteForm.email,
+        name: inviteForm.name,
+        email: inviteForm.email,
         password: inviteForm.password,
-        role:     inviteForm.role,
+        role: inviteForm.role,
       };
       if (inviteForm.chatwootTeamId) {
         payload.chatwootTeamId = inviteForm.chatwootTeamId;
       }
 
-      const res  = await fetch('/api/users/invite', {
-        method:  'POST',
+      const res = await fetch('/api/users/invite', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao convidar membro');
@@ -390,7 +388,7 @@ export default function MembersPage() {
     setDeletingUserId(user.id);
     setDeleteUserMsg(null);
     try {
-      const res  = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
       const data = await res.json() as { error?: string; message?: string };
       if (!res.ok) {
         setDeleteUserMsg({ type: 'error', text: data.error ?? 'Erro ao remover membro' });
@@ -442,18 +440,18 @@ export default function MembersPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* ── Header ── */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Users className="w-7 h-7 text-indigo-600" />
             Membros da Equipe
           </h1>
           <p className="text-gray-600 mt-1">
-            Gerencie os membros, permissões e times de atendimento
+            Gerencie os membros, cargos e permissões da organização
           </p>
         </div>
 
-        {isAdmin && activeTab === 'members' && (
+        {isAdmin && (
           <div className="relative group">
             <button
               onClick={handleOpenInvite}
@@ -476,160 +474,150 @@ export default function MembersPage() {
         )}
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            activeTab === 'members'
-              ? 'bg-white text-indigo-600 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Membros
-        </button>
-        <button
-          onClick={() => setActiveTab('teams')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-            activeTab === 'teams'
-              ? 'bg-white text-indigo-600 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <MessagesSquare className="w-4 h-4" />
-          Times Chatwoot
-        </button>
+      {/* ── CTA Atendimento ── */}
+      <div className="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
+              <MessagesSquare className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Operação do Atendimento separada da gestão de membros
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Times e operação do Chatwoot agora ficam na trilha própria de Atendimento.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/settings/atendimento/equipes"
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors shadow-sm"
+          >
+            Ir para Equipes do Atendimento
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
-      {/* ── Tab: Times ── */}
-      {activeTab === 'teams' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <ChatwootTeamsTab />
-        </div>
-      )}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Feedback exclusão */}
+        {deleteUserMsg && (
+          <div className={`mx-6 mt-4 flex items-center gap-2 p-3 rounded-lg text-sm ${
+            deleteUserMsg.type === 'success'
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {deleteUserMsg.type === 'success'
+              ? <Check className="w-4 h-4 flex-shrink-0" />
+              : <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            }
+            {deleteUserMsg.text}
+          </div>
+        )}
 
-      {/* ── Tab: Membros ── */}
-      {activeTab === 'members' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Membro</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
+                <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões</th>
+                <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {users.map((user) => {
+                const RoleIcon = ROLE_ICONS[user.role] || UserIcon;
+                const hasCustomPerms =
+                  user.permissions &&
+                  user.permissions !== '[]' &&
+                  user.permissions !== '{}';
 
-          {/* Feedback exclusão */}
-          {deleteUserMsg && (
-            <div className={`mx-6 mt-4 flex items-center gap-2 p-3 rounded-lg text-sm ${
-              deleteUserMsg.type === 'success'
-                ? 'bg-green-50 text-green-700 border border-green-200'
-                : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
-              {deleteUserMsg.type === 'success'
-                ? <Check className="w-4 h-4 flex-shrink-0" />
-                : <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              }
-              {deleteUserMsg.text}
-            </div>
-          )}
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Membro</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cargo</th>
-                  <th className="text-left px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Permissões</th>
-                  <th className="text-right px-6 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {users.map((user) => {
-                  const RoleIcon       = ROLE_ICONS[user.role] || UserIcon;
-                  const hasCustomPerms =
-                    user.permissions &&
-                    user.permissions !== '[]' &&
-                    user.permissions !== '{}';
-
-                  return (
-                    <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
-                      {/* Membro */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-indigo-600 font-semibold text-sm">
-                              {user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-gray-900 truncate">{user.name}</p>
-                            <p className="text-sm text-gray-500 truncate">{user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Cargo */}
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[user.role] || ROLE_COLORS.user}`}>
-                          <RoleIcon className="w-3.5 h-3.5" />
-                          {ROLE_LABELS[user.role] || user.role}
-                        </span>
-                      </td>
-
-                      {/* Permissões */}
-                      <td className="px-6 py-4">
-                        {user.role === 'owner' ? (
-                          <span className="text-xs text-amber-600 font-medium">Acesso total</span>
-                        ) : hasCustomPerms ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium">
-                            <Shield className="w-3.5 h-3.5" />
-                            Customizado
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                    {/* Membro */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-indigo-600 font-semibold text-sm">
+                            {user.name.charAt(0).toUpperCase()}
                           </span>
-                        ) : (
-                          <span className="text-xs text-gray-500">Padrão do cargo</span>
-                        )}
-                      </td>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{user.name}</p>
+                          <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                    </td>
 
-                      {/* Ações */}
-                      <td className="px-6 py-4 text-right">
-                        {canEditUser(user) ? (
-                          <div className="inline-flex items-center gap-2">
-                            <button
-                              onClick={() => handleOpenEdit(user)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                            >
-                              <Shield className="w-4 h-4" />
-                              Permissões
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(user)}
-                              disabled={deletingUserId === user.id}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Remover membro"
-                            >
-                              {deletingUserId === user.id
-                                ? <Loader2 className="w-4 h-4 animate-spin" />
-                                : <Trash2 className="w-4 h-4" />
-                              }
-                            </button>
-                          </div>
-                        ) : user.role === 'owner' ? (
-                          <span className="text-xs text-gray-400">—</span>
-                        ) : (
-                          <span className="text-xs text-gray-400">Sem acesso</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                    {/* Cargo */}
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ROLE_COLORS[user.role] || ROLE_COLORS.user}`}>
+                        <RoleIcon className="w-3.5 h-3.5" />
+                        {ROLE_LABELS[user.role] || user.role}
+                      </span>
+                    </td>
 
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                      Nenhum membro encontrado
+                    {/* Permissões */}
+                    <td className="px-6 py-4">
+                      {user.role === 'owner' ? (
+                        <span className="text-xs text-amber-600 font-medium">Acesso total</span>
+                      ) : hasCustomPerms ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-indigo-600 font-medium">
+                          <Shield className="w-3.5 h-3.5" />
+                          Customizado
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-500">Padrão do cargo</span>
+                      )}
+                    </td>
+
+                    {/* Ações */}
+                    <td className="px-6 py-4 text-right">
+                      {canEditUser(user) ? (
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEdit(user)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                          >
+                            <Shield className="w-4 h-4" />
+                            Permissões
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={deletingUserId === user.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Remover membro"
+                          >
+                            {deletingUserId === user.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <Trash2 className="w-4 h-4" />
+                            }
+                          </button>
+                        </div>
+                      ) : user.role === 'owner' ? (
+                        <span className="text-xs text-gray-400">—</span>
+                      ) : (
+                        <span className="text-xs text-gray-400">Sem acesso</span>
+                      )}
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                    Nenhum membro encontrado
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
 
       {/* ============================================ */}
       {/* MODAL DE CONVITE                            */}
@@ -738,13 +726,13 @@ export default function MembersPage() {
                   ))}
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  {inviteForm.role === 'admin'   && 'Acesso quase total — pode gerenciar membros e configurações'}
+                  {inviteForm.role === 'admin' && 'Acesso quase total — pode gerenciar membros e configurações'}
                   {inviteForm.role === 'manager' && 'Acesso a leads, projetos, tarefas e relatórios'}
-                  {inviteForm.role === 'user'    && 'Acesso básico — visualizar e criar conteúdo'}
+                  {inviteForm.role === 'user' && 'Acesso básico — visualizar e criar conteúdo'}
                 </p>
               </div>
 
-              {/* Time Chatwoot (apenas se conectado e com times) */}
+              {/* Time Chatwoot */}
               {chatwootConnected && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -758,7 +746,7 @@ export default function MembersPage() {
                     </div>
                   ) : chatwootTeams.length === 0 ? (
                     <p className="text-sm text-gray-400 italic px-1">
-                      Nenhum time criado ainda. Crie na aba "Times Chatwoot".
+                      Nenhum time criado ainda. Use Atendimento &gt; Equipes.
                     </p>
                   ) : (
                     <select
@@ -865,7 +853,7 @@ export default function MembersPage() {
               {ALL_MODULES.map((module) => {
                 const isExpanded = expandedModules.has(module);
                 const allEnabled = isAllEnabled(module);
-                const partial    = isPartialEnabled(module);
+                const partial = isPartialEnabled(module);
 
                 return (
                   <div key={module} className="border border-gray-200 rounded-lg overflow-hidden">
