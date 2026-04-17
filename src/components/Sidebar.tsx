@@ -98,6 +98,7 @@ const marketingItems: MenuItem[] = [
 ];
 
 const settingsItems: MenuItem[] = [
+  { name: 'Atendimento', icon: MessageSquare, path: '/settings/atendimento', module: 'integrations' },
   { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
   { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
