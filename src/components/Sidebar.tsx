@@ -22,7 +22,6 @@ import {
   Menu,
   X,
   LogOut,
-  Plug,
   Shield,
   UserCog,
   CreditCard,
@@ -99,7 +98,6 @@ const marketingItems: MenuItem[] = [
 
 const settingsItems: MenuItem[] = [
   { name: 'Atendimento', icon: MessageSquare, path: '/settings/atendimento', module: 'integrations' },
-  { name: 'Integrações', icon: Plug, path: '/settings/integrations', module: 'integrations' },
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
   { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
   { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
@@ -152,7 +150,7 @@ export default function Sidebar() {
 
   const palette = useMemo(() => makePalette(), []);
 
-    useEffect(() => {
+  useEffect(() => {
     const savedState = window.localStorage.getItem('mds:sidebar:collapsed');
     const collapsed = savedState === '1';
 
