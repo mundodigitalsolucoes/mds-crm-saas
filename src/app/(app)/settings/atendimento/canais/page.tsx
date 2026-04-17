@@ -1,5 +1,5 @@
-import IntegrationsPage from '../../integrations/page'
+import AtendimentoChannelsPage from '@/components/atendimento/AtendimentoChannelsPage'
 
 export default function AtendimentoCanaisPage() {
-  return <IntegrationsPage />
+  return <AtendimentoChannelsPage />
 }
