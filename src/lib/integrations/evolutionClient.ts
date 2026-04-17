@@ -44,7 +44,6 @@ async function evoFetch<T = unknown>(
       return { ok: false, status: res.status, data: null, error: `${res.status}: ${text}` }
     }
 
-    // Algumas respostas são 204 No Content
     if (res.status === 204) {
       return { ok: true, status: 204, data: null }
     }
@@ -60,6 +59,13 @@ async function evoFetch<T = unknown>(
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
+export type EvolutionConnectionState =
+  | 'open'
+  | 'close'
+  | 'connecting'
+  | 'not_found'
+  | 'unknown'
+
 export interface EvoInstanceState {
   state: 'open' | 'close' | 'connecting' | string
 }
@@ -67,16 +73,16 @@ export interface EvoInstanceState {
 export interface EvoInstanceInfo {
   instance?: {
     instanceName?: string
-    profileName?:  string
-    wuid?:         string
-    state?:        string
+    profileName?: string
+    wuid?: string
+    state?: string
   }
 }
 
 export interface EvoQRCodeResponse {
-  base64?:    string
-  code?:      string
-  count?:     number
+  base64?: string
+  code?: string
+  count?: number
   connected?: boolean
 }
 
@@ -84,17 +90,20 @@ export interface EvoQRCodeResponse {
 
 /**
  * Verifica o estado de conexão de uma instância.
- * Retorna null se a instância não existir (404).
+ * - 404 => not_found
+ * - erro transitório => unknown
  */
 export async function getInstanceState(
   instanceName: string
-): Promise<'open' | 'close' | 'connecting' | 'not_found'> {
+): Promise<EvolutionConnectionState> {
   const res = await evoFetch<{ instance?: EvoInstanceState }>(
     `/instance/connectionState/${instanceName}`
   )
 
-  if (!res.ok || res.status === 404) return 'not_found'
-  return (res.data?.instance?.state as 'open' | 'close' | 'connecting') ?? 'close'
+  if (res.status === 404) return 'not_found'
+  if (!res.ok) return 'unknown'
+
+  return (res.data?.instance?.state as 'open' | 'close' | 'connecting') ?? 'unknown'
 }
 
 /**
@@ -115,11 +124,11 @@ export async function fetchInstanceInfo(
  */
 export async function createInstance(instanceName: string): Promise<boolean> {
   const res = await evoFetch(`/instance/create`, {
-    method:    'POST',
-    body:      JSON.stringify({
+    method: 'POST',
+    body: JSON.stringify({
       instanceName,
       integration: 'WHATSAPP-BAILEYS',
-      qrcode:      true,
+      qrcode: true,
     }),
     timeoutMs: 15_000,
   })
@@ -196,19 +205,19 @@ export async function disconnectInstance(instanceName: string): Promise<void> {
 // ─── Chatwoot Integration ─────────────────────────────────────────────────────
 
 export interface EvoChatwootConfig {
-  enabled:                 boolean
-  accountId:               number
-  token:                   string
-  url:                     string
-  signMsg:                 boolean
-  reopenConversation:      boolean
-  conversationPending:     boolean
-  mergeBrazilContacts:     boolean
-  importContacts:          boolean
-  importMessages:          boolean
+  enabled: boolean
+  accountId: number
+  token: string
+  url: string
+  signMsg: boolean
+  reopenConversation: boolean
+  conversationPending: boolean
+  mergeBrazilContacts: boolean
+  importContacts: boolean
+  importMessages: boolean
   daysLimitImportMessages: number
-  autoCreate:              boolean
-  nameInbox:               string
+  autoCreate: boolean
+  nameInbox: string
 }
 
 /**
@@ -216,11 +225,11 @@ export interface EvoChatwootConfig {
  */
 export async function setChatwootIntegration(
   instanceName: string,
-  config:        EvoChatwootConfig
+  config: EvoChatwootConfig
 ): Promise<boolean> {
   const res = await evoFetch(`/chatwoot/set/${instanceName}`, {
     method: 'POST',
-    body:   JSON.stringify(config),
+    body: JSON.stringify(config),
   })
 
   if (!res.ok) {
