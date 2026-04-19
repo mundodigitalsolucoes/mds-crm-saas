@@ -48,7 +48,7 @@ async function evoFetch<T = unknown>(
       return { ok: true, status: 204, data: null }
     }
 
-    const data = await res.json() as T
+    const data = (await res.json()) as T
     return { ok: true, status: res.status, data }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -84,6 +84,8 @@ export interface EvoQRCodeResponse {
   code?: string
   count?: number
   connected?: boolean
+  pending?: boolean
+  state?: EvolutionConnectionState
 }
 
 // ─── Instance ─────────────────────────────────────────────────────────────────
@@ -164,33 +166,88 @@ export async function restartInstance(instanceName: string): Promise<boolean> {
 }
 
 /**
- * Busca o QR Code de uma instância.
- * Inclui lógica de retry (até 5 tentativas com 2s de espera).
+ * Busca o snapshot atual do QR Code sem loop agressivo.
+ *
+ * Regras:
+ * - se já estiver open, retorna connected=true
+ * - faz no máximo 1 chamada em /instance/connect por ciclo
+ * - não embute retry aqui; retry pertence à UI/orquestração
  */
 export async function getQRCode(
   instanceName: string
 ): Promise<EvoQRCodeResponse | null> {
-  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+  const initialState = await getInstanceState(instanceName)
 
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await sleep(2_000)
-
-    const res = await evoFetch<EvoQRCodeResponse>(
-      `/instance/connect/${instanceName}`,
-      { timeoutMs: 10_000 }
-    )
-
-    if (!res.ok) {
-      console.warn(`[EvoClient] QRCode tentativa ${attempt + 1}: não pronto (${res.status})`)
-      continue
-    }
-
-    if (res.data?.base64 || res.data?.connected) {
-      return res.data
+  if (initialState === 'open') {
+    return {
+      connected: true,
+      pending: false,
+      state: 'open',
     }
   }
 
-  return null
+  if (initialState === 'not_found') {
+    return null
+  }
+
+  const res = await evoFetch<EvoQRCodeResponse>(
+    `/instance/connect/${instanceName}`,
+    { timeoutMs: 10_000 }
+  )
+
+  if (!res.ok) {
+    const fallbackState = await getInstanceState(instanceName)
+
+    if (fallbackState === 'open') {
+      return {
+        connected: true,
+        pending: false,
+        state: 'open',
+      }
+    }
+
+    return {
+      connected: false,
+      pending: true,
+      state: fallbackState === 'not_found' ? 'connecting' : fallbackState,
+    }
+  }
+
+  const data = res.data ?? {}
+
+  if (data.connected) {
+    return {
+      ...data,
+      connected: true,
+      pending: false,
+      state: 'open',
+    }
+  }
+
+  if (data.base64 || data.code) {
+    return {
+      ...data,
+      connected: false,
+      pending: true,
+      state: 'connecting',
+    }
+  }
+
+  const finalState = await getInstanceState(instanceName)
+
+  if (finalState === 'open') {
+    return {
+      connected: true,
+      pending: false,
+      state: 'open',
+    }
+  }
+
+  return {
+    connected: false,
+    pending: true,
+    state: finalState === 'not_found' ? 'connecting' : finalState,
+  }
 }
 
 /**
