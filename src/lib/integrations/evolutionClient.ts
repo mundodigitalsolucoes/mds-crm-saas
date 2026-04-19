@@ -140,19 +140,25 @@ export async function createInstance(instanceName: string): Promise<boolean> {
 /**
  * Faz logout de uma instância (mantém a instância, apenas desconecta).
  */
-export async function logoutInstance(instanceName: string): Promise<void> {
-  await evoFetch(`/instance/logout/${instanceName}`, {
+export async function logoutInstance(instanceName: string): Promise<boolean> {
+  const res = await evoFetch(`/instance/logout/${instanceName}`, {
     method: 'DELETE',
+    timeoutMs: 12_000,
   })
+
+  return res.ok || res.status === 404
 }
 
 /**
  * Deleta uma instância completamente.
  */
-export async function deleteInstance(instanceName: string): Promise<void> {
-  await evoFetch(`/instance/delete/${instanceName}`, {
+export async function deleteInstance(instanceName: string): Promise<boolean> {
+  const res = await evoFetch(`/instance/delete/${instanceName}`, {
     method: 'DELETE',
+    timeoutMs: 12_000,
   })
+
+  return res.ok || res.status === 404
 }
 
 /**
@@ -163,6 +169,10 @@ export async function restartInstance(instanceName: string): Promise<boolean> {
     method: 'PUT',
   })
   return res.ok
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -252,11 +262,39 @@ export async function getQRCode(
 
 /**
  * Desconecta completamente uma instância:
- * logout → delete (ambas silenciosas em caso de erro).
+ * logout → delete
  */
-export async function disconnectInstance(instanceName: string): Promise<void> {
-  await logoutInstance(instanceName)
-  await deleteInstance(instanceName)
+export async function disconnectInstance(instanceName: string): Promise<boolean> {
+  const logoutOk = await logoutInstance(instanceName)
+  const deleteOk = await deleteInstance(instanceName)
+
+  return logoutOk && deleteOk
+}
+
+/**
+ * Aguarda uma instância sair do estado operacional.
+ * Considera OK quando:
+ * - not_found
+ * - close
+ */
+export async function waitUntilInstanceInactive(
+  instanceName: string,
+  attempts = 5,
+  delayMs = 1200
+): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const state = await getInstanceState(instanceName)
+
+    if (state === 'not_found' || state === 'close') {
+      return true
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(delayMs)
+    }
+  }
+
+  return false
 }
 
 // ─── Chatwoot Integration ─────────────────────────────────────────────────────

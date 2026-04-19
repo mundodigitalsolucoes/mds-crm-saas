@@ -6,7 +6,9 @@ import { setupChatwootEvolution } from '@/lib/integrations/chatwoot-evo'
 import {
   createInstance,
   disconnectInstance,
+  fetchInstanceInfo,
   getInstanceState,
+  waitUntilInstanceInactive,
 } from '@/lib/integrations/evolutionClient'
 
 type LegacyWhatsappData = {
@@ -29,6 +31,14 @@ type ConnectWhatsappChannelInput = {
 }
 
 type ReconnectWhatsappChannelInput = {
+  organizationId: string
+  userId: string
+  instanceId?: string
+  evoUrl: string
+  evoKey: string
+}
+
+type FinalizeWhatsappChannelInput = {
   organizationId: string
   userId: string
   instanceId?: string
@@ -133,6 +143,29 @@ async function getOrganizationSlug(organizationId: string): Promise<string> {
   }
 
   return org.slug
+}
+
+async function resolvePhoneNumberFromEvolution(instanceName: string): Promise<string | null> {
+  try {
+    const info = await fetchInstanceInfo(instanceName)
+    const wuid = info?.instance?.wuid ?? null
+    return wuid ? (wuid.split('@')[0] ?? null) : null
+  } catch {
+    return null
+  }
+}
+
+async function ensureEvolutionInstanceCleaned(instanceName: string) {
+  const disconnected = await disconnectInstance(instanceName)
+  const inactive = await waitUntilInstanceInactive(instanceName)
+
+  if (!disconnected || !inactive) {
+    throw new ChannelLifecycleError(
+      'Falha ao limpar a instância na Evolution. Verifique a instância antes de continuar.',
+      502,
+      'EVOLUTION_CLEANUP_FAILED'
+    )
+  }
 }
 
 export async function ensureLegacyWhatsappMirrored(params: {
@@ -393,16 +426,6 @@ export async function connectWhatsappChannel(
 
   const connectRequestedAt = new Date().toISOString()
 
-  const chatwootInboxId = await tryChatwootSetup({
-    organizationId,
-    orgSlug,
-    instanceName,
-    evoUrl,
-    evoKey,
-    phoneNumber: null,
-    inboxName: label,
-  })
-
   const whatsappInstance = await prisma.whatsappInstance.create({
     data: {
       organizationId,
@@ -411,7 +434,7 @@ export async function connectWhatsappChannel(
       instanceName,
       phoneNumber: null,
       status: 'connecting',
-      chatwootInboxId,
+      chatwootInboxId: null,
       serverUrl: evoUrl,
       metadata: JSON.stringify({
         label,
@@ -419,12 +442,15 @@ export async function connectWhatsappChannel(
         serverUrl: evoUrl,
         phone: null,
         connectedAt: null,
-        chatwootInboxId,
+        chatwootInboxId: null,
         inboxDisplayName: label,
         connectRequestedAt,
+        chatwootConfiguredAt: null,
       }),
       isActive: true,
       connectedAt: null,
+      disconnectedAt: null,
+      lastError: null,
     },
   })
 
@@ -441,7 +467,7 @@ export async function connectWhatsappChannel(
     instanceId: whatsappInstance.id,
     instanceName: whatsappInstance.instanceName,
     label: whatsappInstance.label,
-    chatwootInboxId,
+    chatwootInboxId: null,
   }
 }
 
@@ -458,8 +484,6 @@ export async function reconnectWhatsappChannel(
       400
     )
   }
-
-  const orgSlug = await getOrganizationSlug(organizationId)
 
   const targetInstance = await prisma.whatsappInstance.findFirst({
     where: {
@@ -491,52 +515,44 @@ export async function reconnectWhatsappChannel(
     state = 'connecting'
   }
 
+  if (state === 'open') {
+    const finalized = await finalizeWhatsappChannel({
+      organizationId,
+      userId,
+      instanceId: targetInstance.id,
+      evoUrl,
+      evoKey,
+    })
+
+    return {
+      success: true,
+      instanceId: finalized.instanceId,
+      instanceName: finalized.instanceName,
+      label: finalized.label,
+      chatwootInboxId: finalized.chatwootInboxId,
+      alreadyConnected: true,
+    }
+  }
+
   const reconnectRequestedAt = new Date().toISOString()
-
-  const chatwootInboxId = await tryChatwootSetup({
-    organizationId,
-    orgSlug,
-    instanceName: targetInstance.instanceName,
-    evoUrl,
-    evoKey,
-    phoneNumber: targetInstance.phoneNumber ?? null,
-    inboxName: targetInstance.label ?? 'WA',
-  })
-
-  const nextChatwootInboxId =
-    chatwootInboxId ?? targetInstance.chatwootInboxId ?? null
-
-  const alreadyConnected = state === 'open'
   const previousMetadata =
     safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
-
-  const connectedAtValue = alreadyConnected
-    ? targetInstance.connectedAt ?? new Date()
-    : null
 
   const updatedInstance = await prisma.whatsappInstance.update({
     where: { id: targetInstance.id },
     data: {
       isActive: true,
-      status: alreadyConnected ? 'open' : 'connecting',
+      status: 'connecting',
       serverUrl: evoUrl,
-      chatwootInboxId: nextChatwootInboxId,
       lastError: null,
       disconnectedAt: null,
-      phoneNumber: alreadyConnected ? targetInstance.phoneNumber : null,
-      connectedAt: connectedAtValue,
       metadata: JSON.stringify({
         ...previousMetadata,
         instanceName: targetInstance.instanceName,
         serverUrl: evoUrl,
-        chatwootInboxId: nextChatwootInboxId,
         inboxDisplayName: targetInstance.label ?? 'WA',
         reconnectRequestedAt,
         disconnectedAt: null,
-        phone: alreadyConnected ? targetInstance.phoneNumber : null,
-        connectedAt: connectedAtValue
-          ? connectedAtValue.toISOString()
-          : null,
       }),
     },
   })
@@ -554,7 +570,106 @@ export async function reconnectWhatsappChannel(
     instanceName: updatedInstance.instanceName,
     label: updatedInstance.label,
     chatwootInboxId: updatedInstance.chatwootInboxId,
-    alreadyConnected,
+    alreadyConnected: false,
+  }
+}
+
+export async function finalizeWhatsappChannel(
+  input: FinalizeWhatsappChannelInput
+) {
+  const { organizationId, userId, instanceId, evoUrl, evoKey } = input
+
+  await ensureLegacyWhatsappMirrored({ organizationId, userId, evoUrl })
+
+  if (!instanceId) {
+    throw new ChannelLifecycleError(
+      'instanceId é obrigatório para finalizar a conexão.',
+      400
+    )
+  }
+
+  const targetInstance = await prisma.whatsappInstance.findFirst({
+    where: {
+      id: instanceId,
+      organizationId,
+      isActive: true,
+      NOT: { status: 'archived' },
+    },
+  })
+
+  if (!targetInstance) {
+    throw new ChannelLifecycleError(
+      'Instância WhatsApp não encontrada.',
+      404
+    )
+  }
+
+  const state = await getInstanceState(targetInstance.instanceName)
+
+  if (state !== 'open') {
+    throw new ChannelLifecycleError(
+      'WhatsApp ainda não confirmou conexão real na Evolution.',
+      409,
+      'INSTANCE_NOT_OPEN'
+    )
+  }
+
+  const orgSlug = await getOrganizationSlug(organizationId)
+  const previousMetadata =
+    safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
+
+  const phoneNumber = await resolvePhoneNumberFromEvolution(targetInstance.instanceName)
+  const chatwootInboxId = await tryChatwootSetup({
+    organizationId,
+    orgSlug,
+    instanceName: targetInstance.instanceName,
+    evoUrl,
+    evoKey,
+    phoneNumber,
+    inboxName: targetInstance.label ?? 'WA',
+  })
+
+  const connectedAt = new Date()
+
+  const updatedInstance = await prisma.whatsappInstance.update({
+    where: { id: targetInstance.id },
+    data: {
+      isActive: true,
+      status: 'open',
+      phoneNumber,
+      chatwootInboxId,
+      serverUrl: evoUrl,
+      lastError: null,
+      disconnectedAt: null,
+      connectedAt,
+      metadata: JSON.stringify({
+        ...previousMetadata,
+        instanceName: targetInstance.instanceName,
+        serverUrl: evoUrl,
+        phone: phoneNumber,
+        connectedAt: connectedAt.toISOString(),
+        disconnectedAt: null,
+        chatwootInboxId,
+        inboxDisplayName: targetInstance.label ?? 'WA',
+        chatwootConfiguredAt: new Date().toISOString(),
+      }),
+    },
+  })
+
+  await syncLegacyWhatsappShadow({
+    organizationId,
+    userId,
+    evoUrl,
+    evoKey,
+  })
+
+  return {
+    success: true,
+    instanceId: updatedInstance.id,
+    instanceName: updatedInstance.instanceName,
+    label: updatedInstance.label,
+    phoneNumber: updatedInstance.phoneNumber,
+    chatwootInboxId: updatedInstance.chatwootInboxId,
   }
 }
 
@@ -614,20 +729,13 @@ export async function disconnectWhatsappChannel(
   const previousMetadata =
     safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
 
+  await ensureEvolutionInstanceCleaned(targetInstance.instanceName)
+
   await removeChatwootInboxIfUnused({
     organizationId,
     targetInstanceId: targetInstance.id,
     chatwootInboxId: targetInstance.chatwootInboxId,
   })
-
-  try {
-    await disconnectInstance(targetInstance.instanceName)
-  } catch (err) {
-    console.warn(
-      '[ChannelLifecycle] Falha ao limpar instância na Evolution (seguindo com cleanup local):',
-      err
-    )
-  }
 
   await prisma.whatsappInstance.update({
     where: { id: targetInstance.id },
@@ -686,13 +794,7 @@ export async function deleteWhatsappChannel(
     throw new ChannelLifecycleError('Canal não encontrado.', 404)
   }
 
-  let state = 'inactive'
-
-  try {
-    state = await getInstanceState(targetInstance.instanceName)
-  } catch {
-    state = 'unknown'
-  }
+  const state = await getInstanceState(targetInstance.instanceName)
 
   if (targetInstance.isActive && state === 'open') {
     throw new ChannelLifecycleError(
@@ -701,20 +803,15 @@ export async function deleteWhatsappChannel(
     )
   }
 
+  if (state === 'open' || state === 'connecting') {
+    await ensureEvolutionInstanceCleaned(targetInstance.instanceName)
+  }
+
   await removeChatwootInboxIfUnused({
     organizationId,
     targetInstanceId: targetInstance.id,
     chatwootInboxId: targetInstance.chatwootInboxId,
   })
-
-  try {
-    await disconnectInstance(targetInstance.instanceName)
-  } catch (err) {
-    console.warn(
-      '[ChannelLifecycle] Falha ao limpar instância residual (ignorado):',
-      err
-    )
-  }
 
   const previousMetadata =
     safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}

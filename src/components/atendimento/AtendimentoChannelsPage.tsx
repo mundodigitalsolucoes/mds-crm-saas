@@ -81,6 +81,15 @@ interface ReconnectResponse {
   alreadyConnected: boolean
 }
 
+interface FinalizeResponse {
+  success: boolean
+  instanceId: string
+  instanceName: string
+  label: string | null
+  phoneNumber: string | null
+  chatwootInboxId: number | null
+}
+
 interface QRCodeData {
   connected: boolean
   qrcode?: string
@@ -307,6 +316,10 @@ function QRCodeModal({
       if (data.qrcode) {
         hasQrCodeRef.current = true
         setQrData(data)
+
+        if (!expireTimerRef.current) {
+          startExpirationWindow()
+        }
       } else if (!hasQrCodeRef.current) {
         setQrData(null)
       }
@@ -348,7 +361,6 @@ function QRCodeModal({
     setFetchError(null)
     setLoading(true)
 
-    startExpirationWindow()
     void fetchQRRef.current({ showLoader: true })
   }
 
@@ -430,7 +442,7 @@ function QRCodeModal({
           {!loading && !fetchError && !expired && !qrData?.qrcode && (
             <div className="flex flex-col items-center gap-2 px-4 text-center">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-              <p className="text-sm text-slate-600">Preparando conexão com o WhatsApp...</p>
+              <p className="text-sm text-slate-600">Aguardando QR real da Evolution...</p>
             </div>
           )}
         </div>
@@ -657,6 +669,7 @@ export default function AtendimentoChannelsPage() {
   const [reconnectingId, setReconnectingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [qrInstanceId, setQrInstanceId] = useState<string | null>(null)
   const [qrInstanceName, setQrInstanceName] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState('WhatsApp')
   const [message, setMessage] = useState<MessageState>(null)
@@ -708,11 +721,12 @@ export default function AtendimentoChannelsPage() {
         { label }
       )
 
+      setQrInstanceId(response.instanceId)
       setQrInstanceName(response.instanceName)
       setQrLabel(response.label || label)
       setShowQRModal(true)
 
-      showMsg('info', 'Canal criado. Escaneie o QR Code para concluir a conexão.')
+      showMsg('info', 'Canal criado. Aguarde o QR real e escaneie para concluir.')
       await loadInstances()
     } catch (err) {
       const errorText = axios.isAxiosError(err)
@@ -741,11 +755,12 @@ export default function AtendimentoChannelsPage() {
         return
       }
 
+      setQrInstanceId(response.instanceId)
       setQrInstanceName(response.instanceName)
       setQrLabel(response.label || item.label)
       setShowQRModal(true)
 
-      showMsg('info', 'Canal preparado. Escaneie o QR Code para concluir a conexão.')
+      showMsg('info', 'Canal preparado. Aguarde o QR real para concluir a conexão.')
     } catch (err) {
       const errorText = axios.isAxiosError(err)
         ? err.response?.data?.error ?? 'Erro ao reconectar.'
@@ -812,14 +827,37 @@ export default function AtendimentoChannelsPage() {
   }
 
   const handleQRConnected = useCallback(async () => {
-    setShowQRModal(false)
-    setQrInstanceName(null)
-    setQrLabel('WhatsApp')
+    if (!qrInstanceId) {
+      showMsg('error', 'Não foi possível identificar a instância para finalizar a conexão.')
+      return
+    }
 
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-    await loadInstances()
-    showMsg('success', 'WhatsApp conectado com sucesso.')
-  }, [loadInstances])
+    try {
+      await axios.post<FinalizeResponse>('/api/integrations/evolution/finalize', {
+        instanceId: qrInstanceId,
+      })
+
+      setShowQRModal(false)
+      setQrInstanceId(null)
+      setQrInstanceName(null)
+      setQrLabel('WhatsApp')
+
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await loadInstances()
+      showMsg('success', 'WhatsApp conectado com sucesso.')
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Erro ao finalizar conexão WhatsApp.'
+        : 'Erro ao finalizar conexão WhatsApp.'
+
+      setShowQRModal(false)
+      setQrInstanceId(null)
+      setQrInstanceName(null)
+      setQrLabel('WhatsApp')
+      await loadInstances()
+      showMsg('error', errorText)
+    }
+  }, [loadInstances, qrInstanceId])
 
   const planUsage = data?.usage
 
@@ -965,6 +1003,7 @@ export default function AtendimentoChannelsPage() {
           onConnected={handleQRConnected}
           onClose={() => {
             setShowQRModal(false)
+            setQrInstanceId(null)
             setQrInstanceName(null)
             setQrLabel('WhatsApp')
             loadInstances()
