@@ -101,7 +101,7 @@ async function resolvePhoneNumber(instanceName: string): Promise<string | null> 
   try {
     const info = await fetchInstanceInfo(instanceName)
     const wuid = info?.instance?.wuid ?? null
-    return wuid ? wuid.split('@')[0] ?? null : null
+    return wuid ? (wuid.split('@')[0] ?? null) : null
   } catch {
     return null
   }
@@ -219,7 +219,12 @@ export async function readWhatsappGlobalStatus(organizationId: string) {
   })
 
   if (!activeInstances.length) {
-    return { connected: false }
+    return {
+      connected: false,
+      isConnected: false,
+      activeCount: 0,
+      connectedCount: 0,
+    }
   }
 
   const runtimes = await Promise.all(
@@ -233,6 +238,7 @@ export async function readWhatsappGlobalStatus(organizationId: string) {
     return {
       connected: true,
       isConnected: true,
+      unstable: false,
       instanceName: openState.instanceName,
       label: openState.label ?? null,
       disconnectedAt: null,
@@ -247,8 +253,8 @@ export async function readWhatsappGlobalStatus(organizationId: string) {
 
   if (connectingState) {
     return {
-      connected: true,
-      isConnected: true,
+      connected: false,
+      isConnected: false,
       unstable: true,
       instanceName: connectingState.instanceName,
       label: connectingState.label ?? null,
@@ -261,8 +267,9 @@ export async function readWhatsappGlobalStatus(organizationId: string) {
   const reference = runtimes[0]
 
   return {
-    connected: true,
+    connected: false,
     isConnected: false,
+    unstable: false,
     instanceName: reference?.instanceName ?? null,
     label: reference?.label ?? null,
     disconnectedAt:
