@@ -86,6 +86,8 @@ interface QRCodeData {
   qrcode?: string
   code?: string
   count?: number
+  pending?: boolean
+  state?: string
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -232,23 +234,69 @@ function QRCodeModal({
   const [expired, setExpired] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const expireTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const attemptRef = useRef(0)
+  const inFlightRef = useRef(false)
+  const isActiveRef = useRef(false)
+  const expiredRef = useRef(false)
+  const hasQrCodeRef = useRef(false)
+  const fetchQRRef = useRef<(options?: { showLoader?: boolean }) => Promise<void>>(async () => {})
 
   const clearTimers = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current)
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current)
     if (expireTimerRef.current) clearTimeout(expireTimerRef.current)
   }
 
-  const fetchQR = useCallback(async () => {
+  const queueNextFetch = (delay = 3000) => {
+    if (!isActiveRef.current || expiredRef.current) return
+
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current)
+    }
+
+    pollTimeoutRef.current = setTimeout(() => {
+      void fetchQRRef.current()
+    }, delay)
+  }
+
+  const startExpirationWindow = () => {
+    if (expireTimerRef.current) {
+      clearTimeout(expireTimerRef.current)
+    }
+
+    expireTimerRef.current = setTimeout(() => {
+      expiredRef.current = true
+      setExpired(true)
+
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current)
+      }
+    }, 60_000)
+  }
+
+  fetchQRRef.current = async ({ showLoader = false } = {}) => {
+    if (!isActiveRef.current || expiredRef.current || inFlightRef.current) return
+
+    inFlightRef.current = true
+
+    if (showLoader) {
+      setLoading(true)
+    }
+
     try {
+      const mode = hasQrCodeRef.current ? 'status' : 'qr'
+
       const { data } = await axios.get<QRCodeData>(
-        `/api/integrations/evolution/qrcode?instance=${instanceName}`,
-        { timeout: 15000 }
+        `/api/integrations/evolution/qrcode?instance=${encodeURIComponent(instanceName)}&mode=${mode}`,
+        { timeout: 15_000 }
       )
 
+      if (!isActiveRef.current) return
+
       attemptRef.current = 0
+      setFetchError(null)
+      setExpired(false)
 
       if (data.connected) {
         clearTimers()
@@ -257,48 +305,66 @@ function QRCodeModal({
       }
 
       if (data.qrcode) {
+        hasQrCodeRef.current = true
         setQrData(data)
-        setFetchError(null)
-        setExpired(false)
+      } else if (!hasQrCodeRef.current) {
+        setQrData(null)
       }
 
       setLoading(false)
+      queueNextFetch(hasQrCodeRef.current ? 2500 : 3500)
     } catch (err) {
+      if (!isActiveRef.current) return
+
       attemptRef.current += 1
       console.warn(`[QR] tentativa ${attemptRef.current} falhou:`, err)
 
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error
+        : null
+
       if (attemptRef.current >= 5) {
-        setFetchError('Não foi possível gerar o QR Code. Tente novamente.')
+        setFetchError(errorText ?? 'Não foi possível gerar o QR Code. Tente novamente.')
+        setLoading(false)
         clearTimers()
+        return
       }
 
       setLoading(false)
+      queueNextFetch(4000)
+    } finally {
+      inFlightRef.current = false
     }
-  }, [instanceName, onConnected])
+  }
 
-  const startTimers = useCallback(() => {
-    intervalRef.current = setInterval(fetchQR, 3000)
-    expireTimerRef.current = setTimeout(() => {
-      setExpired(true)
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }, 60000)
-  }, [fetchQR])
-
-  useEffect(() => {
-    fetchQR()
-    startTimers()
-
-    return () => clearTimers()
-  }, [fetchQR, startTimers])
-
-  const handleRefresh = () => {
+  const resetAndStart = () => {
     clearTimers()
+    attemptRef.current = 0
+    inFlightRef.current = false
+    expiredRef.current = false
+    hasQrCodeRef.current = false
+    setQrData(null)
     setExpired(false)
     setFetchError(null)
     setLoading(true)
-    attemptRef.current = 0
-    fetchQR()
-    startTimers()
+
+    startExpirationWindow()
+    void fetchQRRef.current({ showLoader: true })
+  }
+
+  useEffect(() => {
+    isActiveRef.current = true
+    resetAndStart()
+
+    return () => {
+      isActiveRef.current = false
+      clearTimers()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instanceName])
+
+  const handleRefresh = () => {
+    resetAndStart()
   }
 
   return (
@@ -318,7 +384,7 @@ function QRCodeModal({
           {loading && !fetchError && (
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
-              <span className="text-xs text-slate-500">Gerando QR...</span>
+              <span className="text-xs text-slate-500">Preparando QR...</span>
             </div>
           )}
 
@@ -359,6 +425,13 @@ function QRCodeModal({
               className="h-full w-full object-contain"
               unoptimized
             />
+          )}
+
+          {!loading && !fetchError && !expired && !qrData?.qrcode && (
+            <div className="flex flex-col items-center gap-2 px-4 text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+              <p className="text-sm text-slate-600">Preparando conexão com o WhatsApp...</p>
+            </div>
           )}
         </div>
 

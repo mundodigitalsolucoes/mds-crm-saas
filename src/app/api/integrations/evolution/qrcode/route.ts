@@ -1,84 +1,114 @@
 // src/app/api/integrations/evolution/qrcode/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import {
+  getInstanceState,
+  getQRCode,
+  type EvolutionConnectionState,
+} from '@/lib/integrations/evolutionClient'
 
-function getEvoConfig() {
-  const url = process.env.EVOLUTION_API_URL
-  const key = process.env.EVOLUTION_API_KEY
-  if (!url || !key) throw new Error('EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados.')
-  return { EVO_URL: url.replace(/\/$/, ''), EVO_KEY: key }
+function noStoreJson(body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      ...(init?.headers ?? {}),
+    },
+  })
 }
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+function normalizePendingState(state: EvolutionConnectionState) {
+  if (state === 'not_found') return 'missing'
+  if (state === 'unknown') return 'connecting'
+  return state
+}
 
 export async function GET(req: NextRequest) {
   const { allowed, errorResponse } = await checkPermission('integrations', 'view')
   if (!allowed) return errorResponse!
 
-  const { EVO_URL, EVO_KEY } = getEvoConfig()
-
   const instanceName = req.nextUrl.searchParams.get('instance')
+  const mode = req.nextUrl.searchParams.get('mode') ?? 'qr'
+
   if (!instanceName) {
-    return NextResponse.json({ error: 'instance obrigatório.' }, { status: 400 })
+    return noStoreJson({ error: 'instance obrigatório.' }, { status: 400 })
   }
 
-  // ── Tenta até 5x com intervalo de 2s (total ~10s) para aguardar QR gerado ──
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (attempt > 0) await sleep(2_000)
+  if (mode === 'status') {
+    const state = await getInstanceState(instanceName)
 
-    try {
-      const res = await fetch(`${EVO_URL}/instance/connect/${instanceName}`, {
-        headers: { apikey: EVO_KEY },
-        signal:  AbortSignal.timeout(10_000),
+    if (state === 'open') {
+      return noStoreJson({
+        connected: true,
+        pending: false,
+        state: 'open',
       })
-
-      // ✅ CORREÇÃO: !res.ok → continua tentando (instância ainda inicializando)
-      if (!res.ok) {
-        console.warn(`[EVO QRCODE] tentativa ${attempt + 1}: instância não pronta (${res.status}), aguardando...`)
-        continue
-      }
-
-      const json = await res.json() as {
-        base64?: string
-        code?:   string
-        count?:  number
-      }
-
-      // QR disponível → retorna imediatamente
-      if (json.base64) {
-        return NextResponse.json({
-          connected: false,
-          qrcode:    json.base64,
-          code:      json.code,
-          count:     json.count,
-        })
-      }
-
-      // Sem QR → verifica se já está conectado
-      const stateRes = await fetch(`${EVO_URL}/instance/connectionState/${instanceName}`, {
-        headers: { apikey: EVO_KEY },
-        signal:  AbortSignal.timeout(5_000),
-      })
-
-      if (stateRes.ok) {
-        const stateJson = await stateRes.json() as { instance?: { state?: string } }
-        if (stateJson?.instance?.state === 'open') {
-          return NextResponse.json({ connected: true })
-        }
-      }
-
-      // Sem QR e sem conexão → tenta de novo no próximo loop
-
-    } catch (err) {
-      console.error(`[EVO QRCODE] tentativa ${attempt + 1}:`, err)
-      if (attempt === 4) {
-        return NextResponse.json({ error: 'Erro ao buscar QR Code.' }, { status: 502 })
-      }
     }
+
+    if (state === 'not_found') {
+      return noStoreJson(
+        { error: 'Instância não encontrada na Evolution.' },
+        { status: 404 }
+      )
+    }
+
+    return noStoreJson({
+      connected: false,
+      pending: true,
+      state: normalizePendingState(state),
+    })
   }
 
-  return NextResponse.json(
-    { error: 'QR Code indisponível. Tente reconectar.' },
-    { status: 422 }
-  )
+  const qrData = await getQRCode(instanceName)
+
+  if (!qrData) {
+    return noStoreJson(
+      { error: 'Instância não encontrada na Evolution.' },
+      { status: 404 }
+    )
+  }
+
+  if (qrData.connected) {
+    return noStoreJson({
+      connected: true,
+      pending: false,
+      state: 'open',
+    })
+  }
+
+  if (qrData.base64) {
+    return noStoreJson({
+      connected: false,
+      pending: true,
+      state: qrData.state ?? 'connecting',
+      qrcode: qrData.base64,
+      code: qrData.code,
+      count: qrData.count,
+    })
+  }
+
+  const fallbackState = await getInstanceState(instanceName)
+
+  if (fallbackState === 'open') {
+    return noStoreJson({
+      connected: true,
+      pending: false,
+      state: 'open',
+    })
+  }
+
+  if (fallbackState === 'not_found') {
+    return noStoreJson(
+      { error: 'Instância não encontrada na Evolution.' },
+      { status: 404 }
+    )
+  }
+
+  return noStoreJson({
+    connected: false,
+    pending: true,
+    state: normalizePendingState(fallbackState),
+  })
 }
