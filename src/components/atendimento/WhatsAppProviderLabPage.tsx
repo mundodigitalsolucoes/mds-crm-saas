@@ -27,7 +27,17 @@ type ProviderItem = {
   safeToUseNow: boolean
 }
 
+type OrgScope = {
+  id: string
+  name: string
+  slug: string
+  plan: string
+  activeWhatsappInstances?: number
+  maxWhatsappInstances?: number
+}
+
 type ProvidersResponse = {
+  orgScope: OrgScope
   providers: ProviderItem[]
 }
 
@@ -41,6 +51,7 @@ type ConnectResponse = {
   chatwootInboxId?: number | null
   error?: string
   code?: string
+  orgScope?: OrgScope
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -154,6 +165,9 @@ function ProviderCard({
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
           Chatwoot-first
         </span>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+          Multi-org
+        </span>
       </div>
 
       <button
@@ -189,6 +203,7 @@ function ProviderCard({
 
 export default function WhatsAppProviderLabPage() {
   const [providers, setProviders] = useState<ProviderItem[]>([])
+  const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [message, setMessage] = useState<MessageState>(null)
@@ -200,9 +215,11 @@ export default function WhatsAppProviderLabPage() {
     try {
       const { data } = await axios.get<ProvidersResponse>('/api/atendimento/canais/providers')
       setProviders(data.providers ?? [])
+      setOrgScope(data.orgScope ?? null)
     } catch (err) {
       console.error(err)
       setProviders([])
+      setOrgScope(null)
       setMessage({
         type: 'error',
         text: 'Não foi possível carregar os providers de WhatsApp.',
@@ -252,7 +269,7 @@ export default function WhatsAppProviderLabPage() {
           type: 'success',
           text:
             provider.id === 'evolution'
-              ? `Provider ${provider.title} respondeu OK. Instância ${data.instanceName ?? '-'} criada sem tocar no fluxo atual.`
+              ? `Provider ${provider.title} respondeu OK na org ${data.orgScope?.slug ?? '-'}. Instância ${data.instanceName ?? '-'} criada sem tocar no fluxo atual.`
               : `Provider ${provider.title} respondeu OK.`,
         })
         return
@@ -307,6 +324,51 @@ export default function WhatsAppProviderLabPage() {
           </div>
         </div>
       </div>
+
+      {orgScope && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-[#2f3453]">Escopo da organização atual</h2>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Organização
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.name}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Slug
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.slug}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Plano
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.plan}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                WhatsApps ativos desta org
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                {orgScope.activeWhatsappInstances ?? 0}
+                {typeof orgScope.maxWhatsappInstances === 'number'
+                  ? ` / ${orgScope.maxWhatsappInstances <= 0 ? '∞' : orgScope.maxWhatsappInstances}`
+                  : ''}
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs text-slate-500">
+            Tudo aqui deve operar somente no contexto da organização logada.
+          </p>
+        </div>
+      )}
 
       <FeedbackBanner msg={message} onClose={() => setMessage(null)} />
 
