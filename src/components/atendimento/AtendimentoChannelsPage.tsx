@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import Image from 'next/image'
+import WhatsAppProviderSelectorModal from '@/components/atendimento/WhatsAppProviderSelectorModal'
 
 type MessageState = {
   type: 'success' | 'error' | 'info'
@@ -669,6 +670,7 @@ export default function AtendimentoChannelsPage() {
   const [reconnectingId, setReconnectingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showQRModal, setShowQRModal] = useState(false)
+  const [showProviderModal, setShowProviderModal] = useState(false)
   const [qrInstanceId, setQrInstanceId] = useState<string | null>(null)
   const [qrInstanceName, setQrInstanceName] = useState<string | null>(null)
   const [qrLabel, setQrLabel] = useState('WhatsApp')
@@ -700,7 +702,16 @@ export default function AtendimentoChannelsPage() {
     loadInstances()
   }, [loadInstances])
 
-  const handleConnect = async (suggestedLabel?: string) => {
+  const handleOpenProviderModal = () => {
+    if (!data?.usage.canAddMore) {
+      showMsg('info', 'Seu plano atingiu o limite de números de WhatsApp.')
+      return
+    }
+
+    setShowProviderModal(true)
+  }
+
+  const handleConnectEvolution = async (suggestedLabel?: string) => {
     if (!data?.usage.canAddMore) {
       showMsg('info', 'Seu plano atingiu o limite de números de WhatsApp.')
       return
@@ -726,7 +737,7 @@ export default function AtendimentoChannelsPage() {
       setQrLabel(response.label || label)
       setShowQRModal(true)
 
-      showMsg('info', 'Canal criado. Aguarde o QR real e escaneie para concluir.')
+      showMsg('info', 'Canal Evolution criado. Aguarde o QR real e escaneie para concluir.')
       await loadInstances()
     } catch (err) {
       const errorText = axios.isAxiosError(err)
@@ -888,7 +899,7 @@ export default function AtendimentoChannelsPage() {
               />
 
               <button
-                onClick={() => handleConnect()}
+                onClick={handleOpenProviderModal}
                 disabled={connectLoading || loading || !planUsage.canAddMore}
                 className={cn(
                   'inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors',
@@ -971,12 +982,11 @@ export default function AtendimentoChannelsPage() {
             </h2>
 
             <p className="mt-2 max-w-md text-sm text-slate-600">
-              Clique em adicionar canal para criar uma nova instância e escanear o QR Code
-              com seu celular.
+              Clique em adicionar canal para escolher o provider e iniciar a conexão do número.
             </p>
 
             <button
-              onClick={() => handleConnect()}
+              onClick={handleOpenProviderModal}
               disabled={connectLoading}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
             >
@@ -988,12 +998,24 @@ export default function AtendimentoChannelsPage() {
               ) : (
                 <>
                   <QrCode className="w-4 h-4" />
-                  Conectar canal
+                  Escolher provider
                 </>
               )}
             </button>
           </div>
         </div>
+      )}
+
+      {showProviderModal && (
+        <WhatsAppProviderSelectorModal
+          open={showProviderModal}
+          actionLoading={connectLoading}
+          onClose={() => setShowProviderModal(false)}
+          onSelectEvolution={() => {
+            void handleConnectEvolution()
+          }}
+          onShowInfo={(text) => showMsg('info', text)}
+        />
       )}
 
       {showQRModal && qrInstanceName && (
