@@ -27,6 +27,24 @@ export async function POST(req: NextRequest) {
   const organizationId = session!.user.organizationId
   const userId = session!.user.id
 
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      plan: true,
+      maxWhatsappInstances: true,
+    },
+  })
+
+  if (!organization) {
+    return NextResponse.json(
+      { error: 'Organização não encontrada.' },
+      { status: 404 }
+    )
+  }
+
   const planCheck = await checkPlanActive(organizationId)
   if (!planCheck.active) return planCheck.errorResponse!
 
@@ -69,6 +87,12 @@ export async function POST(req: NextRequest) {
       ...result,
       provider,
       providerTitle: providerDef.title,
+      orgScope: {
+        id: organization.id,
+        name: organization.name,
+        slug: organization.slug,
+        plan: organization.plan,
+      },
       usage: limitCheck.usage
         ? {
             current: activeCount + (providerDef.safeToUseNow ? 1 : 0),
@@ -83,6 +107,12 @@ export async function POST(req: NextRequest) {
           error: error.message,
           code: error.code,
           provider,
+          orgScope: {
+            id: organization.id,
+            name: organization.name,
+            slug: organization.slug,
+            plan: organization.plan,
+          },
         },
         { status: error.status }
       )
@@ -92,6 +122,12 @@ export async function POST(req: NextRequest) {
       {
         error: 'Erro ao iniciar o canal WhatsApp.',
         provider,
+        orgScope: {
+          id: organization.id,
+          name: organization.name,
+          slug: organization.slug,
+          plan: organization.plan,
+        },
       },
       { status: 502 }
     )
