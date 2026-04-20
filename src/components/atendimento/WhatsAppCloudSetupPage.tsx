@@ -42,6 +42,13 @@ type CloudStatusResponse = {
     lastError: string | null
     lastSyncAt: string | null
     updatedAt: string
+    validation: {
+      success: boolean
+      message: string | null
+      validatedAt: string | null
+      displayPhoneNumber: string | null
+      verifiedName: string | null
+    }
   } | null
 }
 
@@ -159,6 +166,7 @@ const EMPTY_FORM: FormState = {
 export default function WhatsAppCloudSetupPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [validating, setValidating] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [message, setMessage] = useState<MessageState>(null)
   const [statusData, setStatusData] = useState<CloudStatusResponse | null>(null)
@@ -199,14 +207,22 @@ export default function WhatsAppCloudSetupPage() {
   }, [loadStatus])
 
   const canSave = useMemo(() => {
-    return (
+    return Boolean(
       form.displayName.trim() &&
-      form.appId.trim() &&
-      form.businessAccountId.trim() &&
-      form.phoneNumberId.trim() &&
-      form.verifyToken.trim()
+        form.appId.trim() &&
+        form.businessAccountId.trim() &&
+        form.phoneNumberId.trim() &&
+        form.verifyToken.trim()
     )
   }, [form])
+
+  const canValidate = useMemo(() => {
+    return Boolean(
+      statusData?.setup?.connectedAccountId &&
+        statusData?.setup?.hasAccessToken &&
+        statusData.configured
+    )
+  }, [statusData])
 
   const updateField = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setForm((current) => ({
@@ -250,6 +266,42 @@ export default function WhatsAppCloudSetupPage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleValidate = async () => {
+    if (!canValidate) {
+      setMessage({
+        type: 'info',
+        text: 'Salve uma configuração completa antes de validar as credenciais.',
+      })
+      return
+    }
+
+    setValidating(true)
+
+    try {
+      await axios.post('/api/integrations/whatsapp-cloud/validate')
+
+      setMessage({
+        type: 'success',
+        text: 'Credenciais validadas com sucesso na API oficial.',
+      })
+
+      await loadStatus()
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Erro ao validar credenciais do WhatsApp Cloud API.'
+        : 'Erro ao validar credenciais do WhatsApp Cloud API.'
+
+      setMessage({
+        type: 'error',
+        text: errorText,
+      })
+
+      await loadStatus()
+    } finally {
+      setValidating(false)
     }
   }
 
@@ -457,6 +509,21 @@ export default function WhatsAppCloudSetupPage() {
               </button>
 
               <button
+                onClick={handleValidate}
+                disabled={!canValidate || validating}
+                className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                {validating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Validando...
+                  </>
+                ) : (
+                  'Validar credenciais'
+                )}
+              </button>
+
+              <button
                 onClick={handleRemove}
                 disabled={removing || statusData?.status === 'disconnected'}
                 className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
@@ -476,7 +543,7 @@ export default function WhatsAppCloudSetupPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold text-[#2f3453]">Estado atual</h2>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Status
@@ -503,7 +570,54 @@ export default function WhatsAppCloudSetupPage() {
                   {formatDateTime(statusData?.setup?.updatedAt ?? null)}
                 </p>
               </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Validação
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {statusData?.setup?.validation?.success ? 'ok' : 'pendente'}
+                </p>
+              </div>
             </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Nome verificado
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {statusData?.setup?.validation?.verifiedName ?? '—'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Número retornado
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {statusData?.setup?.validation?.displayPhoneNumber ?? '—'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Validado em
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {formatDateTime(statusData?.setup?.validation?.validatedAt ?? null)}
+                </p>
+              </div>
+            </div>
+
+            {statusData?.setup?.validation?.message && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-[#2f3453]">Mensagem de validação</p>
+                <p className="mt-1 text-sm text-slate-700">
+                  {statusData.setup.validation.message}
+                </p>
+              </div>
+            )}
 
             {statusData?.setup?.lastError && (
               <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
