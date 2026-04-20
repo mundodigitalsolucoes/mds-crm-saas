@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     ...previousData,
     provider: 'whatsapp_cloud',
     setupMode: 'manual',
-    status: 'configured',
+    status: 'pending_validation',
     displayName: payload.displayName,
     appId: payload.appId,
     businessAccountId: payload.businessAccountId,
@@ -89,6 +89,13 @@ export async function POST(req: NextRequest) {
     configuredAt: previousData.configuredAt ?? now.toISOString(),
     updatedAt: now.toISOString(),
     disconnectedAt: null,
+    validation: {
+      success: false,
+      message: 'Configuração salva. Valide as credenciais antes de prosseguir.',
+      validatedAt: null,
+      displayPhoneNumber: null,
+      verifiedName: null,
+    },
   })
 
   const account = await prisma.connectedAccount.upsert({
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     provider: 'whatsapp_cloud',
-    status: 'configured',
+    status: 'pending_validation',
     connectedAccountId: account.id,
     orgScope: {
       organizationId,
@@ -174,6 +181,13 @@ export async function DELETE() {
         status: 'disconnected',
         disconnectedAt: now.toISOString(),
         updatedAt: now.toISOString(),
+        validation: {
+          success: false,
+          message: 'Configuração removida.',
+          validatedAt: null,
+          displayPhoneNumber: null,
+          verifiedName: null,
+        },
       }),
     },
   })

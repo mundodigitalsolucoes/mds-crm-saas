@@ -60,6 +60,7 @@ export async function GET() {
     select: {
       id: true,
       isActive: true,
+      accessTokenEnc: true,
       lastError: true,
       lastSyncAt: true,
       updatedAt: true,
@@ -81,9 +82,20 @@ export async function GET() {
     safeJsonParse<Record<string, unknown>>(account.data) ?? {}
 
   const configured = hasRequiredSetup(parsedData)
+  const validation =
+    safeJsonParse<{
+      success?: boolean
+      message?: string
+      validatedAt?: string | null
+      displayPhoneNumber?: string | null
+      verifiedName?: string | null
+    }>(JSON.stringify(parsedData.validation ?? null)) ?? null
+
+  const validationSuccess = validation?.success === true
+
   const status = !account.isActive
     ? 'disconnected'
-    : configured
+    : configured && validationSuccess
       ? 'configured'
       : 'pending_validation'
 
@@ -107,10 +119,17 @@ export async function GET() {
           : '',
       verifyToken:
         typeof parsedData.verifyToken === 'string' ? parsedData.verifyToken : '',
-      hasAccessToken: true,
+      hasAccessToken: Boolean(account.accessTokenEnc),
       lastError: account.lastError,
       lastSyncAt: account.lastSyncAt?.toISOString() ?? null,
       updatedAt: account.updatedAt.toISOString(),
+      validation: {
+        success: validation?.success === true,
+        message: validation?.message ?? null,
+        validatedAt: validation?.validatedAt ?? null,
+        displayPhoneNumber: validation?.displayPhoneNumber ?? null,
+        verifiedName: validation?.verifiedName ?? null,
+      },
     },
   })
 }
