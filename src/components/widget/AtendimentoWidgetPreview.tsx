@@ -31,7 +31,8 @@ export default function AtendimentoWidgetPreview({
         <div>
           <h3 className="text-lg font-bold text-[#2f3453]">Preview do widget</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Prévia visual isolada, sem abrir conversa real.
+            Prévia visual local. O loader real já existe nesta fase, mas esta caixa ainda é só
+            preview.
           </p>
         </div>
 
@@ -100,8 +101,8 @@ export default function AtendimentoWidgetPreview({
               </button>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                Fase 01 do widget. Esta prévia não abre conversa real, não cria inbox e não
-                substitui o Atendimento.
+                O widget real agora já pode ser carregado por snippet, mas a conversa operacional
+                continua no Atendimento.
               </div>
             </div>
           </div>

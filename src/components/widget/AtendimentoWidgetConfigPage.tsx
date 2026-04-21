@@ -159,27 +159,20 @@ export default function AtendimentoWidgetConfigPage() {
   }, [loadConfig])
 
   const snippet = useMemo(() => {
-    const escapedTitle = config.title.replace(/'/g, "\\'")
-    const escapedSubtitle = config.subtitle.replace(/'/g, "\\'")
-    const escapedButtonLabel = config.buttonLabel.replace(/'/g, "\\'")
-    const escapedOrganization = config.organizationName.replace(/'/g, "\\'")
-    const escapedCta = config.ctaLabel.replace(/'/g, "\\'")
-    const escapedUrl = config.primaryActionUrl.replace(/'/g, "\\'")
+    const slug = orgScope?.slug ?? ''
 
     return `<script>
-  window.MDSAtendimentoWidgetConfig = {
-    organizationName: '${escapedOrganization}',
-    title: '${escapedTitle}',
-    subtitle: '${escapedSubtitle}',
-    ctaLabel: '${escapedCta}',
-    buttonLabel: '${escapedButtonLabel}',
-    position: '${config.position}',
-    online: ${config.online},
-    primaryActionUrl: '${escapedUrl}'
+  window.MDSAtendimentoWidget = {
+    orgSlug: '${slug}'
   };
 </script>
 <script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
-  }, [config])
+  }, [orgScope?.slug])
+
+  const publicPreviewUrl = useMemo(() => {
+    if (!orgScope?.slug) return '—'
+    return `https://crm.mundodigitalsolucoes.com.br/api/public/widget/${orgScope.slug}`
+  }, [orgScope?.slug])
 
   const updateField = <K extends keyof WidgetConfig>(field: K, value: WidgetConfig[K]) => {
     setConfig((current) => ({
@@ -242,7 +235,7 @@ export default function AtendimentoWidgetConfigPage() {
       await navigator.clipboard.writeText(snippet)
       setMessage({
         type: 'success',
-        text: 'Snippet copiado.',
+        text: 'Snippet real do widget copiado.',
       })
     } catch {
       setMessage({
@@ -276,7 +269,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 02: configuração salva por organização, ainda sem loader real.
+                  Fase 03: loader real e rota pública de leitura, sem recriar conversa.
                 </p>
               </div>
             </div>
@@ -301,7 +294,7 @@ export default function AtendimentoWidgetConfigPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-[#2f3453]">Escopo da organização</h2>
 
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Organização
@@ -321,6 +314,15 @@ export default function AtendimentoWidgetConfigPage() {
                 Plano
               </p>
               <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.plan}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Rota pública
+              </p>
+              <p className="mt-2 break-all text-sm font-bold text-[#2f3453]">
+                {publicPreviewUrl}
+              </p>
             </div>
           </div>
         </div>
@@ -477,9 +479,9 @@ export default function AtendimentoWidgetConfigPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Snippet conceitual</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">Snippet real</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Ainda não existe loader real nesta fase.
+                  Este snippet já usa loader real e rota pública.
                 </p>
               </div>
 
@@ -496,9 +498,9 @@ export default function AtendimentoWidgetConfigPage() {
               <code>{snippet}</code>
             </pre>
 
-            <div className="mt-4 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800">
-              Este snippet serve para validar UX, texto e distribuição. A publicação real do
-              widget entra só na próxima fase.
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              O widget já pode ser carregado em site externo. Nesta fase ele distribui o contato
+              e redireciona para o Atendimento via CTA.
             </div>
           </div>
         </div>
