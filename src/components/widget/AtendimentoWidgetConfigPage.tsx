@@ -1,19 +1,22 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import axios from 'axios'
 import {
   CheckCircle,
   Copy,
   Info,
+  Loader2,
   MessageCircle,
   RefreshCw,
+  Save,
   Settings2,
   ShieldCheck,
 } from 'lucide-react'
 import AtendimentoWidgetPreview from '@/components/widget/AtendimentoWidgetPreview'
 
 type MessageState = {
-  type: 'success' | 'info'
+  type: 'success' | 'info' | 'error'
   text: string
 } | null
 
@@ -30,8 +33,38 @@ type WidgetConfig = {
   primaryActionUrl: string
 }
 
+type OrgScope = {
+  id: string
+  name: string
+  slug: string
+  plan: string
+}
+
+type WidgetConfigResponse = {
+  orgScope: OrgScope
+  config: WidgetConfig
+  defaults: WidgetConfig
+  savedAt: string
+}
+
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return '—'
+
+  try {
+    return new Date(value).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return value
+  }
 }
 
 function FeedbackBanner({
@@ -43,23 +76,30 @@ function FeedbackBanner({
 }) {
   if (!msg) return null
 
-  const isSuccess = msg.type === 'success'
+  const styles = {
+    success: {
+      wrap: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+      icon: <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />,
+    },
+    info: {
+      wrap: 'border-blue-200 bg-blue-50 text-blue-800',
+      icon: <Info className="h-4 w-4 shrink-0 text-blue-600" />,
+    },
+    error: {
+      wrap: 'border-red-200 bg-red-50 text-red-800',
+      icon: <Info className="h-4 w-4 shrink-0 text-red-600" />,
+    },
+  }
 
   return (
     <div
       className={cn(
         'flex items-start justify-between gap-3 rounded-2xl border px-4 py-3 shadow-sm',
-        isSuccess
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-          : 'border-blue-200 bg-blue-50 text-blue-800'
+        styles[msg.type].wrap
       )}
     >
       <div className="flex items-start gap-2">
-        {isSuccess ? (
-          <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
-        ) : (
-          <Info className="h-4 w-4 shrink-0 text-blue-600" />
-        )}
+        {styles[msg.type].icon}
         <span className="text-sm leading-5">{msg.text}</span>
       </div>
 
@@ -73,7 +113,7 @@ function FeedbackBanner({
   )
 }
 
-const DEFAULT_CONFIG: WidgetConfig = {
+const FALLBACK_DEFAULTS: WidgetConfig = {
   organizationName: 'Mundo Digital Soluções',
   title: 'Fale com nosso Atendimento',
   subtitle:
@@ -87,7 +127,36 @@ const DEFAULT_CONFIG: WidgetConfig = {
 
 export default function AtendimentoWidgetConfigPage() {
   const [message, setMessage] = useState<MessageState>(null)
-  const [config, setConfig] = useState<WidgetConfig>(DEFAULT_CONFIG)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
+  const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
+  const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
+
+  const loadConfig = useCallback(async () => {
+    setLoading(true)
+
+    try {
+      const { data } = await axios.get<WidgetConfigResponse>('/api/atendimento/widget')
+      setConfig(data.config)
+      setDefaults(data.defaults)
+      setOrgScope(data.orgScope)
+      setSavedAt(data.savedAt)
+    } catch (err) {
+      console.error(err)
+      setMessage({
+        type: 'error',
+        text: 'Não foi possível carregar a configuração do widget.',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadConfig()
+  }, [loadConfig])
 
   const snippet = useMemo(() => {
     const escapedTitle = config.title.replace(/'/g, "\\'")
@@ -120,11 +189,52 @@ export default function AtendimentoWidgetConfigPage() {
   }
 
   const handleReset = () => {
-    setConfig(DEFAULT_CONFIG)
+    setConfig(defaults)
     setMessage({
       type: 'info',
-      text: 'Configuração resetada para o padrão da Fase Widget 01.',
+      text: 'Preview resetado para a configuração base desta organização.',
     })
+  }
+
+  const handleReload = async () => {
+    await loadConfig()
+    setMessage({
+      type: 'info',
+      text: 'Configuração recarregada.',
+    })
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+
+    try {
+      const { data } = await axios.post<{
+        success: boolean
+        config: WidgetConfig
+        savedAt: string
+        orgScope: OrgScope
+      }>('/api/atendimento/widget', config)
+
+      setConfig(data.config)
+      setSavedAt(data.savedAt)
+      setOrgScope(data.orgScope)
+
+      setMessage({
+        type: 'success',
+        text: 'Configuração do widget salva para esta organização.',
+      })
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Não foi possível salvar a configuração do widget.'
+        : 'Não foi possível salvar a configuração do widget.'
+
+      setMessage({
+        type: 'error',
+        text: errorText,
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleCopySnippet = async () => {
@@ -142,6 +252,16 @@ export default function AtendimentoWidgetConfigPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-7xl p-6">
+        <div className="flex items-center justify-center rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -156,21 +276,55 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 01: casca visual, preview e snippet conceitual, sem tocar no motor do
-                  Atendimento.
+                  Fase 02: configuração salva por organização, ainda sem loader real.
                 </p>
               </div>
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#374b89]/30 bg-white px-3 py-2 text-xs font-medium text-[#2f3453] shadow-sm">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#374b89]" />
-            Isolado do core protegido
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#374b89]/30 bg-white px-3 py-2 text-xs font-medium text-[#2f3453] shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5 text-[#374b89]" />
+              Isolado do core protegido
+            </span>
+
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
+              Último save: {formatDateTime(savedAt)}
+            </span>
+          </div>
         </div>
       </div>
 
       <FeedbackBanner msg={message} onClose={() => setMessage(null)} />
+
+      {orgScope && (
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="text-lg font-bold text-[#2f3453]">Escopo da organização</h2>
+
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Organização
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.name}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Slug
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.slug}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Plano
+              </p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.plan}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
         <div className="space-y-6">
@@ -182,7 +336,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Configuração</h2>
                 <p className="text-sm text-slate-500">
-                  Ajuste o comportamento visual do widget.
+                  Ajuste e salve o comportamento visual do widget.
                 </p>
               </div>
             </div>
@@ -282,13 +436,41 @@ export default function AtendimentoWidgetConfigPage() {
                 </label>
               </div>
 
-              <button
-                onClick={handleReset}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Resetar preview
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f3453] disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Salvar configuração
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleReload}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Recarregar
+                </button>
+
+                <button
+                  onClick={handleReset}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Resetar preview
+                </button>
+              </div>
             </div>
           </div>
 
