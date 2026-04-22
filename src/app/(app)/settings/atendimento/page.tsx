@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock3,
+  PanelRightOpen,
 } from 'lucide-react'
 
 const cards = [
@@ -18,6 +19,14 @@ const cards = [
       'Gerencie números de WhatsApp, status de conexão e operação dos canais.',
     href: '/settings/atendimento/canais',
     icon: Smartphone,
+    status: 'ativo' as const,
+  },
+  {
+    title: 'Widget',
+    description:
+      'Crie e publique o widget nativo do Atendimento com governança pelo CRM.',
+    href: '/settings/atendimento/widget',
+    icon: PanelRightOpen,
     status: 'ativo' as const,
   },
   {
@@ -74,7 +83,7 @@ function StatusBadge({ status }: { status: 'ativo' | 'preparacao' }) {
 
 export default function AtendimentoSettingsPage() {
   return (
-    <div className="mx-auto max-w-6xl p-6 space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#374b89]/10">
@@ -87,8 +96,8 @@ export default function AtendimentoSettingsPage() {
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
               Centralize aqui a operação do Atendimento sem reinventar o Chatwoot
-              dentro do CRM. Canais, equipes e futuras áreas operacionais ficam
-              organizadas em uma trilha própria.
+              dentro do CRM. Canais, widget, equipes e futuras áreas operacionais
+              ficam organizadas em uma trilha própria.
             </p>
           </div>
         </div>
@@ -101,8 +110,10 @@ export default function AtendimentoSettingsPage() {
               Trilha oficial
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Use <strong>Canais</strong> para operação dos números e{' '}
-              <strong>Equipes e Agentes</strong> para organização dos times do atendimento.
+              Use <strong>Canais</strong> para operação dos números,{' '}
+              <strong>Widget</strong> para publicação do canal website e{' '}
+              <strong>Equipes e Agentes</strong> para organização dos times do
+              atendimento.
             </p>
           </div>
 
