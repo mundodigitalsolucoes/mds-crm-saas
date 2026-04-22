@@ -48,7 +48,10 @@ type ChatwootInboxResponse = {
   greeting_message?: string
 }
 
-const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
+const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
 
 class WidgetProvisionError extends Error {
   status: number
@@ -127,6 +130,19 @@ function readBoolean(
   return typeof value === 'boolean' ? value : fallback
 }
 
+function readRuntimeScalar(
+  raw: Record<string, unknown> | null,
+  key: string
+): string | number | null {
+  const value = raw?.[key]
+
+  if (typeof value === 'string' || typeof value === 'number') {
+    return value
+  }
+
+  return null
+}
+
 function resolveWidgetConfig(
   rawSettings: Record<string, unknown> | null,
   fallbackOrganizationName?: string
@@ -164,18 +180,22 @@ function resolveWidgetRuntime(
       : null
 
   return {
-    chatwootInboxId: runtimeRaw?.chatwootInboxId ?? null,
-    chatwootChannelId: runtimeRaw?.chatwootChannelId ?? null,
+    chatwootInboxId: readRuntimeScalar(runtimeRaw, 'chatwootInboxId'),
+    chatwootChannelId: readRuntimeScalar(runtimeRaw, 'chatwootChannelId'),
     websiteToken:
       typeof runtimeRaw?.websiteToken === 'string' ? runtimeRaw.websiteToken : '',
     webWidgetScript:
-      typeof runtimeRaw?.webWidgetScript === 'string' ? runtimeRaw.webWidgetScript : '',
+      typeof runtimeRaw?.webWidgetScript === 'string'
+        ? runtimeRaw.webWidgetScript
+        : '',
     provisionStatus:
       typeof runtimeRaw?.provisionStatus === 'string'
         ? runtimeRaw.provisionStatus
         : 'draft',
     provisionedAt:
-      typeof runtimeRaw?.provisionedAt === 'string' ? runtimeRaw.provisionedAt : '',
+      typeof runtimeRaw?.provisionedAt === 'string'
+        ? runtimeRaw.provisionedAt
+        : '',
     lastSyncAt:
       typeof runtimeRaw?.lastSyncAt === 'string' ? runtimeRaw.lastSyncAt : '',
     lastError:
@@ -272,13 +292,23 @@ async function chatwootRequest<T>(params: {
   })
 
   const text = await response.text().catch(() => '')
-  const json = text ? safeJsonParse<T & { error?: string; message?: string }>(text) : null
+  const json = text
+    ? safeJsonParse<T & { error?: string; message?: string }>(text)
+    : null
 
   if (!response.ok) {
     const detail =
-      (json && typeof json === 'object' && ('error' in json || 'message' in json)
-        ? String((json as { error?: string; message?: string }).error || (json as { error?: string; message?: string }).message || '')
-        : '') || text || `chatwoot_http_${response.status}`
+      (json &&
+      typeof json === 'object' &&
+      ('error' in json || 'message' in json)
+        ? String(
+            (json as { error?: string; message?: string }).error ||
+              (json as { error?: string; message?: string }).message ||
+              ''
+          )
+        : '') ||
+      text ||
+      `chatwoot_http_${response.status}`
 
     throw new WidgetProvisionError(
       'Falha ao provisionar inbox website no Atendimento.',
@@ -329,7 +359,10 @@ export async function POST() {
   const perm = await checkPermission('integrations', 'edit')
 
   if (!perm.allowed || !perm.session) {
-    return perm.errorResponse ?? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return (
+      perm.errorResponse ??
+      NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    )
   }
 
   const organizationId = perm.session.user.organizationId
@@ -450,10 +483,7 @@ export async function POST() {
         })
         action = 'updated'
       } catch (error) {
-        if (
-          error instanceof WidgetProvisionError &&
-          error.status === 404
-        ) {
+        if (error instanceof WidgetProvisionError && error.status === 404) {
           inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
             url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
             apiToken,
@@ -497,13 +527,16 @@ export async function POST() {
 
     const nowIso = new Date().toISOString()
 
+    const existingWidgetSettings =
+      parsedSettings.atendimentoWidget &&
+      typeof parsedSettings.atendimentoWidget === 'object'
+        ? (parsedSettings.atendimentoWidget as Record<string, unknown>)
+        : {}
+
     const nextSettings = {
       ...parsedSettings,
       atendimentoWidget: {
-        ...(parsedSettings.atendimentoWidget &&
-        typeof parsedSettings.atendimentoWidget === 'object'
-          ? parsedSettings.atendimentoWidget
-          : {}),
+        ...existingWidgetSettings,
         ...config,
         websiteToken,
         updatedAt: nowIso,
@@ -516,9 +549,7 @@ export async function POST() {
         webWidgetScript,
         provisionStatus: 'agents_pending',
         provisionedAt:
-          action === 'created'
-            ? nowIso
-            : runtime.provisionedAt || nowIso,
+          action === 'created' ? nowIso : runtime.provisionedAt || nowIso,
         lastSyncAt: nowIso,
         lastError: null,
       },
@@ -552,7 +583,8 @@ export async function POST() {
         chatwootChannelId: channelId,
         websiteToken,
         websiteUrl:
-          inboxResponse.website_url?.trim() || normalizeWebsiteUrl(config.websiteDomain),
+          inboxResponse.website_url?.trim() ||
+          normalizeWebsiteUrl(config.websiteDomain),
         webWidgetScript,
       },
       runtime: {
