@@ -3,134 +3,66 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
 const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
-const timeSchema = z
-  .string()
-  .trim()
-  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido.')
-
-const targetKeys = ['default', 'slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5'] as const
-type TargetKey = (typeof targetKeys)[number]
-
-type BusinessDay = {
-  enabled: boolean
-  start: string
-  end: string
-}
-
-type BusinessHours = Record<
-  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
-  BusinessDay
->
-
-type TargetSlots = Record<
-  TargetKey,
-  {
-    enabled: boolean
-    internalName: string
-    label: string
-    url: string
-  }
->
-
-const businessDaySchema = z.object({
-  enabled: z.boolean(),
-  start: timeSchema,
-  end: timeSchema,
-})
-
-const businessHoursSchema = z.object({
-  monday: businessDaySchema,
-  tuesday: businessDaySchema,
-  wednesday: businessDaySchema,
-  thursday: businessDaySchema,
-  friday: businessDaySchema,
-  saturday: businessDaySchema,
-  sunday: businessDaySchema,
-})
-
-const targetSlotSchema = z.object({
-  enabled: z.boolean(),
-  internalName: z.string().trim().min(1).max(80),
-  label: z.string().trim().min(1).max(80),
-  url: z.string().trim().max(300),
-})
+const domainSchema = z.string().trim().min(1).max(200)
+const localeSchema = z.string().trim().min(2).max(20)
 
 const publicWidgetConfigSchema = z.object({
   organizationName: z.string().trim().min(1).max(120),
-  title: z.string().trim().min(1).max(120),
-  subtitle: z.string().trim().min(1).max(400),
-  ctaLabel: z.string().trim().min(1).max(80),
-  online: z.boolean(),
-  position: z.enum(['right', 'left']),
-  buttonLabel: z.string().trim().min(1).max(80),
-  primaryActionUrl: z.string().trim().url().max(300),
-  primaryColor: hexColorSchema,
-  accentColor: hexColorSchema,
-  operatingMode: z.enum(['manual', 'business_hours']),
-  timezone: z.string().trim().min(1).max(80),
-  fallbackBehavior: z.enum(['none', 'redirect']),
-  fallbackLabel: z.string().trim().max(80),
-  fallbackUrl: z.string().trim().max(300),
-  businessHours: businessHoursSchema,
-  targetSlots: z.object({
-    default: targetSlotSchema,
-    slot_1: targetSlotSchema,
-    slot_2: targetSlotSchema,
-    slot_3: targetSlotSchema,
-    slot_4: targetSlotSchema,
-    slot_5: targetSlotSchema,
-  }),
-  contextRules: z
-    .array(
-      z.object({
-        context: z.string().trim().min(1).max(80),
-        targetKey: z.enum(targetKeys),
-      })
-    )
-    .max(20),
+
+  enabled: z.boolean(),
+
+  chatwootBaseUrl: z.string().trim().url().max(300),
+  websiteToken: z.string().trim().max(200),
+  websiteInboxName: z.string().trim().min(1).max(120),
+  websiteDomain: z.string().trim().min(1).max(200),
+
+  widgetColor: hexColorSchema,
+  welcomeTitle: z.string().trim().min(1).max(120),
+  welcomeTagline: z.string().trim().min(1).max(400),
+
+  position: z.enum(['left', 'right']),
+  locale: localeSchema,
+  useBrowserLanguage: z.boolean(),
+  darkMode: z.enum(['light', 'auto']),
+  launcherType: z.enum(['standard', 'expanded']),
+  launcherTitle: z.string().trim().max(80),
+
+  greetingEnabled: z.boolean(),
+  greetingMessage: z.string().trim().max(400),
+
+  publishMode: z.enum(['all', 'allowlist']),
+  allowedDomains: z.array(domainSchema).max(20),
 })
 
-const DEFAULTS = {
-  ctaLabel: 'Abrir Atendimento',
-  primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
-  targetSlots: {
-    default: {
-      enabled: true,
-      internalName: 'Destino padrão',
-      label: 'Abrir Atendimento',
-      url: 'https://crm.mundodigitalsolucoes.com.br',
-    },
-    slot_1: {
-      enabled: false,
-      internalName: 'Destino 1',
-      label: 'Abrir destino 1',
-      url: '',
-    },
-    slot_2: {
-      enabled: false,
-      internalName: 'Destino 2',
-      label: 'Abrir destino 2',
-      url: '',
-    },
-    slot_3: {
-      enabled: false,
-      internalName: 'Destino 3',
-      label: 'Abrir destino 3',
-      url: '',
-    },
-    slot_4: {
-      enabled: false,
-      internalName: 'Destino 4',
-      label: 'Abrir destino 4',
-      url: '',
-    },
-    slot_5: {
-      enabled: false,
-      internalName: 'Destino 5',
-      label: 'Abrir destino 5',
-      url: '',
-    },
-  } satisfies TargetSlots,
+type PublicWidgetConfig = z.infer<typeof publicWidgetConfigSchema>
+
+const DEFAULT_PUBLIC_WIDGET_CONFIG: PublicWidgetConfig = {
+  organizationName: 'Mundo Digital Soluções',
+
+  enabled: false,
+
+  chatwootBaseUrl: 'https://app.mundodigitalsolucoes.com.br',
+  websiteToken: '',
+  websiteInboxName: 'Website',
+  websiteDomain: 'www.exemplo.com.br',
+
+  widgetColor: '#374b89',
+  welcomeTitle: 'Fale com nosso Atendimento',
+  welcomeTagline:
+    'Tire dúvidas, peça suporte ou inicie seu atendimento pelo widget oficial.',
+
+  position: 'right',
+  locale: 'pt_BR',
+  useBrowserLanguage: true,
+  darkMode: 'auto',
+  launcherType: 'expanded',
+  launcherTitle: 'Atendimento',
+
+  greetingEnabled: false,
+  greetingMessage: 'Olá. Como podemos ajudar você hoje?',
+
+  publishMode: 'all',
+  allowedDomains: [],
 }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
@@ -149,7 +81,7 @@ function readString(
   fallback: string
 ) {
   const value = raw?.[key]
-  return typeof value === 'string' && value.trim() ? value : fallback
+  return typeof value === 'string' ? value : fallback
 }
 
 function readBoolean(
@@ -173,116 +105,132 @@ function readEnum<T extends readonly string[]>(
     : fallback
 }
 
-function normalizeBusinessHours(raw: unknown): BusinessHours {
-  const source =
-    raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+function readStringArray(raw: Record<string, unknown> | null, key: string): string[] {
+  const value = raw?.[key]
+  if (!Array.isArray(value)) return []
 
-  const defaults: BusinessHours = {
-    monday: { enabled: true, start: '08:00', end: '18:00' },
-    tuesday: { enabled: true, start: '08:00', end: '18:00' },
-    wednesday: { enabled: true, start: '08:00', end: '18:00' },
-    thursday: { enabled: true, start: '08:00', end: '18:00' },
-    friday: { enabled: true, start: '08:00', end: '18:00' },
-    saturday: { enabled: false, start: '08:00', end: '12:00' },
-    sunday: { enabled: false, start: '08:00', end: '12:00' },
-  }
-
-  const result = {} as BusinessHours
-
-  for (const day of Object.keys(defaults) as Array<keyof BusinessHours>) {
-    const defaultDay = defaults[day]
-    const rawDay =
-      source[day] && typeof source[day] === 'object'
-        ? (source[day] as Record<string, unknown>)
-        : null
-
-    result[day] = {
-      enabled:
-        typeof rawDay?.enabled === 'boolean' ? rawDay.enabled : defaultDay.enabled,
-      start:
-        typeof rawDay?.start === 'string' && timeSchema.safeParse(rawDay.start).success
-          ? rawDay.start
-          : defaultDay.start,
-      end:
-        typeof rawDay?.end === 'string' && timeSchema.safeParse(rawDay.end).success
-          ? rawDay.end
-          : defaultDay.end,
-    }
-  }
-
-  return result
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 20)
 }
 
-function normalizeTargetSlots(params: {
-  raw: unknown
-  ctaLabel: string
-  primaryActionUrl: string
-}): TargetSlots {
-  const source =
-    params.raw && typeof params.raw === 'object'
-      ? (params.raw as Record<string, unknown>)
-      : {}
+function resolvePublicWidgetConfig(
+  rawSettings: Record<string, unknown> | null,
+  fallbackOrganizationName?: string
+): PublicWidgetConfig {
+  const widgetRaw =
+    rawSettings && typeof rawSettings.atendimentoWidget === 'object'
+      ? (rawSettings.atendimentoWidget as Record<string, unknown>)
+      : null
 
-  const defaults: TargetSlots = {
-    ...DEFAULTS.targetSlots,
-    default: {
-      ...DEFAULTS.targetSlots.default,
-      label: params.ctaLabel,
-      url: params.primaryActionUrl,
-    },
+  const organizationName =
+    readString(
+      widgetRaw,
+      'organizationName',
+      fallbackOrganizationName?.trim() || DEFAULT_PUBLIC_WIDGET_CONFIG.organizationName
+    ) ||
+    fallbackOrganizationName?.trim() ||
+    DEFAULT_PUBLIC_WIDGET_CONFIG.organizationName
+
+  const merged: PublicWidgetConfig = {
+    organizationName,
+
+    enabled: readBoolean(widgetRaw, 'enabled', DEFAULT_PUBLIC_WIDGET_CONFIG.enabled),
+
+    chatwootBaseUrl: readString(
+      widgetRaw,
+      'chatwootBaseUrl',
+      DEFAULT_PUBLIC_WIDGET_CONFIG.chatwootBaseUrl
+    ),
+    websiteToken: readString(
+      widgetRaw,
+      'websiteToken',
+      DEFAULT_PUBLIC_WIDGET_CONFIG.websiteToken
+    ),
+    websiteInboxName:
+      readString(widgetRaw, 'websiteInboxName', '') ||
+      readString(widgetRaw, 'organizationName', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.websiteInboxName,
+    websiteDomain:
+      readString(widgetRaw, 'websiteDomain', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.websiteDomain,
+
+    widgetColor:
+      readString(widgetRaw, 'widgetColor', '') ||
+      readString(widgetRaw, 'primaryColor', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.widgetColor,
+
+    welcomeTitle:
+      readString(widgetRaw, 'welcomeTitle', '') ||
+      readString(widgetRaw, 'title', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.welcomeTitle,
+
+    welcomeTagline:
+      readString(widgetRaw, 'welcomeTagline', '') ||
+      readString(widgetRaw, 'subtitle', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.welcomeTagline,
+
+    position: readEnum(
+      widgetRaw,
+      'position',
+      ['left', 'right'] as const,
+      DEFAULT_PUBLIC_WIDGET_CONFIG.position
+    ),
+    locale: readString(widgetRaw, 'locale', DEFAULT_PUBLIC_WIDGET_CONFIG.locale),
+    useBrowserLanguage: readBoolean(
+      widgetRaw,
+      'useBrowserLanguage',
+      DEFAULT_PUBLIC_WIDGET_CONFIG.useBrowserLanguage
+    ),
+    darkMode: readEnum(
+      widgetRaw,
+      'darkMode',
+      ['light', 'auto'] as const,
+      DEFAULT_PUBLIC_WIDGET_CONFIG.darkMode
+    ),
+    launcherType: readEnum(
+      widgetRaw,
+      'launcherType',
+      ['standard', 'expanded'] as const,
+      DEFAULT_PUBLIC_WIDGET_CONFIG.launcherType
+    ),
+    launcherTitle:
+      readString(widgetRaw, 'launcherTitle', '') ||
+      readString(widgetRaw, 'buttonLabel', '') ||
+      DEFAULT_PUBLIC_WIDGET_CONFIG.launcherTitle,
+
+    greetingEnabled: readBoolean(
+      widgetRaw,
+      'greetingEnabled',
+      DEFAULT_PUBLIC_WIDGET_CONFIG.greetingEnabled
+    ),
+    greetingMessage: readString(
+      widgetRaw,
+      'greetingMessage',
+      DEFAULT_PUBLIC_WIDGET_CONFIG.greetingMessage
+    ),
+
+    publishMode: readEnum(
+      widgetRaw,
+      'publishMode',
+      ['all', 'allowlist'] as const,
+      DEFAULT_PUBLIC_WIDGET_CONFIG.publishMode
+    ),
+    allowedDomains: readStringArray(widgetRaw, 'allowedDomains'),
   }
 
-  const result = {} as TargetSlots
+  const parsed = publicWidgetConfigSchema.safeParse(merged)
 
-  for (const key of targetKeys) {
-    const defaultTarget = defaults[key]
-    const rawTarget =
-      source[key] && typeof source[key] === 'object'
-        ? (source[key] as Record<string, unknown>)
-        : null
-
-    result[key] = {
-      enabled:
-        typeof rawTarget?.enabled === 'boolean'
-          ? rawTarget.enabled
-          : defaultTarget.enabled,
-      internalName:
-        typeof rawTarget?.internalName === 'string' && rawTarget.internalName.trim()
-          ? rawTarget.internalName
-          : defaultTarget.internalName,
-      label:
-        typeof rawTarget?.label === 'string' && rawTarget.label.trim()
-          ? rawTarget.label
-          : defaultTarget.label,
-      url:
-        typeof rawTarget?.url === 'string'
-          ? rawTarget.url
-          : defaultTarget.url,
-    }
+  if (parsed.success) {
+    return parsed.data
   }
 
-  return result
-}
-
-function normalizeContextRules(raw: unknown) {
-  if (!Array.isArray(raw)) return []
-
-  const normalized: Array<{ context: string; targetKey: TargetKey }> = []
-
-  for (const item of raw) {
-    const parsed = z
-      .object({
-        context: z.string().trim().min(1).max(80),
-        targetKey: z.enum(targetKeys),
-      })
-      .safeParse(item)
-
-    if (!parsed.success) continue
-
-    normalized.push(parsed.data)
+  return {
+    ...DEFAULT_PUBLIC_WIDGET_CONFIG,
+    organizationName,
   }
-
-  return normalized.slice(0, 20)
 }
 
 function corsHeaders() {
@@ -334,69 +282,7 @@ export async function GET(
   const parsedSettings =
     safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
 
-  const widgetRaw =
-    parsedSettings && typeof parsedSettings.atendimentoWidget === 'object'
-      ? (parsedSettings.atendimentoWidget as Record<string, unknown>)
-      : null
-
-  const ctaLabel = readString(widgetRaw, 'ctaLabel', DEFAULTS.ctaLabel)
-  const primaryActionUrl = readString(
-    widgetRaw,
-    'primaryActionUrl',
-    DEFAULTS.primaryActionUrl
-  )
-
-  const merged = {
-    organizationName: readString(widgetRaw, 'organizationName', organization.name),
-    title: readString(widgetRaw, 'title', 'Fale com nosso Atendimento'),
-    subtitle: readString(
-      widgetRaw,
-      'subtitle',
-      'Tire dúvidas, peça suporte ou inicie seu atendimento comercial por este canal.'
-    ),
-    ctaLabel,
-    online: readBoolean(widgetRaw, 'online', true),
-    position: readEnum(widgetRaw, 'position', ['right', 'left'] as const, 'right'),
-    buttonLabel: readString(widgetRaw, 'buttonLabel', 'Atendimento'),
-    primaryActionUrl,
-    primaryColor: readString(widgetRaw, 'primaryColor', '#374b89'),
-    accentColor: readString(widgetRaw, 'accentColor', '#2f3453'),
-    operatingMode: readEnum(
-      widgetRaw,
-      'operatingMode',
-      ['manual', 'business_hours'] as const,
-      'manual'
-    ),
-    timezone: readString(widgetRaw, 'timezone', 'America/Sao_Paulo'),
-    fallbackBehavior: readEnum(
-      widgetRaw,
-      'fallbackBehavior',
-      ['none', 'redirect'] as const,
-      'none'
-    ),
-    fallbackLabel: readString(widgetRaw, 'fallbackLabel', 'Abrir opção alternativa'),
-    fallbackUrl:
-      typeof widgetRaw?.fallbackUrl === 'string' ? widgetRaw.fallbackUrl : '',
-    businessHours: normalizeBusinessHours(widgetRaw?.businessHours),
-    targetSlots: normalizeTargetSlots({
-      raw: widgetRaw?.targetSlots,
-      ctaLabel,
-      primaryActionUrl,
-    }),
-    contextRules: normalizeContextRules(widgetRaw?.contextRules),
-  }
-
-  const parsedWidget = publicWidgetConfigSchema.safeParse(merged)
-
-  if (!parsedWidget.success) {
-    return NextResponse.json(
-      { error: 'Widget não configurado para esta organização.' },
-      {
-        status: 404,
-        headers: corsHeaders(),
-      }
-    )
-  }
+  const config = resolvePublicWidgetConfig(parsedSettings, organization.name)
 
   return NextResponse.json(
     {
@@ -405,7 +291,7 @@ export async function GET(
         name: organization.name,
         slug: organization.slug,
       },
-      config: parsedWidget.data,
+      config,
       savedAt: organization.updatedAt.toISOString(),
     },
     {
