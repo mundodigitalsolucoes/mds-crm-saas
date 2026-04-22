@@ -16,12 +16,12 @@ export async function GET() {
     inlineConfig.organizationSlug ||
     '';
 
-  const pageContext = normalizeScenarioKey(
+  const pageContext = String(
     inlineConfig.pageContext ||
       inlineConfig.context ||
       inlineConfig.scenario ||
       'default'
-  );
+  ).trim();
 
   if (!orgSlug) {
     console.warn('[MDS Widget] orgSlug não informado no snippet.');
@@ -245,10 +245,8 @@ export async function GET() {
     return /^#([0-9A-Fa-f]{6})$/.test(text) ? text : fallback;
   }
 
-  function normalizeScenarioKey(value) {
-    const text = String(value || '').trim().toLowerCase();
-    const allowed = ['default', 'atendimento', 'consultoria', 'whatsapp', 'contato'];
-    return allowed.includes(text) ? text : 'default';
+  function normalizeContext(value) {
+    return String(value || '').trim().toLowerCase();
   }
 
   function toMinutes(time) {
@@ -299,22 +297,28 @@ export async function GET() {
     return map[weekday] || null;
   }
 
-  function resolveScenarioTarget(config, scenarioKey) {
-    const scenarioTargets = config.scenarioTargets || {};
-    const selected = scenarioTargets[scenarioKey] || null;
-    const defaultTarget = scenarioTargets.default || null;
+  function resolveTarget(config, context) {
+    const targetSlots = config.targetSlots || {};
+    const rules = Array.isArray(config.contextRules) ? config.contextRules : [];
+    const normalizedContext = normalizeContext(context);
 
-    if (selected && String(selected.url || '').trim()) {
+    const matchedRule = rules.find((rule) => normalizeContext(rule.context) === normalizedContext);
+    const targetKey = matchedRule?.targetKey || 'default';
+
+    const selected = targetSlots[targetKey] || null;
+    const fallback = targetSlots.default || null;
+
+    if (selected && selected.enabled && String(selected.url || '').trim()) {
       return {
         label: String(selected.label || config.ctaLabel || 'Abrir Atendimento').trim(),
-        url: String(selected.url).trim(),
+        url: String(selected.url || '').trim(),
       };
     }
 
-    if (defaultTarget && String(defaultTarget.url || '').trim()) {
+    if (fallback && String(fallback.url || '').trim()) {
       return {
-        label: String(defaultTarget.label || config.ctaLabel || 'Abrir Atendimento').trim(),
-        url: String(defaultTarget.url).trim(),
+        label: String(fallback.label || config.ctaLabel || 'Abrir Atendimento').trim(),
+        url: String(fallback.url || '').trim(),
       };
     }
 
@@ -343,13 +347,13 @@ export async function GET() {
         current.minutes <= toMinutes(day.end);
     }
 
-    const onlineTarget = resolveScenarioTarget(config, pageContext);
+    const resolvedTarget = resolveTarget(config, pageContext);
 
     if (isOnline) {
       return {
         online: true,
-        actionUrl: onlineTarget.url,
-        actionLabel: onlineTarget.label,
+        actionUrl: resolvedTarget.url,
+        actionLabel: resolvedTarget.label,
         helperText:
           'Widget carregado em modo operacional. O destino foi resolvido pelo contexto da página.',
         statusText: 'Atendimento disponível',
@@ -369,8 +373,8 @@ export async function GET() {
 
     return {
       online: false,
-      actionUrl: onlineTarget.url,
-      actionLabel: onlineTarget.label,
+      actionUrl: resolvedTarget.url,
+      actionLabel: resolvedTarget.label,
       helperText:
         'Fora do horário. Sem fallback configurado, o destino do contexto foi mantido.',
       statusText: 'Fora do horário',

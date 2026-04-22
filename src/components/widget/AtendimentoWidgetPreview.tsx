@@ -1,11 +1,11 @@
 'use client'
 
-import { MessageCircle, X, Circle } from 'lucide-react'
+import { Circle, MessageCircle, X } from 'lucide-react'
 
 type WidgetPosition = 'right' | 'left'
 type OperatingMode = 'manual' | 'business_hours'
 type FallbackBehavior = 'none' | 'redirect'
-type ScenarioKey = 'default' | 'atendimento' | 'consultoria' | 'whatsapp' | 'contato'
+type TargetKey = 'default' | 'slot_1' | 'slot_2' | 'slot_3' | 'slot_4' | 'slot_5'
 
 type BusinessDay = {
   enabled: boolean
@@ -23,12 +23,17 @@ type BusinessHours = {
   sunday: BusinessDay
 }
 
-type ScenarioTarget = {
+type TargetSlot = {
+  enabled: boolean
+  internalName: string
   label: string
   url: string
 }
 
-type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
+type ContextRule = {
+  context: string
+  targetKey: TargetKey
+}
 
 type AtendimentoWidgetPreviewProps = {
   organizationName: string
@@ -47,11 +52,14 @@ type AtendimentoWidgetPreviewProps = {
   fallbackUrl: string
   primaryActionUrl: string
   businessHours: BusinessHours
-  scenarioTargets: ScenarioTargets
-  previewContext: ScenarioKey
+  targetSlots: Record<TargetKey, TargetSlot>
+  contextRules: ContextRule[]
+  previewContext: string
 }
 
 type ResolvedTarget = {
+  targetKey: TargetKey
+  internalName: string
   label: string
   url: string
 }
@@ -62,6 +70,7 @@ type ResolvedWidgetState = {
   actionUrl: string
   helperText: string
   statusText: string
+  resolvedTargetName: string
 }
 
 const weekdayMap: Record<string, keyof BusinessHours> = {
@@ -76,6 +85,10 @@ const weekdayMap: Record<string, keyof BusinessHours> = {
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
+}
+
+function normalizeContext(value: string) {
+  return value.trim().toLowerCase()
 }
 
 function toMinutes(time: string) {
@@ -117,32 +130,46 @@ function isBusinessOpen({
   }
 }
 
-function resolveScenarioTarget(params: {
-  scenarioTargets: ScenarioTargets
-  scenarioKey: ScenarioKey
-  fallbackLabel: string
-  fallbackUrl: string
+function resolveTarget(params: {
+  targetSlots: Record<TargetKey, TargetSlot>
+  contextRules: ContextRule[]
+  context: string
+  ctaLabel: string
+  primaryActionUrl: string
 }): ResolvedTarget {
-  const selected = params.scenarioTargets[params.scenarioKey]
-  const defaultTarget = params.scenarioTargets.default
+  const normalizedContext = normalizeContext(params.context)
 
-  if (selected?.url?.trim()) {
+  const matchedRule = params.contextRules.find(
+    (rule) => normalizeContext(rule.context) === normalizedContext
+  )
+
+  const targetKey: TargetKey = matchedRule?.targetKey ?? 'default'
+  const candidate = params.targetSlots[targetKey]
+  const fallback = params.targetSlots.default
+
+  if (candidate && candidate.enabled && candidate.url.trim()) {
     return {
-      label: selected.label.trim() || params.fallbackLabel,
-      url: selected.url.trim(),
+      targetKey,
+      internalName: candidate.internalName,
+      label: candidate.label,
+      url: candidate.url,
     }
   }
 
-  if (defaultTarget?.url?.trim()) {
+  if (fallback && fallback.url.trim()) {
     return {
-      label: defaultTarget.label.trim() || params.fallbackLabel,
-      url: defaultTarget.url.trim(),
+      targetKey: 'default',
+      internalName: fallback.internalName,
+      label: fallback.label || params.ctaLabel,
+      url: fallback.url || params.primaryActionUrl,
     }
   }
 
   return {
-    label: params.fallbackLabel,
-    url: params.fallbackUrl,
+    targetKey: 'default',
+    internalName: 'Destino padrão',
+    label: params.ctaLabel,
+    url: params.primaryActionUrl,
   }
 }
 
@@ -151,13 +178,14 @@ function resolveWidgetState(params: {
   online: boolean
   timezone: string
   businessHours: BusinessHours
-  ctaLabel: string
-  primaryActionUrl: string
   fallbackBehavior: FallbackBehavior
   fallbackLabel: string
   fallbackUrl: string
-  scenarioTargets: ScenarioTargets
-  scenarioKey: ScenarioKey
+  targetSlots: Record<TargetKey, TargetSlot>
+  contextRules: ContextRule[]
+  previewContext: string
+  ctaLabel: string
+  primaryActionUrl: string
 }): ResolvedWidgetState {
   const isOnline =
     params.operatingMode === 'manual'
@@ -167,21 +195,23 @@ function resolveWidgetState(params: {
           businessHours: params.businessHours,
         })
 
-  const onlineTarget = resolveScenarioTarget({
-    scenarioTargets: params.scenarioTargets,
-    scenarioKey: params.scenarioKey,
-    fallbackLabel: params.ctaLabel,
-    fallbackUrl: params.primaryActionUrl,
+  const resolvedTarget = resolveTarget({
+    targetSlots: params.targetSlots,
+    contextRules: params.contextRules,
+    context: params.previewContext,
+    ctaLabel: params.ctaLabel,
+    primaryActionUrl: params.primaryActionUrl,
   })
 
   if (isOnline) {
     return {
       online: true,
-      actionLabel: onlineTarget.label,
-      actionUrl: onlineTarget.url,
+      actionLabel: resolvedTarget.label,
+      actionUrl: resolvedTarget.url,
       helperText:
         'Widget em modo operacional. O destino foi resolvido pelo contexto da página.',
       statusText: 'Atendimento disponível',
+      resolvedTargetName: resolvedTarget.internalName,
     }
   }
 
@@ -193,16 +223,18 @@ function resolveWidgetState(params: {
       helperText:
         'Fora do horário. O CTA foi governado para o fallback configurado.',
       statusText: 'Fora do horário',
+      resolvedTargetName: 'Fallback',
     }
   }
 
   return {
     online: false,
-    actionLabel: onlineTarget.label,
-    actionUrl: onlineTarget.url,
+    actionLabel: resolvedTarget.label,
+    actionUrl: resolvedTarget.url,
     helperText:
       'Fora do horário. Sem fallback configurado, o destino do contexto foi mantido.',
     statusText: 'Fora do horário',
+    resolvedTargetName: resolvedTarget.internalName,
   }
 }
 
@@ -212,13 +244,14 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
     online: props.online,
     timezone: props.timezone,
     businessHours: props.businessHours,
-    ctaLabel: props.ctaLabel,
-    primaryActionUrl: props.primaryActionUrl,
     fallbackBehavior: props.fallbackBehavior,
     fallbackLabel: props.fallbackLabel,
     fallbackUrl: props.fallbackUrl,
-    scenarioTargets: props.scenarioTargets,
-    scenarioKey: props.previewContext,
+    targetSlots: props.targetSlots,
+    contextRules: props.contextRules,
+    previewContext: props.previewContext,
+    ctaLabel: props.ctaLabel,
+    primaryActionUrl: props.primaryActionUrl,
   })
 
   return (
@@ -227,7 +260,7 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
         <div>
           <h3 className="text-lg font-bold text-[#2f3453]">Preview do widget</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Prévia com contexto da página, horário, fallback e governança do CTA.
+            Prévia com contexto livre por página, fallback e destino genérico por slot.
           </p>
         </div>
 
@@ -251,14 +284,18 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Contexto atual
           </p>
-          <p className="mt-2 text-sm font-semibold text-[#2f3453]">{props.previewContext}</p>
+          <p className="mt-2 text-sm font-semibold text-[#2f3453]">
+            {props.previewContext || 'default'}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            CTA resolvido
+            Slot resolvido
           </p>
-          <p className="mt-2 text-sm font-semibold text-[#2f3453]">{resolved.actionLabel}</p>
+          <p className="mt-2 text-sm font-semibold text-[#2f3453]">
+            {resolved.resolvedTargetName}
+          </p>
         </div>
       </div>
 
@@ -269,8 +306,8 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
           </p>
           <h4 className="mt-2 text-xl font-bold text-[#2f3453]">{props.organizationName}</h4>
           <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
-            Área de simulação do widget. O objetivo aqui é validar contexto, CTA,
-            fallback e destino por cenário sem tocar no motor do Atendimento.
+            Área de simulação do widget. O objetivo aqui é validar contexto livre,
+            slot de destino, fallback e CTA sem tocar no motor do Atendimento.
           </p>
         </div>
 
