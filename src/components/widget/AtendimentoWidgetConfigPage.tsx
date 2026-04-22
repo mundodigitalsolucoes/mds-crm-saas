@@ -14,6 +14,7 @@ import {
   Save,
   Settings2,
   ShieldCheck,
+  UserCheck,
   Wand2,
 } from 'lucide-react'
 
@@ -84,6 +85,21 @@ type ProvisionResponse = {
   }
   runtime: {
     provisionStatus: string
+    lastSyncAt: string
+  }
+  savedAt: string
+}
+
+type LinkPrincipalAgentResponse = {
+  success: boolean
+  alreadyLinked: boolean
+  orgScope: OrgScope
+  principalAgent: {
+    chatwootUserId: number
+  }
+  runtime: {
+    provisionStatus: string
+    principalAgentLinkedAt: string
     lastSyncAt: string
   }
   savedAt: string
@@ -241,18 +257,24 @@ export default function AtendimentoWidgetConfigPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [provisioning, setProvisioning] = useState(false)
+  const [linkingAgent, setLinkingAgent] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [domainText, setDomainText] = useState('')
-  const [lastProvisionResult, setLastProvisionResult] = useState<ProvisionResponse | null>(null)
+  const [lastProvisionResult, setLastProvisionResult] =
+    useState<ProvisionResponse | null>(null)
+  const [lastAgentResult, setLastAgentResult] =
+    useState<LinkPrincipalAgentResponse | null>(null)
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
 
     try {
-      const { data } = await axios.get<WidgetConfigResponse>('/api/atendimento/widget')
+      const { data } = await axios.get<WidgetConfigResponse>(
+        '/api/atendimento/widget'
+      )
       setConfig(data.config)
       setDefaults(data.defaults)
       setOrgScope(data.orgScope)
@@ -296,6 +318,18 @@ export default function AtendimentoWidgetConfigPage() {
     }
   }, [config, parsedDomains.length])
 
+  const operationStatus = useMemo(() => {
+    if (lastAgentResult?.runtime.provisionStatus === 'ready') {
+      return 'ready'
+    }
+
+    if (readiness.provisioned) {
+      return 'agents_pending'
+    }
+
+    return 'draft'
+  }, [lastAgentResult, readiness.provisioned])
+
   const snippet = useMemo(() => {
     return `<script>
   window.MDSAtendimentoWidget = {
@@ -305,7 +339,10 @@ export default function AtendimentoWidgetConfigPage() {
 <script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
   }, [orgScope?.slug])
 
-  const updateField = <K extends keyof WidgetConfig>(field: K, value: WidgetConfig[K]) => {
+  const updateField = <K extends keyof WidgetConfig>(
+    field: K,
+    value: WidgetConfig[K]
+  ) => {
     setConfig((current) => ({
       ...current,
       [field]: value,
@@ -319,7 +356,10 @@ export default function AtendimentoWidgetConfigPage() {
         allowedDomains: parseDomains(domainText),
       }
 
-      const { data } = await axios.post<SaveResponse>('/api/atendimento/widget', payload)
+      const { data } = await axios.post<SaveResponse>(
+        '/api/atendimento/widget',
+        payload
+      )
 
       setConfig(data.config)
       setSavedAt(data.savedAt)
@@ -362,7 +402,9 @@ export default function AtendimentoWidgetConfigPage() {
       await saveConfig(true)
     } catch (err) {
       const errorText = axios.isAxiosError(err)
-        ? err.response?.data?.error ?? 'Não foi possível salvar a configuração do widget.'
+        ? err.response?.data?.message ??
+          err.response?.data?.error ??
+          'Não foi possível salvar a configuração do widget.'
         : 'Não foi possível salvar a configuração do widget.'
 
       setMessage({
@@ -385,6 +427,7 @@ export default function AtendimentoWidgetConfigPage() {
       )
 
       setLastProvisionResult(data)
+      setLastAgentResult(null)
       await loadConfig()
 
       setMessage({
@@ -407,6 +450,39 @@ export default function AtendimentoWidgetConfigPage() {
       })
     } finally {
       setProvisioning(false)
+    }
+  }
+
+  const handleLinkPrincipalAgent = async () => {
+    setLinkingAgent(true)
+
+    try {
+      const { data } = await axios.post<LinkPrincipalAgentResponse>(
+        '/api/atendimento/widget/agents'
+      )
+
+      setLastAgentResult(data)
+      setSavedAt(data.savedAt)
+
+      setMessage({
+        type: 'success',
+        text: data.alreadyLinked
+          ? 'Agente principal já estava vinculado à inbox website.'
+          : 'Agente principal vinculado com sucesso.',
+      })
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.message ??
+          err.response?.data?.error ??
+          'Não foi possível vincular o agente principal.'
+        : 'Não foi possível vincular o agente principal.'
+
+      setMessage({
+        type: 'error',
+        text: errorText,
+      })
+    } finally {
+      setLinkingAgent(false)
     }
   }
 
@@ -472,28 +548,36 @@ export default function AtendimentoWidgetConfigPage() {
 
       {orgScope && (
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-[#2f3453]">Escopo da organização</h2>
+          <h2 className="text-lg font-bold text-[#2f3453]">
+            Escopo da organização
+          </h2>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Organização
               </p>
-              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.name}</p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                {orgScope.name}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Slug
               </p>
-              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.slug}</p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                {orgScope.slug}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Plano
               </p>
-              <p className="mt-2 text-sm font-bold text-[#2f3453]">{orgScope.plan}</p>
+              <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                {orgScope.plan}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -516,7 +600,9 @@ export default function AtendimentoWidgetConfigPage() {
                 <Settings2 className="h-5 w-5 text-slate-600" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Canal website</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">
+                  Canal website
+                </h2>
                 <p className="text-sm text-slate-500">
                   Dados do canal nativo de website do Atendimento.
                 </p>
@@ -531,7 +617,9 @@ export default function AtendimentoWidgetConfigPage() {
                   onChange={(e) => updateField('enabled', e.target.checked)}
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[#2f3453]">Widget ativo</p>
+                  <p className="text-sm font-semibold text-[#2f3453]">
+                    Widget ativo
+                  </p>
                   <p className="text-xs text-slate-500">
                     Controla a prontidão do snippet no CRM.
                   </p>
@@ -544,7 +632,9 @@ export default function AtendimentoWidgetConfigPage() {
                 </span>
                 <input
                   value={config.organizationName}
-                  onChange={(e) => updateField('organizationName', e.target.value)}
+                  onChange={(e) =>
+                    updateField('organizationName', e.target.value)
+                  }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                 />
               </label>
@@ -556,7 +646,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <input
                     value={config.chatwootBaseUrl}
-                    onChange={(e) => updateField('chatwootBaseUrl', e.target.value)}
+                    onChange={(e) =>
+                      updateField('chatwootBaseUrl', e.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                     placeholder="https://app.seudominio.com"
                   />
@@ -583,7 +675,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <input
                     value={config.websiteInboxName}
-                    onChange={(e) => updateField('websiteInboxName', e.target.value)}
+                    onChange={(e) =>
+                      updateField('websiteInboxName', e.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   />
                 </label>
@@ -594,7 +688,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <input
                     value={config.websiteDomain}
-                    onChange={(e) => updateField('websiteDomain', e.target.value)}
+                    onChange={(e) =>
+                      updateField('websiteDomain', e.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                     placeholder="www.exemplo.com.br"
                   />
@@ -604,7 +700,9 @@ export default function AtendimentoWidgetConfigPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Visual e experiência</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">
+              Visual e experiência
+            </h2>
 
             <div className="mt-4 space-y-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -616,12 +714,16 @@ export default function AtendimentoWidgetConfigPage() {
                     <input
                       type="color"
                       value={config.widgetColor}
-                      onChange={(e) => updateField('widgetColor', e.target.value)}
+                      onChange={(e) =>
+                        updateField('widgetColor', e.target.value)
+                      }
                       className="h-10 w-12 rounded border-0 bg-transparent p-0"
                     />
                     <input
                       value={config.widgetColor}
-                      onChange={(e) => updateField('widgetColor', e.target.value)}
+                      onChange={(e) =>
+                        updateField('widgetColor', e.target.value)
+                      }
                       className="w-full text-sm outline-none"
                     />
                   </div>
@@ -633,7 +735,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <select
                     value={config.position}
-                    onChange={(e) => updateField('position', e.target.value as WidgetPosition)}
+                    onChange={(e) =>
+                      updateField('position', e.target.value as WidgetPosition)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
                     <option value="right">Direita</option>
@@ -661,7 +765,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <select
                     value={config.darkMode}
-                    onChange={(e) => updateField('darkMode', e.target.value as DarkMode)}
+                    onChange={(e) =>
+                      updateField('darkMode', e.target.value as DarkMode)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
                     <option value="light">Claro</option>
@@ -674,7 +780,9 @@ export default function AtendimentoWidgetConfigPage() {
                 <input
                   type="checkbox"
                   checked={config.useBrowserLanguage}
-                  onChange={(e) => updateField('useBrowserLanguage', e.target.checked)}
+                  onChange={(e) =>
+                    updateField('useBrowserLanguage', e.target.checked)
+                  }
                 />
                 <div>
                   <p className="text-sm font-semibold text-[#2f3453]">
@@ -694,7 +802,10 @@ export default function AtendimentoWidgetConfigPage() {
                   <select
                     value={config.launcherType}
                     onChange={(e) =>
-                      updateField('launcherType', e.target.value as LauncherType)
+                      updateField(
+                        'launcherType',
+                        e.target.value as LauncherType
+                      )
                     }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
@@ -709,7 +820,9 @@ export default function AtendimentoWidgetConfigPage() {
                   </span>
                   <input
                     value={config.launcherTitle}
-                    onChange={(e) => updateField('launcherTitle', e.target.value)}
+                    onChange={(e) =>
+                      updateField('launcherTitle', e.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                     placeholder="Atendimento"
                   />
@@ -733,7 +846,9 @@ export default function AtendimentoWidgetConfigPage() {
                 </span>
                 <textarea
                   value={config.welcomeTagline}
-                  onChange={(e) => updateField('welcomeTagline', e.target.value)}
+                  onChange={(e) =>
+                    updateField('welcomeTagline', e.target.value)
+                  }
                   className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                 />
               </label>
@@ -742,7 +857,9 @@ export default function AtendimentoWidgetConfigPage() {
                 <input
                   type="checkbox"
                   checked={config.greetingEnabled}
-                  onChange={(e) => updateField('greetingEnabled', e.target.checked)}
+                  onChange={(e) =>
+                    updateField('greetingEnabled', e.target.checked)
+                  }
                 />
                 <div>
                   <p className="text-sm font-semibold text-[#2f3453]">
@@ -760,7 +877,9 @@ export default function AtendimentoWidgetConfigPage() {
                 </span>
                 <textarea
                   value={config.greetingMessage}
-                  onChange={(e) => updateField('greetingMessage', e.target.value)}
+                  onChange={(e) =>
+                    updateField('greetingMessage', e.target.value)
+                  }
                   className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                 />
               </label>
@@ -777,7 +896,9 @@ export default function AtendimentoWidgetConfigPage() {
                 </span>
                 <select
                   value={config.publishMode}
-                  onChange={(e) => updateField('publishMode', e.target.value as PublishMode)}
+                  onChange={(e) =>
+                    updateField('publishMode', e.target.value as PublishMode)
+                  }
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                 >
                   <option value="all">Todos os domínios</option>
@@ -798,7 +919,9 @@ export default function AtendimentoWidgetConfigPage() {
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">Notas</span>
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Notas
+                </span>
                 <textarea
                   value={config.notes}
                   onChange={(e) => updateField('notes', e.target.value)}
@@ -811,7 +934,7 @@ export default function AtendimentoWidgetConfigPage() {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 onClick={handleSave}
-                disabled={saving || provisioning}
+                disabled={saving || provisioning || linkingAgent}
                 className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f3453] disabled:opacity-50"
               >
                 {saving ? (
@@ -829,7 +952,7 @@ export default function AtendimentoWidgetConfigPage() {
 
               <button
                 onClick={handleProvision}
-                disabled={saving || provisioning}
+                disabled={saving || provisioning || linkingAgent}
                 className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
               >
                 {provisioning ? (
@@ -841,6 +964,29 @@ export default function AtendimentoWidgetConfigPage() {
                   <>
                     <Wand2 className="h-4 w-4" />
                     {readiness.provisioned ? 'Atualizar widget' : 'Criar widget'}
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleLinkPrincipalAgent}
+                disabled={
+                  saving ||
+                  provisioning ||
+                  linkingAgent ||
+                  !readiness.provisioned
+                }
+                className="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-50"
+              >
+                {linkingAgent ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Vinculando agente...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="h-4 w-4" />
+                    Vincular agente principal
                   </>
                 )}
               </button>
@@ -863,15 +1009,16 @@ export default function AtendimentoWidgetConfigPage() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              O botão <strong>Criar widget</strong> salva a configuração atual e depois cria
-              ou atualiza a inbox website real no Atendimento.
+              Primeiro crie o widget. Depois vincule o agente principal.
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Prontidão do widget</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">
+              Prontidão do widget
+            </h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <StatusCard
@@ -883,6 +1030,17 @@ export default function AtendimentoWidgetConfigPage() {
                 title="Provisionamento"
                 value={readiness.provisioned ? 'Provisionado' : 'Pendente'}
                 ok={readiness.provisioned}
+              />
+              <StatusCard
+                title="Agente principal"
+                value={
+                  operationStatus === 'ready'
+                    ? 'Vinculado'
+                    : readiness.provisioned
+                    ? 'Pendente'
+                    : 'Aguardando inbox'
+                }
+                ok={operationStatus === 'ready'}
               />
               <StatusCard
                 title="Website token"
@@ -899,24 +1057,30 @@ export default function AtendimentoWidgetConfigPage() {
                 value={readiness.snippetReady ? 'Sim' : 'Não'}
                 ok={readiness.snippetReady}
               />
-              <StatusCard
-                title="Escopo de publicação"
-                value={readiness.allowlistReady ? 'OK' : 'Revisar allowlist'}
-                ok={readiness.allowlistReady}
-              />
             </div>
 
-            {lastProvisionResult && (
+            {(lastProvisionResult || lastAgentResult) && (
               <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                <p className="font-semibold">
-                  Último provisionamento: {lastProvisionResult.action === 'created' ? 'criado' : 'atualizado'}
-                </p>
-                <p className="mt-1">
-                  Inbox ID: {lastProvisionResult.inbox.chatwootInboxId ?? '—'}
-                </p>
-                <p className="mt-1">
-                  Channel ID: {lastProvisionResult.inbox.chatwootChannelId ?? '—'}
-                </p>
+                {lastProvisionResult && (
+                  <p>
+                    Provisionamento:{' '}
+                    {lastProvisionResult.action === 'created'
+                      ? 'criado'
+                      : 'atualizado'}
+                    {lastProvisionResult.inbox.chatwootInboxId
+                      ? ` | Inbox ID: ${lastProvisionResult.inbox.chatwootInboxId}`
+                      : ''}
+                  </p>
+                )}
+
+                {lastAgentResult && (
+                  <p className={lastProvisionResult ? 'mt-1' : ''}>
+                    Agente principal:{' '}
+                    {lastAgentResult.alreadyLinked
+                      ? 'já vinculado'
+                      : 'vinculado com sucesso'}
+                  </p>
+                )}
               </div>
             )}
 
@@ -924,8 +1088,8 @@ export default function AtendimentoWidgetConfigPage() {
               <div className="flex items-start gap-3">
                 <Globe className="mt-0.5 h-4 w-4 text-slate-500" />
                 <div className="text-sm text-slate-600">
-                  Esta tela governa o canal website nativo do Atendimento. Ela não substitui
-                  a inbox do Atendimento e não cria chat paralelo.
+                  Esta tela governa o canal website nativo do Atendimento. Ela
+                  não substitui a inbox do Atendimento e não cria chat paralelo.
                 </div>
               </div>
             </div>
@@ -934,9 +1098,11 @@ export default function AtendimentoWidgetConfigPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Protocolo de ativação</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">
+                  Protocolo de ativação
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Sequência correta para ativar o widget sem desviar da arquitetura.
+                  Sequência correta para ativar o widget.
                 </p>
               </div>
 
@@ -960,22 +1126,22 @@ export default function AtendimentoWidgetConfigPage() {
               <StepCard
                 number="2"
                 title="Salvar a configuração"
-                description="O CRM grava a configuração da organização antes de qualquer ação operacional."
+                description="O CRM grava a configuração da organização."
               />
               <StepCard
                 number="3"
                 title="Criar widget"
-                description="O CRM cria ou atualiza a inbox website real no Atendimento via backend."
+                description="O CRM cria ou atualiza a inbox website real no Atendimento."
               />
               <StepCard
                 number="4"
-                title="Copiar o snippet"
-                description="Depois do provisionamento, copie o snippet governado pelo CRM."
+                title="Vincular agente principal"
+                description="O CRM vincula o agente principal à inbox website criada."
               />
               <StepCard
                 number="5"
-                title="Publicar no site"
-                description="Cole o snippet no site do cliente. O loader inicializa o SDK nativo do Atendimento."
+                title="Copiar e publicar o snippet"
+                description="Cole o snippet no site do cliente para inicializar o SDK nativo do Atendimento."
               />
             </div>
           </div>
@@ -983,9 +1149,12 @@ export default function AtendimentoWidgetConfigPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Snippet nativo</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">
+                  Snippet nativo
+                </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Snippet governado pelo CRM para inicializar o widget nativo do Atendimento.
+                  Snippet governado pelo CRM para inicializar o widget nativo do
+                  Atendimento.
                 </p>
               </div>
 
@@ -1003,13 +1172,15 @@ export default function AtendimentoWidgetConfigPage() {
             </pre>
 
             <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              O loader do CRM só governa a configuração pública e inicializa o SDK nativo.
-              A conversa operacional continua no Atendimento.
+              O loader do CRM governa a configuração pública e inicializa o SDK
+              nativo. A conversa operacional continua no Atendimento.
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Resumo operacional</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">
+              Resumo operacional
+            </h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -1032,10 +1203,10 @@ export default function AtendimentoWidgetConfigPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Allowed domains
+                  Status atual
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {parsedDomains.length}
+                  {operationStatus}
                 </p>
               </div>
             </div>
