@@ -238,9 +238,112 @@ export async function GET() {
     return /^#([0-9A-Fa-f]{6})$/.test(text) ? text : fallback;
   }
 
+  function toMinutes(time) {
+    const parts = String(time || '00:00').split(':');
+    const hours = Number(parts[0] || 0);
+    const minutes = Number(parts[1] || 0);
+    return hours * 60 + minutes;
+  }
+
+  function getCurrentDayAndMinutes(timezone) {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone || 'America/Sao_Paulo',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+
+      const parts = formatter.formatToParts(new Date());
+      const weekday = (parts.find((part) => part.type === 'weekday')?.value || '').toLowerCase();
+      const hour = Number(parts.find((part) => part.type === 'hour')?.value || '0');
+      const minute = Number(parts.find((part) => part.type === 'minute')?.value || '0');
+
+      return {
+        weekday,
+        minutes: hour * 60 + minute,
+      };
+    } catch {
+      return {
+        weekday: '',
+        minutes: 0,
+      };
+    }
+  }
+
+  function resolveDayKey(weekday) {
+    const map = {
+      monday: 'monday',
+      tuesday: 'tuesday',
+      wednesday: 'wednesday',
+      thursday: 'thursday',
+      friday: 'friday',
+      saturday: 'saturday',
+      sunday: 'sunday',
+    };
+
+    return map[weekday] || null;
+  }
+
+  function resolveWidgetState(config) {
+    const operatingMode = config.operatingMode === 'business_hours' ? 'business_hours' : 'manual';
+    const fallbackBehavior = config.fallbackBehavior === 'redirect' ? 'redirect' : 'none';
+    const fallbackUrl = String(config.fallbackUrl || '').trim();
+    const fallbackLabel = String(config.fallbackLabel || '').trim();
+    const primaryActionUrl = String(config.primaryActionUrl || '').trim();
+    const ctaLabel = String(config.ctaLabel || 'Abrir Atendimento').trim();
+
+    let isOnline = Boolean(config.online);
+
+    if (operatingMode === 'business_hours') {
+      const current = getCurrentDayAndMinutes(config.timezone);
+      const dayKey = resolveDayKey(current.weekday);
+      const day = dayKey && config.businessHours ? config.businessHours[dayKey] : null;
+
+      isOnline =
+        Boolean(day && day.enabled) &&
+        current.minutes >= toMinutes(day.start) &&
+        current.minutes <= toMinutes(day.end);
+    }
+
+    if (isOnline) {
+      return {
+        online: true,
+        actionUrl: primaryActionUrl,
+        actionLabel: ctaLabel,
+        helperText:
+          'Widget carregado em modo operacional. O CTA principal aponta para o Atendimento.',
+        statusText: 'Atendimento disponível',
+      };
+    }
+
+    if (fallbackBehavior === 'redirect' && fallbackUrl) {
+      return {
+        online: false,
+        actionUrl: fallbackUrl,
+        actionLabel: fallbackLabel || 'Abrir opção alternativa',
+        helperText:
+          'Fora do horário. O CTA foi redirecionado para o fallback configurado.',
+        statusText: 'Fora do horário',
+      };
+    }
+
+    return {
+      online: false,
+      actionUrl: primaryActionUrl,
+      actionLabel: ctaLabel,
+      helperText:
+        'Fora do horário. Sem fallback configurado, o CTA principal foi mantido.',
+      statusText: 'Fora do horário',
+    };
+  }
+
   function createWidget(config) {
     const existing = document.getElementById('mds-aw-root');
     if (existing) existing.remove();
+
+    const resolved = resolveWidgetState(config);
 
     const root = document.createElement('div');
     root.id = 'mds-aw-root';
@@ -259,8 +362,8 @@ export async function GET() {
         <div>
           <div class="mds-aw-org">\${escapeHtml(config.organizationName)}</div>
           <div class="mds-aw-status">
-            <span class="mds-aw-status-dot \${config.online ? '' : 'offline'}"></span>
-            \${config.online ? 'Atendimento disponível' : 'Retorno no próximo horário'}
+            <span class="mds-aw-status-dot \${resolved.online ? '' : 'offline'}"></span>
+            \${resolved.statusText}
           </div>
         </div>
         <button class="mds-aw-close" type="button" aria-label="Fechar">×</button>
@@ -270,15 +373,15 @@ export async function GET() {
         <p class="mds-aw-subtitle">\${escapeHtml(config.subtitle)}</p>
         <a
           class="mds-aw-cta"
-          href="\${escapeHtml(config.primaryActionUrl)}"
+          href="\${escapeHtml(resolved.actionUrl)}"
           target="_blank"
           rel="noopener noreferrer"
         >
           <span class="mds-aw-icon">💬</span>
-          \${escapeHtml(config.ctaLabel)}
+          \${escapeHtml(resolved.actionLabel)}
         </a>
         <div class="mds-aw-note">
-          Widget carregado em modo de distribuição. O atendimento operacional continua no MDS CRM.
+          \${escapeHtml(resolved.helperText)}
         </div>
       </div>
     \`;
