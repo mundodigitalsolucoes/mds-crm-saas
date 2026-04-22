@@ -31,6 +31,8 @@ type WidgetConfig = {
   position: WidgetPosition
   buttonLabel: string
   primaryActionUrl: string
+  primaryColor: string
+  accentColor: string
 }
 
 type OrgScope = {
@@ -122,7 +124,9 @@ const FALLBACK_DEFAULTS: WidgetConfig = {
   online: true,
   position: 'right',
   buttonLabel: 'Atendimento',
-  primaryActionUrl: 'https://app.mundodigitalsolucoes.com.br',
+  primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
+  primaryColor: '#374b89',
+  accentColor: '#2f3453',
 }
 
 export default function AtendimentoWidgetConfigPage() {
@@ -269,7 +273,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 03: loader real e rota pública de leitura, sem recriar conversa.
+                  Fase 03.1: personalização de cor por organização.
                 </p>
               </div>
             </div>
@@ -338,7 +342,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Configuração</h2>
                 <p className="text-sm text-slate-500">
-                  Ajuste e salve o comportamento visual do widget.
+                  Ajuste, personalize cor e salve o widget.
                 </p>
               </div>
             </div>
@@ -406,7 +410,7 @@ export default function AtendimentoWidgetConfigPage() {
                   value={config.primaryActionUrl}
                   onChange={(e) => updateField('primaryActionUrl', e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  placeholder="https://app.mundodigitalsolucoes.com.br"
+                  placeholder="https://crm.mundodigitalsolucoes.com.br"
                 />
               </label>
 
@@ -435,6 +439,44 @@ export default function AtendimentoWidgetConfigPage() {
                     <option value="online">Online</option>
                     <option value="offline">Offline</option>
                   </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">Cor principal</span>
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
+                    <input
+                      type="color"
+                      value={config.primaryColor}
+                      onChange={(e) => updateField('primaryColor', e.target.value)}
+                      className="h-10 w-12 rounded border-0 bg-transparent p-0"
+                    />
+                    <input
+                      value={config.primaryColor}
+                      onChange={(e) => updateField('primaryColor', e.target.value)}
+                      className="w-full text-sm outline-none"
+                      placeholder="#374b89"
+                    />
+                  </div>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">Cor de destaque</span>
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
+                    <input
+                      type="color"
+                      value={config.accentColor}
+                      onChange={(e) => updateField('accentColor', e.target.value)}
+                      className="h-10 w-12 rounded border-0 bg-transparent p-0"
+                    />
+                    <input
+                      value={config.accentColor}
+                      onChange={(e) => updateField('accentColor', e.target.value)}
+                      className="w-full text-sm outline-none"
+                      placeholder="#2f3453"
+                    />
+                  </div>
                 </label>
               </div>
 
@@ -513,6 +555,8 @@ export default function AtendimentoWidgetConfigPage() {
           online={config.online}
           position={config.position}
           buttonLabel={config.buttonLabel}
+          primaryColor={config.primaryColor}
+          accentColor={config.accentColor}
         />
       </div>
     </div>

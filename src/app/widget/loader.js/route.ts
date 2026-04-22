@@ -42,6 +42,8 @@ export async function GET() {
     style.id = styleId;
     style.textContent = \`
       .mds-aw-root {
+        --mds-aw-primary: #374b89;
+        --mds-aw-accent: #2f3453;
         position: fixed;
         bottom: 24px;
         z-index: 2147483000;
@@ -83,7 +85,7 @@ export async function GET() {
       }
 
       .mds-aw-header {
-        background: #2f3453;
+        background: var(--mds-aw-accent);
         color: #ffffff;
         padding: 16px 18px;
         display: flex;
@@ -154,7 +156,7 @@ export async function GET() {
         align-items: center;
         justify-content: center;
         gap: 10px;
-        background: #374b89;
+        background: var(--mds-aw-primary);
         color: #ffffff;
         text-decoration: none;
         border-radius: 18px;
@@ -179,7 +181,7 @@ export async function GET() {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        background: #374b89;
+        background: var(--mds-aw-primary);
         color: #ffffff;
         border: 0;
         border-radius: 999px;
@@ -187,7 +189,7 @@ export async function GET() {
         font-size: 14px;
         font-weight: 700;
         cursor: pointer;
-        box-shadow: 0 10px 24px rgba(55, 75, 137, 0.28);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
       }
 
       .mds-aw-icon {
@@ -227,8 +229,13 @@ export async function GET() {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
+      .replace(/\\"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  function normalizeHex(value, fallback) {
+    const text = String(value || '').trim();
+    return /^#([0-9A-Fa-f]{6})$/.test(text) ? text : fallback;
   }
 
   function createWidget(config) {
@@ -238,6 +245,8 @@ export async function GET() {
     const root = document.createElement('div');
     root.id = 'mds-aw-root';
     root.className = 'mds-aw-root ' + (config.position === 'left' ? 'left' : 'right');
+    root.style.setProperty('--mds-aw-primary', normalizeHex(config.primaryColor, '#374b89'));
+    root.style.setProperty('--mds-aw-accent', normalizeHex(config.accentColor, '#2f3453'));
 
     const stack = document.createElement('div');
     stack.className = 'mds-aw-stack';

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 
+const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
+
 const widgetConfigSchema = z.object({
   organizationName: z.string().trim().min(1).max(120),
   title: z.string().trim().min(1).max(120),
@@ -12,6 +14,8 @@ const widgetConfigSchema = z.object({
   position: z.enum(['right', 'left']),
   buttonLabel: z.string().trim().min(1).max(80),
   primaryActionUrl: z.string().trim().url().max(300),
+  primaryColor: hexColorSchema,
+  accentColor: hexColorSchema,
 })
 
 type WidgetConfig = z.infer<typeof widgetConfigSchema>
@@ -25,7 +29,9 @@ const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   online: true,
   position: 'right',
   buttonLabel: 'Atendimento',
-  primaryActionUrl: 'https://app.mundodigitalsolucoes.com.br',
+  primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
+  primaryColor: '#374b89',
+  accentColor: '#2f3453',
 }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
