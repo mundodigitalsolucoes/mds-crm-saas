@@ -14,6 +14,7 @@ import {
   Save,
   Settings2,
   ShieldCheck,
+  Wand2,
 } from 'lucide-react'
 
 type MessageState = {
@@ -60,6 +61,31 @@ type WidgetConfigResponse = {
   orgScope: OrgScope
   config: WidgetConfig
   defaults: WidgetConfig
+  savedAt: string
+}
+
+type SaveResponse = {
+  success: boolean
+  config: WidgetConfig
+  savedAt: string
+  orgScope: OrgScope
+}
+
+type ProvisionResponse = {
+  success: boolean
+  action: 'created' | 'updated'
+  orgScope: OrgScope
+  inbox: {
+    chatwootInboxId: number | null
+    chatwootChannelId: number | null
+    websiteToken: string
+    websiteUrl: string
+    webWidgetScript: string
+  }
+  runtime: {
+    provisionStatus: string
+    lastSyncAt: string
+  }
   savedAt: string
 }
 
@@ -214,11 +240,13 @@ export default function AtendimentoWidgetConfigPage() {
   const [message, setMessage] = useState<MessageState>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [provisioning, setProvisioning] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [domainText, setDomainText] = useState('')
+  const [lastProvisionResult, setLastProvisionResult] = useState<ProvisionResponse | null>(null)
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
@@ -255,6 +283,7 @@ export default function AtendimentoWidgetConfigPage() {
     const snippetReady = enabled && baseUrl && token
     const allowlistReady =
       config.publishMode === 'all' ? true : parsedDomains.length > 0
+    const provisioned = token
 
     return {
       enabled,
@@ -263,60 +292,18 @@ export default function AtendimentoWidgetConfigPage() {
       domain,
       allowlistReady,
       snippetReady,
+      provisioned,
     }
   }, [config, parsedDomains.length])
 
   const snippet = useMemo(() => {
-    const baseUrl = config.chatwootBaseUrl.trim() || defaults.chatwootBaseUrl
-    const websiteToken = config.websiteToken.trim()
-    const type = config.launcherType === 'expanded' ? 'expanded_bubble' : 'standard'
-
-    const settingsLines = [
-      `position: ${JSON.stringify(config.position)}`,
-      `locale: ${JSON.stringify(config.locale)}`,
-      `useBrowserLanguage: ${config.useBrowserLanguage}`,
-      `darkMode: ${JSON.stringify(config.darkMode)}`,
-      `type: ${JSON.stringify(type)}`,
-    ]
-
-    if (config.launcherType === 'expanded' && config.launcherTitle.trim()) {
-      settingsLines.push(`launcherTitle: ${JSON.stringify(config.launcherTitle.trim())}`)
-    }
-
     return `<script>
   window.MDSAtendimentoWidget = {
     orgSlug: ${JSON.stringify(orgScope?.slug || '')}
   };
 </script>
-<script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>
-
-<!-- Referência nativa gerada pelo CRM -->
-<!-- O loader do CRM valida domínio, carrega config pública e inicializa o SDK nativo do Atendimento -->
-
-<!-- Estrutura equivalente do widget nativo -->
-<script>
-  window.chatwootSettings = {
-    ${settingsLines.join(',\n    ')}
-  };
-
-  (function(d, t) {
-    var BASE_URL = ${JSON.stringify(baseUrl)};
-    var g = d.createElement(t);
-    var s = d.getElementsByTagName(t)[0];
-    g.src = BASE_URL + "/packs/js/sdk.js";
-    g.defer = true;
-    g.async = true;
-    s.parentNode.insertBefore(g, s);
-
-    g.onload = function() {
-      window.chatwootSDK.run({
-        websiteToken: ${JSON.stringify(websiteToken)},
-        baseUrl: BASE_URL
-      });
-    };
-  })(document, "script");
-</script>`
-  }, [config, defaults.chatwootBaseUrl, orgScope?.slug])
+<script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
+  }, [orgScope?.slug])
 
   const updateField = <K extends keyof WidgetConfig>(field: K, value: WidgetConfig[K]) => {
     setConfig((current) => ({
@@ -324,6 +311,32 @@ export default function AtendimentoWidgetConfigPage() {
       [field]: value,
     }))
   }
+
+  const saveConfig = useCallback(
+    async (showSuccessMessage = true) => {
+      const payload: WidgetConfig = {
+        ...config,
+        allowedDomains: parseDomains(domainText),
+      }
+
+      const { data } = await axios.post<SaveResponse>('/api/atendimento/widget', payload)
+
+      setConfig(data.config)
+      setSavedAt(data.savedAt)
+      setOrgScope(data.orgScope)
+      setDomainText((data.config.allowedDomains || []).join('\n'))
+
+      if (showSuccessMessage) {
+        setMessage({
+          type: 'success',
+          text: 'Configuração do widget salva para esta organização.',
+        })
+      }
+
+      return data
+    },
+    [config, domainText]
+  )
 
   const handleReset = () => {
     setConfig(defaults)
@@ -346,27 +359,7 @@ export default function AtendimentoWidgetConfigPage() {
     setSaving(true)
 
     try {
-      const payload: WidgetConfig = {
-        ...config,
-        allowedDomains: parseDomains(domainText),
-      }
-
-      const { data } = await axios.post<{
-        success: boolean
-        config: WidgetConfig
-        savedAt: string
-        orgScope: OrgScope
-      }>('/api/atendimento/widget', payload)
-
-      setConfig(data.config)
-      setSavedAt(data.savedAt)
-      setOrgScope(data.orgScope)
-      setDomainText((data.config.allowedDomains || []).join('\n'))
-
-      setMessage({
-        type: 'success',
-        text: 'Configuração do widget salva para esta organização.',
-      })
+      await saveConfig(true)
     } catch (err) {
       const errorText = axios.isAxiosError(err)
         ? err.response?.data?.error ?? 'Não foi possível salvar a configuração do widget.'
@@ -378,6 +371,42 @@ export default function AtendimentoWidgetConfigPage() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleProvision = async () => {
+    setProvisioning(true)
+
+    try {
+      await saveConfig(false)
+
+      const { data } = await axios.post<ProvisionResponse>(
+        '/api/atendimento/widget/provision'
+      )
+
+      setLastProvisionResult(data)
+      await loadConfig()
+
+      setMessage({
+        type: 'success',
+        text:
+          data.action === 'created'
+            ? 'Widget criado no Atendimento com sucesso.'
+            : 'Widget atualizado no Atendimento com sucesso.',
+      })
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.message ??
+          err.response?.data?.error ??
+          'Não foi possível provisionar o widget.'
+        : 'Não foi possível provisionar o widget.'
+
+      setMessage({
+        type: 'error',
+        text: errorText,
+      })
+    } finally {
+      setProvisioning(false)
     }
   }
 
@@ -541,7 +570,8 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.websiteToken}
                     onChange={(e) => updateField('websiteToken', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="token da inbox website"
+                    placeholder="preenchido automaticamente após provisionar"
+                    readOnly
                   />
                 </label>
               </div>
@@ -781,7 +811,7 @@ export default function AtendimentoWidgetConfigPage() {
             <div className="mt-4 flex flex-wrap gap-3">
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || provisioning}
                 className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f3453] disabled:opacity-50"
               >
                 {saving ? (
@@ -793,6 +823,24 @@ export default function AtendimentoWidgetConfigPage() {
                   <>
                     <Save className="h-4 w-4" />
                     Salvar configuração
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleProvision}
+                disabled={saving || provisioning}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+              >
+                {provisioning ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Provisionando...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="h-4 w-4" />
+                    {readiness.provisioned ? 'Atualizar widget' : 'Criar widget'}
                   </>
                 )}
               </button>
@@ -813,6 +861,11 @@ export default function AtendimentoWidgetConfigPage() {
                 Resetar
               </button>
             </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+              O botão <strong>Criar widget</strong> salva a configuração atual e depois cria
+              ou atualiza a inbox website real no Atendimento.
+            </div>
           </div>
         </div>
 
@@ -825,6 +878,11 @@ export default function AtendimentoWidgetConfigPage() {
                 title="Widget ativo"
                 value={readiness.enabled ? 'Sim' : 'Não'}
                 ok={readiness.enabled}
+              />
+              <StatusCard
+                title="Provisionamento"
+                value={readiness.provisioned ? 'Provisionado' : 'Pendente'}
+                ok={readiness.provisioned}
               />
               <StatusCard
                 title="Website token"
@@ -842,16 +900,25 @@ export default function AtendimentoWidgetConfigPage() {
                 ok={readiness.snippetReady}
               />
               <StatusCard
-                title="Domínio principal"
-                value={readiness.domain ? 'Configurado' : 'Pendente'}
-                ok={readiness.domain}
-              />
-              <StatusCard
                 title="Escopo de publicação"
                 value={readiness.allowlistReady ? 'OK' : 'Revisar allowlist'}
                 ok={readiness.allowlistReady}
               />
             </div>
+
+            {lastProvisionResult && (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                <p className="font-semibold">
+                  Último provisionamento: {lastProvisionResult.action === 'created' ? 'criado' : 'atualizado'}
+                </p>
+                <p className="mt-1">
+                  Inbox ID: {lastProvisionResult.inbox.chatwootInboxId ?? '—'}
+                </p>
+                <p className="mt-1">
+                  Channel ID: {lastProvisionResult.inbox.chatwootChannelId ?? '—'}
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start gap-3">
@@ -887,28 +954,28 @@ export default function AtendimentoWidgetConfigPage() {
             <div className="mt-4 space-y-3">
               <StepCard
                 number="1"
-                title="Criar a inbox website no Atendimento"
-                description="No Atendimento, crie ou valide a inbox nativa de website da organização."
+                title="Preencher a configuração"
+                description="Defina nome da inbox, domínio, visual, launcher, idioma e regras de publicação."
               />
               <StepCard
                 number="2"
-                title="Copiar o Website Token"
-                description="Pegue o token da inbox website nativa e cole no campo Website token desta tela."
+                title="Salvar a configuração"
+                description="O CRM grava a configuração da organização antes de qualquer ação operacional."
               />
               <StepCard
                 number="3"
-                title="Configurar Base URL e domínio"
-                description="Defina a Base URL do Atendimento e o domínio principal onde o widget será publicado."
+                title="Criar widget"
+                description="O CRM cria ou atualiza a inbox website real no Atendimento via backend."
               />
               <StepCard
                 number="4"
-                title="Salvar e ativar"
-                description="Salve a configuração, ative o widget e valide a prontidão do snippet."
+                title="Copiar o snippet"
+                description="Depois do provisionamento, copie o snippet governado pelo CRM."
               />
               <StepCard
                 number="5"
-                title="Publicar o snippet no site"
-                description="Cole o snippet no site do cliente. O loader do CRM valida a configuração pública e inicializa o SDK nativo do Atendimento."
+                title="Publicar no site"
+                description="Cole o snippet no site do cliente. O loader inicializa o SDK nativo do Atendimento."
               />
             </div>
           </div>
