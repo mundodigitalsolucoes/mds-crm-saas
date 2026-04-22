@@ -5,24 +5,25 @@ import axios from 'axios'
 import {
   CheckCircle,
   Copy,
+  Globe,
   Info,
   Loader2,
   MessageCircle,
-  Plus,
   RefreshCw,
   Save,
   Settings2,
   ShieldCheck,
-  Trash2,
 } from 'lucide-react'
-import AtendimentoWidgetPreview from '@/components/widget/AtendimentoWidgetPreview'
 
 type MessageState = {
   type: 'success' | 'info' | 'error'
   text: string
 } | null
 
-type WidgetPosition = 'right' | 'left'
+type WidgetPosition = 'left' | 'right'
+type PublishMode = 'all' | 'allowlist'
+type DarkMode = 'light' | 'auto'
+type LauncherType = 'standard' | 'expanded'
 type OperatingMode = 'manual' | 'business_hours'
 type FallbackBehavior = 'none' | 'redirect'
 type BusinessDayKey =
@@ -33,7 +34,6 @@ type BusinessDayKey =
   | 'friday'
   | 'saturday'
   | 'sunday'
-type TargetKey = 'default' | 'slot_1' | 'slot_2' | 'slot_3' | 'slot_4' | 'slot_5'
 
 type BusinessDay = {
   enabled: boolean
@@ -43,37 +43,27 @@ type BusinessDay = {
 
 type BusinessHours = Record<BusinessDayKey, BusinessDay>
 
-type TargetSlot = {
-  enabled: boolean
-  internalName: string
-  label: string
-  url: string
-}
-
-type ContextRule = {
-  context: string
-  targetKey: TargetKey
-}
-
 type WidgetConfig = {
   organizationName: string
-  title: string
-  subtitle: string
-  ctaLabel: string
-  online: boolean
+  enabled: boolean
+  chatwootBaseUrl: string
+  websiteToken: string
+  websiteInboxName: string
+  websiteDomain: string
+  widgetColor: string
+  welcomeTitle: string
+  welcomeTagline: string
   position: WidgetPosition
-  buttonLabel: string
-  primaryActionUrl: string
-  primaryColor: string
-  accentColor: string
-  operatingMode: OperatingMode
-  timezone: string
-  fallbackBehavior: FallbackBehavior
-  fallbackLabel: string
-  fallbackUrl: string
-  businessHours: BusinessHours
-  targetSlots: Record<TargetKey, TargetSlot>
-  contextRules: ContextRule[]
+  locale: string
+  useBrowserLanguage: boolean
+  darkMode: DarkMode
+  launcherType: LauncherType
+  launcherTitle: string
+  greetingEnabled: boolean
+  greetingMessage: string
+  publishMode: PublishMode
+  allowedDomains: string[]
+  notes: string
 }
 
 type OrgScope = {
@@ -90,6 +80,30 @@ type WidgetConfigResponse = {
   savedAt: string
 }
 
+const FALLBACK_DEFAULTS: WidgetConfig = {
+  organizationName: 'Mundo Digital Soluções',
+  enabled: false,
+  chatwootBaseUrl: 'https://app.mundodigitalsolucoes.com.br',
+  websiteToken: '',
+  websiteInboxName: 'Website',
+  websiteDomain: 'www.exemplo.com.br',
+  widgetColor: '#374b89',
+  welcomeTitle: 'Fale com nosso Atendimento',
+  welcomeTagline:
+    'Tire dúvidas, peça suporte ou inicie seu atendimento pelo widget oficial.',
+  position: 'right',
+  locale: 'pt_BR',
+  useBrowserLanguage: true,
+  darkMode: 'auto',
+  launcherType: 'expanded',
+  launcherTitle: 'Atendimento',
+  greetingEnabled: false,
+  greetingMessage: 'Olá. Como podemos ajudar você hoje?',
+  publishMode: 'all',
+  allowedDomains: [],
+  notes: '',
+}
+
 const dayLabels: Record<BusinessDayKey, string> = {
   monday: 'Segunda',
   tuesday: 'Terça',
@@ -98,15 +112,6 @@ const dayLabels: Record<BusinessDayKey, string> = {
   friday: 'Sexta',
   saturday: 'Sábado',
   sunday: 'Domingo',
-}
-
-const targetLabels: Record<TargetKey, string> = {
-  default: 'default',
-  slot_1: 'slot_1',
-  slot_2: 'slot_2',
-  slot_3: 'slot_3',
-  slot_4: 'slot_4',
-  slot_5: 'slot_5',
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -127,6 +132,15 @@ function formatDateTime(value: string | null) {
   } catch {
     return value
   }
+}
+
+function parseDomains(text: string) {
+  const items = text
+    .split(/\n|,/g)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+  return Array.from(new Set(items)).slice(0, 20)
 }
 
 function FeedbackBanner({
@@ -175,73 +189,6 @@ function FeedbackBanner({
   )
 }
 
-const FALLBACK_DEFAULTS: WidgetConfig = {
-  organizationName: 'Mundo Digital Soluções',
-  title: 'Fale com nosso Atendimento',
-  subtitle:
-    'Tire dúvidas, peça suporte ou inicie seu atendimento comercial por este canal.',
-  ctaLabel: 'Abrir Atendimento',
-  online: true,
-  position: 'right',
-  buttonLabel: 'Atendimento',
-  primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
-  primaryColor: '#374b89',
-  accentColor: '#2f3453',
-  operatingMode: 'manual',
-  timezone: 'America/Sao_Paulo',
-  fallbackBehavior: 'none',
-  fallbackLabel: 'Abrir opção alternativa',
-  fallbackUrl: '',
-  businessHours: {
-    monday: { enabled: true, start: '08:00', end: '18:00' },
-    tuesday: { enabled: true, start: '08:00', end: '18:00' },
-    wednesday: { enabled: true, start: '08:00', end: '18:00' },
-    thursday: { enabled: true, start: '08:00', end: '18:00' },
-    friday: { enabled: true, start: '08:00', end: '18:00' },
-    saturday: { enabled: false, start: '08:00', end: '12:00' },
-    sunday: { enabled: false, start: '08:00', end: '12:00' },
-  },
-  targetSlots: {
-    default: {
-      enabled: true,
-      internalName: 'Destino padrão',
-      label: 'Abrir Atendimento',
-      url: 'https://crm.mundodigitalsolucoes.com.br',
-    },
-    slot_1: {
-      enabled: false,
-      internalName: 'Destino 1',
-      label: 'Abrir destino 1',
-      url: '',
-    },
-    slot_2: {
-      enabled: false,
-      internalName: 'Destino 2',
-      label: 'Abrir destino 2',
-      url: '',
-    },
-    slot_3: {
-      enabled: false,
-      internalName: 'Destino 3',
-      label: 'Abrir destino 3',
-      url: '',
-    },
-    slot_4: {
-      enabled: false,
-      internalName: 'Destino 4',
-      label: 'Abrir destino 4',
-      url: '',
-    },
-    slot_5: {
-      enabled: false,
-      internalName: 'Destino 5',
-      label: 'Abrir destino 5',
-      url: '',
-    },
-  },
-  contextRules: [],
-}
-
 export default function AtendimentoWidgetConfigPage() {
   const [message, setMessage] = useState<MessageState>(null)
   const [loading, setLoading] = useState(true)
@@ -250,7 +197,7 @@ export default function AtendimentoWidgetConfigPage() {
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
-  const [previewContext, setPreviewContext] = useState('default')
+  const [domainText, setDomainText] = useState('')
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
@@ -261,6 +208,7 @@ export default function AtendimentoWidgetConfigPage() {
       setDefaults(data.defaults)
       setOrgScope(data.orgScope)
       setSavedAt(data.savedAt)
+      setDomainText((data.config.allowedDomains || []).join('\n'))
     } catch (err) {
       console.error(err)
       setMessage({
@@ -276,22 +224,56 @@ export default function AtendimentoWidgetConfigPage() {
     void loadConfig()
   }, [loadConfig])
 
+  const readiness = useMemo(() => {
+    return {
+      enabled: config.enabled,
+      baseUrl: Boolean(config.chatwootBaseUrl.trim()),
+      token: Boolean(config.websiteToken.trim()),
+      snippetReady:
+        config.enabled && Boolean(config.chatwootBaseUrl.trim()) && Boolean(config.websiteToken.trim()),
+    }
+  }, [config])
+
   const snippet = useMemo(() => {
-    const slug = orgScope?.slug ?? ''
+    const baseUrl = config.chatwootBaseUrl.trim() || defaults.chatwootBaseUrl
+    const websiteToken = config.websiteToken.trim()
+    const type = config.launcherType === 'expanded' ? 'expanded_bubble' : 'standard'
+
+    const settingsLines = [
+      `position: ${JSON.stringify(config.position)}`,
+      `locale: ${JSON.stringify(config.locale)}`,
+      `useBrowserLanguage: ${config.useBrowserLanguage}`,
+      `darkMode: ${JSON.stringify(config.darkMode)}`,
+      `type: ${JSON.stringify(type)}`,
+    ]
+
+    if (config.launcherType === 'expanded' && config.launcherTitle.trim()) {
+      settingsLines.push(`launcherTitle: ${JSON.stringify(config.launcherTitle.trim())}`)
+    }
 
     return `<script>
-  window.MDSAtendimentoWidget = {
-    orgSlug: '${slug}',
-    pageContext: '${previewContext.trim() || 'default'}'
+  window.chatwootSettings = {
+    ${settingsLines.join(',\n    ')}
   };
-</script>
-<script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
-  }, [orgScope?.slug, previewContext])
 
-  const publicPreviewUrl = useMemo(() => {
-    if (!orgScope?.slug) return '—'
-    return `https://crm.mundodigitalsolucoes.com.br/api/public/widget/${orgScope.slug}`
-  }, [orgScope?.slug])
+  (function(d, t) {
+    var BASE_URL = ${JSON.stringify(baseUrl)};
+    var g = d.createElement(t);
+    var s = d.getElementsByTagName(t)[0];
+    g.src = BASE_URL + "/packs/js/sdk.js";
+    g.defer = true;
+    g.async = true;
+    s.parentNode.insertBefore(g, s);
+
+    g.onload = function() {
+      window.chatwootSDK.run({
+        websiteToken: ${JSON.stringify(websiteToken)},
+        baseUrl: BASE_URL
+      });
+    };
+  })(document, "script");
+</script>`
+  }, [config, defaults.chatwootBaseUrl])
 
   const updateField = <K extends keyof WidgetConfig>(field: K, value: WidgetConfig[K]) => {
     setConfig((current) => ({
@@ -300,77 +282,12 @@ export default function AtendimentoWidgetConfigPage() {
     }))
   }
 
-  const updateBusinessDay = <K extends keyof BusinessDay>(
-    day: BusinessDayKey,
-    field: K,
-    value: BusinessDay[K]
-  ) => {
-    setConfig((current) => ({
-      ...current,
-      businessHours: {
-        ...current.businessHours,
-        [day]: {
-          ...current.businessHours[day],
-          [field]: value,
-        },
-      },
-    }))
-  }
-
-  const updateTargetSlot = <K extends keyof TargetSlot>(
-    targetKey: TargetKey,
-    field: K,
-    value: TargetSlot[K]
-  ) => {
-    setConfig((current) => ({
-      ...current,
-      targetSlots: {
-        ...current.targetSlots,
-        [targetKey]: {
-          ...current.targetSlots[targetKey],
-          [field]: value,
-        },
-      },
-    }))
-  }
-
-  const updateContextRule = (
-    index: number,
-    field: keyof ContextRule,
-    value: string
-  ) => {
-    setConfig((current) => ({
-      ...current,
-      contextRules: current.contextRules.map((rule, currentIndex) =>
-        currentIndex === index
-          ? {
-              ...rule,
-              [field]: value,
-            }
-          : rule
-      ),
-    }))
-  }
-
-  const addContextRule = () => {
-    setConfig((current) => ({
-      ...current,
-      contextRules: [...current.contextRules, { context: '', targetKey: 'default' }],
-    }))
-  }
-
-  const removeContextRule = (index: number) => {
-    setConfig((current) => ({
-      ...current,
-      contextRules: current.contextRules.filter((_, currentIndex) => currentIndex !== index),
-    }))
-  }
-
   const handleReset = () => {
     setConfig(defaults)
+    setDomainText((defaults.allowedDomains || []).join('\n'))
     setMessage({
       type: 'info',
-      text: 'Preview resetado para a configuração base desta organização.',
+      text: 'Configuração resetada para o padrão desta organização.',
     })
   }
 
@@ -388,12 +305,7 @@ export default function AtendimentoWidgetConfigPage() {
     try {
       const payload: WidgetConfig = {
         ...config,
-        contextRules: config.contextRules
-          .map((rule) => ({
-            context: rule.context.trim(),
-            targetKey: rule.targetKey,
-          }))
-          .filter((rule) => rule.context),
+        allowedDomains: parseDomains(domainText),
       }
 
       const { data } = await axios.post<{
@@ -406,6 +318,7 @@ export default function AtendimentoWidgetConfigPage() {
       setConfig(data.config)
       setSavedAt(data.savedAt)
       setOrgScope(data.orgScope)
+      setDomainText((data.config.allowedDomains || []).join('\n'))
 
       setMessage({
         type: 'success',
@@ -430,7 +343,7 @@ export default function AtendimentoWidgetConfigPage() {
       await navigator.clipboard.writeText(snippet)
       setMessage({
         type: 'success',
-        text: 'Snippet real do widget copiado.',
+        text: 'Snippet do widget copiado.',
       })
     } catch {
       setMessage({
@@ -464,7 +377,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 05: destinos genéricos por slot e contexto livre por página.
+                  Painel SaaS do widget nativo de website do Atendimento.
                 </p>
               </div>
             </div>
@@ -473,7 +386,7 @@ export default function AtendimentoWidgetConfigPage() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#374b89]/30 bg-white px-3 py-2 text-xs font-medium text-[#2f3453] shadow-sm">
               <ShieldCheck className="h-3.5 w-3.5 text-[#374b89]" />
-              Isolado do core protegido
+              Alinhado à arquitetura oficial
             </span>
 
             <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
@@ -513,10 +426,10 @@ export default function AtendimentoWidgetConfigPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Rota pública
+                Domínio publicado
               </p>
               <p className="mt-2 break-all text-sm font-bold text-[#2f3453]">
-                {publicPreviewUrl}
+                {config.websiteDomain || '—'}
               </p>
             </div>
           </div>
@@ -531,14 +444,28 @@ export default function AtendimentoWidgetConfigPage() {
                 <Settings2 className="h-5 w-5 text-slate-600" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Configuração base</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">Canal website</h2>
                 <p className="text-sm text-slate-500">
-                  Base visual e operacional do widget.
+                  Dados do canal nativo de website do Atendimento.
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={config.enabled}
+                  onChange={(e) => updateField('enabled', e.target.checked)}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[#2f3453]">Widget ativo</p>
+                  <p className="text-xs text-slate-500">
+                    Controla a prontidão do snippet no CRM.
+                  </p>
+                </div>
+              </label>
+
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#2f3453]">
                   Nome da organização
@@ -550,378 +477,263 @@ export default function AtendimentoWidgetConfigPage() {
                 />
               </label>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">Título</span>
-                <input
-                  value={config.title}
-                  onChange={(e) => updateField('title', e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                />
-              </label>
-
-              <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">Subtítulo</span>
-                <textarea
-                  value={config.subtitle}
-                  onChange={(e) => updateField('subtitle', e.target.value)}
-                  className="min-h-[110px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                />
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Texto base do CTA</span>
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Base URL do Atendimento
+                  </span>
                   <input
-                    value={config.ctaLabel}
-                    onChange={(e) => updateField('ctaLabel', e.target.value)}
+                    value={config.chatwootBaseUrl}
+                    onChange={(e) => updateField('chatwootBaseUrl', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="https://app.seudominio.com"
                   />
                 </label>
 
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[#2f3453]">
-                    Texto do botão flutuante
+                    Website token
                   </span>
                   <input
-                    value={config.buttonLabel}
-                    onChange={(e) => updateField('buttonLabel', e.target.value)}
+                    value={config.websiteToken}
+                    onChange={(e) => updateField('websiteToken', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="token da inbox website"
                   />
                 </label>
               </div>
 
-              <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">URL base do CTA</span>
-                <input
-                  value={config.primaryActionUrl}
-                  onChange={(e) => updateField('primaryActionUrl', e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                />
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Posição</span>
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Nome da inbox website
+                  </span>
+                  <input
+                    value={config.websiteInboxName}
+                    onChange={(e) => updateField('websiteInboxName', e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="Website"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Domínio principal do site
+                  </span>
+                  <input
+                    value={config.websiteDomain}
+                    onChange={(e) => updateField('websiteDomain', e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="www.exemplo.com.br"
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-[#2f3453]">Visual e experiência</h2>
+
+            <div className="mt-4 space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Cor do widget
+                  </span>
+                  <div className="flex items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
+                    <input
+                      type="color"
+                      value={config.widgetColor}
+                      onChange={(e) => updateField('widgetColor', e.target.value)}
+                      className="h-10 w-12 rounded border-0 bg-transparent p-0"
+                    />
+                    <input
+                      value={config.widgetColor}
+                      onChange={(e) => updateField('widgetColor', e.target.value)}
+                      className="w-full text-sm outline-none"
+                    />
+                  </div>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Posição
+                  </span>
                   <select
                     value={config.position}
-                    onChange={(e) =>
-                      updateField('position', e.target.value as WidgetPosition)
-                    }
+                    onChange={(e) => updateField('position', e.target.value as WidgetPosition)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
                     <option value="right">Direita</option>
                     <option value="left">Esquerda</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Idioma
+                  </span>
+                  <input
+                    value={config.locale}
+                    onChange={(e) => updateField('locale', e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="pt_BR"
+                  />
+                </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Timezone</span>
-                  <input
-                    value={config.timezone}
-                    onChange={(e) => updateField('timezone', e.target.value)}
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Tema
+                  </span>
+                  <select
+                    value={config.darkMode}
+                    onChange={(e) => updateField('darkMode', e.target.value as DarkMode)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  />
+                  >
+                    <option value="light">Claro</option>
+                    <option value="auto">Auto</option>
+                  </select>
                 </label>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={config.useBrowserLanguage}
+                  onChange={(e) => updateField('useBrowserLanguage', e.target.checked)}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[#2f3453]">
+                    Usar idioma do navegador
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Quando ativo, o widget tenta respeitar o idioma do visitante.
+                  </p>
+                </div>
+              </label>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Modo operacional</span>
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Tipo do launcher
+                  </span>
                   <select
-                    value={config.operatingMode}
+                    value={config.launcherType}
                     onChange={(e) =>
-                      updateField('operatingMode', e.target.value as OperatingMode)
+                      updateField('launcherType', e.target.value as LauncherType)
                     }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
-                    <option value="manual">Manual</option>
-                    <option value="business_hours">Por horário</option>
+                    <option value="standard">Standard</option>
+                    <option value="expanded">Expanded</option>
                   </select>
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Status manual</span>
-                  <select
-                    value={config.online ? 'online' : 'offline'}
-                    onChange={(e) => updateField('online', e.target.value === 'online')}
-                    disabled={config.operatingMode !== 'manual'}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89] disabled:bg-slate-100"
-                  >
-                    <option value="online">Online</option>
-                    <option value="offline">Offline</option>
-                  </select>
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Texto do launcher
+                  </span>
+                  <input
+                    value={config.launcherTitle}
+                    onChange={(e) => updateField('launcherTitle', e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    placeholder="Atendimento"
+                  />
                 </label>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Cor principal</span>
-                  <div className="flex items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
-                    <input
-                      type="color"
-                      value={config.primaryColor}
-                      onChange={(e) => updateField('primaryColor', e.target.value)}
-                      className="h-10 w-12 rounded border-0 bg-transparent p-0"
-                    />
-                    <input
-                      value={config.primaryColor}
-                      onChange={(e) => updateField('primaryColor', e.target.value)}
-                      className="w-full text-sm outline-none"
-                    />
-                  </div>
-                </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Welcome heading
+                </span>
+                <input
+                  value={config.welcomeTitle}
+                  onChange={(e) => updateField('welcomeTitle', e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                />
+              </label>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Cor de destaque</span>
-                  <div className="flex items-center gap-3 rounded-xl border border-slate-300 px-3 py-2">
-                    <input
-                      type="color"
-                      value={config.accentColor}
-                      onChange={(e) => updateField('accentColor', e.target.value)}
-                      className="h-10 w-12 rounded border-0 bg-transparent p-0"
-                    />
-                    <input
-                      value={config.accentColor}
-                      onChange={(e) => updateField('accentColor', e.target.value)}
-                      className="w-full text-sm outline-none"
-                    />
-                  </div>
-                </label>
-              </div>
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Welcome tagline
+                </span>
+                <textarea
+                  value={config.welcomeTagline}
+                  onChange={(e) => updateField('welcomeTagline', e.target.value)}
+                  className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                />
+              </label>
+
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={config.greetingEnabled}
+                  onChange={(e) => updateField('greetingEnabled', e.target.checked)}
+                />
+                <div>
+                  <p className="text-sm font-semibold text-[#2f3453]">
+                    Greeting da conversa
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Campo para governança da saudação do canal website.
+                  </p>
+                </div>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Mensagem de greeting
+                </span>
+                <textarea
+                  value={config.greetingMessage}
+                  onChange={(e) => updateField('greetingMessage', e.target.value)}
+                  className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                />
+              </label>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Fallback e horário</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">Publicação</h2>
 
             <div className="mt-4 space-y-4">
               <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">Comportamento offline</span>
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Escopo de publicação
+                </span>
                 <select
-                  value={config.fallbackBehavior}
-                  onChange={(e) =>
-                    updateField('fallbackBehavior', e.target.value as FallbackBehavior)
-                  }
+                  value={config.publishMode}
+                  onChange={(e) => updateField('publishMode', e.target.value as PublishMode)}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                 >
-                  <option value="none">Sem fallback</option>
-                  <option value="redirect">Redirecionar para fallback</option>
+                  <option value="all">Todos os domínios</option>
+                  <option value="allowlist">Somente domínios permitidos</option>
                 </select>
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Texto do fallback</span>
-                  <input
-                    value={config.fallbackLabel}
-                    onChange={(e) => updateField('fallbackLabel', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  />
-                </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Allowed domains
+                </span>
+                <textarea
+                  value={domainText}
+                  onChange={(e) => setDomainText(e.target.value)}
+                  className="min-h-[120px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                  placeholder={'www.exemplo.com.br\napp.exemplo.com.br'}
+                />
+              </label>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">URL do fallback</span>
-                  <input
-                    value={config.fallbackUrl}
-                    onChange={(e) => updateField('fallbackUrl', e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  />
-                </label>
-              </div>
-
-              <div className="space-y-3">
-                {(Object.keys(dayLabels) as BusinessDayKey[]).map((day) => (
-                  <div
-                    key={day}
-                    className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[120px_110px_1fr_1fr]"
-                  >
-                    <div className="flex items-center font-semibold text-[#2f3453]">
-                      {dayLabels[day]}
-                    </div>
-
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={config.businessHours[day].enabled}
-                        onChange={(e) => updateBusinessDay(day, 'enabled', e.target.checked)}
-                      />
-                      Ativo
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Início
-                      </span>
-                      <input
-                        type="time"
-                        value={config.businessHours[day].start}
-                        onChange={(e) => updateBusinessDay(day, 'start', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
-                      />
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Fim
-                      </span>
-                      <input
-                        type="time"
-                        value={config.businessHours[day].end}
-                        onChange={(e) => updateBusinessDay(day, 'end', e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
-                      />
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Slots de destino</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Cada organização decide quais slots usa e para onde cada um aponta.
-            </p>
-
-            <div className="mt-4 space-y-4">
-              {(Object.keys(targetLabels) as TargetKey[]).map((targetKey) => (
-                <div
-                  key={targetKey}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-bold text-[#2f3453]">{targetLabels[targetKey]}</p>
-
-                    <label className="flex items-center gap-2 text-sm text-slate-700">
-                      <input
-                        type="checkbox"
-                        checked={config.targetSlots[targetKey].enabled}
-                        onChange={(e) =>
-                          updateTargetSlot(targetKey, 'enabled', e.target.checked)
-                        }
-                      />
-                      Ativo
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <label className="block space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Nome interno
-                      </span>
-                      <input
-                        value={config.targetSlots[targetKey].internalName}
-                        onChange={(e) =>
-                          updateTargetSlot(targetKey, 'internalName', e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                      />
-                    </label>
-
-                    <label className="block space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Texto do CTA
-                      </span>
-                      <input
-                        value={config.targetSlots[targetKey].label}
-                        onChange={(e) =>
-                          updateTargetSlot(targetKey, 'label', e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                      />
-                    </label>
-
-                    <label className="block space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        URL
-                      </span>
-                      <input
-                        value={config.targetSlots[targetKey].url}
-                        onChange={(e) =>
-                          updateTargetSlot(targetKey, 'url', e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Regras de contexto</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Qualquer página pode enviar um `pageContext` livre para escolher um slot.
-                </p>
-              </div>
-
-              <button
-                onClick={addContextRule}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar regra
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {config.contextRules.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
-                  Nenhuma regra criada ainda. Sem regra, o widget usa o slot `default`.
-                </div>
-              ) : (
-                config.contextRules.map((rule, index) => (
-                  <div
-                    key={`${index}-${rule.targetKey}-${rule.context}`}
-                    className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_180px_56px]"
-                  >
-                    <label className="space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        pageContext
-                      </span>
-                      <input
-                        value={rule.context}
-                        onChange={(e) =>
-                          updateContextRule(index, 'context', e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                        placeholder="ex.: landing-vendas"
-                      />
-                    </label>
-
-                    <label className="space-y-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Slot
-                      </span>
-                      <select
-                        value={rule.targetKey}
-                        onChange={(e) =>
-                          updateContextRule(index, 'targetKey', e.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                      >
-                        {(Object.keys(targetLabels) as TargetKey[]).map((targetKey) => (
-                          <option key={targetKey} value={targetKey}>
-                            {targetKey}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <div className="flex items-end">
-                      <button
-                        onClick={() => removeContextRule(index)}
-                        className="inline-flex h-[50px] w-full items-center justify-center rounded-xl border border-red-200 bg-white text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">Notas</span>
+                <textarea
+                  value={config.notes}
+                  onChange={(e) => updateField('notes', e.target.value)}
+                  className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                  placeholder="Observações operacionais deste widget"
+                />
+              </label>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -956,17 +768,103 @@ export default function AtendimentoWidgetConfigPage() {
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 <RefreshCw className="h-4 w-4" />
-                Resetar preview
+                Resetar
               </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-[#2f3453]">Prontidão do widget</h2>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Canal website
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {config.websiteInboxName || '—'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Base URL
+                </p>
+                <p className="mt-2 break-all text-sm font-bold text-[#2f3453]">
+                  {config.chatwootBaseUrl || '—'}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 text-sm',
+                  readiness.enabled
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                )}
+              >
+                <p className="font-semibold">Widget ativo</p>
+                <p className="mt-1">{readiness.enabled ? 'Sim' : 'Não'}</p>
+              </div>
+
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 text-sm',
+                  readiness.token
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                )}
+              >
+                <p className="font-semibold">Website token</p>
+                <p className="mt-1">{readiness.token ? 'Configurado' : 'Pendente'}</p>
+              </div>
+
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 text-sm',
+                  readiness.baseUrl
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                )}
+              >
+                <p className="font-semibold">Base URL</p>
+                <p className="mt-1">{readiness.baseUrl ? 'Configurada' : 'Pendente'}</p>
+              </div>
+
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 text-sm',
+                  readiness.snippetReady
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                )}
+              >
+                <p className="font-semibold">Snippet pronto</p>
+                <p className="mt-1">{readiness.snippetReady ? 'Sim' : 'Não'}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start gap-3">
+                <Globe className="mt-0.5 h-4 w-4 text-slate-500" />
+                <div className="text-sm text-slate-600">
+                  Esta tela governa o canal website nativo do Atendimento. Ela não substitui a
+                  inbox do Atendimento e não cria chat paralelo.
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Snippet real</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">Snippet nativo</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Use qualquer valor de `pageContext` que faça sentido para a empresa.
+                  Snippet baseado em `websiteToken`, `baseUrl` e `chatwootSettings`.
                 </p>
               </div>
 
@@ -979,48 +877,115 @@ export default function AtendimentoWidgetConfigPage() {
               </button>
             </div>
 
-            <label className="mb-4 block space-y-2">
-              <span className="text-sm font-semibold text-[#2f3453]">pageContext do snippet</span>
-              <input
-                value={previewContext}
-                onChange={(e) => setPreviewContext(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                placeholder="ex.: landing-vendas"
-              />
-            </label>
-
             <pre className="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">
               <code>{snippet}</code>
             </pre>
 
-            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              O widget agora pode abrir destinos diferentes por contexto, sem depender de nomes
-              fixos de negócio.
+            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+              Campos como cor, heading, tagline e greeting fazem parte da governança do canal
+              website. O snippet acima já usa a base nativa do Atendimento.
             </div>
           </div>
-        </div>
 
-        <AtendimentoWidgetPreview
-          organizationName={config.organizationName}
-          title={config.title}
-          subtitle={config.subtitle}
-          ctaLabel={config.ctaLabel}
-          online={config.online}
-          position={config.position}
-          buttonLabel={config.buttonLabel}
-          primaryColor={config.primaryColor}
-          accentColor={config.accentColor}
-          operatingMode={config.operatingMode}
-          timezone={config.timezone}
-          fallbackBehavior={config.fallbackBehavior}
-          fallbackLabel={config.fallbackLabel}
-          fallbackUrl={config.fallbackUrl}
-          primaryActionUrl={config.primaryActionUrl}
-          businessHours={config.businessHours}
-          targetSlots={config.targetSlots}
-          contextRules={config.contextRules}
-          previewContext={previewContext}
-        />
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-[#2f3453]">Prévia de configuração</h2>
+
+            <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top,_#f8fafc,_#e2e8f0)] p-6">
+              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 backdrop-blur">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Website inbox
+                </p>
+                <h3 className="mt-2 text-xl font-bold text-[#2f3453]">
+                  {config.websiteInboxName || config.organizationName}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {config.websiteDomain || 'www.exemplo.com.br'}
+                </p>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <div className="w-full max-w-[340px] rounded-3xl border border-slate-200 bg-white shadow-xl">
+                  <div
+                    className="rounded-t-3xl px-5 py-4 text-white"
+                    style={{ backgroundColor: config.widgetColor }}
+                  >
+                    <p className="text-sm font-semibold">{config.welcomeTitle}</p>
+                    <p className="mt-1 text-xs text-slate-100">{config.welcomeTagline}</p>
+                  </div>
+
+                  <div className="space-y-4 px-5 py-5">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                      Launcher: {config.launcherType === 'expanded' ? 'Expanded bubble' : 'Standard'}
+                    </div>
+
+                    {config.greetingEnabled && (
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5 text-emerald-800">
+                        Greeting: {config.greetingMessage}
+                      </div>
+                    )}
+
+                    <button
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                      style={{ backgroundColor: config.widgetColor }}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      {config.launcherType === 'expanded'
+                        ? config.launcherTitle || 'Atendimento'
+                        : 'Abrir chat'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Publish mode
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {config.publishMode === 'all' ? 'Todos os domínios' : 'Allowlist'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Idioma
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {config.useBrowserLanguage ? `${config.locale} + navegador` : config.locale}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Allowed domains
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {parseDomains(domainText).length}
+                </p>
+              </div>
+            </div>
+
+            {parseDomains(domainText).length > 0 && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Lista de domínios
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {parseDomains(domainText).map((domain) => (
+                    <span
+                      key={domain}
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700"
+                    >
+                      {domain}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
