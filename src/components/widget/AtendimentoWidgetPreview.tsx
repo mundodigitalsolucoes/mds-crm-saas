@@ -5,6 +5,7 @@ import { MessageCircle, X, Circle } from 'lucide-react'
 type WidgetPosition = 'right' | 'left'
 type OperatingMode = 'manual' | 'business_hours'
 type FallbackBehavior = 'none' | 'redirect'
+type ScenarioKey = 'default' | 'atendimento' | 'consultoria' | 'whatsapp' | 'contato'
 
 type BusinessDay = {
   enabled: boolean
@@ -21,6 +22,13 @@ type BusinessHours = {
   saturday: BusinessDay
   sunday: BusinessDay
 }
+
+type ScenarioTarget = {
+  label: string
+  url: string
+}
+
+type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
 
 type AtendimentoWidgetPreviewProps = {
   organizationName: string
@@ -39,6 +47,13 @@ type AtendimentoWidgetPreviewProps = {
   fallbackUrl: string
   primaryActionUrl: string
   businessHours: BusinessHours
+  scenarioTargets: ScenarioTargets
+  previewContext: ScenarioKey
+}
+
+type ResolvedTarget = {
+  label: string
+  url: string
 }
 
 type ResolvedWidgetState = {
@@ -49,10 +64,6 @@ type ResolvedWidgetState = {
   statusText: string
 }
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ')
-}
-
 const weekdayMap: Record<string, keyof BusinessHours> = {
   monday: 'monday',
   tuesday: 'tuesday',
@@ -61,6 +72,10 @@ const weekdayMap: Record<string, keyof BusinessHours> = {
   friday: 'friday',
   saturday: 'saturday',
   sunday: 'sunday',
+}
+
+function cn(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ')
 }
 
 function toMinutes(time: string) {
@@ -102,17 +117,36 @@ function isBusinessOpen({
   }
 }
 
-function resolveWidgetState({
-  operatingMode,
-  online,
-  timezone,
-  businessHours,
-  ctaLabel,
-  primaryActionUrl,
-  fallbackBehavior,
-  fallbackLabel,
-  fallbackUrl,
-}: {
+function resolveScenarioTarget(params: {
+  scenarioTargets: ScenarioTargets
+  scenarioKey: ScenarioKey
+  fallbackLabel: string
+  fallbackUrl: string
+}): ResolvedTarget {
+  const selected = params.scenarioTargets[params.scenarioKey]
+  const defaultTarget = params.scenarioTargets.default
+
+  if (selected?.url?.trim()) {
+    return {
+      label: selected.label.trim() || params.fallbackLabel,
+      url: selected.url.trim(),
+    }
+  }
+
+  if (defaultTarget?.url?.trim()) {
+    return {
+      label: defaultTarget.label.trim() || params.fallbackLabel,
+      url: defaultTarget.url.trim(),
+    }
+  }
+
+  return {
+    label: params.fallbackLabel,
+    url: params.fallbackUrl,
+  }
+}
+
+function resolveWidgetState(params: {
   operatingMode: OperatingMode
   online: boolean
   timezone: string
@@ -122,37 +156,52 @@ function resolveWidgetState({
   fallbackBehavior: FallbackBehavior
   fallbackLabel: string
   fallbackUrl: string
+  scenarioTargets: ScenarioTargets
+  scenarioKey: ScenarioKey
 }): ResolvedWidgetState {
   const isOnline =
-    operatingMode === 'manual'
-      ? online
-      : isBusinessOpen({ timezone, businessHours })
+    params.operatingMode === 'manual'
+      ? params.online
+      : isBusinessOpen({
+          timezone: params.timezone,
+          businessHours: params.businessHours,
+        })
+
+  const onlineTarget = resolveScenarioTarget({
+    scenarioTargets: params.scenarioTargets,
+    scenarioKey: params.scenarioKey,
+    fallbackLabel: params.ctaLabel,
+    fallbackUrl: params.primaryActionUrl,
+  })
 
   if (isOnline) {
     return {
       online: true,
-      actionLabel: ctaLabel,
-      actionUrl: primaryActionUrl,
-      helperText: 'Widget em modo operacional. O CTA principal aponta para o Atendimento.',
+      actionLabel: onlineTarget.label,
+      actionUrl: onlineTarget.url,
+      helperText:
+        'Widget em modo operacional. O destino foi resolvido pelo contexto da página.',
       statusText: 'Atendimento disponível',
     }
   }
 
-  if (fallbackBehavior === 'redirect' && fallbackUrl.trim()) {
+  if (params.fallbackBehavior === 'redirect' && params.fallbackUrl.trim()) {
     return {
       online: false,
-      actionLabel: fallbackLabel.trim() || 'Abrir opção alternativa',
-      actionUrl: fallbackUrl.trim(),
-      helperText: 'Fora do horário. O CTA foi governado para o fallback configurado.',
+      actionLabel: params.fallbackLabel.trim() || 'Abrir opção alternativa',
+      actionUrl: params.fallbackUrl.trim(),
+      helperText:
+        'Fora do horário. O CTA foi governado para o fallback configurado.',
       statusText: 'Fora do horário',
     }
   }
 
   return {
     online: false,
-    actionLabel: ctaLabel,
-    actionUrl: primaryActionUrl,
-    helperText: 'Fora do horário. Sem fallback configurado, o CTA principal foi mantido.',
+    actionLabel: onlineTarget.label,
+    actionUrl: onlineTarget.url,
+    helperText:
+      'Fora do horário. Sem fallback configurado, o destino do contexto foi mantido.',
     statusText: 'Fora do horário',
   }
 }
@@ -168,6 +217,8 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
     fallbackBehavior: props.fallbackBehavior,
     fallbackLabel: props.fallbackLabel,
     fallbackUrl: props.fallbackUrl,
+    scenarioTargets: props.scenarioTargets,
+    scenarioKey: props.previewContext,
   })
 
   return (
@@ -176,7 +227,7 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
         <div>
           <h3 className="text-lg font-bold text-[#2f3453]">Preview do widget</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Prévia com regra de horário, fallback e governança do CTA.
+            Prévia com contexto da página, horário, fallback e governança do CTA.
           </p>
         </div>
 
@@ -198,39 +249,9 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
       <div className="mb-4 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Cor principal
+            Contexto atual
           </p>
-          <div className="mt-2 flex items-center gap-3">
-            <span
-              className="h-6 w-6 rounded-full border border-slate-200"
-              style={{ backgroundColor: props.primaryColor }}
-            />
-            <span className="text-sm font-semibold text-[#2f3453]">{props.primaryColor}</span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Cor de destaque
-          </p>
-          <div className="mt-2 flex items-center gap-3">
-            <span
-              className="h-6 w-6 rounded-full border border-slate-200"
-              style={{ backgroundColor: props.accentColor }}
-            />
-            <span className="text-sm font-semibold text-[#2f3453]">{props.accentColor}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Modo operacional
-          </p>
-          <p className="mt-2 text-sm font-semibold text-[#2f3453]">
-            {props.operatingMode === 'manual' ? 'Manual' : 'Por horário'}
-          </p>
+          <p className="mt-2 text-sm font-semibold text-[#2f3453]">{props.previewContext}</p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -248,8 +269,8 @@ export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreview
           </p>
           <h4 className="mt-2 text-xl font-bold text-[#2f3453]">{props.organizationName}</h4>
           <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
-            Área de simulação do widget. O objetivo aqui é validar casca visual, identidade,
-            CTA, horário e fallback sem tocar no motor do Atendimento.
+            Área de simulação do widget. O objetivo aqui é validar contexto, CTA,
+            fallback e destino por cenário sem tocar no motor do Atendimento.
           </p>
         </div>
 

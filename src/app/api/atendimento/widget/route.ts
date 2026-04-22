@@ -9,6 +9,28 @@ const timeSchema = z
   .trim()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido.')
 
+const scenarioKeys = ['default', 'atendimento', 'consultoria', 'whatsapp', 'contato'] as const
+
+type ScenarioKey = (typeof scenarioKeys)[number]
+
+type BusinessDay = {
+  enabled: boolean
+  start: string
+  end: string
+}
+
+type BusinessHours = Record<
+  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday',
+  BusinessDay
+>
+
+type ScenarioTarget = {
+  label: string
+  url: string
+}
+
+type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
+
 const businessDaySchema = z.object({
   enabled: z.boolean(),
   start: timeSchema,
@@ -23,6 +45,19 @@ const businessHoursSchema = z.object({
   friday: businessDaySchema,
   saturday: businessDaySchema,
   sunday: businessDaySchema,
+})
+
+const scenarioTargetSchema = z.object({
+  label: z.string().trim().min(1).max(80),
+  url: z.string().trim().max(300),
+})
+
+const scenarioTargetsSchema = z.object({
+  default: scenarioTargetSchema,
+  atendimento: scenarioTargetSchema,
+  consultoria: scenarioTargetSchema,
+  whatsapp: scenarioTargetSchema,
+  contato: scenarioTargetSchema,
 })
 
 const widgetConfigSchema = z.object({
@@ -42,6 +77,7 @@ const widgetConfigSchema = z.object({
   fallbackLabel: z.string().trim().max(80),
   fallbackUrl: z.string().trim().max(300),
   businessHours: businessHoursSchema,
+  scenarioTargets: scenarioTargetsSchema,
 })
 
 type WidgetConfig = z.infer<typeof widgetConfigSchema>
@@ -72,6 +108,28 @@ const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
     saturday: { enabled: false, start: '08:00', end: '12:00' },
     sunday: { enabled: false, start: '08:00', end: '12:00' },
   },
+  scenarioTargets: {
+    default: {
+      label: 'Abrir Atendimento',
+      url: 'https://crm.mundodigitalsolucoes.com.br',
+    },
+    atendimento: {
+      label: 'Abrir Atendimento',
+      url: 'https://crm.mundodigitalsolucoes.com.br',
+    },
+    consultoria: {
+      label: 'Solicitar consultoria',
+      url: 'https://mundodigitalsolucoes.com.br/contato',
+    },
+    whatsapp: {
+      label: 'Falar no WhatsApp',
+      url: 'https://wa.me/5517992822597',
+    },
+    contato: {
+      label: 'Abrir página de contato',
+      url: 'https://mundodigitalsolucoes.com.br/contato',
+    },
+  },
 }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
@@ -84,25 +142,196 @@ function safeJsonParse<T>(value: string | null | undefined): T | null {
   }
 }
 
+function readString(
+  raw: Record<string, unknown> | null,
+  key: string,
+  fallback: string
+) {
+  const value = raw?.[key]
+  return typeof value === 'string' && value.trim() ? value : fallback
+}
+
+function readBoolean(
+  raw: Record<string, unknown> | null,
+  key: string,
+  fallback: boolean
+) {
+  const value = raw?.[key]
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function readEnum<T extends readonly string[]>(
+  raw: Record<string, unknown> | null,
+  key: string,
+  allowed: T,
+  fallback: T[number]
+): T[number] {
+  const value = raw?.[key]
+  return typeof value === 'string' && allowed.includes(value as T[number])
+    ? (value as T[number])
+    : fallback
+}
+
+function normalizeBusinessHours(raw: unknown): BusinessHours {
+  const source =
+    raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
+
+  const result = {} as BusinessHours
+
+  for (const day of Object.keys(DEFAULT_WIDGET_CONFIG.businessHours) as Array<
+    keyof BusinessHours
+  >) {
+    const defaultDay = DEFAULT_WIDGET_CONFIG.businessHours[day]
+    const rawDay =
+      source[day] && typeof source[day] === 'object'
+        ? (source[day] as Record<string, unknown>)
+        : null
+
+    result[day] = {
+      enabled:
+        typeof rawDay?.enabled === 'boolean' ? rawDay.enabled : defaultDay.enabled,
+      start:
+        typeof rawDay?.start === 'string' && timeSchema.safeParse(rawDay.start).success
+          ? rawDay.start
+          : defaultDay.start,
+      end:
+        typeof rawDay?.end === 'string' && timeSchema.safeParse(rawDay.end).success
+          ? rawDay.end
+          : defaultDay.end,
+    }
+  }
+
+  return result
+}
+
+function normalizeScenarioTargets(params: {
+  raw: unknown
+  ctaLabel: string
+  primaryActionUrl: string
+}): ScenarioTargets {
+  const source =
+    params.raw && typeof params.raw === 'object'
+      ? (params.raw as Record<string, unknown>)
+      : {}
+
+  const defaults: ScenarioTargets = {
+    ...DEFAULT_WIDGET_CONFIG.scenarioTargets,
+    default: {
+      label: params.ctaLabel,
+      url: params.primaryActionUrl,
+    },
+  }
+
+  const result = {} as ScenarioTargets
+
+  for (const key of scenarioKeys) {
+    const defaultTarget = defaults[key]
+    const rawTarget =
+      source[key] && typeof source[key] === 'object'
+        ? (source[key] as Record<string, unknown>)
+        : null
+
+    result[key] = {
+      label:
+        typeof rawTarget?.label === 'string' && rawTarget.label.trim()
+          ? rawTarget.label
+          : defaultTarget.label,
+      url:
+        typeof rawTarget?.url === 'string'
+          ? rawTarget.url
+          : defaultTarget.url,
+    }
+  }
+
+  return result
+}
+
 function resolveWidgetConfigFromSettings(
   rawSettings: Record<string, unknown> | null,
   fallbackOrganizationName?: string
 ): WidgetConfig {
   const widgetRaw =
     rawSettings && typeof rawSettings.atendimentoWidget === 'object'
-      ? rawSettings.atendimentoWidget
+      ? (rawSettings.atendimentoWidget as Record<string, unknown>)
       : null
 
-  const parsed = widgetConfigSchema.safeParse(widgetRaw)
+  const organizationName = readString(
+    widgetRaw,
+    'organizationName',
+    fallbackOrganizationName?.trim() || DEFAULT_WIDGET_CONFIG.organizationName
+  )
 
-  if (parsed.success) {
-    return parsed.data
+  const ctaLabel = readString(widgetRaw, 'ctaLabel', DEFAULT_WIDGET_CONFIG.ctaLabel)
+  const primaryActionUrl = readString(
+    widgetRaw,
+    'primaryActionUrl',
+    DEFAULT_WIDGET_CONFIG.primaryActionUrl
+  )
+
+  const merged: WidgetConfig = {
+    organizationName,
+    title: readString(widgetRaw, 'title', DEFAULT_WIDGET_CONFIG.title),
+    subtitle: readString(widgetRaw, 'subtitle', DEFAULT_WIDGET_CONFIG.subtitle),
+    ctaLabel,
+    online: readBoolean(widgetRaw, 'online', DEFAULT_WIDGET_CONFIG.online),
+    position: readEnum(
+      widgetRaw,
+      'position',
+      ['right', 'left'] as const,
+      DEFAULT_WIDGET_CONFIG.position
+    ),
+    buttonLabel: readString(
+      widgetRaw,
+      'buttonLabel',
+      DEFAULT_WIDGET_CONFIG.buttonLabel
+    ),
+    primaryActionUrl,
+    primaryColor: readString(
+      widgetRaw,
+      'primaryColor',
+      DEFAULT_WIDGET_CONFIG.primaryColor
+    ),
+    accentColor: readString(
+      widgetRaw,
+      'accentColor',
+      DEFAULT_WIDGET_CONFIG.accentColor
+    ),
+    operatingMode: readEnum(
+      widgetRaw,
+      'operatingMode',
+      ['manual', 'business_hours'] as const,
+      DEFAULT_WIDGET_CONFIG.operatingMode
+    ),
+    timezone: readString(widgetRaw, 'timezone', DEFAULT_WIDGET_CONFIG.timezone),
+    fallbackBehavior: readEnum(
+      widgetRaw,
+      'fallbackBehavior',
+      ['none', 'redirect'] as const,
+      DEFAULT_WIDGET_CONFIG.fallbackBehavior
+    ),
+    fallbackLabel: readString(
+      widgetRaw,
+      'fallbackLabel',
+      DEFAULT_WIDGET_CONFIG.fallbackLabel
+    ),
+    fallbackUrl:
+      typeof widgetRaw?.fallbackUrl === 'string'
+        ? widgetRaw.fallbackUrl
+        : DEFAULT_WIDGET_CONFIG.fallbackUrl,
+    businessHours: normalizeBusinessHours(widgetRaw?.businessHours),
+    scenarioTargets: normalizeScenarioTargets({
+      raw: widgetRaw?.scenarioTargets,
+      ctaLabel,
+      primaryActionUrl,
+    }),
   }
+
+  const parsed = widgetConfigSchema.safeParse(merged)
+  if (parsed.success) return parsed.data
 
   return {
     ...DEFAULT_WIDGET_CONFIG,
-    organizationName:
-      fallbackOrganizationName?.trim() || DEFAULT_WIDGET_CONFIG.organizationName,
+    organizationName,
   }
 }
 
