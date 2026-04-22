@@ -4,6 +4,26 @@ import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 
 const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
+const timeSchema = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido.')
+
+const businessDaySchema = z.object({
+  enabled: z.boolean(),
+  start: timeSchema,
+  end: timeSchema,
+})
+
+const businessHoursSchema = z.object({
+  monday: businessDaySchema,
+  tuesday: businessDaySchema,
+  wednesday: businessDaySchema,
+  thursday: businessDaySchema,
+  friday: businessDaySchema,
+  saturday: businessDaySchema,
+  sunday: businessDaySchema,
+})
 
 const widgetConfigSchema = z.object({
   organizationName: z.string().trim().min(1).max(120),
@@ -16,6 +36,12 @@ const widgetConfigSchema = z.object({
   primaryActionUrl: z.string().trim().url().max(300),
   primaryColor: hexColorSchema,
   accentColor: hexColorSchema,
+  operatingMode: z.enum(['manual', 'business_hours']),
+  timezone: z.string().trim().min(1).max(80),
+  fallbackBehavior: z.enum(['none', 'redirect']),
+  fallbackLabel: z.string().trim().max(80),
+  fallbackUrl: z.string().trim().max(300),
+  businessHours: businessHoursSchema,
 })
 
 type WidgetConfig = z.infer<typeof widgetConfigSchema>
@@ -32,6 +58,20 @@ const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
   primaryColor: '#374b89',
   accentColor: '#2f3453',
+  operatingMode: 'manual',
+  timezone: 'America/Sao_Paulo',
+  fallbackBehavior: 'none',
+  fallbackLabel: 'Abrir opção alternativa',
+  fallbackUrl: '',
+  businessHours: {
+    monday: { enabled: true, start: '08:00', end: '18:00' },
+    tuesday: { enabled: true, start: '08:00', end: '18:00' },
+    wednesday: { enabled: true, start: '08:00', end: '18:00' },
+    thursday: { enabled: true, start: '08:00', end: '18:00' },
+    friday: { enabled: true, start: '08:00', end: '18:00' },
+    saturday: { enabled: false, start: '08:00', end: '12:00' },
+    sunday: { enabled: false, start: '08:00', end: '12:00' },
+  },
 }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {

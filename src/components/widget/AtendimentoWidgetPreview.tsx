@@ -2,46 +2,186 @@
 
 import { MessageCircle, X, Circle } from 'lucide-react'
 
+type WidgetPosition = 'right' | 'left'
+type OperatingMode = 'manual' | 'business_hours'
+type FallbackBehavior = 'none' | 'redirect'
+
+type BusinessDay = {
+  enabled: boolean
+  start: string
+  end: string
+}
+
+type BusinessHours = {
+  monday: BusinessDay
+  tuesday: BusinessDay
+  wednesday: BusinessDay
+  thursday: BusinessDay
+  friday: BusinessDay
+  saturday: BusinessDay
+  sunday: BusinessDay
+}
+
 type AtendimentoWidgetPreviewProps = {
   organizationName: string
   title: string
   subtitle: string
   ctaLabel: string
   online: boolean
-  position: 'right' | 'left'
+  position: WidgetPosition
   buttonLabel: string
   primaryColor: string
   accentColor: string
+  operatingMode: OperatingMode
+  timezone: string
+  fallbackBehavior: FallbackBehavior
+  fallbackLabel: string
+  fallbackUrl: string
+  primaryActionUrl: string
+  businessHours: BusinessHours
+}
+
+type ResolvedWidgetState = {
+  online: boolean
+  actionLabel: string
+  actionUrl: string
+  helperText: string
+  statusText: string
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
-export default function AtendimentoWidgetPreview({
-  organizationName,
-  title,
-  subtitle,
-  ctaLabel,
+const weekdayMap: Record<string, keyof BusinessHours> = {
+  monday: 'monday',
+  tuesday: 'tuesday',
+  wednesday: 'wednesday',
+  thursday: 'thursday',
+  friday: 'friday',
+  saturday: 'saturday',
+  sunday: 'sunday',
+}
+
+function toMinutes(time: string) {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+function isBusinessOpen({
+  timezone,
+  businessHours,
+}: {
+  timezone: string
+  businessHours: BusinessHours
+}) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      weekday: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+
+    const parts = formatter.formatToParts(new Date())
+    const weekday = parts.find((part) => part.type === 'weekday')?.value.toLowerCase() ?? ''
+    const hour = parts.find((part) => part.type === 'hour')?.value ?? '00'
+    const minute = parts.find((part) => part.type === 'minute')?.value ?? '00'
+
+    const dayKey = weekdayMap[weekday]
+    if (!dayKey) return false
+
+    const day = businessHours[dayKey]
+    if (!day.enabled) return false
+
+    const currentMinutes = Number(hour) * 60 + Number(minute)
+    return currentMinutes >= toMinutes(day.start) && currentMinutes <= toMinutes(day.end)
+  } catch {
+    return false
+  }
+}
+
+function resolveWidgetState({
+  operatingMode,
   online,
-  position,
-  buttonLabel,
-  primaryColor,
-  accentColor,
-}: AtendimentoWidgetPreviewProps) {
+  timezone,
+  businessHours,
+  ctaLabel,
+  primaryActionUrl,
+  fallbackBehavior,
+  fallbackLabel,
+  fallbackUrl,
+}: {
+  operatingMode: OperatingMode
+  online: boolean
+  timezone: string
+  businessHours: BusinessHours
+  ctaLabel: string
+  primaryActionUrl: string
+  fallbackBehavior: FallbackBehavior
+  fallbackLabel: string
+  fallbackUrl: string
+}): ResolvedWidgetState {
+  const isOnline =
+    operatingMode === 'manual'
+      ? online
+      : isBusinessOpen({ timezone, businessHours })
+
+  if (isOnline) {
+    return {
+      online: true,
+      actionLabel: ctaLabel,
+      actionUrl: primaryActionUrl,
+      helperText: 'Widget em modo operacional. O CTA principal aponta para o Atendimento.',
+      statusText: 'Atendimento disponível',
+    }
+  }
+
+  if (fallbackBehavior === 'redirect' && fallbackUrl.trim()) {
+    return {
+      online: false,
+      actionLabel: fallbackLabel.trim() || 'Abrir opção alternativa',
+      actionUrl: fallbackUrl.trim(),
+      helperText: 'Fora do horário. O CTA foi governado para o fallback configurado.',
+      statusText: 'Fora do horário',
+    }
+  }
+
+  return {
+    online: false,
+    actionLabel: ctaLabel,
+    actionUrl: primaryActionUrl,
+    helperText: 'Fora do horário. Sem fallback configurado, o CTA principal foi mantido.',
+    statusText: 'Fora do horário',
+  }
+}
+
+export default function AtendimentoWidgetPreview(props: AtendimentoWidgetPreviewProps) {
+  const resolved = resolveWidgetState({
+    operatingMode: props.operatingMode,
+    online: props.online,
+    timezone: props.timezone,
+    businessHours: props.businessHours,
+    ctaLabel: props.ctaLabel,
+    primaryActionUrl: props.primaryActionUrl,
+    fallbackBehavior: props.fallbackBehavior,
+    fallbackLabel: props.fallbackLabel,
+    fallbackUrl: props.fallbackUrl,
+  })
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold text-[#2f3453]">Preview do widget</h3>
           <p className="mt-1 text-sm text-slate-500">
-            Prévia visual local. O loader real já existe nesta fase, mas esta caixa ainda é só
-            preview.
+            Prévia com regra de horário, fallback e governança do CTA.
           </p>
         </div>
 
         <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-          {online ? (
+          {resolved.online ? (
             <>
               <Circle className="h-3 w-3 fill-emerald-500 text-emerald-500" />
               Online
@@ -63,9 +203,9 @@ export default function AtendimentoWidgetPreview({
           <div className="mt-2 flex items-center gap-3">
             <span
               className="h-6 w-6 rounded-full border border-slate-200"
-              style={{ backgroundColor: primaryColor }}
+              style={{ backgroundColor: props.primaryColor }}
             />
-            <span className="text-sm font-semibold text-[#2f3453]">{primaryColor}</span>
+            <span className="text-sm font-semibold text-[#2f3453]">{props.primaryColor}</span>
           </div>
         </div>
 
@@ -76,10 +216,28 @@ export default function AtendimentoWidgetPreview({
           <div className="mt-2 flex items-center gap-3">
             <span
               className="h-6 w-6 rounded-full border border-slate-200"
-              style={{ backgroundColor: accentColor }}
+              style={{ backgroundColor: props.accentColor }}
             />
-            <span className="text-sm font-semibold text-[#2f3453]">{accentColor}</span>
+            <span className="text-sm font-semibold text-[#2f3453]">{props.accentColor}</span>
           </div>
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Modo operacional
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[#2f3453]">
+            {props.operatingMode === 'manual' ? 'Manual' : 'Por horário'}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            CTA resolvido
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[#2f3453]">{resolved.actionLabel}</p>
         </div>
       </div>
 
@@ -88,34 +246,34 @@ export default function AtendimentoWidgetPreview({
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Página do cliente
           </p>
-          <h4 className="mt-2 text-xl font-bold text-[#2f3453]">{organizationName}</h4>
+          <h4 className="mt-2 text-xl font-bold text-[#2f3453]">{props.organizationName}</h4>
           <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
             Área de simulação do widget. O objetivo aqui é validar casca visual, identidade,
-            CTA e posicionamento sem tocar no motor do Atendimento.
+            CTA, horário e fallback sem tocar no motor do Atendimento.
           </p>
         </div>
 
         <div
           className={cn(
             'absolute bottom-6 flex w-[340px] max-w-[calc(100%-48px)] flex-col gap-3',
-            position === 'right' ? 'right-6 items-end' : 'left-6 items-start'
+            props.position === 'right' ? 'right-6 items-end' : 'left-6 items-start'
           )}
         >
           <div className="w-full rounded-3xl border border-slate-200 bg-white shadow-xl">
             <div
               className="flex items-start justify-between gap-3 rounded-t-3xl px-5 py-4 text-white"
-              style={{ backgroundColor: accentColor }}
+              style={{ backgroundColor: props.accentColor }}
             >
               <div>
-                <p className="text-sm font-semibold">{organizationName}</p>
+                <p className="text-sm font-semibold">{props.organizationName}</p>
                 <div className="mt-1 flex items-center gap-2 text-xs text-slate-200">
                   <span
                     className={cn(
                       'h-2 w-2 rounded-full',
-                      online ? 'bg-emerald-400' : 'bg-yellow-400'
+                      resolved.online ? 'bg-emerald-400' : 'bg-yellow-400'
                     )}
                   />
-                  {online ? 'Atendimento disponível' : 'Retorno no próximo horário'}
+                  {resolved.statusText}
                 </div>
               </div>
 
@@ -126,31 +284,34 @@ export default function AtendimentoWidgetPreview({
 
             <div className="space-y-4 px-5 py-5">
               <div>
-                <h5 className="text-base font-bold text-[#2f3453]">{title}</h5>
-                <p className="mt-1 text-sm leading-6 text-slate-600">{subtitle}</p>
+                <h5 className="text-base font-bold text-[#2f3453]">{props.title}</h5>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{props.subtitle}</p>
               </div>
 
               <button
                 className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
-                style={{ backgroundColor: primaryColor }}
+                style={{ backgroundColor: props.primaryColor }}
               >
                 <MessageCircle className="h-4 w-4" />
-                {ctaLabel}
+                {resolved.actionLabel}
               </button>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                O widget real agora já pode ser carregado por snippet, mas a conversa operacional
-                continua no Atendimento.
+                {resolved.helperText}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
+                Destino atual: {resolved.actionUrl}
               </div>
             </div>
           </div>
 
           <button
             className="inline-flex items-center gap-2 rounded-full px-5 py-4 text-sm font-semibold text-white shadow-lg"
-            style={{ backgroundColor: primaryColor }}
+            style={{ backgroundColor: props.primaryColor }}
           >
             <MessageCircle className="h-5 w-5" />
-            {buttonLabel}
+            {props.buttonLabel}
           </button>
         </div>
       </div>
