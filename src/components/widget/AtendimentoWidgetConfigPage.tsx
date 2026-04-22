@@ -31,6 +31,7 @@ type BusinessDayKey =
   | 'friday'
   | 'saturday'
   | 'sunday'
+type ScenarioKey = 'default' | 'atendimento' | 'consultoria' | 'whatsapp' | 'contato'
 
 type BusinessDay = {
   enabled: boolean
@@ -39,6 +40,13 @@ type BusinessDay = {
 }
 
 type BusinessHours = Record<BusinessDayKey, BusinessDay>
+
+type ScenarioTarget = {
+  label: string
+  url: string
+}
+
+type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
 
 type WidgetConfig = {
   organizationName: string
@@ -57,6 +65,7 @@ type WidgetConfig = {
   fallbackLabel: string
   fallbackUrl: string
   businessHours: BusinessHours
+  scenarioTargets: ScenarioTargets
 }
 
 type OrgScope = {
@@ -81,6 +90,14 @@ const dayLabels: Record<BusinessDayKey, string> = {
   friday: 'Sexta',
   saturday: 'Sábado',
   sunday: 'Domingo',
+}
+
+const scenarioLabels: Record<ScenarioKey, string> = {
+  default: 'Default',
+  atendimento: 'Atendimento',
+  consultoria: 'Consultoria',
+  whatsapp: 'WhatsApp',
+  contato: 'Contato',
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -175,6 +192,28 @@ const FALLBACK_DEFAULTS: WidgetConfig = {
     saturday: { enabled: false, start: '08:00', end: '12:00' },
     sunday: { enabled: false, start: '08:00', end: '12:00' },
   },
+  scenarioTargets: {
+    default: {
+      label: 'Abrir Atendimento',
+      url: 'https://crm.mundodigitalsolucoes.com.br',
+    },
+    atendimento: {
+      label: 'Abrir Atendimento',
+      url: 'https://crm.mundodigitalsolucoes.com.br',
+    },
+    consultoria: {
+      label: 'Solicitar consultoria',
+      url: 'https://mundodigitalsolucoes.com.br/contato',
+    },
+    whatsapp: {
+      label: 'Falar no WhatsApp',
+      url: 'https://wa.me/5517992822597',
+    },
+    contato: {
+      label: 'Abrir página de contato',
+      url: 'https://mundodigitalsolucoes.com.br/contato',
+    },
+  },
 }
 
 export default function AtendimentoWidgetConfigPage() {
@@ -185,6 +224,7 @@ export default function AtendimentoWidgetConfigPage() {
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
+  const [previewContext, setPreviewContext] = useState<ScenarioKey>('default')
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
@@ -215,11 +255,12 @@ export default function AtendimentoWidgetConfigPage() {
 
     return `<script>
   window.MDSAtendimentoWidget = {
-    orgSlug: '${slug}'
+    orgSlug: '${slug}',
+    pageContext: '${previewContext}'
   };
 </script>
 <script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
-  }, [orgScope?.slug])
+  }, [orgScope?.slug, previewContext])
 
   const publicPreviewUrl = useMemo(() => {
     if (!orgScope?.slug) return '—'
@@ -244,6 +285,23 @@ export default function AtendimentoWidgetConfigPage() {
         ...current.businessHours,
         [day]: {
           ...current.businessHours[day],
+          [field]: value,
+        },
+      },
+    }))
+  }
+
+  const updateScenarioTarget = <K extends keyof ScenarioTarget>(
+    scenario: ScenarioKey,
+    field: K,
+    value: ScenarioTarget[K]
+  ) => {
+    setConfig((current) => ({
+      ...current,
+      scenarioTargets: {
+        ...current.scenarioTargets,
+        [scenario]: {
+          ...current.scenarioTargets[scenario],
           [field]: value,
         },
       },
@@ -338,7 +396,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 04: horário de atendimento, fallback e governança do CTA.
+                  Fase 05: múltiplos destinos por cenário comercial.
                 </p>
               </div>
             </div>
@@ -397,7 +455,7 @@ export default function AtendimentoWidgetConfigPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[460px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[500px_minmax(0,1fr)]">
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5 flex items-center gap-3">
@@ -405,9 +463,9 @@ export default function AtendimentoWidgetConfigPage() {
                 <Settings2 className="h-5 w-5 text-slate-600" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#2f3453]">Configuração</h2>
+                <h2 className="text-lg font-bold text-[#2f3453]">Configuração base</h2>
                 <p className="text-sm text-slate-500">
-                  Ajuste, salve, governe o CTA e defina o comportamento fora do horário.
+                  Mantém a configuração geral, fallback e horário.
                 </p>
               </div>
             </div>
@@ -421,7 +479,6 @@ export default function AtendimentoWidgetConfigPage() {
                   value={config.organizationName}
                   onChange={(e) => updateField('organizationName', e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  placeholder="Nome da empresa"
                 />
               </label>
 
@@ -431,7 +488,6 @@ export default function AtendimentoWidgetConfigPage() {
                   value={config.title}
                   onChange={(e) => updateField('title', e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  placeholder="Título do widget"
                 />
               </label>
 
@@ -441,18 +497,16 @@ export default function AtendimentoWidgetConfigPage() {
                   value={config.subtitle}
                   onChange={(e) => updateField('subtitle', e.target.value)}
                   className="min-h-[110px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  placeholder="Mensagem curta do widget"
                 />
               </label>
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-2">
-                  <span className="text-sm font-semibold text-[#2f3453]">Texto do CTA</span>
+                  <span className="text-sm font-semibold text-[#2f3453]">Texto base do CTA</span>
                   <input
                     value={config.ctaLabel}
                     onChange={(e) => updateField('ctaLabel', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="Abrir Atendimento"
                   />
                 </label>
 
@@ -464,20 +518,16 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.buttonLabel}
                     onChange={(e) => updateField('buttonLabel', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="Atendimento"
                   />
                 </label>
               </div>
 
               <label className="block space-y-2">
-                <span className="text-sm font-semibold text-[#2f3453]">
-                  URL principal do CTA
-                </span>
+                <span className="text-sm font-semibold text-[#2f3453]">URL base do CTA</span>
                 <input
                   value={config.primaryActionUrl}
                   onChange={(e) => updateField('primaryActionUrl', e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                  placeholder="https://crm.mundodigitalsolucoes.com.br"
                 />
               </label>
 
@@ -502,7 +552,6 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.timezone}
                     onChange={(e) => updateField('timezone', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="America/Sao_Paulo"
                   />
                 </label>
               </div>
@@ -550,7 +599,6 @@ export default function AtendimentoWidgetConfigPage() {
                       value={config.primaryColor}
                       onChange={(e) => updateField('primaryColor', e.target.value)}
                       className="w-full text-sm outline-none"
-                      placeholder="#374b89"
                     />
                   </div>
                 </label>
@@ -568,7 +616,6 @@ export default function AtendimentoWidgetConfigPage() {
                       value={config.accentColor}
                       onChange={(e) => updateField('accentColor', e.target.value)}
                       className="w-full text-sm outline-none"
-                      placeholder="#2f3453"
                     />
                   </div>
                 </label>
@@ -577,7 +624,7 @@ export default function AtendimentoWidgetConfigPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Fallback e governança do CTA</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">Fallback e horário</h2>
 
             <div className="mt-4 space-y-4">
               <label className="block space-y-2">
@@ -601,7 +648,6 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.fallbackLabel}
                     onChange={(e) => updateField('fallbackLabel', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="Ex.: Falar no WhatsApp"
                   />
                 </label>
 
@@ -611,58 +657,101 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.fallbackUrl}
                     onChange={(e) => updateField('fallbackUrl', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="https://wa.me/5517992822597"
                   />
                 </label>
+              </div>
+
+              <div className="space-y-3">
+                {(Object.keys(dayLabels) as BusinessDayKey[]).map((day) => (
+                  <div
+                    key={day}
+                    className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[120px_110px_1fr_1fr]"
+                  >
+                    <div className="flex items-center font-semibold text-[#2f3453]">
+                      {dayLabels[day]}
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={config.businessHours[day].enabled}
+                        onChange={(e) => updateBusinessDay(day, 'enabled', e.target.checked)}
+                      />
+                      Ativo
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Início
+                      </span>
+                      <input
+                        type="time"
+                        value={config.businessHours[day].start}
+                        onChange={(e) => updateBusinessDay(day, 'start', e.target.value)}
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
+                      />
+                    </label>
+
+                    <label className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Fim
+                      </span>
+                      <input
+                        type="time"
+                        value={config.businessHours[day].end}
+                        onChange={(e) => updateBusinessDay(day, 'end', e.target.value)}
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
+                      />
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Horário de atendimento</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">Destinos por contexto</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Cada página pode chamar o mesmo widget com um `pageContext` diferente.
+            </p>
 
-            <div className="mt-4 space-y-3">
-              {(Object.keys(dayLabels) as BusinessDayKey[]).map((day) => (
+            <div className="mt-4 space-y-4">
+              {(Object.keys(scenarioLabels) as ScenarioKey[]).map((scenario) => (
                 <div
-                  key={day}
-                  className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[120px_110px_1fr_1fr]"
+                  key={scenario}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 >
-                  <div className="flex items-center font-semibold text-[#2f3453]">
-                    {dayLabels[day]}
+                  <p className="text-sm font-bold text-[#2f3453]">
+                    {scenarioLabels[scenario]}
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="block space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Texto
+                      </span>
+                      <input
+                        value={config.scenarioTargets[scenario].label}
+                        onChange={(e) =>
+                          updateScenarioTarget(scenario, 'label', e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                      />
+                    </label>
+
+                    <label className="block space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        URL
+                      </span>
+                      <input
+                        value={config.scenarioTargets[scenario].url}
+                        onChange={(e) =>
+                          updateScenarioTarget(scenario, 'url', e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                      />
+                    </label>
                   </div>
-
-                  <label className="flex items-center gap-2 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={config.businessHours[day].enabled}
-                      onChange={(e) => updateBusinessDay(day, 'enabled', e.target.checked)}
-                    />
-                    Ativo
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Início
-                    </span>
-                    <input
-                      type="time"
-                      value={config.businessHours[day].start}
-                      onChange={(e) => updateBusinessDay(day, 'start', e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Fim
-                    </span>
-                    <input
-                      type="time"
-                      value={config.businessHours[day].end}
-                      onChange={(e) => updateBusinessDay(day, 'end', e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#374b89]"
-                    />
-                  </label>
                 </div>
               ))}
             </div>
@@ -709,7 +798,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Snippet real</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Este snippet continua usando loader real e rota pública.
+                  Escolha o contexto e copie o snippet correspondente.
                 </p>
               </div>
 
@@ -722,12 +811,27 @@ export default function AtendimentoWidgetConfigPage() {
               </button>
             </div>
 
+            <label className="mb-4 block space-y-2">
+              <span className="text-sm font-semibold text-[#2f3453]">Contexto do snippet</span>
+              <select
+                value={previewContext}
+                onChange={(e) => setPreviewContext(e.target.value as ScenarioKey)}
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+              >
+                <option value="default">default</option>
+                <option value="atendimento">atendimento</option>
+                <option value="consultoria">consultoria</option>
+                <option value="whatsapp">whatsapp</option>
+                <option value="contato">contato</option>
+              </select>
+            </label>
+
             <pre className="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">
               <code>{snippet}</code>
             </pre>
 
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              O widget já pode governar o CTA por horário e por fallback sem recriar conversa.
+              O widget agora pode abrir destinos diferentes dependendo da página onde o snippet foi colado.
             </div>
           </div>
         </div>
@@ -749,6 +853,8 @@ export default function AtendimentoWidgetConfigPage() {
           fallbackUrl={config.fallbackUrl}
           primaryActionUrl={config.primaryActionUrl}
           businessHours={config.businessHours}
+          scenarioTargets={config.scenarioTargets}
+          previewContext={previewContext}
         />
       </div>
     </div>
