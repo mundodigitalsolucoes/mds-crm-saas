@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
+const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
+
 const publicWidgetConfigSchema = z.object({
   organizationName: z.string().trim().min(1).max(120),
   title: z.string().trim().min(1).max(120),
@@ -11,6 +13,8 @@ const publicWidgetConfigSchema = z.object({
   position: z.enum(['right', 'left']),
   buttonLabel: z.string().trim().min(1).max(80),
   primaryActionUrl: z.string().trim().url().max(300),
+  primaryColor: hexColorSchema,
+  accentColor: hexColorSchema,
 })
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {

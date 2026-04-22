@@ -10,6 +10,8 @@ type AtendimentoWidgetPreviewProps = {
   online: boolean
   position: 'right' | 'left'
   buttonLabel: string
+  primaryColor: string
+  accentColor: string
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -24,6 +26,8 @@ export default function AtendimentoWidgetPreview({
   online,
   position,
   buttonLabel,
+  primaryColor,
+  accentColor,
 }: AtendimentoWidgetPreviewProps) {
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -51,6 +55,34 @@ export default function AtendimentoWidgetPreview({
         </span>
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Cor principal
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <span
+              className="h-6 w-6 rounded-full border border-slate-200"
+              style={{ backgroundColor: primaryColor }}
+            />
+            <span className="text-sm font-semibold text-[#2f3453]">{primaryColor}</span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Cor de destaque
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <span
+              className="h-6 w-6 rounded-full border border-slate-200"
+              style={{ backgroundColor: accentColor }}
+            />
+            <span className="text-sm font-semibold text-[#2f3453]">{accentColor}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="relative min-h-[420px] overflow-hidden rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top,_#f8fafc,_#e2e8f0)] p-6">
         <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 backdrop-blur">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -70,7 +102,10 @@ export default function AtendimentoWidgetPreview({
           )}
         >
           <div className="w-full rounded-3xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-3 rounded-t-3xl bg-[#2f3453] px-5 py-4 text-white">
+            <div
+              className="flex items-start justify-between gap-3 rounded-t-3xl px-5 py-4 text-white"
+              style={{ backgroundColor: accentColor }}
+            >
               <div>
                 <p className="text-sm font-semibold">{organizationName}</p>
                 <div className="mt-1 flex items-center gap-2 text-xs text-slate-200">
@@ -95,7 +130,10 @@ export default function AtendimentoWidgetPreview({
                 <p className="mt-1 text-sm leading-6 text-slate-600">{subtitle}</p>
               </div>
 
-              <button className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#374b89] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f3453]">
+              <button
+                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
+                style={{ backgroundColor: primaryColor }}
+              >
                 <MessageCircle className="h-4 w-4" />
                 {ctaLabel}
               </button>
@@ -107,7 +145,10 @@ export default function AtendimentoWidgetPreview({
             </div>
           </div>
 
-          <button className="inline-flex items-center gap-2 rounded-full bg-[#374b89] px-5 py-4 text-sm font-semibold text-white shadow-lg hover:bg-[#2f3453]">
+          <button
+            className="inline-flex items-center gap-2 rounded-full px-5 py-4 text-sm font-semibold text-white shadow-lg"
+            style={{ backgroundColor: primaryColor }}
+          >
             <MessageCircle className="h-5 w-5" />
             {buttonLabel}
           </button>
