@@ -5,6 +5,7 @@ import axios from 'axios'
 import {
   CheckCircle,
   Copy,
+  ExternalLink,
   Globe,
   Info,
   Loader2,
@@ -24,24 +25,6 @@ type WidgetPosition = 'left' | 'right'
 type PublishMode = 'all' | 'allowlist'
 type DarkMode = 'light' | 'auto'
 type LauncherType = 'standard' | 'expanded'
-type OperatingMode = 'manual' | 'business_hours'
-type FallbackBehavior = 'none' | 'redirect'
-type BusinessDayKey =
-  | 'monday'
-  | 'tuesday'
-  | 'wednesday'
-  | 'thursday'
-  | 'friday'
-  | 'saturday'
-  | 'sunday'
-
-type BusinessDay = {
-  enabled: boolean
-  start: string
-  end: string
-}
-
-type BusinessHours = Record<BusinessDayKey, BusinessDay>
 
 type WidgetConfig = {
   organizationName: string
@@ -102,16 +85,6 @@ const FALLBACK_DEFAULTS: WidgetConfig = {
   publishMode: 'all',
   allowedDomains: [],
   notes: '',
-}
-
-const dayLabels: Record<BusinessDayKey, string> = {
-  monday: 'Segunda',
-  tuesday: 'Terça',
-  wednesday: 'Quarta',
-  thursday: 'Quinta',
-  friday: 'Sexta',
-  saturday: 'Sábado',
-  sunday: 'Domingo',
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -189,6 +162,54 @@ function FeedbackBanner({
   )
 }
 
+function StatusCard({
+  title,
+  value,
+  ok,
+}: {
+  title: string
+  value: string
+  ok: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border p-4 text-sm',
+        ok
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+          : 'border-yellow-200 bg-yellow-50 text-yellow-800'
+      )}
+    >
+      <p className="font-semibold">{title}</p>
+      <p className="mt-1">{value}</p>
+    </div>
+  )
+}
+
+function StepCard({
+  number,
+  title,
+  description,
+}: {
+  number: string
+  title: string
+  description: string
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#374b89] text-sm font-bold text-white">
+          {number}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[#2f3453]">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AtendimentoWidgetConfigPage() {
   const [message, setMessage] = useState<MessageState>(null)
   const [loading, setLoading] = useState(true)
@@ -224,15 +245,26 @@ export default function AtendimentoWidgetConfigPage() {
     void loadConfig()
   }, [loadConfig])
 
+  const parsedDomains = useMemo(() => parseDomains(domainText), [domainText])
+
   const readiness = useMemo(() => {
+    const enabled = config.enabled
+    const baseUrl = Boolean(config.chatwootBaseUrl.trim())
+    const token = Boolean(config.websiteToken.trim())
+    const domain = Boolean(config.websiteDomain.trim())
+    const snippetReady = enabled && baseUrl && token
+    const allowlistReady =
+      config.publishMode === 'all' ? true : parsedDomains.length > 0
+
     return {
-      enabled: config.enabled,
-      baseUrl: Boolean(config.chatwootBaseUrl.trim()),
-      token: Boolean(config.websiteToken.trim()),
-      snippetReady:
-        config.enabled && Boolean(config.chatwootBaseUrl.trim()) && Boolean(config.websiteToken.trim()),
+      enabled,
+      baseUrl,
+      token,
+      domain,
+      allowlistReady,
+      snippetReady,
     }
-  }, [config])
+  }, [config, parsedDomains.length])
 
   const snippet = useMemo(() => {
     const baseUrl = config.chatwootBaseUrl.trim() || defaults.chatwootBaseUrl
@@ -252,6 +284,17 @@ export default function AtendimentoWidgetConfigPage() {
     }
 
     return `<script>
+  window.MDSAtendimentoWidget = {
+    orgSlug: ${JSON.stringify(orgScope?.slug || '')}
+  };
+</script>
+<script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>
+
+<!-- Referência nativa gerada pelo CRM -->
+<!-- O loader do CRM valida domínio, carrega config pública e inicializa o SDK nativo do Atendimento -->
+
+<!-- Estrutura equivalente do widget nativo -->
+<script>
   window.chatwootSettings = {
     ${settingsLines.join(',\n    ')}
   };
@@ -273,7 +316,7 @@ export default function AtendimentoWidgetConfigPage() {
     };
   })(document, "script");
 </script>`
-  }, [config, defaults.chatwootBaseUrl])
+  }, [config, defaults.chatwootBaseUrl, orgScope?.slug])
 
   const updateField = <K extends keyof WidgetConfig>(field: K, value: WidgetConfig[K]) => {
     setConfig((current) => ({
@@ -426,7 +469,7 @@ export default function AtendimentoWidgetConfigPage() {
 
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Domínio publicado
+                Domínio principal
               </p>
               <p className="mt-2 break-all text-sm font-bold text-[#2f3453]">
                 {config.websiteDomain || '—'}
@@ -512,7 +555,6 @@ export default function AtendimentoWidgetConfigPage() {
                     value={config.websiteInboxName}
                     onChange={(e) => updateField('websiteInboxName', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="Website"
                   />
                 </label>
 
@@ -778,84 +820,96 @@ export default function AtendimentoWidgetConfigPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold text-[#2f3453]">Prontidão do widget</h2>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Canal website
-                </p>
-                <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {config.websiteInboxName || '—'}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Base URL
-                </p>
-                <p className="mt-2 break-all text-sm font-bold text-[#2f3453]">
-                  {config.chatwootBaseUrl || '—'}
-                </p>
-              </div>
-            </div>
-
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div
-                className={cn(
-                  'rounded-2xl border p-4 text-sm',
-                  readiness.enabled
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
-                )}
-              >
-                <p className="font-semibold">Widget ativo</p>
-                <p className="mt-1">{readiness.enabled ? 'Sim' : 'Não'}</p>
-              </div>
-
-              <div
-                className={cn(
-                  'rounded-2xl border p-4 text-sm',
-                  readiness.token
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
-                )}
-              >
-                <p className="font-semibold">Website token</p>
-                <p className="mt-1">{readiness.token ? 'Configurado' : 'Pendente'}</p>
-              </div>
-
-              <div
-                className={cn(
-                  'rounded-2xl border p-4 text-sm',
-                  readiness.baseUrl
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
-                )}
-              >
-                <p className="font-semibold">Base URL</p>
-                <p className="mt-1">{readiness.baseUrl ? 'Configurada' : 'Pendente'}</p>
-              </div>
-
-              <div
-                className={cn(
-                  'rounded-2xl border p-4 text-sm',
-                  readiness.snippetReady
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-yellow-200 bg-yellow-50 text-yellow-800'
-                )}
-              >
-                <p className="font-semibold">Snippet pronto</p>
-                <p className="mt-1">{readiness.snippetReady ? 'Sim' : 'Não'}</p>
-              </div>
+              <StatusCard
+                title="Widget ativo"
+                value={readiness.enabled ? 'Sim' : 'Não'}
+                ok={readiness.enabled}
+              />
+              <StatusCard
+                title="Website token"
+                value={readiness.token ? 'Configurado' : 'Pendente'}
+                ok={readiness.token}
+              />
+              <StatusCard
+                title="Base URL"
+                value={readiness.baseUrl ? 'Configurada' : 'Pendente'}
+                ok={readiness.baseUrl}
+              />
+              <StatusCard
+                title="Snippet pronto"
+                value={readiness.snippetReady ? 'Sim' : 'Não'}
+                ok={readiness.snippetReady}
+              />
+              <StatusCard
+                title="Domínio principal"
+                value={readiness.domain ? 'Configurado' : 'Pendente'}
+                ok={readiness.domain}
+              />
+              <StatusCard
+                title="Escopo de publicação"
+                value={readiness.allowlistReady ? 'OK' : 'Revisar allowlist'}
+                ok={readiness.allowlistReady}
+              />
             </div>
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex items-start gap-3">
                 <Globe className="mt-0.5 h-4 w-4 text-slate-500" />
                 <div className="text-sm text-slate-600">
-                  Esta tela governa o canal website nativo do Atendimento. Ela não substitui a
-                  inbox do Atendimento e não cria chat paralelo.
+                  Esta tela governa o canal website nativo do Atendimento. Ela não substitui
+                  a inbox do Atendimento e não cria chat paralelo.
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-[#2f3453]">Protocolo de ativação</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Sequência correta para ativar o widget sem desviar da arquitetura.
+                </p>
+              </div>
+
+              <a
+                href={config.chatwootBaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Abrir Atendimento
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              <StepCard
+                number="1"
+                title="Criar a inbox website no Atendimento"
+                description="No Atendimento, crie ou valide a inbox nativa de website da organização."
+              />
+              <StepCard
+                number="2"
+                title="Copiar o Website Token"
+                description="Pegue o token da inbox website nativa e cole no campo Website token desta tela."
+              />
+              <StepCard
+                number="3"
+                title="Configurar Base URL e domínio"
+                description="Defina a Base URL do Atendimento e o domínio principal onde o widget será publicado."
+              />
+              <StepCard
+                number="4"
+                title="Salvar e ativar"
+                description="Salve a configuração, ative o widget e valide a prontidão do snippet."
+              />
+              <StepCard
+                number="5"
+                title="Publicar o snippet no site"
+                description="Cole o snippet no site do cliente. O loader do CRM valida a configuração pública e inicializa o SDK nativo do Atendimento."
+              />
             </div>
           </div>
 
@@ -864,7 +918,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Snippet nativo</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Snippet baseado em `websiteToken`, `baseUrl` e `chatwootSettings`.
+                  Snippet governado pelo CRM para inicializar o widget nativo do Atendimento.
                 </p>
               </div>
 
@@ -882,78 +936,30 @@ export default function AtendimentoWidgetConfigPage() {
             </pre>
 
             <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-              Campos como cor, heading, tagline e greeting fazem parte da governança do canal
-              website. O snippet acima já usa a base nativa do Atendimento.
+              O loader do CRM só governa a configuração pública e inicializa o SDK nativo.
+              A conversa operacional continua no Atendimento.
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Prévia de configuração</h2>
-
-            <div className="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_top,_#f8fafc,_#e2e8f0)] p-6">
-              <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Website inbox
-                </p>
-                <h3 className="mt-2 text-xl font-bold text-[#2f3453]">
-                  {config.websiteInboxName || config.organizationName}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {config.websiteDomain || 'www.exemplo.com.br'}
-                </p>
-              </div>
-
-              <div className="mt-6 flex justify-end">
-                <div className="w-full max-w-[340px] rounded-3xl border border-slate-200 bg-white shadow-xl">
-                  <div
-                    className="rounded-t-3xl px-5 py-4 text-white"
-                    style={{ backgroundColor: config.widgetColor }}
-                  >
-                    <p className="text-sm font-semibold">{config.welcomeTitle}</p>
-                    <p className="mt-1 text-xs text-slate-100">{config.welcomeTagline}</p>
-                  </div>
-
-                  <div className="space-y-4 px-5 py-5">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-500">
-                      Launcher: {config.launcherType === 'expanded' ? 'Expanded bubble' : 'Standard'}
-                    </div>
-
-                    {config.greetingEnabled && (
-                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5 text-emerald-800">
-                        Greeting: {config.greetingMessage}
-                      </div>
-                    )}
-
-                    <button
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-white"
-                      style={{ backgroundColor: config.widgetColor }}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      {config.launcherType === 'expanded'
-                        ? config.launcherTitle || 'Atendimento'
-                        : 'Abrir chat'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-lg font-bold text-[#2f3453]">Resumo operacional</h2>
 
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Publish mode
+                  Canal website
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {config.publishMode === 'all' ? 'Todos os domínios' : 'Allowlist'}
+                  {config.websiteInboxName || '—'}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Idioma
+                  Launcher
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {config.useBrowserLanguage ? `${config.locale} + navegador` : config.locale}
+                  {config.launcherType === 'expanded' ? 'Expanded' : 'Standard'}
                 </p>
               </div>
 
@@ -962,18 +968,18 @@ export default function AtendimentoWidgetConfigPage() {
                   Allowed domains
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {parseDomains(domainText).length}
+                  {parsedDomains.length}
                 </p>
               </div>
             </div>
 
-            {parseDomains(domainText).length > 0 && (
+            {parsedDomains.length > 0 && (
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Lista de domínios
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {parseDomains(domainText).map((domain) => (
+                  {parsedDomains.map((domain) => (
                     <span
                       key={domain}
                       className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700"
