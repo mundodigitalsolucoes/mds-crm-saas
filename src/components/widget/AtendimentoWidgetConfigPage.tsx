@@ -8,10 +8,12 @@ import {
   Info,
   Loader2,
   MessageCircle,
+  Plus,
   RefreshCw,
   Save,
   Settings2,
   ShieldCheck,
+  Trash2,
 } from 'lucide-react'
 import AtendimentoWidgetPreview from '@/components/widget/AtendimentoWidgetPreview'
 
@@ -31,7 +33,7 @@ type BusinessDayKey =
   | 'friday'
   | 'saturday'
   | 'sunday'
-type ScenarioKey = 'default' | 'atendimento' | 'consultoria' | 'whatsapp' | 'contato'
+type TargetKey = 'default' | 'slot_1' | 'slot_2' | 'slot_3' | 'slot_4' | 'slot_5'
 
 type BusinessDay = {
   enabled: boolean
@@ -41,12 +43,17 @@ type BusinessDay = {
 
 type BusinessHours = Record<BusinessDayKey, BusinessDay>
 
-type ScenarioTarget = {
+type TargetSlot = {
+  enabled: boolean
+  internalName: string
   label: string
   url: string
 }
 
-type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
+type ContextRule = {
+  context: string
+  targetKey: TargetKey
+}
 
 type WidgetConfig = {
   organizationName: string
@@ -65,7 +72,8 @@ type WidgetConfig = {
   fallbackLabel: string
   fallbackUrl: string
   businessHours: BusinessHours
-  scenarioTargets: ScenarioTargets
+  targetSlots: Record<TargetKey, TargetSlot>
+  contextRules: ContextRule[]
 }
 
 type OrgScope = {
@@ -92,12 +100,13 @@ const dayLabels: Record<BusinessDayKey, string> = {
   sunday: 'Domingo',
 }
 
-const scenarioLabels: Record<ScenarioKey, string> = {
-  default: 'Default',
-  atendimento: 'Atendimento',
-  consultoria: 'Consultoria',
-  whatsapp: 'WhatsApp',
-  contato: 'Contato',
+const targetLabels: Record<TargetKey, string> = {
+  default: 'default',
+  slot_1: 'slot_1',
+  slot_2: 'slot_2',
+  slot_3: 'slot_3',
+  slot_4: 'slot_4',
+  slot_5: 'slot_5',
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -192,28 +201,45 @@ const FALLBACK_DEFAULTS: WidgetConfig = {
     saturday: { enabled: false, start: '08:00', end: '12:00' },
     sunday: { enabled: false, start: '08:00', end: '12:00' },
   },
-  scenarioTargets: {
+  targetSlots: {
     default: {
+      enabled: true,
+      internalName: 'Destino padrão',
       label: 'Abrir Atendimento',
       url: 'https://crm.mundodigitalsolucoes.com.br',
     },
-    atendimento: {
-      label: 'Abrir Atendimento',
-      url: 'https://crm.mundodigitalsolucoes.com.br',
+    slot_1: {
+      enabled: false,
+      internalName: 'Destino 1',
+      label: 'Abrir destino 1',
+      url: '',
     },
-    consultoria: {
-      label: 'Solicitar consultoria',
-      url: 'https://mundodigitalsolucoes.com.br/contato',
+    slot_2: {
+      enabled: false,
+      internalName: 'Destino 2',
+      label: 'Abrir destino 2',
+      url: '',
     },
-    whatsapp: {
-      label: 'Falar no WhatsApp',
-      url: 'https://wa.me/5517992822597',
+    slot_3: {
+      enabled: false,
+      internalName: 'Destino 3',
+      label: 'Abrir destino 3',
+      url: '',
     },
-    contato: {
-      label: 'Abrir página de contato',
-      url: 'https://mundodigitalsolucoes.com.br/contato',
+    slot_4: {
+      enabled: false,
+      internalName: 'Destino 4',
+      label: 'Abrir destino 4',
+      url: '',
+    },
+    slot_5: {
+      enabled: false,
+      internalName: 'Destino 5',
+      label: 'Abrir destino 5',
+      url: '',
     },
   },
+  contextRules: [],
 }
 
 export default function AtendimentoWidgetConfigPage() {
@@ -224,7 +250,7 @@ export default function AtendimentoWidgetConfigPage() {
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [defaults, setDefaults] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
   const [config, setConfig] = useState<WidgetConfig>(FALLBACK_DEFAULTS)
-  const [previewContext, setPreviewContext] = useState<ScenarioKey>('default')
+  const [previewContext, setPreviewContext] = useState('default')
 
   const loadConfig = useCallback(async () => {
     setLoading(true)
@@ -256,7 +282,7 @@ export default function AtendimentoWidgetConfigPage() {
     return `<script>
   window.MDSAtendimentoWidget = {
     orgSlug: '${slug}',
-    pageContext: '${previewContext}'
+    pageContext: '${previewContext.trim() || 'default'}'
   };
 </script>
 <script defer src="https://crm.mundodigitalsolucoes.com.br/widget/loader.js"></script>`
@@ -291,20 +317,52 @@ export default function AtendimentoWidgetConfigPage() {
     }))
   }
 
-  const updateScenarioTarget = <K extends keyof ScenarioTarget>(
-    scenario: ScenarioKey,
+  const updateTargetSlot = <K extends keyof TargetSlot>(
+    targetKey: TargetKey,
     field: K,
-    value: ScenarioTarget[K]
+    value: TargetSlot[K]
   ) => {
     setConfig((current) => ({
       ...current,
-      scenarioTargets: {
-        ...current.scenarioTargets,
-        [scenario]: {
-          ...current.scenarioTargets[scenario],
+      targetSlots: {
+        ...current.targetSlots,
+        [targetKey]: {
+          ...current.targetSlots[targetKey],
           [field]: value,
         },
       },
+    }))
+  }
+
+  const updateContextRule = (
+    index: number,
+    field: keyof ContextRule,
+    value: string
+  ) => {
+    setConfig((current) => ({
+      ...current,
+      contextRules: current.contextRules.map((rule, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...rule,
+              [field]: value,
+            }
+          : rule
+      ),
+    }))
+  }
+
+  const addContextRule = () => {
+    setConfig((current) => ({
+      ...current,
+      contextRules: [...current.contextRules, { context: '', targetKey: 'default' }],
+    }))
+  }
+
+  const removeContextRule = (index: number) => {
+    setConfig((current) => ({
+      ...current,
+      contextRules: current.contextRules.filter((_, currentIndex) => currentIndex !== index),
     }))
   }
 
@@ -328,12 +386,22 @@ export default function AtendimentoWidgetConfigPage() {
     setSaving(true)
 
     try {
+      const payload: WidgetConfig = {
+        ...config,
+        contextRules: config.contextRules
+          .map((rule) => ({
+            context: rule.context.trim(),
+            targetKey: rule.targetKey,
+          }))
+          .filter((rule) => rule.context),
+      }
+
       const { data } = await axios.post<{
         success: boolean
         config: WidgetConfig
         savedAt: string
         orgScope: OrgScope
-      }>('/api/atendimento/widget', config)
+      }>('/api/atendimento/widget', payload)
 
       setConfig(data.config)
       setSavedAt(data.savedAt)
@@ -396,7 +464,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Fase 05: múltiplos destinos por cenário comercial.
+                  Fase 05: destinos genéricos por slot e contexto livre por página.
                 </p>
               </div>
             </div>
@@ -455,7 +523,7 @@ export default function AtendimentoWidgetConfigPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[500px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[520px_minmax(0,1fr)]">
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-5 flex items-center gap-3">
@@ -465,7 +533,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Configuração base</h2>
                 <p className="text-sm text-slate-500">
-                  Mantém a configuração geral, fallback e horário.
+                  Base visual e operacional do widget.
                 </p>
               </div>
             </div>
@@ -710,30 +778,54 @@ export default function AtendimentoWidgetConfigPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="text-lg font-bold text-[#2f3453]">Destinos por contexto</h2>
+            <h2 className="text-lg font-bold text-[#2f3453]">Slots de destino</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Cada página pode chamar o mesmo widget com um `pageContext` diferente.
+              Cada organização decide quais slots usa e para onde cada um aponta.
             </p>
 
             <div className="mt-4 space-y-4">
-              {(Object.keys(scenarioLabels) as ScenarioKey[]).map((scenario) => (
+              {(Object.keys(targetLabels) as TargetKey[]).map((targetKey) => (
                 <div
-                  key={scenario}
+                  key={targetKey}
                   className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 >
-                  <p className="text-sm font-bold text-[#2f3453]">
-                    {scenarioLabels[scenario]}
-                  </p>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-[#2f3453]">{targetLabels[targetKey]}</p>
 
-                  <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="flex items-center gap-2 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={config.targetSlots[targetKey].enabled}
+                        onChange={(e) =>
+                          updateTargetSlot(targetKey, 'enabled', e.target.checked)
+                        }
+                      />
+                      Ativo
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                     <label className="block space-y-2">
                       <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Texto
+                        Nome interno
                       </span>
                       <input
-                        value={config.scenarioTargets[scenario].label}
+                        value={config.targetSlots[targetKey].internalName}
                         onChange={(e) =>
-                          updateScenarioTarget(scenario, 'label', e.target.value)
+                          updateTargetSlot(targetKey, 'internalName', e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                      />
+                    </label>
+
+                    <label className="block space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Texto do CTA
+                      </span>
+                      <input
+                        value={config.targetSlots[targetKey].label}
+                        onChange={(e) =>
+                          updateTargetSlot(targetKey, 'label', e.target.value)
                         }
                         className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                       />
@@ -744,9 +836,9 @@ export default function AtendimentoWidgetConfigPage() {
                         URL
                       </span>
                       <input
-                        value={config.scenarioTargets[scenario].url}
+                        value={config.targetSlots[targetKey].url}
                         onChange={(e) =>
-                          updateScenarioTarget(scenario, 'url', e.target.value)
+                          updateTargetSlot(targetKey, 'url', e.target.value)
                         }
                         className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                       />
@@ -754,6 +846,82 @@ export default function AtendimentoWidgetConfigPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-[#2f3453]">Regras de contexto</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Qualquer página pode enviar um `pageContext` livre para escolher um slot.
+                </p>
+              </div>
+
+              <button
+                onClick={addContextRule}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Plus className="h-4 w-4" />
+                Adicionar regra
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {config.contextRules.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                  Nenhuma regra criada ainda. Sem regra, o widget usa o slot `default`.
+                </div>
+              ) : (
+                config.contextRules.map((rule, index) => (
+                  <div
+                    key={`${index}-${rule.targetKey}-${rule.context}`}
+                    className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_180px_56px]"
+                  >
+                    <label className="space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        pageContext
+                      </span>
+                      <input
+                        value={rule.context}
+                        onChange={(e) =>
+                          updateContextRule(index, 'context', e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                        placeholder="ex.: landing-vendas"
+                      />
+                    </label>
+
+                    <label className="space-y-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Slot
+                      </span>
+                      <select
+                        value={rule.targetKey}
+                        onChange={(e) =>
+                          updateContextRule(index, 'targetKey', e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                      >
+                        {(Object.keys(targetLabels) as TargetKey[]).map((targetKey) => (
+                          <option key={targetKey} value={targetKey}>
+                            {targetKey}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="flex items-end">
+                      <button
+                        onClick={() => removeContextRule(index)}
+                        className="inline-flex h-[50px] w-full items-center justify-center rounded-xl border border-red-200 bg-white text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">
@@ -798,7 +966,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">Snippet real</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Escolha o contexto e copie o snippet correspondente.
+                  Use qualquer valor de `pageContext` que faça sentido para a empresa.
                 </p>
               </div>
 
@@ -812,18 +980,13 @@ export default function AtendimentoWidgetConfigPage() {
             </div>
 
             <label className="mb-4 block space-y-2">
-              <span className="text-sm font-semibold text-[#2f3453]">Contexto do snippet</span>
-              <select
+              <span className="text-sm font-semibold text-[#2f3453]">pageContext do snippet</span>
+              <input
                 value={previewContext}
-                onChange={(e) => setPreviewContext(e.target.value as ScenarioKey)}
+                onChange={(e) => setPreviewContext(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-              >
-                <option value="default">default</option>
-                <option value="atendimento">atendimento</option>
-                <option value="consultoria">consultoria</option>
-                <option value="whatsapp">whatsapp</option>
-                <option value="contato">contato</option>
-              </select>
+                placeholder="ex.: landing-vendas"
+              />
             </label>
 
             <pre className="overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">
@@ -831,7 +994,8 @@ export default function AtendimentoWidgetConfigPage() {
             </pre>
 
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-              O widget agora pode abrir destinos diferentes dependendo da página onde o snippet foi colado.
+              O widget agora pode abrir destinos diferentes por contexto, sem depender de nomes
+              fixos de negócio.
             </div>
           </div>
         </div>
@@ -853,7 +1017,8 @@ export default function AtendimentoWidgetConfigPage() {
           fallbackUrl={config.fallbackUrl}
           primaryActionUrl={config.primaryActionUrl}
           businessHours={config.businessHours}
-          scenarioTargets={config.scenarioTargets}
+          targetSlots={config.targetSlots}
+          contextRules={config.contextRules}
           previewContext={previewContext}
         />
       </div>

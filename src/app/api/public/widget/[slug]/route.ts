@@ -8,9 +8,8 @@ const timeSchema = z
   .trim()
   .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Horário inválido.')
 
-const scenarioKeys = ['default', 'atendimento', 'consultoria', 'whatsapp', 'contato'] as const
-
-type ScenarioKey = (typeof scenarioKeys)[number]
+const targetKeys = ['default', 'slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5'] as const
+type TargetKey = (typeof targetKeys)[number]
 
 type BusinessDay = {
   enabled: boolean
@@ -23,12 +22,15 @@ type BusinessHours = Record<
   BusinessDay
 >
 
-type ScenarioTarget = {
-  label: string
-  url: string
-}
-
-type ScenarioTargets = Record<ScenarioKey, ScenarioTarget>
+type TargetSlots = Record<
+  TargetKey,
+  {
+    enabled: boolean
+    internalName: string
+    label: string
+    url: string
+  }
+>
 
 const businessDaySchema = z.object({
   enabled: z.boolean(),
@@ -46,7 +48,9 @@ const businessHoursSchema = z.object({
   sunday: businessDaySchema,
 })
 
-const scenarioTargetSchema = z.object({
+const targetSlotSchema = z.object({
+  enabled: z.boolean(),
+  internalName: z.string().trim().min(1).max(80),
   label: z.string().trim().min(1).max(80),
   url: z.string().trim().max(300),
 })
@@ -68,40 +72,65 @@ const publicWidgetConfigSchema = z.object({
   fallbackLabel: z.string().trim().max(80),
   fallbackUrl: z.string().trim().max(300),
   businessHours: businessHoursSchema,
-  scenarioTargets: z.object({
-    default: scenarioTargetSchema,
-    atendimento: scenarioTargetSchema,
-    consultoria: scenarioTargetSchema,
-    whatsapp: scenarioTargetSchema,
-    contato: scenarioTargetSchema,
+  targetSlots: z.object({
+    default: targetSlotSchema,
+    slot_1: targetSlotSchema,
+    slot_2: targetSlotSchema,
+    slot_3: targetSlotSchema,
+    slot_4: targetSlotSchema,
+    slot_5: targetSlotSchema,
   }),
+  contextRules: z
+    .array(
+      z.object({
+        context: z.string().trim().min(1).max(80),
+        targetKey: z.enum(targetKeys),
+      })
+    )
+    .max(20),
 })
 
 const DEFAULTS = {
   ctaLabel: 'Abrir Atendimento',
   primaryActionUrl: 'https://crm.mundodigitalsolucoes.com.br',
-  scenarioTargets: {
+  targetSlots: {
     default: {
+      enabled: true,
+      internalName: 'Destino padrão',
       label: 'Abrir Atendimento',
       url: 'https://crm.mundodigitalsolucoes.com.br',
     },
-    atendimento: {
-      label: 'Abrir Atendimento',
-      url: 'https://crm.mundodigitalsolucoes.com.br',
+    slot_1: {
+      enabled: false,
+      internalName: 'Destino 1',
+      label: 'Abrir destino 1',
+      url: '',
     },
-    consultoria: {
-      label: 'Solicitar consultoria',
-      url: 'https://mundodigitalsolucoes.com.br/contato',
+    slot_2: {
+      enabled: false,
+      internalName: 'Destino 2',
+      label: 'Abrir destino 2',
+      url: '',
     },
-    whatsapp: {
-      label: 'Falar no WhatsApp',
-      url: 'https://wa.me/5517992822597',
+    slot_3: {
+      enabled: false,
+      internalName: 'Destino 3',
+      label: 'Abrir destino 3',
+      url: '',
     },
-    contato: {
-      label: 'Abrir página de contato',
-      url: 'https://mundodigitalsolucoes.com.br/contato',
+    slot_4: {
+      enabled: false,
+      internalName: 'Destino 4',
+      label: 'Abrir destino 4',
+      url: '',
     },
-  },
+    slot_5: {
+      enabled: false,
+      internalName: 'Destino 5',
+      label: 'Abrir destino 5',
+      url: '',
+    },
+  } satisfies TargetSlots,
 }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
@@ -184,27 +213,28 @@ function normalizeBusinessHours(raw: unknown): BusinessHours {
   return result
 }
 
-function normalizeScenarioTargets(params: {
+function normalizeTargetSlots(params: {
   raw: unknown
   ctaLabel: string
   primaryActionUrl: string
-}): ScenarioTargets {
+}): TargetSlots {
   const source =
     params.raw && typeof params.raw === 'object'
       ? (params.raw as Record<string, unknown>)
       : {}
 
-  const defaults: ScenarioTargets = {
-    ...DEFAULTS.scenarioTargets,
+  const defaults: TargetSlots = {
+    ...DEFAULTS.targetSlots,
     default: {
+      ...DEFAULTS.targetSlots.default,
       label: params.ctaLabel,
       url: params.primaryActionUrl,
     },
   }
 
-  const result = {} as ScenarioTargets
+  const result = {} as TargetSlots
 
-  for (const key of scenarioKeys) {
+  for (const key of targetKeys) {
     const defaultTarget = defaults[key]
     const rawTarget =
       source[key] && typeof source[key] === 'object'
@@ -212,6 +242,14 @@ function normalizeScenarioTargets(params: {
         : null
 
     result[key] = {
+      enabled:
+        typeof rawTarget?.enabled === 'boolean'
+          ? rawTarget.enabled
+          : defaultTarget.enabled,
+      internalName:
+        typeof rawTarget?.internalName === 'string' && rawTarget.internalName.trim()
+          ? rawTarget.internalName
+          : defaultTarget.internalName,
       label:
         typeof rawTarget?.label === 'string' && rawTarget.label.trim()
           ? rawTarget.label
@@ -224,6 +262,27 @@ function normalizeScenarioTargets(params: {
   }
 
   return result
+}
+
+function normalizeContextRules(raw: unknown) {
+  if (!Array.isArray(raw)) return []
+
+  const normalized: Array<{ context: string; targetKey: TargetKey }> = []
+
+  for (const item of raw) {
+    const parsed = z
+      .object({
+        context: z.string().trim().min(1).max(80),
+        targetKey: z.enum(targetKeys),
+      })
+      .safeParse(item)
+
+    if (!parsed.success) continue
+
+    normalized.push(parsed.data)
+  }
+
+  return normalized.slice(0, 20)
 }
 
 function corsHeaders() {
@@ -319,11 +378,12 @@ export async function GET(
     fallbackUrl:
       typeof widgetRaw?.fallbackUrl === 'string' ? widgetRaw.fallbackUrl : '',
     businessHours: normalizeBusinessHours(widgetRaw?.businessHours),
-    scenarioTargets: normalizeScenarioTargets({
-      raw: widgetRaw?.scenarioTargets,
+    targetSlots: normalizeTargetSlots({
+      raw: widgetRaw?.targetSlots,
       ctaLabel,
       primaryActionUrl,
     }),
+    contextRules: normalizeContextRules(widgetRaw?.contextRules),
   }
 
   const parsedWidget = publicWidgetConfigSchema.safeParse(merged)
