@@ -6,6 +6,27 @@ import { prisma } from '@/lib/prisma'
 const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
 const domainSchema = z.string().trim().min(1).max(200)
 const localeSchema = z.string().trim().min(2).max(20)
+const timezoneSchema = z.string().trim().min(1).max(80)
+const timeSchema = z
+  .string()
+  .trim()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Horário inválido.')
+
+const businessHourDaySchema = z.object({
+  enabled: z.boolean(),
+  openTime: timeSchema,
+  closeTime: timeSchema,
+})
+
+const businessHoursSchema = z.object({
+  monday: businessHourDaySchema,
+  tuesday: businessHourDaySchema,
+  wednesday: businessHourDaySchema,
+  thursday: businessHourDaySchema,
+  friday: businessHourDaySchema,
+  saturday: businessHourDaySchema,
+  sunday: businessHourDaySchema,
+})
 
 const widgetConfigSchema = z.object({
   organizationName: z.string().trim().min(1).max(120),
@@ -34,10 +55,25 @@ const widgetConfigSchema = z.object({
   publishMode: z.enum(['all', 'allowlist']),
   allowedDomains: z.array(domainSchema).max(20),
 
+  availabilityMode: z.enum(['always', 'business_hours']).default('always'),
+  businessHoursTimezone: timezoneSchema.default('America/Sao_Paulo'),
+  outOfOfficeMessage: z.string().trim().max(400),
+  businessHours: businessHoursSchema,
+
   notes: z.string().trim().max(500),
 })
 
 type WidgetConfig = z.infer<typeof widgetConfigSchema>
+
+const DEFAULT_BUSINESS_HOURS: WidgetConfig['businessHours'] = {
+  monday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+  tuesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+  wednesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+  thursday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+  friday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+  saturday: { enabled: true, openTime: '08:00', closeTime: '12:00' },
+  sunday: { enabled: false, openTime: '08:00', closeTime: '12:00' },
+}
 
 const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
   organizationName: 'Mundo Digital Soluções',
@@ -66,6 +102,12 @@ const DEFAULT_WIDGET_CONFIG: WidgetConfig = {
 
   publishMode: 'all',
   allowedDomains: [],
+
+  availabilityMode: 'always',
+  businessHoursTimezone: 'America/Sao_Paulo',
+  outOfOfficeMessage:
+    'No momento estamos fora do horário de atendimento. Deixe sua mensagem e retornaremos assim que possível.',
+  businessHours: DEFAULT_BUSINESS_HOURS,
 
   notes: '',
 }
@@ -119,6 +161,38 @@ function readStringArray(raw: Record<string, unknown> | null, key: string): stri
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 20)
+}
+
+function normalizeBusinessHourDay(
+  value: unknown,
+  fallback: WidgetConfig['businessHours'][keyof WidgetConfig['businessHours']]
+) {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+  return {
+    enabled: readBoolean(raw, 'enabled', fallback.enabled),
+    openTime: readString(raw, 'openTime', fallback.openTime),
+    closeTime: readString(raw, 'closeTime', fallback.closeTime),
+  }
+}
+
+function readBusinessHours(
+  raw: Record<string, unknown> | null,
+  key: string,
+  fallback: WidgetConfig['businessHours']
+): WidgetConfig['businessHours'] {
+  const value = raw?.[key]
+  const businessRaw = value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+  return {
+    monday: normalizeBusinessHourDay(businessRaw?.monday, fallback.monday),
+    tuesday: normalizeBusinessHourDay(businessRaw?.tuesday, fallback.tuesday),
+    wednesday: normalizeBusinessHourDay(businessRaw?.wednesday, fallback.wednesday),
+    thursday: normalizeBusinessHourDay(businessRaw?.thursday, fallback.thursday),
+    friday: normalizeBusinessHourDay(businessRaw?.friday, fallback.friday),
+    saturday: normalizeBusinessHourDay(businessRaw?.saturday, fallback.saturday),
+    sunday: normalizeBusinessHourDay(businessRaw?.sunday, fallback.sunday),
+  }
 }
 
 function resolveWidgetConfigFromSettings(
@@ -219,6 +293,28 @@ function resolveWidgetConfigFromSettings(
     ),
     allowedDomains: readStringArray(widgetRaw, 'allowedDomains'),
 
+    availabilityMode: readEnum(
+      widgetRaw,
+      'availabilityMode',
+      ['always', 'business_hours'] as const,
+      DEFAULT_WIDGET_CONFIG.availabilityMode
+    ),
+    businessHoursTimezone: readString(
+      widgetRaw,
+      'businessHoursTimezone',
+      DEFAULT_WIDGET_CONFIG.businessHoursTimezone
+    ),
+    outOfOfficeMessage: readString(
+      widgetRaw,
+      'outOfOfficeMessage',
+      DEFAULT_WIDGET_CONFIG.outOfOfficeMessage
+    ),
+    businessHours: readBusinessHours(
+      widgetRaw,
+      'businessHours',
+      DEFAULT_WIDGET_CONFIG.businessHours
+    ),
+
     notes: readString(widgetRaw, 'notes', DEFAULT_WIDGET_CONFIG.notes),
   }
 
@@ -288,7 +384,15 @@ export async function POST(req: NextRequest) {
   const organizationId = session!.user.organizationId
 
   const body = await req.json().catch(() => ({}))
-  const parsed = widgetConfigSchema.safeParse(body)
+  const parsed = widgetConfigSchema.safeParse({
+    ...body,
+    availabilityMode: body?.availabilityMode ?? DEFAULT_WIDGET_CONFIG.availabilityMode,
+    businessHoursTimezone:
+      body?.businessHoursTimezone ?? DEFAULT_WIDGET_CONFIG.businessHoursTimezone,
+    outOfOfficeMessage:
+      body?.outOfOfficeMessage ?? DEFAULT_WIDGET_CONFIG.outOfOfficeMessage,
+    businessHours: body?.businessHours ?? DEFAULT_WIDGET_CONFIG.businessHours,
+  })
 
   if (!parsed.success) {
     return NextResponse.json(
