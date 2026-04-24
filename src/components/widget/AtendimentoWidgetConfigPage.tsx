@@ -27,6 +27,23 @@ type WidgetPosition = 'left' | 'right'
 type PublishMode = 'all' | 'allowlist'
 type DarkMode = 'light' | 'auto'
 type LauncherType = 'standard' | 'expanded'
+type AvailabilityMode = 'always' | 'business_hours'
+
+type BusinessHoursDay = {
+  enabled: boolean
+  openTime: string
+  closeTime: string
+}
+
+type BusinessHours = {
+  monday: BusinessHoursDay
+  tuesday: BusinessHoursDay
+  wednesday: BusinessHoursDay
+  thursday: BusinessHoursDay
+  friday: BusinessHoursDay
+  saturday: BusinessHoursDay
+  sunday: BusinessHoursDay
+}
 
 type WidgetConfig = {
   organizationName: string
@@ -48,6 +65,10 @@ type WidgetConfig = {
   greetingMessage: string
   publishMode: PublishMode
   allowedDomains: string[]
+  availabilityMode: AvailabilityMode
+  businessHoursTimezone: string
+  outOfOfficeMessage: string
+  businessHours: BusinessHours
   notes: string
 }
 
@@ -126,6 +147,19 @@ const FALLBACK_DEFAULTS: WidgetConfig = {
   greetingMessage: 'Olá. Como podemos ajudar você hoje?',
   publishMode: 'all',
   allowedDomains: [],
+  availabilityMode: 'always',
+  businessHoursTimezone: 'America/Sao_Paulo',
+  outOfOfficeMessage:
+    'No momento estamos fora do horário de atendimento. Deixe sua mensagem e retornaremos assim que possível.',
+  businessHours: {
+    monday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+    tuesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+    wednesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+    thursday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+    friday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+    saturday: { enabled: true, openTime: '08:00', closeTime: '12:00' },
+    sunday: { enabled: false, openTime: '08:00', closeTime: '12:00' },
+  },
   notes: '',
 }
 
@@ -157,6 +191,19 @@ function parseDomains(text: string) {
 
   return Array.from(new Set(items)).slice(0, 20)
 }
+
+const BUSINESS_HOURS_LABELS: Array<{
+  key: keyof BusinessHours
+  label: string
+}> = [
+  { key: 'monday', label: 'Segunda-feira' },
+  { key: 'tuesday', label: 'Terça-feira' },
+  { key: 'wednesday', label: 'Quarta-feira' },
+  { key: 'thursday', label: 'Quinta-feira' },
+  { key: 'friday', label: 'Sexta-feira' },
+  { key: 'saturday', label: 'Sábado' },
+  { key: 'sunday', label: 'Domingo' },
+]
 
 function FeedbackBanner({
   msg,
@@ -349,6 +396,23 @@ export default function AtendimentoWidgetConfigPage() {
     }))
   }
 
+  const updateBusinessHourDay = (
+    day: keyof BusinessHours,
+    field: keyof BusinessHoursDay,
+    value: boolean | string
+  ) => {
+    setConfig((current) => ({
+      ...current,
+      businessHours: {
+        ...current.businessHours,
+        [day]: {
+          ...current.businessHours[day],
+          [field]: value,
+        },
+      },
+    }))
+  }
+
   const saveConfig = useCallback(
     async (showSuccessMessage = true) => {
       const payload: WidgetConfig = {
@@ -525,7 +589,7 @@ export default function AtendimentoWidgetConfigPage() {
                   Widget do Atendimento
                 </h1>
                 <p className="mt-1 text-sm text-slate-600">
-                  Painel SaaS do widget nativo de website do Atendimento.
+                  Painel SaaS do widget nativo do site no Atendimento.
                 </p>
               </div>
             </div>
@@ -887,6 +951,151 @@ export default function AtendimentoWidgetConfigPage() {
           </div>
 
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-bold text-[#2f3453]">
+              Disponibilidade do atendimento
+            </h2>
+
+            <div className="mt-4 space-y-4">
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Modo de disponibilidade
+                </span>
+                <select
+                  value={config.availabilityMode}
+                  onChange={(e) =>
+                    updateField(
+                      'availabilityMode',
+                      e.target.value as AvailabilityMode
+                    )
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                >
+                  <option value="always">Sempre disponível</option>
+                  <option value="business_hours">Horário de atendimento</option>
+                </select>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-semibold text-[#2f3453]">
+                  Fuso horário
+                </span>
+                <input
+                  value={config.businessHoursTimezone}
+                  onChange={(e) =>
+                    updateField('businessHoursTimezone', e.target.value)
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                  placeholder="America/Sao_Paulo"
+                />
+              </label>
+
+              {config.availabilityMode === 'always' ? (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                  O widget ficará disponível o tempo todo e não exibirá mensagem de ausência por horário.
+                </div>
+              ) : (
+                <>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-semibold text-[#2f3453]">
+                      Mensagem fora do horário
+                    </span>
+                    <textarea
+                      value={config.outOfOfficeMessage}
+                      onChange={(e) =>
+                        updateField('outOfOfficeMessage', e.target.value)
+                      }
+                      className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
+                    />
+                  </label>
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#2f3453]">
+                        Horário por dia
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Configure os dias e horários em que o atendimento ficará disponível no widget.
+                      </p>
+                    </div>
+
+                    {BUSINESS_HOURS_LABELS.map((day) => {
+                      const currentDay = config.businessHours[day.key]
+
+                      return (
+                        <div
+                          key={day.key}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.4fr_0.8fr_1fr_1fr] md:items-end">
+                            <div>
+                              <p className="text-sm font-semibold text-[#2f3453]">
+                                {day.label}
+                              </p>
+                            </div>
+
+                            <label className="flex items-center gap-2 text-sm text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={currentDay.enabled}
+                                onChange={(e) =>
+                                  updateBusinessHourDay(
+                                    day.key,
+                                    'enabled',
+                                    e.target.checked
+                                  )
+                                }
+                              />
+                              Ativo
+                            </label>
+
+                            <label className="block space-y-1">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Abre às
+                              </span>
+                              <input
+                                type="time"
+                                value={currentDay.openTime}
+                                disabled={!currentDay.enabled}
+                                onChange={(e) =>
+                                  updateBusinessHourDay(
+                                    day.key,
+                                    'openTime',
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100 focus:border-[#374b89]"
+                              />
+                            </label>
+
+                            <label className="block space-y-1">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Fecha às
+                              </span>
+                              <input
+                                type="time"
+                                value={currentDay.closeTime}
+                                disabled={!currentDay.enabled}
+                                onChange={(e) =>
+                                  updateBusinessHourDay(
+                                    day.key,
+                                    'closeTime',
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-100 focus:border-[#374b89]"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-bold text-[#2f3453]">Publicação</h2>
 
             <div className="mt-4 space-y-4">
@@ -1121,7 +1330,7 @@ export default function AtendimentoWidgetConfigPage() {
               <StepCard
                 number="1"
                 title="Preencher a configuração"
-                description="Defina nome da inbox, domínio, visual, launcher, idioma e regras de publicação."
+                description="Defina nome da caixa de entrada, domínio, visual, botão, idioma, disponibilidade e regras de publicação."
               />
               <StepCard
                 number="2"
@@ -1182,7 +1391,7 @@ export default function AtendimentoWidgetConfigPage() {
               Resumo operacional
             </h2>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Canal do site
@@ -1194,10 +1403,21 @@ export default function AtendimentoWidgetConfigPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Launcher
+                  Botão
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
-                  {config.launcherType === 'expanded' ? 'Expanded' : 'Standard'}
+                  {config.launcherType === 'expanded' ? 'Expandido' : 'Padrão'}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Disponibilidade
+                </p>
+                <p className="mt-2 text-sm font-bold text-[#2f3453]">
+                  {config.availabilityMode === 'business_hours'
+                    ? 'Horário de atendimento'
+                    : 'Sempre disponível'}
                 </p>
               </div>
 
