@@ -284,7 +284,7 @@ export default function AtendimentoWidgetConfigPage() {
       console.error(err)
       setMessage({
         type: 'error',
-        text: 'Não foi possível carregar a configuração do widget.',
+        text: 'Não foi possível carregar as configurações do widget.',
       })
     } finally {
       setLoading(false)
@@ -369,7 +369,7 @@ export default function AtendimentoWidgetConfigPage() {
       if (showSuccessMessage) {
         setMessage({
           type: 'success',
-          text: 'Configuração do widget salva para esta organização.',
+          text: 'Configurações do widget salvas com sucesso.',
         })
       }
 
@@ -383,7 +383,7 @@ export default function AtendimentoWidgetConfigPage() {
     setDomainText((defaults.allowedDomains || []).join('\n'))
     setMessage({
       type: 'info',
-      text: 'Configuração resetada para o padrão desta organização.',
+      text: 'Configurações restauradas para o padrão da organização.',
     })
   }
 
@@ -391,7 +391,7 @@ export default function AtendimentoWidgetConfigPage() {
     await loadConfig()
     setMessage({
       type: 'info',
-      text: 'Configuração recarregada.',
+      text: 'Configurações recarregadas.',
     })
   }
 
@@ -404,8 +404,8 @@ export default function AtendimentoWidgetConfigPage() {
       const errorText = axios.isAxiosError(err)
         ? err.response?.data?.message ??
           err.response?.data?.error ??
-          'Não foi possível salvar a configuração do widget.'
-        : 'Não foi possível salvar a configuração do widget.'
+          'Não foi possível salvar as configurações do widget.'
+        : 'Não foi possível salvar as configurações do widget.'
 
       setMessage({
         type: 'error',
@@ -434,15 +434,15 @@ export default function AtendimentoWidgetConfigPage() {
         type: 'success',
         text:
           data.action === 'created'
-            ? 'Widget criado no Atendimento com sucesso.'
-            : 'Widget atualizado no Atendimento com sucesso.',
+            ? 'Widget ativado com sucesso no Atendimento.'
+            : 'Widget atualizado com sucesso no Atendimento.',
       })
     } catch (err) {
       const errorText = axios.isAxiosError(err)
         ? err.response?.data?.message ??
           err.response?.data?.error ??
-          'Não foi possível provisionar o widget.'
-        : 'Não foi possível provisionar o widget.'
+          'Não foi possível ativar o widget.'
+        : 'Não foi possível ativar o widget.'
 
       setMessage({
         type: 'error',
@@ -467,15 +467,15 @@ export default function AtendimentoWidgetConfigPage() {
       setMessage({
         type: 'success',
         text: data.alreadyLinked
-          ? 'Agente principal já estava vinculado à inbox website.'
-          : 'Agente principal vinculado com sucesso.',
+          ? 'O atendente principal já estava vinculado ao canal do site.'
+          : 'Atendente principal vinculado com sucesso.',
       })
     } catch (err) {
       const errorText = axios.isAxiosError(err)
         ? err.response?.data?.message ??
           err.response?.data?.error ??
-          'Não foi possível vincular o agente principal.'
-        : 'Não foi possível vincular o agente principal.'
+          'Não foi possível vincular o atendente principal.'
+        : 'Não foi possível vincular o atendente principal.'
 
       setMessage({
         type: 'error',
@@ -491,12 +491,12 @@ export default function AtendimentoWidgetConfigPage() {
       await navigator.clipboard.writeText(snippet)
       setMessage({
         type: 'success',
-        text: 'Snippet do widget copiado.',
+        text: 'Snippet de instalação copiado.',
       })
     } catch {
       setMessage({
         type: 'info',
-        text: 'Não foi possível copiar automaticamente. Copie manualmente o bloco abaixo.',
+        text: 'Não foi possível copiar automaticamente. Copie manualmente o código abaixo.',
       })
     }
   }
@@ -538,7 +538,7 @@ export default function AtendimentoWidgetConfigPage() {
             </span>
 
             <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
-              Último save: {formatDateTime(savedAt)}
+              Último salvamento: {formatDateTime(savedAt)}
             </span>
           </div>
         </div>
@@ -601,10 +601,10 @@ export default function AtendimentoWidgetConfigPage() {
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">
-                  Canal website
+                  Canal do site
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Dados do canal nativo de website do Atendimento.
+                  Dados do canal nativo do site no Atendimento.
                 </p>
               </div>
             </div>
@@ -656,13 +656,13 @@ export default function AtendimentoWidgetConfigPage() {
 
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[#2f3453]">
-                    Website token
+                    Token do canal do site
                   </span>
                   <input
                     value={config.websiteToken}
                     onChange={(e) => updateField('websiteToken', e.target.value)}
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
-                    placeholder="preenchido automaticamente após provisionar"
+                    placeholder="preenchido automaticamente após ativar o widget"
                     readOnly
                   />
                 </label>
@@ -671,7 +671,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[#2f3453]">
-                    Nome da inbox website
+                    Nome da caixa de entrada do site
                   </span>
                   <input
                     value={config.websiteInboxName}
@@ -797,7 +797,7 @@ export default function AtendimentoWidgetConfigPage() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[#2f3453]">
-                    Tipo do launcher
+                    Tipo do botão
                   </span>
                   <select
                     value={config.launcherType}
@@ -809,14 +809,14 @@ export default function AtendimentoWidgetConfigPage() {
                     }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-[#374b89]"
                   >
-                    <option value="standard">Standard</option>
-                    <option value="expanded">Expanded</option>
+                    <option value="standard">Padrão</option>
+                    <option value="expanded">Expandido</option>
                   </select>
                 </label>
 
                 <label className="block space-y-2">
                   <span className="text-sm font-semibold text-[#2f3453]">
-                    Texto do launcher
+                    Texto do botão
                   </span>
                   <input
                     value={config.launcherTitle}
@@ -831,7 +831,7 @@ export default function AtendimentoWidgetConfigPage() {
 
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#2f3453]">
-                  Welcome heading
+                  Texto de boas-vindas
                 </span>
                 <input
                   value={config.welcomeTitle}
@@ -842,7 +842,7 @@ export default function AtendimentoWidgetConfigPage() {
 
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#2f3453]">
-                  Welcome tagline
+                  Mensagem de boas-vindas
                 </span>
                 <textarea
                   value={config.welcomeTagline}
@@ -863,17 +863,17 @@ export default function AtendimentoWidgetConfigPage() {
                 />
                 <div>
                   <p className="text-sm font-semibold text-[#2f3453]">
-                    Greeting da conversa
+                    Saudação inicial da conversa
                   </p>
                   <p className="text-xs text-slate-500">
-                    Campo para governança da saudação do canal website.
+                    Controla a saudação inicial exibida no canal do site.
                   </p>
                 </div>
               </label>
 
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#2f3453]">
-                  Mensagem de greeting
+                  Mensagem de saudação
                 </span>
                 <textarea
                   value={config.greetingMessage}
@@ -908,7 +908,7 @@ export default function AtendimentoWidgetConfigPage() {
 
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-[#2f3453]">
-                  Allowed domains
+                  Domínios permitidos
                 </span>
                 <textarea
                   value={domainText}
@@ -1043,7 +1043,7 @@ export default function AtendimentoWidgetConfigPage() {
                 ok={operationStatus === 'ready'}
               />
               <StatusCard
-                title="Website token"
+                title="Token do canal do site"
                 value={readiness.token ? 'Configurado' : 'Pendente'}
                 ok={readiness.token}
               />
@@ -1150,7 +1150,7 @@ export default function AtendimentoWidgetConfigPage() {
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-[#2f3453]">
-                  Snippet nativo
+                  Snippet de instalação
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
                   Snippet governado pelo CRM para inicializar o widget nativo do
@@ -1185,7 +1185,7 @@ export default function AtendimentoWidgetConfigPage() {
             <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Canal website
+                  Canal do site
                 </p>
                 <p className="mt-2 text-sm font-bold text-[#2f3453]">
                   {config.websiteInboxName || '—'}

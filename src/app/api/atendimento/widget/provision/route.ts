@@ -9,6 +9,22 @@ type ChatwootAccountData = {
   chatwootUrl?: string
 }
 
+type BusinessHourDayConfig = {
+  enabled: boolean
+  openTime: string
+  closeTime: string
+}
+
+type BusinessHoursConfig = {
+  monday: BusinessHourDayConfig
+  tuesday: BusinessHourDayConfig
+  wednesday: BusinessHourDayConfig
+  thursday: BusinessHourDayConfig
+  friday: BusinessHourDayConfig
+  saturday: BusinessHourDayConfig
+  sunday: BusinessHourDayConfig
+}
+
 type WidgetProvisionConfig = {
   organizationName: string
   enabled: boolean
@@ -21,6 +37,10 @@ type WidgetProvisionConfig = {
   welcomeTagline: string
   greetingEnabled: boolean
   greetingMessage: string
+  availabilityMode: 'always' | 'business_hours'
+  businessHoursTimezone: string
+  outOfOfficeMessage: string
+  businessHours: BusinessHoursConfig
 }
 
 type WidgetRuntimeData = {
@@ -32,6 +52,16 @@ type WidgetRuntimeData = {
   provisionedAt?: string
   lastSyncAt?: string
   lastError?: string | null
+}
+
+type ChatwootWorkingHour = {
+  day_of_week: number
+  closed_all_day: boolean
+  open_all_day: boolean
+  open_hour: number | null
+  open_minutes: number | null
+  close_hour: number | null
+  close_minutes: number | null
 }
 
 type ChatwootInboxResponse = {
@@ -46,6 +76,10 @@ type ChatwootInboxResponse = {
   welcome_tagline?: string
   greeting_enabled?: boolean
   greeting_message?: string
+  working_hours_enabled?: boolean
+  out_of_office_message?: string
+  timezone?: string
+  working_hours?: ChatwootWorkingHour[]
 }
 
 const hexColorSchema = z
@@ -143,6 +177,38 @@ function readRuntimeScalar(
   return null
 }
 
+function normalizeBusinessHourDay(
+  value: unknown,
+  fallback: BusinessHourDayConfig
+): BusinessHourDayConfig {
+  const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+  return {
+    enabled: readBoolean(raw, 'enabled', fallback.enabled),
+    openTime: readString(raw, 'openTime', fallback.openTime),
+    closeTime: readString(raw, 'closeTime', fallback.closeTime),
+  }
+}
+
+function readBusinessHours(
+  raw: Record<string, unknown> | null,
+  key: string,
+  fallback: BusinessHoursConfig
+): BusinessHoursConfig {
+  const value = raw?.[key]
+  const businessRaw = value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+
+  return {
+    monday: normalizeBusinessHourDay(businessRaw?.monday, fallback.monday),
+    tuesday: normalizeBusinessHourDay(businessRaw?.tuesday, fallback.tuesday),
+    wednesday: normalizeBusinessHourDay(businessRaw?.wednesday, fallback.wednesday),
+    thursday: normalizeBusinessHourDay(businessRaw?.thursday, fallback.thursday),
+    friday: normalizeBusinessHourDay(businessRaw?.friday, fallback.friday),
+    saturday: normalizeBusinessHourDay(businessRaw?.saturday, fallback.saturday),
+    sunday: normalizeBusinessHourDay(businessRaw?.sunday, fallback.sunday),
+  }
+}
+
 function resolveWidgetConfig(
   rawSettings: Record<string, unknown> | null,
   fallbackOrganizationName?: string
@@ -168,6 +234,23 @@ function resolveWidgetConfig(
     welcomeTagline: readString(widgetRaw, 'welcomeTagline', '').trim(),
     greetingEnabled: readBoolean(widgetRaw, 'greetingEnabled', false),
     greetingMessage: readString(widgetRaw, 'greetingMessage', '').trim(),
+    availabilityMode:
+      readString(widgetRaw, 'availabilityMode', 'always') === 'business_hours'
+        ? 'business_hours'
+        : 'always',
+    businessHoursTimezone:
+      readString(widgetRaw, 'businessHoursTimezone', 'America/Sao_Paulo').trim() ||
+      'America/Sao_Paulo',
+    outOfOfficeMessage: readString(widgetRaw, 'outOfOfficeMessage', '').trim(),
+    businessHours: readBusinessHours(widgetRaw, 'businessHours', {
+      monday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+      tuesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+      wednesday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+      thursday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+      friday: { enabled: true, openTime: '08:00', closeTime: '18:00' },
+      saturday: { enabled: true, openTime: '08:00', closeTime: '12:00' },
+      sunday: { enabled: false, openTime: '08:00', closeTime: '12:00' },
+    }),
   }
 }
 
@@ -206,7 +289,7 @@ function resolveWidgetRuntime(
 function validateProvisionConfig(config: WidgetProvisionConfig) {
   if (!config.websiteInboxName) {
     throw new WidgetProvisionError(
-      'Nome da inbox website é obrigatório.',
+      'Nome da caixa de entrada do site é obrigatório.',
       400,
       'MISSING_WEBSITE_INBOX_NAME'
     )
@@ -222,7 +305,7 @@ function validateProvisionConfig(config: WidgetProvisionConfig) {
 
   if (!config.welcomeTitle) {
     throw new WidgetProvisionError(
-      'Welcome heading é obrigatório.',
+      'Texto de boas-vindas é obrigatório.',
       400,
       'MISSING_WELCOME_TITLE'
     )
@@ -230,7 +313,7 @@ function validateProvisionConfig(config: WidgetProvisionConfig) {
 
   if (!config.welcomeTagline) {
     throw new WidgetProvisionError(
-      'Welcome tagline é obrigatório.',
+      'Mensagem de boas-vindas é obrigatória.',
       400,
       'MISSING_WELCOME_TAGLINE'
     )
@@ -245,11 +328,80 @@ function validateProvisionConfig(config: WidgetProvisionConfig) {
   }
 }
 
+function parseTimeParts(value: string) {
+  const [hourRaw, minuteRaw] = value.split(':')
+  const hour = Number(hourRaw)
+  const minute = Number(minuteRaw)
+
+  if (
+    !Number.isInteger(hour) ||
+    !Number.isInteger(minute) ||
+    hour < 0 ||
+    hour > 23 ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    throw new WidgetProvisionError(
+      'Horário de atendimento inválido.',
+      400,
+      'INVALID_BUSINESS_HOURS_TIME'
+    )
+  }
+
+  return { hour, minute }
+}
+
+function buildWorkingHours(config: WidgetProvisionConfig): ChatwootWorkingHour[] {
+  const dayMap: Array<[number, keyof BusinessHoursConfig]> = [
+    [0, 'sunday'],
+    [1, 'monday'],
+    [2, 'tuesday'],
+    [3, 'wednesday'],
+    [4, 'thursday'],
+    [5, 'friday'],
+    [6, 'saturday'],
+  ]
+
+  return dayMap.map(([dayOfWeek, key]) => {
+    const day = config.businessHours[key]
+
+    if (!day.enabled) {
+      return {
+        day_of_week: dayOfWeek,
+        closed_all_day: true,
+        open_all_day: false,
+        open_hour: null,
+        open_minutes: null,
+        close_hour: null,
+        close_minutes: null,
+      }
+    }
+
+    const open = parseTimeParts(day.openTime)
+    const close = parseTimeParts(day.closeTime)
+
+    return {
+      day_of_week: dayOfWeek,
+      closed_all_day: false,
+      open_all_day: false,
+      open_hour: open.hour,
+      open_minutes: open.minute,
+      close_hour: close.hour,
+      close_minutes: close.minute,
+    }
+  })
+}
+
 function buildCreatePayload(config: WidgetProvisionConfig) {
   return {
     name: config.websiteInboxName,
     greeting_enabled: config.greetingEnabled,
     greeting_message: config.greetingEnabled ? config.greetingMessage : '',
+    working_hours_enabled: config.availabilityMode === 'business_hours',
+    out_of_office_message:
+      config.availabilityMode === 'business_hours' ? config.outOfOfficeMessage : '',
+    timezone: config.businessHoursTimezone,
+    working_hours: buildWorkingHours(config),
     channel: {
       type: 'web_widget',
       website_url: normalizeWebsiteUrl(config.websiteDomain),
@@ -265,6 +417,11 @@ function buildUpdatePayload(config: WidgetProvisionConfig) {
     name: config.websiteInboxName,
     greeting_enabled: config.greetingEnabled,
     greeting_message: config.greetingEnabled ? config.greetingMessage : '',
+    working_hours_enabled: config.availabilityMode === 'business_hours',
+    out_of_office_message:
+      config.availabilityMode === 'business_hours' ? config.outOfOfficeMessage : '',
+    timezone: config.businessHoursTimezone,
+    working_hours: buildWorkingHours(config),
     channel: {
       website_url: normalizeWebsiteUrl(config.websiteDomain),
       welcome_title: config.welcomeTitle,
@@ -311,7 +468,7 @@ async function chatwootRequest<T>(params: {
       `chatwoot_http_${response.status}`
 
     throw new WidgetProvisionError(
-      'Falha ao provisionar inbox website no Atendimento.',
+      'Falha ao ativar o canal do site no Atendimento.',
       response.status,
       'CHATWOOT_INBOX_REQUEST_FAILED',
       detail
@@ -321,7 +478,7 @@ async function chatwootRequest<T>(params: {
   if (json) return json as T
 
   throw new WidgetProvisionError(
-    'Resposta inválida do Atendimento ao provisionar inbox website.',
+    'Resposta inválida do Atendimento ao ativar o canal do site.',
     502,
     'INVALID_CHATWOOT_RESPONSE'
   )
@@ -597,7 +754,7 @@ export async function POST() {
     const message =
       error instanceof WidgetProvisionError
         ? error.message
-        : 'Erro inesperado ao provisionar widget do Atendimento.'
+        : 'Erro inesperado ao ativar o widget do Atendimento.'
 
     await persistRuntimeError({
       organizationId,
