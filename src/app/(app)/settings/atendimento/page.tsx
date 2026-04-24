@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Clock3,
   PanelRightOpen,
+  Instagram,
 } from 'lucide-react'
 
 const cards = [
@@ -28,6 +29,14 @@ const cards = [
     href: '/settings/atendimento/widget',
     icon: PanelRightOpen,
     status: 'ativo' as const,
+  },
+  {
+    title: 'Instagram',
+    description:
+      'Prepare a inbox separada do Instagram Direct para operação multicanal no Atendimento.',
+    href: '/settings/atendimento/instagram',
+    icon: Instagram,
+    status: 'preparacao' as const,
   },
   {
     title: 'Equipes e Agentes',
@@ -96,8 +105,8 @@ export default function AtendimentoSettingsPage() {
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
               Centralize aqui a operação do Atendimento sem reinventar o Chatwoot
-              dentro do CRM. Canais, widget, equipes e futuras áreas operacionais
-              ficam organizadas em uma trilha própria.
+              dentro do CRM. Canais, widget, Instagram, equipes e futuras áreas
+              operacionais ficam organizadas em trilhas próprias.
             </p>
           </div>
         </div>
@@ -111,7 +120,8 @@ export default function AtendimentoSettingsPage() {
             </h2>
             <p className="mt-1 text-sm text-slate-600">
               Use <strong>Canais</strong> para operação dos números,{' '}
-              <strong>Widget</strong> para publicação do canal website e{' '}
+              <strong>Widget</strong> para publicação do canal website,{' '}
+              <strong>Instagram</strong> para Direct em inbox separada e{' '}
               <strong>Equipes e Agentes</strong> para organização dos times do
               atendimento.
             </p>
