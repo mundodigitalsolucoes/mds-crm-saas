@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { encryptToken } from '@/lib/integrations/crypto'
+
+const META_GRAPH_VERSION = 'v20.0'
 
 const callbackStateSchema = z.object({
   organizationId: z.string().uuid(),
   userId: z.string().min(1),
   source: z.literal('mds_crm_instagram'),
 })
+
+type MetaTokenResponse = {
+  access_token?: string
+  token_type?: string
+  expires_in?: number
+  error?: {
+    message?: string
+    type?: string
+    code?: number
+    fbtrace_id?: string
+  }
+}
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
   if (!value) return null
@@ -34,7 +49,20 @@ function decodeState(rawState: string | null) {
   }
 }
 
-function redirectToInstagramSettings(status: 'success' | 'error', message: string) {
+function getRequiredEnv(name: string) {
+  const value = process.env[name]
+
+  if (!value) {
+    throw new Error(`Variável de ambiente ausente: ${name}`)
+  }
+
+  return value
+}
+
+function redirectToInstagramSettings(
+  status: 'success' | 'error',
+  message: string
+) {
   const url = new URL(
     '/settings/atendimento/instagram',
     process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br'
@@ -44,6 +72,43 @@ function redirectToInstagramSettings(status: 'success' | 'error', message: strin
   url.searchParams.set('message', message)
 
   return NextResponse.redirect(url)
+}
+
+async function exchangeCodeForToken(code: string) {
+  const appId = getRequiredEnv('META_INSTAGRAM_APP_ID')
+  const appSecret = getRequiredEnv('META_INSTAGRAM_APP_SECRET')
+  const appUrl = getRequiredEnv('NEXTAUTH_URL')
+
+  const redirectUri = `${appUrl}/api/atendimento/instagram/callback`
+
+  const params = new URLSearchParams({
+    client_id: appId,
+    client_secret: appSecret,
+    redirect_uri: redirectUri,
+    code,
+  })
+
+  const response = await fetch(
+    `https://graph.facebook.com/${META_GRAPH_VERSION}/oauth/access_token?${params.toString()}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+    }
+  )
+
+  const data = (await response.json()) as MetaTokenResponse
+
+  if (!response.ok || !data.access_token) {
+    throw new Error(
+      data.error?.message || 'A Meta não retornou access_token válido.'
+    )
+  }
+
+  return {
+    accessToken: data.access_token,
+    tokenType: data.token_type || '',
+    expiresIn: data.expires_in || null,
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -92,38 +157,54 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const parsedSettings =
-    safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
+  try {
+    const token = await exchangeCodeForToken(code)
 
-  const currentInstagram =
-    parsedSettings.atendimentoInstagram &&
-    typeof parsedSettings.atendimentoInstagram === 'object'
-      ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
-      : {}
+    const parsedSettings =
+      safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
 
-  const nextSettings = {
-    ...parsedSettings,
-    atendimentoInstagram: {
-      ...currentInstagram,
-      enabled: true,
-      connectionMode: 'meta_api',
-      status: 'pending_connection',
-      metaAuthorizationCodeReceived: true,
-      metaAuthorizationCodeReceivedAt: new Date().toISOString(),
-      metaAuthorizationCodePreview: `${code.slice(0, 8)}...`,
-      updatedAt: new Date().toISOString(),
-    },
+    const currentInstagram =
+      parsedSettings.atendimentoInstagram &&
+      typeof parsedSettings.atendimentoInstagram === 'object'
+        ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
+        : {}
+
+    const now = new Date().toISOString()
+
+    const nextSettings = {
+      ...parsedSettings,
+      atendimentoInstagram: {
+        ...currentInstagram,
+        enabled: true,
+        connectionMode: 'meta_api',
+        status: 'token_received',
+        metaAuthorizationCodeReceived: true,
+        metaAuthorizationCodeReceivedAt: now,
+        metaAuthorizationCodePreview: `${code.slice(0, 8)}...`,
+        metaAccessTokenEncrypted: encryptToken(token.accessToken),
+        metaAccessTokenPreview: `${token.accessToken.slice(0, 10)}...`,
+        metaTokenType: token.tokenType,
+        metaTokenExpiresIn: token.expiresIn,
+        metaTokenReceivedAt: now,
+        updatedAt: now,
+      },
+    }
+
+    await prisma.organization.update({
+      where: { id: state.organizationId },
+      data: {
+        settings: JSON.stringify(nextSettings),
+      },
+    })
+
+    return redirectToInstagramSettings(
+      'success',
+      'Token da Meta recebido com sucesso. Próximo passo: buscar página e conta Instagram.'
+    )
+  } catch (error: any) {
+    return redirectToInstagramSettings(
+      'error',
+      error?.message || 'Erro ao trocar código da Meta por token.'
+    )
   }
-
-  await prisma.organization.update({
-    where: { id: state.organizationId },
-    data: {
-      settings: JSON.stringify(nextSettings),
-    },
-  })
-
-  return redirectToInstagramSettings(
-    'success',
-    'Autorização inicial da Meta recebida. Próximo passo: troca segura do token.'
-  )
 }
