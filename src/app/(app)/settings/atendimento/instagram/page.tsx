@@ -8,6 +8,7 @@ import {
   Clock3,
   Instagram,
   Loader2,
+  RefreshCcw,
   Save,
   ShieldCheck,
 } from 'lucide-react'
@@ -19,7 +20,7 @@ type InstagramConfig = {
   instagramBusinessId: string
   inboxName: string
   connectionMode: 'meta_api' | 'manual_token'
-  status: 'draft' | 'pending_connection' | 'connected' | 'error'
+  status: 'draft' | 'pending_connection' | 'token_received' | 'connected' | 'error'
   notes: string
 }
 
@@ -37,9 +38,25 @@ type InstagramResponse = {
   savedAt: string
 }
 
+type SyncAccountResponse = {
+  success: boolean
+  status: 'connected'
+  facebookPage: {
+    id: string
+    name: string
+  }
+  instagram: {
+    id: string
+    name: string
+    username: string
+    handle: string
+  }
+}
+
 export default function AtendimentoInstagramPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -55,42 +72,42 @@ export default function AtendimentoInstagramPage() {
     notes: '',
   })
 
-  useEffect(() => {
-    async function loadConfig() {
-      try {
-        const res = await fetch('/api/atendimento/instagram', {
-          method: 'GET',
-          credentials: 'include',
-        })
+  async function loadConfig() {
+    try {
+      const res = await fetch('/api/atendimento/instagram', {
+        method: 'GET',
+        credentials: 'include',
+      })
 
-        if (!res.ok) {
-          const error = await res.json().catch(() => ({}))
-          throw error
-        }
-
-        const data: InstagramResponse = await res.json()
-
-        setConfig({
-          ...data.config,
-          connectionMode:
-            data.config.connectionMode === 'manual_token'
-              ? 'manual_token'
-              : 'meta_api',
-        })
-        setOrgScope(data.orgScope)
-        setSavedAt(data.savedAt)
-      } catch (error: any) {
-        console.error(error)
-        setMessage(
-          error?.error ||
-            error?.message ||
-            'Erro ao carregar configuração do Instagram'
-        )
-      } finally {
-        setLoading(false)
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}))
+        throw error
       }
-    }
 
+      const data: InstagramResponse = await res.json()
+
+      setConfig({
+        ...data.config,
+        connectionMode:
+          data.config.connectionMode === 'manual_token'
+            ? 'manual_token'
+            : 'meta_api',
+      })
+      setOrgScope(data.orgScope)
+      setSavedAt(data.savedAt)
+    } catch (error: any) {
+      console.error(error)
+      setMessage(
+        error?.error ||
+          error?.message ||
+          'Erro ao carregar configuração do Instagram'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
     void loadConfig()
   }, [])
 
@@ -134,6 +151,52 @@ export default function AtendimentoInstagramPage() {
       )
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleSyncAccount() {
+    setSyncing(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/atendimento/instagram/sync-account', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw data
+      }
+
+      const syncData = data as SyncAccountResponse
+
+      setConfig((current) => ({
+        ...current,
+        enabled: true,
+        status: syncData.status,
+        instagramAccountName: syncData.instagram.name || current.instagramAccountName,
+        instagramHandle: syncData.instagram.handle || current.instagramHandle,
+        instagramBusinessId: syncData.instagram.id || current.instagramBusinessId,
+      }))
+
+      await loadConfig()
+
+      setMessage('Conta Instagram sincronizada com sucesso.')
+    } catch (error: any) {
+      console.error(error)
+      setMessage(
+        error?.error ||
+          error?.details ||
+          error?.message ||
+          'Erro ao sincronizar conta Instagram.'
+      )
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -365,18 +428,33 @@ export default function AtendimentoInstagramPage() {
               />
             </label>
 
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2f3453] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Salvar configuração
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2f3453] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Salvar configuração
+              </button>
+
+              <button
+                onClick={handleSyncAccount}
+                disabled={syncing || config.status === 'draft'}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#374b89]/30 bg-white px-5 py-3 text-sm font-semibold text-[#374b89] shadow-sm transition hover:bg-[#374b89]/5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {syncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-4 w-4" />
+                )}
+                Sincronizar Instagram
+              </button>
+            </div>
           </div>
         </div>
 
@@ -389,9 +467,9 @@ export default function AtendimentoInstagramPage() {
             {[
               'Salvar configuração base do provider',
               'Criar fluxo de conexão com a Meta',
+              'Sincronizar página e conta Instagram',
               'Configurar webhook de recebimento',
               'Criar inbox API no Atendimento',
-              'Vincular mensagens ao CRM',
               'Ativar operação com agentes',
             ].map((item) => (
               <div
@@ -409,9 +487,8 @@ export default function AtendimentoInstagramPage() {
               Atenção
             </p>
             <p className="mt-1 text-sm leading-6 text-amber-700">
-              Esta tela ainda não conecta com a Meta, não recebe webhooks e não
-              cria a inbox API no Atendimento. Ela apenas grava a configuração
-              inicial por organização.
+              O botão de sincronização usa o token Meta já recebido para buscar
+              a Página Facebook e a conta Instagram Business vinculada.
             </p>
           </div>
         </div>
