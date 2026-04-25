@@ -3,6 +3,14 @@ import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 
+const instagramStatusSchema = z.enum([
+  'draft',
+  'pending_connection',
+  'token_received',
+  'connected',
+  'error',
+])
+
 const instagramConfigSchema = z.object({
   enabled: z.boolean(),
   instagramAccountName: z.string().trim().max(120),
@@ -10,7 +18,7 @@ const instagramConfigSchema = z.object({
   instagramBusinessId: z.string().trim().max(120),
   inboxName: z.string().trim().min(1).max(120),
   connectionMode: z.enum(['meta_api', 'manual_token']),
-  status: z.enum(['draft', 'pending_connection', 'connected', 'error']),
+  status: instagramStatusSchema,
   notes: z.string().trim().max(500),
 })
 
@@ -109,7 +117,13 @@ function resolveInstagramConfigFromSettings(
     status: readEnum(
       instagramRaw,
       'status',
-      ['draft', 'pending_connection', 'connected', 'error'] as const,
+      [
+        'draft',
+        'pending_connection',
+        'token_received',
+        'connected',
+        'error',
+      ] as const,
       DEFAULT_INSTAGRAM_CONFIG.status
     ),
     notes: readString(instagramRaw, 'notes', DEFAULT_INSTAGRAM_CONFIG.notes),
@@ -220,9 +234,16 @@ export async function POST(req: NextRequest) {
   const parsedSettings =
     safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
 
+  const currentInstagram =
+    parsedSettings.atendimentoInstagram &&
+    typeof parsedSettings.atendimentoInstagram === 'object'
+      ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
+      : {}
+
   const nextSettings = {
     ...parsedSettings,
     atendimentoInstagram: {
+      ...currentInstagram,
       ...parsed.data,
       updatedAt: new Date().toISOString(),
     },
