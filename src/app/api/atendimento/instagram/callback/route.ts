@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
 
 const callbackStateSchema = z.object({
@@ -25,7 +24,6 @@ function decodeState(rawState: string | null) {
   try {
     const decoded = Buffer.from(rawState, 'base64url').toString('utf-8')
     const parsed = JSON.parse(decoded)
-
     const result = callbackStateSchema.safeParse(parsed)
 
     if (!result.success) return null
@@ -49,13 +47,6 @@ function redirectToInstagramSettings(status: 'success' | 'error', message: strin
 }
 
 export async function GET(req: NextRequest) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'integrations',
-    'edit'
-  )
-
-  if (!allowed) return errorResponse!
-
   const { searchParams } = new URL(req.url)
 
   const code = searchParams.get('code')
@@ -86,17 +77,8 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const sessionOrgId = session!.user.organizationId
-
-  if (state.organizationId !== sessionOrgId) {
-    return redirectToInstagramSettings(
-      'error',
-      'Organização da sessão não confere com a conexão iniciada.'
-    )
-  }
-
   const organization = await prisma.organization.findUnique({
-    where: { id: sessionOrgId },
+    where: { id: state.organizationId },
     select: {
       id: true,
       settings: true,
@@ -128,12 +110,13 @@ export async function GET(req: NextRequest) {
       status: 'pending_connection',
       metaAuthorizationCodeReceived: true,
       metaAuthorizationCodeReceivedAt: new Date().toISOString(),
+      metaAuthorizationCodePreview: `${code.slice(0, 8)}...`,
       updatedAt: new Date().toISOString(),
     },
   }
 
   await prisma.organization.update({
-    where: { id: sessionOrgId },
+    where: { id: state.organizationId },
     data: {
       settings: JSON.stringify(nextSettings),
     },
