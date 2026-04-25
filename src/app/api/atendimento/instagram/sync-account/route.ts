@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { prisma } from '@/lib/prisma'
-import { decryptToken } from '@/lib/integrations/crypto'
+import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
 
 const META_GRAPH_VERSION = 'v20.0'
+const TARGET_FACEBOOK_PAGE_ID = '109568358707186'
 
 type MetaPage = {
   id: string
@@ -104,26 +105,42 @@ export async function POST() {
     )
   }
 
-  const pageWithInstagram = data.data?.find(
-    (page) => page.instagram_business_account?.id
-  )
+  const pages = data.data ?? []
 
-  if (!pageWithInstagram?.instagram_business_account?.id) {
+  const targetPage = pages.find((page) => page.id === TARGET_FACEBOOK_PAGE_ID)
+
+  if (!targetPage) {
     return NextResponse.json(
       {
-        error:
-          'Nenhuma página conectada a uma conta Instagram Business foi encontrada.',
-        pages: data.data?.map((page) => ({
+        error: 'Página Mundo Digital não encontrada no token Meta atual.',
+        expectedFacebookPageId: TARGET_FACEBOOK_PAGE_ID,
+        pages: pages.map((page) => ({
           id: page.id,
-          name: page.name,
+          name: page.name || '',
           hasInstagram: Boolean(page.instagram_business_account?.id),
+          instagramBusinessId: page.instagram_business_account?.id || '',
+          instagramUsername: page.instagram_business_account?.username || '',
         })),
       },
       { status: 404 }
     )
   }
 
-  const instagram = pageWithInstagram.instagram_business_account
+  if (!targetPage.instagram_business_account?.id) {
+    return NextResponse.json(
+      {
+        error:
+          'Página Mundo Digital encontrada, mas sem Instagram Business vinculado.',
+        facebookPage: {
+          id: targetPage.id,
+          name: targetPage.name || '',
+        },
+      },
+      { status: 404 }
+    )
+  }
+
+  const instagram = targetPage.instagram_business_account
   const now = new Date().toISOString()
 
   const nextSettings = {
@@ -133,13 +150,13 @@ export async function POST() {
       enabled: true,
       connectionMode: 'meta_api',
       status: 'connected',
-      facebookPageId: pageWithInstagram.id,
-      facebookPageName: pageWithInstagram.name || '',
-      facebookPageAccessTokenEncrypted: pageWithInstagram.access_token
-        ? encryptPageAccessToken(pageWithInstagram.access_token)
+      facebookPageId: targetPage.id,
+      facebookPageName: targetPage.name || '',
+      facebookPageAccessTokenEncrypted: targetPage.access_token
+        ? encryptToken(targetPage.access_token)
         : '',
       instagramBusinessId: instagram.id,
-      instagramAccountName: instagram.name || pageWithInstagram.name || '',
+      instagramAccountName: instagram.name || targetPage.name || '',
       instagramHandle: instagram.username ? `@${instagram.username}` : '',
       syncedAt: now,
       updatedAt: now,
@@ -157,8 +174,8 @@ export async function POST() {
     success: true,
     status: 'connected',
     facebookPage: {
-      id: pageWithInstagram.id,
-      name: pageWithInstagram.name || '',
+      id: targetPage.id,
+      name: targetPage.name || '',
     },
     instagram: {
       id: instagram.id,
@@ -167,9 +184,4 @@ export async function POST() {
       handle: instagram.username ? `@${instagram.username}` : '',
     },
   })
-}
-
-function encryptPageAccessToken(token: string) {
-  const { encryptToken } = require('@/lib/integrations/crypto') as typeof import('@/lib/integrations/crypto')
-  return encryptToken(token)
 }
