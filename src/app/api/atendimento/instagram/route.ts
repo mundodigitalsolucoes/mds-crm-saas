@@ -1,260 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { checkPermission } from '@/lib/checkPermission'
-import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
-const instagramConfigSchema = z.object({
-  enabled: z.boolean(),
-  instagramAccountName: z.string().trim().max(120),
-  instagramHandle: z.string().trim().max(80),
-  instagramBusinessId: z.string().trim().max(120),
-  inboxName: z.string().trim().min(1).max(120),
-  connectionMode: z.enum(['manual_setup', 'embedded_signup']),
-  status: z.enum(['draft', 'pending_connection', 'connected', 'error']),
-  notes: z.string().trim().max(500),
-})
+type InstagramConfig = {
+  enabled: boolean
+  instagramAccountName: string
+  instagramHandle: string
+  instagramBusinessId: string
+  inboxName: string
+  connectionMode: 'meta_api' | 'manual_token'
+  status: 'draft' | 'pending_connection' | 'connected' | 'error'
+  notes: string
+}
 
-type InstagramConfig = z.infer<typeof instagramConfigSchema>
-
-const DEFAULT_INSTAGRAM_CONFIG: InstagramConfig = {
+const defaultConfig: InstagramConfig = {
   enabled: false,
   instagramAccountName: '',
   instagramHandle: '',
   instagramBusinessId: '',
   inboxName: 'Instagram Direct',
-  connectionMode: 'embedded_signup',
+  connectionMode: 'meta_api',
   status: 'draft',
   notes: '',
 }
 
-function safeJsonParse<T>(value: string | null | undefined): T | null {
-  if (!value) return null
-
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return null
-  }
-}
-
-function readString(
-  raw: Record<string, unknown> | null,
-  key: string,
-  fallback: string
-) {
-  const value = raw?.[key]
-  return typeof value === 'string' ? value : fallback
-}
-
-function readBoolean(
-  raw: Record<string, unknown> | null,
-  key: string,
-  fallback: boolean
-) {
-  const value = raw?.[key]
-  return typeof value === 'boolean' ? value : fallback
-}
-
-function readEnum<T extends readonly string[]>(
-  raw: Record<string, unknown> | null,
-  key: string,
-  allowed: T,
-  fallback: T[number]
-): T[number] {
-  const value = raw?.[key]
-
-  return typeof value === 'string' && allowed.includes(value as T[number])
-    ? (value as T[number])
-    : fallback
-}
-
-function resolveInstagramConfigFromSettings(
-  rawSettings: Record<string, unknown> | null
-): InstagramConfig {
-  const instagramRaw =
-    rawSettings && typeof rawSettings.atendimentoInstagram === 'object'
-      ? (rawSettings.atendimentoInstagram as Record<string, unknown>)
-      : null
-
-  const merged: InstagramConfig = {
-    enabled: readBoolean(
-      instagramRaw,
-      'enabled',
-      DEFAULT_INSTAGRAM_CONFIG.enabled
-    ),
-    instagramAccountName: readString(
-      instagramRaw,
-      'instagramAccountName',
-      DEFAULT_INSTAGRAM_CONFIG.instagramAccountName
-    ),
-    instagramHandle: readString(
-      instagramRaw,
-      'instagramHandle',
-      DEFAULT_INSTAGRAM_CONFIG.instagramHandle
-    ),
-    instagramBusinessId: readString(
-      instagramRaw,
-      'instagramBusinessId',
-      DEFAULT_INSTAGRAM_CONFIG.instagramBusinessId
-    ),
-    inboxName:
-      readString(instagramRaw, 'inboxName', '') ||
-      DEFAULT_INSTAGRAM_CONFIG.inboxName,
-    connectionMode: readEnum(
-      instagramRaw,
-      'connectionMode',
-      ['manual_setup', 'embedded_signup'] as const,
-      DEFAULT_INSTAGRAM_CONFIG.connectionMode
-    ),
-    status: readEnum(
-      instagramRaw,
-      'status',
-      ['draft', 'pending_connection', 'connected', 'error'] as const,
-      DEFAULT_INSTAGRAM_CONFIG.status
-    ),
-    notes: readString(
-      instagramRaw,
-      'notes',
-      DEFAULT_INSTAGRAM_CONFIG.notes
-    ),
-  }
-
-  const parsed = instagramConfigSchema.safeParse(merged)
-
-  if (parsed.success) {
-    return parsed.data
-  }
-
-  return DEFAULT_INSTAGRAM_CONFIG
-}
-
 export async function GET() {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'integrations',
-    'view'
-  )
+  const session = await getServerSession(authOptions)
 
-  if (!allowed) return errorResponse!
-
-  const organizationId = session!.user.organizationId
-
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      plan: true,
-      settings: true,
-      updatedAt: true,
-    },
-  })
-
-  if (!organization) {
+  if (!session?.user) {
     return NextResponse.json(
-      { error: 'Organização não encontrada.' },
-      { status: 404 }
+      { error: 'Não autenticado' },
+      { status: 401 }
     )
   }
 
-  const parsedSettings =
-    safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
+  const orgScope = session.user.org
 
-  const config = resolveInstagramConfigFromSettings(parsedSettings)
-
-  return NextResponse.json({
-    orgScope: {
-      id: organization.id,
-      name: organization.name,
-      slug: organization.slug,
-      plan: organization.plan,
-    },
-    config,
-    defaults: DEFAULT_INSTAGRAM_CONFIG,
-    savedAt: organization.updatedAt.toISOString(),
-  })
-}
-
-export async function POST(req: NextRequest) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'integrations',
-    'edit'
-  )
-
-  if (!allowed) return errorResponse!
-
-  const organizationId = session!.user.organizationId
-  const body = await req.json().catch(() => ({}))
-
-  const parsed = instagramConfigSchema.safeParse({
-    ...body,
-    status: body?.status ?? DEFAULT_INSTAGRAM_CONFIG.status,
-    connectionMode:
-      body?.connectionMode ?? DEFAULT_INSTAGRAM_CONFIG.connectionMode,
-  })
-
-  if (!parsed.success) {
+  if (!orgScope) {
     return NextResponse.json(
-      {
-        error: 'Dados inválidos para salvar a configuração do Instagram.',
-        details: parsed.error.flatten(),
-      },
+      { error: 'Organização não encontrada' },
       { status: 400 }
     )
   }
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      plan: true,
-      settings: true,
-    },
-  })
+  // ⚠️ Simulação temporária (persistência futura via banco)
+  const config = defaultConfig
 
-  if (!organization) {
+  return NextResponse.json({
+    orgScope,
+    config,
+    defaults: defaultConfig,
+    savedAt: new Date().toISOString(),
+  })
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+
+  if (!session?.user) {
     return NextResponse.json(
-      { error: 'Organização não encontrada.' },
-      { status: 404 }
+      { error: 'Não autenticado' },
+      { status: 401 }
     )
   }
 
-  const parsedSettings =
-    safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
+  const orgScope = session.user.org
 
-  const nextSettings = {
-    ...parsedSettings,
-    atendimentoInstagram: {
-      ...parsed.data,
-      updatedAt: new Date().toISOString(),
-    },
+  if (!orgScope) {
+    return NextResponse.json(
+      { error: 'Organização não encontrada' },
+      { status: 400 }
+    )
   }
 
-  const updated = await prisma.organization.update({
-    where: { id: organizationId },
-    data: {
-      settings: JSON.stringify(nextSettings),
-    },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      plan: true,
-      updatedAt: true,
-    },
-  })
+  const body = await req.json()
+
+  const config: InstagramConfig = {
+    enabled: Boolean(body.enabled),
+    instagramAccountName: body.instagramAccountName || '',
+    instagramHandle: body.instagramHandle || '',
+    instagramBusinessId: body.instagramBusinessId || '',
+    inboxName: body.inboxName || 'Instagram Direct',
+    connectionMode:
+      body.connectionMode === 'manual_token'
+        ? 'manual_token'
+        : 'meta_api',
+    status: body.status || 'draft',
+    notes: body.notes || '',
+  }
+
+  // ⚠️ Aqui depois entra persistência real (Prisma)
+  const savedAt = new Date().toISOString()
 
   return NextResponse.json({
-    success: true,
-    orgScope: {
-      id: updated.id,
-      name: updated.name,
-      slug: updated.slug,
-      plan: updated.plan,
-    },
-    config: parsed.data,
-    savedAt: updated.updatedAt.toISOString(),
+    orgScope,
+    config,
+    defaults: defaultConfig,
+    savedAt,
   })
 }
