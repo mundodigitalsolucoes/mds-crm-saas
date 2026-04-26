@@ -45,6 +45,7 @@ export async function GET() {
         'pages_read_engagement',
         'instagram_basic',
         'instagram_manage_messages',
+        'business_management',
       ].join(','),
     })
 
