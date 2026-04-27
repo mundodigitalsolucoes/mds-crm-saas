@@ -38,7 +38,23 @@ type InstagramResponse = {
   savedAt: string
 }
 
-type SyncAccountResponse = {
+type InstagramAccount = {
+  facebookPageId: string
+  facebookPageName: string
+  hasInstagramBusinessAccount: boolean
+  instagramBusinessId: string
+  instagramAccountName: string
+  instagramUsername: string
+  instagramHandle: string
+}
+
+type AccountsResponse = {
+  success: boolean
+  total: number
+  accounts: InstagramAccount[]
+}
+
+type SelectAccountResponse = {
   success: boolean
   status: 'connected'
   facebookPage: {
@@ -56,10 +72,13 @@ type SyncAccountResponse = {
 export default function AtendimentoInstagramPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [syncing, setSyncing] = useState(false)
+  const [loadingAccounts, setLoadingAccounts] = useState(false)
+  const [selectingAccount, setSelectingAccount] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [orgScope, setOrgScope] = useState<OrgScope | null>(null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
+  const [accounts, setAccounts] = useState<InstagramAccount[]>([])
+  const [selectedAccountKey, setSelectedAccountKey] = useState('')
 
   const [config, setConfig] = useState<InstagramConfig>({
     enabled: false,
@@ -107,9 +126,56 @@ export default function AtendimentoInstagramPage() {
     }
   }
 
+  async function loadAccounts() {
+    setLoadingAccounts(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/atendimento/instagram/accounts', {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        throw data
+      }
+
+      const accountsData = data as AccountsResponse
+      const validAccounts = accountsData.accounts.filter(
+        (account) => account.hasInstagramBusinessAccount
+      )
+
+      setAccounts(validAccounts)
+
+      if (validAccounts.length === 0) {
+        setMessage(
+          'Nenhuma conta Instagram Business autorizada foi encontrada. Refaça a conexão com a Meta.'
+        )
+      }
+    } catch (error: any) {
+      console.error(error)
+      setMessage(
+        error?.error ||
+          error?.details ||
+          error?.message ||
+          'Erro ao listar contas Instagram autorizadas.'
+      )
+    } finally {
+      setLoadingAccounts(false)
+    }
+  }
+
   useEffect(() => {
     void loadConfig()
   }, [])
+
+  useEffect(() => {
+    if (config.status !== 'draft') {
+      void loadAccounts()
+    }
+  }, [config.status])
 
   async function handleSave() {
     setSaving(true)
@@ -154,17 +220,32 @@ export default function AtendimentoInstagramPage() {
     }
   }
 
-  async function handleSyncAccount() {
-    setSyncing(true)
+  async function handleSelectAccount() {
+    const selectedAccount = accounts.find(
+      (account) =>
+        `${account.facebookPageId}:${account.instagramBusinessId}` ===
+        selectedAccountKey
+    )
+
+    if (!selectedAccount) {
+      setMessage('Selecione uma conta Instagram autorizada.')
+      return
+    }
+
+    setSelectingAccount(true)
     setMessage(null)
 
     try {
-      const res = await fetch('/api/atendimento/instagram/sync-account', {
+      const res = await fetch('/api/atendimento/instagram/select-account', {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          facebookPageId: selectedAccount.facebookPageId,
+          instagramBusinessId: selectedAccount.instagramBusinessId,
+        }),
       })
 
       const data = await res.json().catch(() => ({}))
@@ -173,30 +254,32 @@ export default function AtendimentoInstagramPage() {
         throw data
       }
 
-      const syncData = data as SyncAccountResponse
+      const selectedData = data as SelectAccountResponse
 
       setConfig((current) => ({
         ...current,
         enabled: true,
-        status: syncData.status,
-        instagramAccountName: syncData.instagram.name || current.instagramAccountName,
-        instagramHandle: syncData.instagram.handle || current.instagramHandle,
-        instagramBusinessId: syncData.instagram.id || current.instagramBusinessId,
+        status: selectedData.status,
+        instagramAccountName:
+          selectedData.instagram.name || selectedAccount.instagramAccountName,
+        instagramHandle:
+          selectedData.instagram.handle || selectedAccount.instagramHandle,
+        instagramBusinessId:
+          selectedData.instagram.id || selectedAccount.instagramBusinessId,
       }))
 
       await loadConfig()
-
-      setMessage('Conta Instagram sincronizada com sucesso.')
+      setMessage('Conta Instagram selecionada e sincronizada com sucesso.')
     } catch (error: any) {
       console.error(error)
       setMessage(
         error?.error ||
           error?.details ||
           error?.message ||
-          'Erro ao sincronizar conta Instagram.'
+          'Erro ao selecionar conta Instagram.'
       )
     } finally {
-      setSyncing(false)
+      setSelectingAccount(false)
     }
   }
 
@@ -341,6 +424,60 @@ export default function AtendimentoInstagramPage() {
               </div>
             </label>
 
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                <label className="block flex-1 space-y-2">
+                  <span className="text-sm font-semibold text-[#2f3453]">
+                    Conta Instagram autorizada
+                  </span>
+                  <select
+                    value={selectedAccountKey}
+                    onChange={(e) => setSelectedAccountKey(e.target.value)}
+                    disabled={loadingAccounts || accounts.length === 0}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#374b89] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">
+                      {loadingAccounts
+                        ? 'Carregando contas...'
+                        : 'Selecione uma conta'}
+                    </option>
+                    {accounts.map((account) => (
+                      <option
+                        key={`${account.facebookPageId}:${account.instagramBusinessId}`}
+                        value={`${account.facebookPageId}:${account.instagramBusinessId}`}
+                      >
+                        {account.instagramHandle || account.instagramAccountName} —{' '}
+                        {account.facebookPageName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  onClick={handleSelectAccount}
+                  disabled={
+                    selectingAccount ||
+                    loadingAccounts ||
+                    !selectedAccountKey ||
+                    accounts.length === 0
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#374b89]/30 bg-white px-5 py-3 text-sm font-semibold text-[#374b89] shadow-sm transition hover:bg-[#374b89]/5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {selectingAccount ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
+                  Usar esta conta
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Para SaaS, a conta deve ser escolhida por organização. O CRM não
+                seleciona automaticamente a primeira página retornada pela Meta.
+              </p>
+            </div>
+
             <label className="block space-y-2">
               <span className="text-sm font-semibold text-[#2f3453]">
                 Nome da inbox API no Atendimento
@@ -443,16 +580,16 @@ export default function AtendimentoInstagramPage() {
               </button>
 
               <button
-                onClick={handleSyncAccount}
-                disabled={syncing || config.status === 'draft'}
+                onClick={loadAccounts}
+                disabled={loadingAccounts || config.status === 'draft'}
                 className="inline-flex items-center gap-2 rounded-xl border border-[#374b89]/30 bg-white px-5 py-3 text-sm font-semibold text-[#374b89] shadow-sm transition hover:bg-[#374b89]/5 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {syncing ? (
+                {loadingAccounts ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCcw className="h-4 w-4" />
                 )}
-                Sincronizar Instagram
+                Atualizar contas autorizadas
               </button>
             </div>
           </div>
@@ -467,7 +604,7 @@ export default function AtendimentoInstagramPage() {
             {[
               'Salvar configuração base do provider',
               'Criar fluxo de conexão com a Meta',
-              'Sincronizar página e conta Instagram',
+              'Selecionar conta Instagram por organização',
               'Configurar webhook de recebimento',
               'Criar inbox API no Atendimento',
               'Ativar operação com agentes',
@@ -487,8 +624,8 @@ export default function AtendimentoInstagramPage() {
               Atenção
             </p>
             <p className="mt-1 text-sm leading-6 text-amber-700">
-              O botão de sincronização usa o token Meta já recebido para buscar
-              a Página Facebook e a conta Instagram Business vinculada.
+              Em ambiente SaaS, cada organização deve escolher explicitamente a
+              Página Facebook e a conta Instagram autorizada que deseja operar.
             </p>
           </div>
         </div>
