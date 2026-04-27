@@ -102,7 +102,7 @@ export async function POST() {
     subscribed_fields: [
       'messages',
       'messaging_postbacks',
-      'messaging_seen',
+      'message_reads',
       'message_reactions',
     ].join(','),
     access_token: pageAccessToken,
@@ -144,7 +144,7 @@ export async function POST() {
       subscribedAppsFields: [
         'messages',
         'messaging_postbacks',
-        'messaging_seen',
+        'message_reads',
         'message_reactions',
       ],
       subscribedAppsAt: now,
@@ -169,7 +169,7 @@ export async function POST() {
     fields: [
       'messages',
       'messaging_postbacks',
-      'messaging_seen',
+      'message_reads',
       'message_reactions',
     ],
     meta: data,
