@@ -13,6 +13,8 @@ const instagramStatusSchema = z.enum([
 
 const instagramConfigSchema = z.object({
   enabled: z.boolean(),
+  facebookPageId: z.string().trim().max(120),
+  facebookPageName: z.string().trim().max(120),
   instagramAccountName: z.string().trim().max(120),
   instagramHandle: z.string().trim().max(80),
   instagramBusinessId: z.string().trim().max(120),
@@ -26,6 +28,8 @@ type InstagramConfig = z.infer<typeof instagramConfigSchema>
 
 const DEFAULT_INSTAGRAM_CONFIG: InstagramConfig = {
   enabled: false,
+  facebookPageId: '',
+  facebookPageName: '',
   instagramAccountName: '',
   instagramHandle: '',
   instagramBusinessId: '',
@@ -89,6 +93,16 @@ function resolveInstagramConfigFromSettings(
       instagramRaw,
       'enabled',
       DEFAULT_INSTAGRAM_CONFIG.enabled
+    ),
+    facebookPageId: readString(
+      instagramRaw,
+      'facebookPageId',
+      DEFAULT_INSTAGRAM_CONFIG.facebookPageId
+    ),
+    facebookPageName: readString(
+      instagramRaw,
+      'facebookPageName',
+      DEFAULT_INSTAGRAM_CONFIG.facebookPageName
     ),
     instagramAccountName: readString(
       instagramRaw,
@@ -198,6 +212,8 @@ export async function POST(req: NextRequest) {
 
   const parsed = instagramConfigSchema.safeParse({
     ...body,
+    facebookPageId: body?.facebookPageId ?? '',
+    facebookPageName: body?.facebookPageName ?? '',
     status: body?.status ?? DEFAULT_INSTAGRAM_CONFIG.status,
     connectionMode:
       body?.connectionMode === 'manual_token' ? 'manual_token' : 'meta_api',
