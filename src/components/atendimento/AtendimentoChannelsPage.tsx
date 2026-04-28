@@ -750,6 +750,53 @@ export default function AtendimentoChannelsPage() {
     }
   }
 
+  const handleConnectWhatsappCloud = async () => {
+    if (!data?.usage.canAddMore) {
+      showMsg('info', 'Seu plano atingiu o limite de números de WhatsApp.')
+      return
+    }
+
+    const defaultLabel = `WhatsApp API Oficial ${data.usage.current + 1}`
+    const labelInput = window.prompt('Nome do canal no CRM e no Atendimento:', defaultLabel)
+
+    if (labelInput === null) return
+
+    const phoneNumber = window.prompt('Número do WhatsApp com DDD. Ex: 5519999999999')
+    if (!phoneNumber) return
+
+    const phoneNumberId = window.prompt('Phone Number ID da Meta:')
+    if (!phoneNumberId) return
+
+    const businessAccountId = window.prompt('WhatsApp Business Account ID:')
+    if (!businessAccountId) return
+
+    const accessToken = window.prompt('Access Token permanente da Meta:')
+    if (!accessToken) return
+
+    setConnectLoading(true)
+
+    try {
+      await axios.post('/api/atendimento/canais/whatsapp-cloud/connect', {
+        label: labelInput.trim() || defaultLabel,
+        phoneNumber: phoneNumber.trim(),
+        phoneNumberId: phoneNumberId.trim(),
+        businessAccountId: businessAccountId.trim(),
+        accessToken: accessToken.trim(),
+      })
+
+      showMsg('success', 'WhatsApp API Oficial configurado com sucesso.')
+      await loadInstances()
+    } catch (err) {
+      const errorText = axios.isAxiosError(err)
+        ? err.response?.data?.error ?? 'Erro ao configurar WhatsApp API Oficial.'
+        : 'Erro ao configurar WhatsApp API Oficial.'
+
+      showMsg('error', errorText)
+    } finally {
+      setConnectLoading(false)
+    }
+  }
+
   const handleReconnect = async (item: WhatsAppInstanceItem) => {
     setReconnectingId(item.id)
 
@@ -1013,6 +1060,9 @@ export default function AtendimentoChannelsPage() {
           onClose={() => setShowProviderModal(false)}
           onSelectEvolution={() => {
             void handleConnectEvolution()
+          }}
+          onSelectWhatsappCloud={() => {
+            void handleConnectWhatsappCloud()
           }}
           onShowInfo={(text) => showMsg('info', text)}
         />

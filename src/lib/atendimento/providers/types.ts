@@ -1,5 +1,3 @@
-// src/lib/atendimento/providers/types.ts
-
 export type WhatsappProvider = 'evolution' | 'whatsapp_cloud'
 
 export type WhatsappProviderStatus = 'active' | 'planned'
@@ -16,21 +14,21 @@ export type WhatsappProviderDefinition = {
 export const WHATSAPP_PROVIDER_DEFINITIONS: WhatsappProviderDefinition[] = [
   {
     id: 'evolution',
-    title: 'WhatsApp via Evolution',
+    title: 'WhatsApp Business',
     description:
-      'Conexão por QR Code e sessão do WhatsApp Business. Trilha atual em operação e homologação contínua.',
+      'Conexão por QR Code e sessão do WhatsApp Business. Trilha atual em operação.',
     status: 'active',
     setupMode: 'qr',
     safeToUseNow: true,
   },
   {
     id: 'whatsapp_cloud',
-    title: 'WhatsApp Cloud API',
+    title: 'WhatsApp API Oficial',
     description:
-      'Trilha oficial separada para API da Meta no contexto do Chatwoot. Reservada para a próxima etapa de ativação.',
-    status: 'planned',
+      'Trilha oficial da Meta via Atendimento, isolada da trilha WhatsApp Business.',
+    status: 'active',
     setupMode: 'official_api',
-    safeToUseNow: false,
+    safeToUseNow: true,
   },
 ]
 
@@ -46,11 +44,8 @@ export function resolveWhatsappProvider(value: unknown): WhatsappProvider {
 export function getWhatsappProviderDefinition(
   provider: WhatsappProvider
 ): WhatsappProviderDefinition {
-  const found = WHATSAPP_PROVIDER_DEFINITIONS.find((item) => item.id === provider)
-
-  if (!found) {
-    return WHATSAPP_PROVIDER_DEFINITIONS[0]
-  }
-
-  return found
+  return (
+    WHATSAPP_PROVIDER_DEFINITIONS.find((item) => item.id === provider) ??
+    WHATSAPP_PROVIDER_DEFINITIONS[0]
+  )
 }
