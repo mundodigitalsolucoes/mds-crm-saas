@@ -9,7 +9,6 @@ type ChatwootAccountData = {
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
   if (!value) return null
-
   try {
     return JSON.parse(value) as T
   } catch {
@@ -33,7 +32,6 @@ function parseChatwootAccountData(raw: string): ChatwootAccountData | null {
 
 function readInstagramSettings(settings: string | null) {
   const parsed = safeJsonParse<Record<string, unknown>>(settings) ?? {}
-
   return parsed.atendimentoInstagram &&
     typeof parsed.atendimentoInstagram === 'object'
     ? (parsed.atendimentoInstagram as Record<string, unknown>)
@@ -54,7 +52,7 @@ async function chatwootRequest<T>(params: {
     },
     body: params.body ? JSON.stringify(params.body) : undefined,
     cache: 'no-store',
-    signal: AbortSignal.timeout(12_000),
+    signal: AbortSignal.timeout(12000),
   })
 
   const text = await response.text().catch(() => '')
@@ -80,7 +78,6 @@ async function findOrganizationByInstagramBusinessId(instagramBusinessId: string
 
   return organizations.find((organization) => {
     const instagram = readInstagramSettings(organization.settings)
-
     return (
       typeof instagram.instagramBusinessId === 'string' &&
       instagram.instagramBusinessId === instagramBusinessId
@@ -178,9 +175,16 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    // 🔥 LOG CRÍTICO
+    console.log('[Instagram Webhook] RECEBIDO:', {
+      time: new Date().toISOString(),
+      object: body?.object,
+      entries: Array.isArray(body?.entry) ? body.entry.length : 0,
+      raw: JSON.stringify(body).slice(0, 2000),
+    })
+
     if (body?.event) {
-      console.log('Webhook Chatwoot ignorado nesta ponte:', body.event)
-      return NextResponse.json({ ok: true, ignored: 'chatwoot_event' })
+      return NextResponse.json({ ok: true })
     }
 
     const entries = Array.isArray(body?.entry) ? body.entry : []
@@ -193,21 +197,11 @@ export async function POST(req: NextRequest) {
         instagramBusinessId
       )
 
-      if (!organization) {
-        console.warn(
-          'Organização não encontrada para Instagram Business ID:',
-          instagramBusinessId
-        )
-        continue
-      }
+      if (!organization) continue
 
       const instagramSettings = readInstagramSettings(organization.settings)
       const inboxId = toPositiveInt(instagramSettings.chatwootInboxId)
-
-      if (!inboxId) {
-        console.warn('Inbox do Instagram não provisionada para org:', organization.id)
-        continue
-      }
+      if (!inboxId) continue
 
       const chatwootAccount = await prisma.connectedAccount.findUnique({
         where: {
@@ -216,35 +210,20 @@ export async function POST(req: NextRequest) {
             organizationId: organization.id,
           },
         },
-        select: {
-          isActive: true,
-          accessTokenEnc: true,
-          data: true,
-        },
       })
 
-      if (!chatwootAccount?.isActive || !chatwootAccount.accessTokenEnc) {
-        console.warn('Atendimento não conectado para org:', organization.id)
-        continue
-      }
+      if (!chatwootAccount?.accessTokenEnc) continue
 
       const chatwootData = parseChatwootAccountData(chatwootAccount.data)
       const accountId = toPositiveInt(chatwootData?.chatwootAccountId)
-
-      if (!accountId) {
-        console.warn('chatwootAccountId ausente para org:', organization.id)
-        continue
-      }
+      if (!accountId) continue
 
       const apiBaseUrl =
         normalizeBaseUrl(process.env.CHATWOOT_INTERNAL_URL) ||
         normalizeBaseUrl(organization.chatwootUrl) ||
         normalizeBaseUrl(chatwootData?.chatwootUrl)
 
-      if (!apiBaseUrl) {
-        console.warn('Base URL Atendimento ausente para org:', organization.id)
-        continue
-      }
+      if (!apiBaseUrl) continue
 
       const apiToken = decryptToken(chatwootAccount.accessTokenEnc)
       const messaging = Array.isArray(entry?.messaging) ? entry.messaging : []
@@ -252,11 +231,10 @@ export async function POST(req: NextRequest) {
       for (const event of messaging) {
         const senderId = String(event?.sender?.id || '')
         const messageText = String(event?.message?.text || '').trim()
-        const messageId = String(event?.message?.mid || '')
 
         if (!senderId || !messageText) continue
 
-        const contactResponse = await createChatwootContact({
+        const contact = await createChatwootContact({
           apiBaseUrl,
           accountId,
           apiToken,
@@ -266,15 +244,12 @@ export async function POST(req: NextRequest) {
         })
 
         const contactId =
-          toPositiveInt(contactResponse?.payload?.contact?.id) ||
-          toPositiveInt(contactResponse?.id)
+          toPositiveInt(contact?.payload?.contact?.id) ||
+          toPositiveInt(contact?.id)
 
-        if (!contactId) {
-          console.warn('Contato Chatwoot não criado para sender:', senderId)
-          continue
-        }
+        if (!contactId) continue
 
-        const conversationResponse = await createChatwootConversation({
+        const conversation = await createChatwootConversation({
           apiBaseUrl,
           accountId,
           apiToken,
@@ -283,12 +258,8 @@ export async function POST(req: NextRequest) {
           sourceId: `instagram:${senderId}`,
         })
 
-        const conversationId = toPositiveInt(conversationResponse.id)
-
-        if (!conversationId) {
-          console.warn('Conversa Chatwoot não criada para sender:', senderId)
-          continue
-        }
+        const conversationId = toPositiveInt(conversation.id)
+        if (!conversationId) continue
 
         await createChatwootMessage({
           apiBaseUrl,
@@ -298,12 +269,9 @@ export async function POST(req: NextRequest) {
           content: messageText,
         })
 
-        console.log('Mensagem Instagram enviada ao Atendimento:', {
-          organizationId: organization.id,
-          instagramBusinessId,
+        console.log('[Instagram → Atendimento OK]', {
+          org: organization.id,
           senderId,
-          messageId,
-          inboxId,
           conversationId,
         })
       }
@@ -311,16 +279,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Erro na ponte Meta → Atendimento:', error)
+    console.error('Erro webhook Instagram:', error)
 
     return NextResponse.json(
-      {
-        error: 'META_TO_CHATWOOT_BRIDGE_FAILED',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Erro inesperado ao processar webhook.',
-      },
+      { error: 'WEBHOOK_FAILED' },
       { status: 500 }
     )
   }
