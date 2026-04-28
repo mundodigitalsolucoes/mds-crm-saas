@@ -40,11 +40,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
-function ProviderBadge({
-  provider,
-}: {
-  provider: ProviderItem
-}) {
+function ProviderBadge({ provider }: { provider: ProviderItem }) {
   if (provider.safeToUseNow) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -140,12 +136,14 @@ export default function WhatsAppProviderSelectorModal({
   actionLoading,
   onClose,
   onSelectEvolution,
+  onSelectWhatsappCloud,
   onShowInfo,
 }: {
   open: boolean
   actionLoading: boolean
   onClose: () => void
   onSelectEvolution: () => void
+  onSelectWhatsappCloud: () => void
   onShowInfo: (text: string) => void
 }) {
   const [loading, setLoading] = useState(true)
@@ -174,11 +172,7 @@ export default function WhatsAppProviderSelectorModal({
 
         if (cancelled) return
 
-        const errorText = axios.isAxiosError(err)
-          ? err.response?.data?.error ?? 'Não foi possível carregar os providers.'
-          : 'Não foi possível carregar os providers.'
-
-        setFetchError(errorText)
+        setFetchError('Não foi possível carregar os providers.')
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -196,32 +190,23 @@ export default function WhatsAppProviderSelectorModal({
   if (!open) return null
 
   const handleChoose = (provider: ProviderItem) => {
+    onClose()
+
     if (provider.id === 'evolution') {
-      onClose()
       onSelectEvolution()
       return
     }
 
-    onShowInfo('WhatsApp Cloud API está reservado para a próxima etapa da Fase 02.')
+    onSelectWhatsappCloud()
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 backdrop-blur-sm p-4">
       <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#374b89]/10">
-                <Plug className="h-6 w-6 text-[#374b89]" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-[#2f3453]">Escolher provider do WhatsApp</h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  Selecione a trilha do canal sem misturar Evolution com API oficial.
-                </p>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold text-[#2f3453]">
+            Escolher provider do WhatsApp
+          </h2>
 
           <button
             onClick={onClose}
@@ -231,51 +216,12 @@ export default function WhatsAppProviderSelectorModal({
           </button>
         </div>
 
-        {orgScope && (
-          <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Organização
-                </p>
-                <p className="mt-1 text-sm font-bold text-[#2f3453]">{orgScope.name}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Slug
-                </p>
-                <p className="mt-1 text-sm font-bold text-[#2f3453]">{orgScope.slug}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Plano
-                </p>
-                <p className="mt-1 text-sm font-bold text-[#2f3453]">{orgScope.plan}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  WhatsApps ativos
-                </p>
-                <p className="mt-1 text-sm font-bold text-[#2f3453]">
-                  {orgScope.activeWhatsappInstances ?? 0}
-                  {typeof orgScope.maxWhatsappInstances === 'number'
-                    ? ` / ${orgScope.maxWhatsappInstances <= 0 ? '∞' : orgScope.maxWhatsappInstances}`
-                    : ''}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {loading ? (
-          <div className="flex h-56 items-center justify-center rounded-3xl border border-slate-200 bg-white">
+          <div className="flex h-56 items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
           </div>
         ) : fetchError ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-red-200 bg-red-50 p-10 text-center">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <p className="text-sm font-medium text-red-700">{fetchError}</p>
-          </div>
+          <div className="text-center text-red-600">{fetchError}</div>
         ) : (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             {providers.map((provider) => (
@@ -288,15 +234,6 @@ export default function WhatsAppProviderSelectorModal({
             ))}
           </div>
         )}
-
-        <div className="mt-5 flex justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Fechar
-          </button>
-        </div>
       </div>
     </div>
   )
