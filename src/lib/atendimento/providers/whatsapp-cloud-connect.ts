@@ -70,13 +70,13 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
       enable_auto_assignment: true,
       timezone: 'America/Sao_Paulo',
       channel: {
-        type: 'whatsapp',
-        provider: 'whatsapp_cloud',
-        phone_number: phoneNumber,
-        phone_number_id: input.phoneNumberId,
-        business_account_id: input.businessAccountId,
-        api_key: input.accessToken,
-      },
+  type: 'Channel::Whatsapp',
+  provider: 'whatsapp_cloud_api',
+  phone_number: phoneNumber,
+  whatsapp_phone_number_id: input.phoneNumberId,
+  whatsapp_business_account_id: input.businessAccountId,
+  access_token: input.accessToken,
+},
     },
   })
 
