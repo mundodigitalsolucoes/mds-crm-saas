@@ -14,6 +14,8 @@ export type InstanceStatus =
   | 'missing'
   | 'disconnected'
 
+export type WhatsappProvider = 'evolution' | 'whatsapp_cloud'
+
 const CONNECTION_GRACE_MS = 90_000
 
 type LegacyWhatsappData = {
@@ -40,6 +42,10 @@ function parseIsoDate(value: unknown): Date | null {
   if (typeof value !== 'string') return null
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function resolveProvider(metadata: Record<string, unknown>): WhatsappProvider {
+  return metadata.provider === 'whatsapp_cloud' ? 'whatsapp_cloud' : 'evolution'
 }
 
 function resolveStatus(params: {
@@ -125,12 +131,42 @@ export async function readWhatsappInstanceRuntime(instance: {
   const parsedMetadata =
     safeJsonParse<Record<string, unknown>>(instance.metadata) ?? {}
 
-  const connectRequestedAt =
-    parseIsoDate(parsedMetadata.connectRequestedAt) ??
-    parseIsoDate(parsedMetadata.reconnectRequestedAt)
+  const provider = resolveProvider(parsedMetadata)
 
   const metadataConnectedAt = parseIsoDate(parsedMetadata.connectedAt)
   const metadataDisconnectedAt = parseIsoDate(parsedMetadata.disconnectedAt)
+
+  if (provider === 'whatsapp_cloud') {
+    const status: InstanceStatus = instance.isActive ? 'connected' : 'disconnected'
+    const connectedAt = instance.connectedAt ?? metadataConnectedAt ?? instance.createdAt
+    const disconnectedAt = !instance.isActive
+      ? instance.disconnectedAt ?? metadataDisconnectedAt ?? instance.updatedAt
+      : null
+
+    return {
+      id: instance.id,
+      provider,
+      label: instance.label ?? 'WhatsApp API Oficial',
+      instanceName: instance.instanceName,
+      phoneNumber: instance.phoneNumber,
+      status,
+      isActive: instance.isActive,
+      isConnected: instance.isActive,
+      chatwootInboxId: instance.chatwootInboxId,
+      connectedAt: connectedAt ? connectedAt.toISOString() : null,
+      disconnectedAt: disconnectedAt ? disconnectedAt.toISOString() : null,
+      lastError: instance.isActive ? null : instance.lastError,
+      createdAt: instance.createdAt.toISOString(),
+      updatedAt: instance.updatedAt.toISOString(),
+      rawState: instance.isActive ? 'open' : 'inactive',
+      effectiveState: instance.isActive ? 'open' : 'inactive',
+      inGraceWindow: false,
+    }
+  }
+
+  const connectRequestedAt =
+    parseIsoDate(parsedMetadata.connectRequestedAt) ??
+    parseIsoDate(parsedMetadata.reconnectRequestedAt)
 
   const inGraceWindow =
     !!connectRequestedAt &&
@@ -163,10 +199,9 @@ export async function readWhatsappInstanceRuntime(instance: {
     phoneNumber = await resolvePhoneNumber(instance.instanceName)
   }
 
-  const connectedAt =
-    isConnected
-      ? instance.connectedAt ?? metadataConnectedAt ?? null
-      : instance.connectedAt ?? metadataConnectedAt ?? null
+  const connectedAt = isConnected
+    ? instance.connectedAt ?? metadataConnectedAt ?? null
+    : instance.connectedAt ?? metadataConnectedAt ?? null
 
   const disconnectedAt =
     !isConnected && effectiveState !== 'connecting'
@@ -187,6 +222,7 @@ export async function readWhatsappInstanceRuntime(instance: {
 
   return {
     id: instance.id,
+    provider,
     label: instance.label ?? 'WhatsApp sem nome',
     instanceName: instance.instanceName,
     phoneNumber,
@@ -272,9 +308,7 @@ export async function readWhatsappGlobalStatus(organizationId: string) {
     unstable: false,
     instanceName: reference?.instanceName ?? null,
     label: reference?.label ?? null,
-    disconnectedAt:
-      reference?.disconnectedAt ??
-      new Date().toISOString(),
+    disconnectedAt: reference?.disconnectedAt ?? new Date().toISOString(),
     activeCount: activeInstances.length,
     connectedCount: 0,
     lostConnection: runtimes.every((item) => item.rawState === 'not_found'),
