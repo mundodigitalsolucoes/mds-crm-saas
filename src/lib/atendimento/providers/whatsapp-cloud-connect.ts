@@ -63,24 +63,17 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
   }
 
   const inbox = await chatwootApi<ChatwootInbox>(credentials, '/inboxes', {
-    method: 'POST',
-    timeoutMs: 20_000,
-    body: {
-      name: input.label,
-      enable_auto_assignment: true,
-      timezone: 'America/Sao_Paulo',
-      channel: {
-        type: 'whatsapp',
-        phone_number: phoneNumber,
-        provider: 'whatsapp_cloud_api',
-        provider_config: {
-          phone_number_id: input.phoneNumberId,
-          business_account_id: input.businessAccountId,
-          api_key: input.accessToken,
-        },
-      },
+  method: 'POST',
+  timeoutMs: 20000,
+  body: {
+    name: input.label,
+    enable_auto_assignment: true,
+    timezone: 'America/Sao_Paulo',
+    channel: {
+      type: 'api',
     },
-  })
+  },
+})
 
   if (!inbox?.id) {
     throw new Error('Atendimento não retornou o ID da inbox.')
@@ -100,15 +93,16 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
       chatwootInboxId: inbox.id,
       serverUrl: credentials.chatwootUrl,
       metadata: JSON.stringify({
-        provider: 'whatsapp_cloud',
-        phoneNumber,
-        phoneNumberId: input.phoneNumberId,
-        businessAccountId: input.businessAccountId,
-        chatwootAccountId: credentials.accountId,
-        chatwootInboxId: inbox.id,
-        chatwootChannelId: inbox.channel_id ?? null,
-        configuredAt: connectedAt.toISOString(),
-      }),
+  provider: 'whatsapp_cloud',
+  phoneNumber,
+  phoneNumberId: input.phoneNumberId,
+  businessAccountId: input.businessAccountId,
+  accessToken: input.accessToken,
+  chatwootAccountId: credentials.accountId,
+  chatwootInboxId: inbox.id,
+  chatwootChannelId: inbox.channel_id ?? null,
+  configuredAt: connectedAt.toISOString(),
+}),
       isActive: true,
       connectedAt,
       disconnectedAt: null,
