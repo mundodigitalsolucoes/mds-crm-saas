@@ -35,6 +35,7 @@ type InstanceStatus =
 
 interface WhatsAppInstanceItem {
   id: string
+  provider?: 'evolution' | 'whatsapp_cloud'
   label: string
   instanceName: string
   phoneNumber: string | null
@@ -532,8 +533,9 @@ function WhatsAppCard({
   const connectedAt = formatDateTime(item.connectedAt)
   const disconnectedAt = formatDateTime(item.disconnectedAt)
   const busy = disconnecting || reconnecting || deleting
-  const canDeleteFromCrm = !item.isConnected
-  const showOperationalDisconnect = item.isConnected
+  const isCloudApi = item.provider === 'whatsapp_cloud'
+  const canDeleteFromCrm = !item.isConnected && !isCloudApi
+  const showOperationalDisconnect = item.isConnected && !isCloudApi
 
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -560,10 +562,14 @@ function WhatsAppCard({
             </div>
 
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-emerald-700">WhatsApp conectado</p>
+              <p className="text-sm font-semibold text-emerald-700">
+                {isCloudApi ? 'WhatsApp API Oficial conectado' : 'WhatsApp conectado'}
+              </p>
+
               {item.phoneNumber && (
                 <p className="mt-1 text-sm text-slate-700">Número: +{item.phoneNumber}</p>
               )}
+
               {connectedAt && (
                 <p className="mt-1 text-xs text-slate-500">Conectado em {connectedAt}</p>
               )}
@@ -600,7 +606,11 @@ function WhatsAppCard({
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {showOperationalDisconnect ? (
+        {isCloudApi ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 sm:col-span-2">
+            Canal oficial ativo. Respostas e mensagens serão tratadas pela integração da Meta.
+          </div>
+        ) : showOperationalDisconnect ? (
           <>
             <button
               onClick={() => onDisconnect(item)}
