@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { processWhatsAppCloudWebhook } from '@/lib/atendimento/providers/whatsapp-cloud-inbound'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,24 +19,18 @@ export async function GET(req: NextRequest) {
   const verifyToken = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
+  const expectedVerifyToken = process.env.WHATSAPP_CLOUD_VERIFY_TOKEN
+
+  if (!expectedVerifyToken) {
+    console.error('[WHATSAPP CLOUD WEBHOOK] Missing WHATSAPP_CLOUD_VERIFY_TOKEN')
+    return textResponse('Server Misconfigured', 500)
+  }
+
   if (mode !== 'subscribe' || !verifyToken || !challenge) {
     return textResponse('Bad Request', 400)
   }
 
-  const account = await prisma.connectedAccount.findFirst({
-    where: {
-      provider: 'whatsapp_cloud',
-      isActive: true,
-      data: {
-        contains: `"verifyToken":"${verifyToken}"`,
-      },
-    },
-    select: {
-      id: true,
-    },
-  })
-
-  if (!account) {
+  if (verifyToken !== expectedVerifyToken) {
     return textResponse('Forbidden', 403)
   }
 
@@ -50,7 +44,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false }, { status: 400 })
   }
 
-  console.log('[WHATSAPP CLOUD WEBHOOK]', JSON.stringify(payload))
+  const result = await processWhatsAppCloudWebhook(payload)
 
-  return NextResponse.json({ success: true })
+  return NextResponse.json(result)
 }
