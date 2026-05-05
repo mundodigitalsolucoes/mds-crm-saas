@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { getChatwootCredentials, chatwootApi } from '@/lib/chatwoot'
+import { ensureChatwootWebhookForOrganization } from '@/lib/atendimento/orchestration/chatwoot-webhooks'
 
 type ConnectWhatsappCloudInput = {
   organizationId: string
@@ -63,21 +64,24 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
   }
 
   const inbox = await chatwootApi<ChatwootInbox>(credentials, '/inboxes', {
-  method: 'POST',
-  timeoutMs: 20000,
-  body: {
-    name: input.label,
-    enable_auto_assignment: true,
-    timezone: 'America/Sao_Paulo',
-    channel: {
-      type: 'api',
+    method: 'POST',
+    timeoutMs: 20000,
+    body: {
+      name: input.label,
+      enable_auto_assignment: true,
+      timezone: 'America/Sao_Paulo',
+      channel: {
+        type: 'api',
+      },
     },
-  },
-})
+  })
 
   if (!inbox?.id) {
     throw new Error('Atendimento não retornou o ID da inbox.')
   }
+
+  // GARANTE WEBHOOK AUTOMATICO POR ORGANIZACAO
+  await ensureChatwootWebhookForOrganization(credentials)
 
   const instanceName = buildCloudInstanceName(org.slug)
   const connectedAt = new Date()
@@ -93,16 +97,16 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
       chatwootInboxId: inbox.id,
       serverUrl: credentials.chatwootUrl,
       metadata: JSON.stringify({
-  provider: 'whatsapp_cloud',
-  phoneNumber,
-  phoneNumberId: input.phoneNumberId,
-  businessAccountId: input.businessAccountId,
-  accessToken: input.accessToken,
-  chatwootAccountId: credentials.accountId,
-  chatwootInboxId: inbox.id,
-  chatwootChannelId: inbox.channel_id ?? null,
-  configuredAt: connectedAt.toISOString(),
-}),
+        provider: 'whatsapp_cloud',
+        phoneNumber,
+        phoneNumberId: input.phoneNumberId,
+        businessAccountId: input.businessAccountId,
+        accessToken: input.accessToken,
+        chatwootAccountId: credentials.accountId,
+        chatwootInboxId: inbox.id,
+        chatwootChannelId: inbox.channel_id ?? null,
+        configuredAt: connectedAt.toISOString(),
+      }),
       isActive: true,
       connectedAt,
       disconnectedAt: null,
