@@ -1,79 +1,59 @@
-import {
-  bridgeContactCreated,
-  bridgeConversationCreated,
-  bridgeConversationUpdated,
-  bridgeIncomingMessage,
-  type ChatwootWebhookPayload,
-} from '@/lib/atendimento/orchestration/lead-bridge'
+import { prisma } from '@/lib/prisma'
 import { sendWhatsAppCloudMessage } from '@/lib/atendimento/providers/whatsapp-cloud-outbound'
 
-function isIncoming(messageType: string | number | undefined) {
-  return messageType === 'incoming' || messageType === 0 || messageType === '0'
-}
+export async function processChatwootEvent(payload: any, organizationId?: string) {
+  try {
+    console.log('[Chatwoot] Evento recebido:', payload?.event)
 
-function isOutgoing(messageType: string | number | undefined) {
-  return messageType === 'outgoing' || messageType === 1 || messageType === '1'
-}
+    // Só processa mensagens
+    if (payload?.event !== 'message_created') return
 
-function resolveContactPhone(payload: ChatwootWebhookPayload) {
-  return (
-    payload.conversation?.meta?.sender?.phone_number ??
-    payload.contact?.phone_number ??
-    payload.sender?.phone_number ??
-    payload.meta?.sender?.phone_number ??
-    null
-  )
-}
+    // Só mensagens enviadas pelo agente
+    if (payload?.message_type !== 'outgoing') return
 
-export async function processChatwootEvent(
-  payload: ChatwootWebhookPayload,
-  organizationId: string
-): Promise<void> {
-  switch (payload.event) {
-    case 'conversation_created':
-      await bridgeConversationCreated(payload, organizationId)
-      break
+    const content = payload?.content
+    if (!content) return
 
-    case 'conversation_updated':
-    case 'conversation_status_changed':
-      await bridgeConversationUpdated(payload, organizationId)
-      break
+    const inboxId = payload?.conversation?.inbox_id
 
-    case 'message_created': {
-      if (isIncoming(payload.message_type)) {
-        await bridgeIncomingMessage(payload, organizationId)
-        break
-      }
-
-      if (isOutgoing(payload.message_type)) {
-        const inboxId = payload.conversation?.inbox_id ?? payload.inbox_id ?? null
-        const content = payload.content ?? ''
-        const contactPhone = resolveContactPhone(payload)
-
-        if (inboxId && content && contactPhone) {
-          await sendWhatsAppCloudMessage({
-            organizationId,
-            inboxId,
-            content,
-            to: contactPhone,
-          })
-        } else {
-          console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem dados suficientes.', {
-            inboxId,
-            hasContent: Boolean(content),
-            hasContactPhone: Boolean(contactPhone),
-          })
-        }
-      }
-
-      break
+    if (!inboxId) {
+      console.warn('[OUTBOUND] inbox_id ausente')
+      return
     }
 
-    case 'contact_created':
-      await bridgeContactCreated(payload, organizationId)
-      break
+    const instance = await prisma.whatsappInstance.findFirst({
+      where: {
+        chatwootInboxId: Number(inboxId),
+        isActive: true,
+      },
+    })
 
-    default:
-      console.log('[Chatwoot Webhook] Evento nao tratado:', payload.event)
+    if (!instance) {
+      console.warn('[OUTBOUND] instância não encontrada para inbox:', inboxId)
+      return
+    }
+
+    let metadata: any = {}
+    try {
+      metadata = JSON.parse(instance.metadata || '{}')
+    } catch {
+      console.warn('[OUTBOUND] erro ao parsear metadata')
+    }
+
+    if (metadata.provider !== 'whatsapp_cloud') return
+
+    console.log('[OUTBOUND] Disparando envio', {
+      instanceId: instance.id,
+      inboxId,
+    })
+
+    await sendWhatsAppCloudMessage({
+      instance,
+      content,
+    })
+
+    console.log('[OUTBOUND] Enviado com sucesso')
+  } catch (error) {
+    console.error('[OUTBOUND] Erro geral:', error)
   }
 }
