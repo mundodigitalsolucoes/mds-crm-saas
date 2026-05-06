@@ -149,6 +149,10 @@ model User {
 
   role                          String                  @default("user")
 
+  // Atendimento / Chatwoot
+  chatwootUserId                Int?                    @map("chatwoot_user_id")
+  isChatwootAgent               Boolean                 @default(false) @map("is_chatwoot_agent")
+
   // Permissões específicas
   permissions                   String                  @default("{}")
 
@@ -188,6 +192,7 @@ model User {
 
   @@index([organizationId])
   @@index([email])
+  @@index([chatwootUserId])
   @@map("users")
 }
 
