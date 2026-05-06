@@ -1,3 +1,4 @@
+import { prisma } from '@/lib/prisma'
 import {
   bridgeContactCreated,
   bridgeConversationCreated,
@@ -32,10 +33,78 @@ function resolveInboxId(payload: ChatwootWebhookPayload) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
+async function isWhatsappCloudInbox(organizationId: string, inboxId: number) {
+  const instance = await prisma.whatsappInstance.findFirst({
+    where: {
+      organizationId,
+      chatwootInboxId: inboxId,
+      isActive: true,
+      NOT: { status: 'archived' },
+    },
+    select: { metadata: true },
+  })
+
+  if (!instance?.metadata) return false
+
+  try {
+    const metadata = JSON.parse(instance.metadata) as { provider?: string }
+    return metadata.provider === 'whatsapp_cloud'
+  } catch {
+    return false
+  }
+}
+
+async function processWhatsappCloudEvent(
+  payload: ChatwootWebhookPayload,
+  organizationId: string,
+  inboxId: number
+) {
+  if (payload.event !== 'message_created') {
+    console.log('[WHATSAPP CLOUD] Evento Chatwoot ignorado:', payload.event)
+    return
+  }
+
+  if (isIncoming(payload.message_type)) {
+    console.log('[WHATSAPP CLOUD] Incoming ignorado para evitar reprocessamento.')
+    return
+  }
+
+  if (!isOutgoing(payload.message_type)) return
+
+  const content = payload.content ?? ''
+  const contactPhone = resolveContactPhone(payload)
+
+  if (!content.trim()) {
+    console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem conteúdo.')
+    return
+  }
+
+  if (!contactPhone) {
+    console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem telefone do contato.', {
+      inboxId,
+    })
+    return
+  }
+
+  await sendWhatsAppCloudMessage({
+    organizationId,
+    inboxId,
+    content,
+    to: contactPhone,
+  })
+}
+
 export async function processChatwootEvent(
   payload: ChatwootWebhookPayload,
   organizationId: string
 ): Promise<void> {
+  const inboxId = resolveInboxId(payload)
+
+  if (inboxId && (await isWhatsappCloudInbox(organizationId, inboxId))) {
+    await processWhatsappCloudEvent(payload, organizationId, inboxId)
+    return
+  }
+
   switch (payload.event) {
     case 'conversation_created':
       await bridgeConversationCreated(payload, organizationId)
@@ -50,36 +119,6 @@ export async function processChatwootEvent(
       if (isIncoming(payload.message_type)) {
         await bridgeIncomingMessage(payload, organizationId)
         break
-      }
-
-      if (isOutgoing(payload.message_type)) {
-        const inboxId = resolveInboxId(payload)
-        const content = payload.content ?? ''
-        const contactPhone = resolveContactPhone(payload)
-
-        if (!inboxId) {
-          console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem inbox_id.')
-          break
-        }
-
-        if (!content.trim()) {
-          console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem conteúdo.')
-          break
-        }
-
-        if (!contactPhone) {
-          console.warn('[WHATSAPP CLOUD OUTBOUND] Evento outgoing sem telefone do contato.', {
-            inboxId,
-          })
-          break
-        }
-
-        await sendWhatsAppCloudMessage({
-          organizationId,
-          inboxId,
-          content,
-          to: contactPhone,
-        })
       }
 
       break
