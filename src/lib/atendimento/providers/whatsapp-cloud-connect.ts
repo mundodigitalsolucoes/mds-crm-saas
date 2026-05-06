@@ -23,7 +23,7 @@ type ChatwootInbox = {
 
 function normalizePhoneNumber(value: string) {
   const digits = value.replace(/\D/g, '')
-  return digits.startsWith('55') ? `+${digits}` : `+${digits}`
+  return digits ? `+${digits}` : ''
 }
 
 function buildCloudInstanceName(slug: string) {
@@ -48,6 +48,10 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
   }
 
   const phoneNumber = normalizePhoneNumber(input.phoneNumber)
+
+  if (!phoneNumber) {
+    throw new Error('Número de WhatsApp inválido.')
+  }
 
   const duplicated = await prisma.whatsappInstance.findFirst({
     where: {
@@ -80,9 +84,6 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
     throw new Error('Atendimento não retornou o ID da inbox.')
   }
 
-  // GARANTE WEBHOOK AUTOMATICO POR ORGANIZACAO
-  await ensureChatwootWebhookForOrganization(credentials)
-
   const instanceName = buildCloudInstanceName(org.slug)
   const connectedAt = new Date()
 
@@ -105,6 +106,7 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
         chatwootAccountId: credentials.accountId,
         chatwootInboxId: inbox.id,
         chatwootChannelId: inbox.channel_id ?? null,
+        webhookStatus: 'pending',
         configuredAt: connectedAt.toISOString(),
       }),
       isActive: true,
@@ -113,6 +115,35 @@ export async function connectWhatsappCloudOfficial(input: ConnectWhatsappCloudIn
       lastError: null,
     },
   })
+
+  try {
+    await ensureChatwootWebhookForOrganization(credentials)
+
+    await prisma.whatsappInstance.update({
+      where: { id: instance.id },
+      data: {
+        metadata: JSON.stringify({
+          provider: 'whatsapp_cloud',
+          phoneNumber,
+          phoneNumberId: input.phoneNumberId,
+          businessAccountId: input.businessAccountId,
+          accessToken: input.accessToken,
+          chatwootAccountId: credentials.accountId,
+          chatwootInboxId: inbox.id,
+          chatwootChannelId: inbox.channel_id ?? null,
+          webhookStatus: 'configured',
+          configuredAt: connectedAt.toISOString(),
+          webhookConfiguredAt: new Date().toISOString(),
+        }),
+      },
+    })
+  } catch (error) {
+    console.warn('[WHATSAPP CLOUD CONNECT] Webhook do Chatwoot não configurado automaticamente.', {
+      organizationId: input.organizationId,
+      inboxId: inbox.id,
+      error: error instanceof Error ? error.message : error,
+    })
+  }
 
   return {
     success: true,
