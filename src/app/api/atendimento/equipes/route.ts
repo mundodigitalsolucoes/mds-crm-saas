@@ -17,6 +17,11 @@ const createTeamSchema = z.object({
   description: z.string().optional(),
 })
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return 'Erro desconhecido'
+}
+
 export async function GET() {
   const { allowed, session, errorResponse } = await checkPermission(
     'atendimento',
@@ -48,7 +53,10 @@ export async function GET() {
     console.error('[ATENDIMENTO EQUIPES] Erro ao listar equipes:', error)
 
     return NextResponse.json(
-      { error: 'Erro ao listar equipes do Atendimento' },
+      {
+        error: 'Erro ao listar equipes do Atendimento',
+        detail: errorMessage(error),
+      },
       { status: 502 }
     )
   }
@@ -93,7 +101,10 @@ export async function POST(request: NextRequest) {
     console.error('[ATENDIMENTO EQUIPES] Erro ao criar equipe:', error)
 
     return NextResponse.json(
-      { error: 'Erro ao criar equipe no Atendimento' },
+      {
+        error: 'Erro ao criar equipe no Atendimento',
+        detail: errorMessage(error),
+      },
       { status: 502 }
     )
   }
