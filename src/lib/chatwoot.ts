@@ -320,7 +320,11 @@ export async function listChatwootAgents(
 export async function listChatwootInboxes(
   credentials: ChatwootCredentials
 ): Promise<ChatwootInbox[]> {
-  return chatwootApi<ChatwootInbox[]>(credentials, '/inboxes')
+  const response = await chatwootApi<{
+    payload?: ChatwootInbox[]
+  }>(credentials, '/inboxes')
+
+  return response.payload || []
 }
 
 export async function addChatwootInboxMembers(
