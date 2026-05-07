@@ -276,6 +276,7 @@ export async function createChatwootTeam(
     body: {
       name: input.name,
       description: input.description ?? '',
+      allow_auto_assign: true,
     },
   })
 }
