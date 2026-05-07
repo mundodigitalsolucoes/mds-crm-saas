@@ -13,6 +13,7 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react'
 
 type Tab = 'agentes' | 'equipes' | 'inboxes'
@@ -63,6 +64,7 @@ export default function AtendimentoEquipesPage() {
 
   const [creatingTeam, setCreatingTeam] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -230,6 +232,62 @@ export default function AtendimentoEquipesPage() {
     }
   }
 
+  async function handleDeleteTeam(teamId: number) {
+    const confirmed = window.confirm(
+      'Deseja realmente excluir esta equipe?'
+    )
+
+    if (!confirmed) return
+
+    setDeletingTeamId(teamId)
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/atendimento/equipes/${teamId}`, {
+        method: 'DELETE',
+      })
+
+      const text = await res.text()
+
+      let data: {
+        error?: string
+        detail?: string
+      } = {}
+
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {
+          error: 'Resposta inválida da API',
+          detail: text.slice(0, 300),
+        }
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail || data.error || 'Erro ao excluir equipe'
+        )
+      }
+
+      setMessage({
+        type: 'success',
+        text: 'Equipe excluída com sucesso.',
+      })
+
+      await fetchAll()
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao excluir equipe',
+      })
+    } finally {
+      setDeletingTeamId(null)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -317,75 +375,6 @@ export default function AtendimentoEquipesPage() {
           </div>
         ) : (
           <div className="p-5">
-            {tab === 'agentes' && (
-              <div className="space-y-4">
-                <div className="flex justify-between gap-3">
-                  <div>
-                    <h2 className="font-semibold text-[#2f3453]">
-                      Agentes
-                    </h2>
-
-                    <p className="text-sm text-slate-500">
-                      {agents.length} membro(s) ativos encontrados.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleSyncAgents}
-                    disabled={syncing}
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {syncing ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserCheck className="h-4 w-4" />
-                    )}
-
-                    Sincronizar agentes
-                  </button>
-                </div>
-
-                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                  {agents.map((agent) => (
-                    <div
-                      key={agent.userId}
-                      className="flex items-center justify-between gap-4 p-4"
-                    >
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {agent.name}
-                        </p>
-
-                        <p className="text-sm text-slate-500">
-                          {agent.email}
-                        </p>
-                      </div>
-
-                      <div className="text-right text-sm">
-                        <p className="font-semibold text-slate-700">
-                          {agent.chatwootUserId
-                            ? `ID ${agent.chatwootUserId}`
-                            : 'Sem vínculo'}
-                        </p>
-
-                        <p
-                          className={
-                            agent.matchedInAtendimento
-                              ? 'text-emerald-600'
-                              : 'text-amber-600'
-                          }
-                        >
-                          {agent.matchedInAtendimento
-                            ? 'Encontrado no Atendimento'
-                            : 'Não encontrado'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {tab === 'equipes' && (
               <div className="space-y-5">
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -442,52 +431,25 @@ export default function AtendimentoEquipesPage() {
                         )}
                       </div>
 
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {team.agents_count ?? 0} agente(s)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {tab === 'inboxes' && (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="font-semibold text-[#2f3453]">
-                    Inboxes / Canais
-                  </h2>
-
-                  <p className="text-sm text-slate-500">
-                    {inboxes.length} inbox(es) operacionais encontrados.
-                  </p>
-                </div>
-
-                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                  {inboxes.map((inbox) => (
-                    <div
-                      key={inbox.id}
-                      className="flex items-center justify-between gap-4 p-4"
-                    >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#374b89]/10">
-                          <Inbox className="h-5 w-5 text-[#374b89]" />
-                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {team.agents_count ?? 0} agente(s)
+                        </span>
 
-                        <div>
-                          <p className="font-medium text-slate-900">
-                            {inbox.name}
-                          </p>
+                        <button
+                          onClick={() => handleDeleteTeam(team.id)}
+                          disabled={deletingTeamId === team.id}
+                          className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60"
+                        >
+                          {deletingTeamId === team.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
 
-                          <p className="text-sm text-slate-500">
-                            {inbox.channelType ?? inbox.channel}
-                          </p>
-                        </div>
+                          Excluir
+                        </button>
                       </div>
-
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {inbox.channelLabel}
-                      </span>
                     </div>
                   ))}
                 </div>
