@@ -294,6 +294,16 @@ export async function addChatwootTeamMembers(
   })
 }
 
+export async function removeChatwootTeamMember(
+  credentials: ChatwootCredentials,
+  teamId: number,
+  agentId: number
+): Promise<void> {
+  await chatwootApi(credentials, `/teams/${teamId}/team_members/${agentId}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function listChatwootAgents(
   credentials: ChatwootCredentials
 ): Promise<ChatwootAgent[]> {
