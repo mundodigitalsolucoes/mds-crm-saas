@@ -37,6 +37,14 @@ export interface ChatwootTeam {
   agents_count?: number
 }
 
+export interface ChatwootAgent {
+  id: number
+  name: string
+  email: string
+  role?: string
+  availability_status?: string
+}
+
 function normalizeBaseUrl(url?: string | null): string | null {
   return url?.trim().replace(/\/$/, '') || null
 }
@@ -59,9 +67,7 @@ function parseAccountData(raw: string): ChatwootAccountData | null {
 async function readChatwootError(res: Response): Promise<string> {
   const text = await res.text().catch(() => '')
 
-  if (!text) {
-    return `Erro na API do Chatwoot (${res.status})`
-  }
+  if (!text) return `Erro na API do Chatwoot (${res.status})`
 
   try {
     const json = JSON.parse(text) as { message?: string; error?: string }
@@ -72,9 +78,7 @@ async function readChatwootError(res: Response): Promise<string> {
 }
 
 async function parseResponseBody<T>(res: Response): Promise<T> {
-  if (res.status === 204) {
-    return null as T
-  }
+  if (res.status === 204) return null as T
 
   const contentType = res.headers.get('content-type') || ''
   if (contentType.includes('application/json')) {
@@ -111,9 +115,7 @@ export async function getChatwootConnectionMeta(
     },
   })
 
-  if (!account || !account.isActive) {
-    return { connected: false }
-  }
+  if (!account || !account.isActive) return { connected: false }
 
   const data = parseAccountData(account.data)
   const chatwootUrl = normalizeBaseUrl(data?.chatwootUrl)
@@ -158,17 +160,12 @@ export async function getChatwootCredentials(
   try {
     const token = decryptToken(account.accessTokenEnc)
     const data = parseAccountData(account.data)
-
     const chatwootUrl = normalizeBaseUrl(data?.chatwootUrl)
     const accountId = toPositiveInt(data?.chatwootAccountId)
 
     if (!chatwootUrl || !accountId || !token) return null
 
-    return {
-      chatwootUrl,
-      accountId,
-      token,
-    }
+    return { chatwootUrl, accountId, token }
   } catch {
     return null
   }
@@ -178,10 +175,7 @@ export async function getChatwootCredentialsByAccountId(
   chatwootAccountId: number
 ): Promise<(ChatwootCredentials & { organizationId: string }) | null> {
   const accounts = await prisma.connectedAccount.findMany({
-    where: {
-      provider: 'chatwoot',
-      isActive: true,
-    },
+    where: { provider: 'chatwoot', isActive: true },
     select: {
       organizationId: true,
       accessTokenEnc: true,
@@ -226,9 +220,7 @@ export async function validateChatwootCredentials(input: {
     const res = await fetch(
       `${baseUrl}/api/v1/accounts/${input.accountId}/conversations?page=1`,
       {
-        headers: {
-          api_access_token: input.token,
-        },
+        headers: { api_access_token: input.token },
         signal: AbortSignal.timeout(8_000),
       }
     )
@@ -258,9 +250,7 @@ export async function chatwootApi<T = unknown>(
     signal: AbortSignal.timeout(timeoutMs),
   })
 
-  if (!res.ok) {
-    throw new Error(await readChatwootError(res))
-  }
+  if (!res.ok) throw new Error(await readChatwootError(res))
 
   return parseResponseBody<T>(res)
 }
@@ -300,10 +290,14 @@ export async function addChatwootTeamMembers(
 ): Promise<void> {
   await chatwootApi(credentials, `/teams/${teamId}/team_members`, {
     method: 'POST',
-    body: {
-      user_ids: agentIds,
-    },
+    body: { user_ids: agentIds },
   })
+}
+
+export async function listChatwootAgents(
+  credentials: ChatwootCredentials
+): Promise<ChatwootAgent[]> {
+  return chatwootApi<ChatwootAgent[]>(credentials, '/agents')
 }
 
 export function normalizeChatwootChannel(channel?: string | null): string {
