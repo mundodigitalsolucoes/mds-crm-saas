@@ -45,6 +45,12 @@ export interface ChatwootAgent {
   availability_status?: string
 }
 
+export interface ChatwootInbox {
+  id: number
+  name: string
+  channel_type?: string
+}
+
 function normalizeBaseUrl(url?: string | null): string | null {
   return url?.trim().replace(/\/$/, '') || null
 }
@@ -308,6 +314,12 @@ export async function listChatwootAgents(
   credentials: ChatwootCredentials
 ): Promise<ChatwootAgent[]> {
   return chatwootApi<ChatwootAgent[]>(credentials, '/agents')
+}
+
+export async function listChatwootInboxes(
+  credentials: ChatwootCredentials
+): Promise<ChatwootInbox[]> {
+  return chatwootApi<ChatwootInbox[]>(credentials, '/inboxes')
 }
 
 export function normalizeChatwootChannel(channel?: string | null): string {
