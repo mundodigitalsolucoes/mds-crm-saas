@@ -48,7 +48,11 @@ type InboxItem = {
 export default function AtendimentoEquipesPage() {
   const [tab, setTab] = useState<Tab>('agentes')
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  const [message, setMessage] = useState<{
+    type: 'success' | 'error'
+    text: string
+  } | null>(null)
 
   const [agents, setAgents] = useState<Agent[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -56,12 +60,12 @@ export default function AtendimentoEquipesPage() {
 
   const [teamName, setTeamName] = useState('')
   const [teamDescription, setTeamDescription] = useState('')
+
   const [creatingTeam, setCreatingTeam] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
-    setMessage(null)
 
     try {
       const [agentsRes, teamsRes, inboxesRes] = await Promise.all([
@@ -70,15 +74,21 @@ export default function AtendimentoEquipesPage() {
         fetch('/api/atendimento/inboxes'),
       ])
 
-      const [agentsData, teamsData, inboxesData] = await Promise.all([
-        agentsRes.json(),
-        teamsRes.json(),
-        inboxesRes.json(),
-      ])
+      const agentsData = await agentsRes.json()
+      const teamsData = await teamsRes.json()
+      const inboxesData = await inboxesRes.json()
 
-      if (!agentsRes.ok) throw new Error(agentsData.error || 'Erro ao carregar agentes')
-      if (!teamsRes.ok) throw new Error(teamsData.error || 'Erro ao carregar equipes')
-      if (!inboxesRes.ok) throw new Error(inboxesData.error || 'Erro ao carregar inboxes')
+      if (!agentsRes.ok) {
+        throw new Error(agentsData.error || 'Erro ao carregar agentes')
+      }
+
+      if (!teamsRes.ok) {
+        throw new Error(teamsData.error || 'Erro ao carregar equipes')
+      }
+
+      if (!inboxesRes.ok) {
+        throw new Error(inboxesData.error || 'Erro ao carregar inboxes')
+      }
 
       setAgents(agentsData.agents ?? [])
       setTeams(teamsData.teams ?? [])
@@ -86,7 +96,10 @@ export default function AtendimentoEquipesPage() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Erro ao carregar operação',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao carregar operação',
       })
     } finally {
       setLoading(false)
@@ -106,9 +119,28 @@ export default function AtendimentoEquipesPage() {
         method: 'POST',
       })
 
-      const data = await res.json()
+      const text = await res.text()
 
-      if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar agentes')
+      let data: {
+        error?: string
+        detail?: string
+        updated?: number
+      } = {}
+
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {
+          error: 'Resposta inválida da API',
+          detail: text.slice(0, 300),
+        }
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail || data.error || 'Erro ao sincronizar agentes'
+        )
+      }
 
       setMessage({
         type: 'success',
@@ -119,7 +151,10 @@ export default function AtendimentoEquipesPage() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Erro ao sincronizar agentes',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao sincronizar agentes',
       })
     } finally {
       setSyncing(false)
@@ -128,7 +163,11 @@ export default function AtendimentoEquipesPage() {
 
   async function handleCreateTeam() {
     if (!teamName.trim()) {
-      setMessage({ type: 'error', text: 'Informe o nome da equipe' })
+      setMessage({
+        type: 'error',
+        text: 'Informe o nome da equipe',
+      })
+
       return
     }
 
@@ -138,25 +177,53 @@ export default function AtendimentoEquipesPage() {
     try {
       const res = await fetch('/api/atendimento/equipes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           name: teamName.trim(),
           description: teamDescription.trim() || undefined,
         }),
       })
 
-      const data = await res.json()
+      const text = await res.text()
 
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar equipe')
+      let data: {
+        error?: string
+        detail?: string
+      } = {}
 
-      setMessage({ type: 'success', text: 'Equipe criada com sucesso.' })
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {
+          error: 'A API retornou uma resposta inválida ao criar equipe',
+          detail: text.slice(0, 300),
+        }
+      }
+
+      if (!res.ok) {
+        throw new Error(
+          data.detail || data.error || 'Erro ao criar equipe'
+        )
+      }
+
+      setMessage({
+        type: 'success',
+        text: 'Equipe criada com sucesso.',
+      })
+
       setTeamName('')
       setTeamDescription('')
+
       await fetchAll()
     } catch (error) {
       setMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Erro ao criar equipe',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao criar equipe',
       })
     } finally {
       setCreatingTeam(false)
@@ -164,7 +231,7 @@ export default function AtendimentoEquipesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-6 space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-start gap-4">
@@ -176,14 +243,16 @@ export default function AtendimentoEquipesPage() {
               <h1 className="text-2xl font-bold text-[#2f3453]">
                 Operações do Atendimento
               </h1>
+
               <p className="mt-1 max-w-2xl text-sm text-slate-600">
-                Gerencie agentes, equipes e inboxes sem recriar a engine nativa do Atendimento.
+                Gerencie agentes, equipes e inboxes sem recriar a engine
+                nativa do Atendimento.
               </p>
             </div>
           </div>
 
           <Link
-            href="/settings/members"
+            href="/settings/membros"
             className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <Shield className="h-4 w-4" />
@@ -195,7 +264,7 @@ export default function AtendimentoEquipesPage() {
 
       {message && (
         <div
-          className={`rounded-xl border p-4 text-sm flex items-center gap-2 ${
+          className={`flex items-center gap-2 rounded-xl border p-4 text-sm ${
             message.type === 'success'
               ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
               : 'border-red-200 bg-red-50 text-red-700'
@@ -206,11 +275,12 @@ export default function AtendimentoEquipesPage() {
           ) : (
             <AlertCircle className="h-4 w-4" />
           )}
-          {message.text}
+
+          <span>{message.text}</span>
         </div>
       )}
 
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
           <div className="flex gap-2">
             {[
@@ -251,7 +321,10 @@ export default function AtendimentoEquipesPage() {
               <div className="space-y-4">
                 <div className="flex justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold text-[#2f3453]">Agentes</h2>
+                    <h2 className="font-semibold text-[#2f3453]">
+                      Agentes
+                    </h2>
+
                     <p className="text-sm text-slate-500">
                       {agents.length} membro(s) ativos encontrados.
                     </p>
@@ -262,25 +335,49 @@ export default function AtendimentoEquipesPage() {
                     disabled={syncing}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                   >
-                    {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+                    {syncing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserCheck className="h-4 w-4" />
+                    )}
+
                     Sincronizar agentes
                   </button>
                 </div>
 
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
                   {agents.map((agent) => (
-                    <div key={agent.userId} className="flex items-center justify-between gap-4 p-4">
+                    <div
+                      key={agent.userId}
+                      className="flex items-center justify-between gap-4 p-4"
+                    >
                       <div>
-                        <p className="font-medium text-slate-900">{agent.name}</p>
-                        <p className="text-sm text-slate-500">{agent.email}</p>
+                        <p className="font-medium text-slate-900">
+                          {agent.name}
+                        </p>
+
+                        <p className="text-sm text-slate-500">
+                          {agent.email}
+                        </p>
                       </div>
 
                       <div className="text-right text-sm">
                         <p className="font-semibold text-slate-700">
-                          {agent.chatwootUserId ? `ID ${agent.chatwootUserId}` : 'Sem vínculo'}
+                          {agent.chatwootUserId
+                            ? `ID ${agent.chatwootUserId}`
+                            : 'Sem vínculo'}
                         </p>
-                        <p className={agent.matchedInAtendimento ? 'text-emerald-600' : 'text-amber-600'}>
-                          {agent.matchedInAtendimento ? 'Encontrado no Atendimento' : 'Não encontrado'}
+
+                        <p
+                          className={
+                            agent.matchedInAtendimento
+                              ? 'text-emerald-600'
+                              : 'text-amber-600'
+                          }
+                        >
+                          {agent.matchedInAtendimento
+                            ? 'Encontrado no Atendimento'
+                            : 'Não encontrado'}
                         </p>
                       </div>
                     </div>
@@ -291,8 +388,10 @@ export default function AtendimentoEquipesPage() {
 
             {tab === 'equipes' && (
               <div className="space-y-5">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <h2 className="font-semibold text-[#2f3453]">Nova equipe</h2>
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <h2 className="font-semibold text-[#2f3453]">
+                    Nova equipe
+                  </h2>
 
                   <input
                     value={teamName}
@@ -303,7 +402,9 @@ export default function AtendimentoEquipesPage() {
 
                   <input
                     value={teamDescription}
-                    onChange={(e) => setTeamDescription(e.target.value)}
+                    onChange={(e) =>
+                      setTeamDescription(e.target.value)
+                    }
                     placeholder="Descrição opcional"
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
                   />
@@ -313,18 +414,31 @@ export default function AtendimentoEquipesPage() {
                     disabled={creatingTeam}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                   >
-                    {creatingTeam ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {creatingTeam ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+
                     Criar equipe
                   </button>
                 </div>
 
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
                   {teams.map((team) => (
-                    <div key={team.id} className="flex items-center justify-between gap-4 p-4">
+                    <div
+                      key={team.id}
+                      className="flex items-center justify-between gap-4 p-4"
+                    >
                       <div>
-                        <p className="font-medium text-slate-900">{team.name}</p>
+                        <p className="font-medium text-slate-900">
+                          {team.name}
+                        </p>
+
                         {team.description && (
-                          <p className="text-sm text-slate-500">{team.description}</p>
+                          <p className="text-sm text-slate-500">
+                            {team.description}
+                          </p>
                         )}
                       </div>
 
@@ -340,7 +454,10 @@ export default function AtendimentoEquipesPage() {
             {tab === 'inboxes' && (
               <div className="space-y-4">
                 <div>
-                  <h2 className="font-semibold text-[#2f3453]">Inboxes / Canais</h2>
+                  <h2 className="font-semibold text-[#2f3453]">
+                    Inboxes / Canais
+                  </h2>
+
                   <p className="text-sm text-slate-500">
                     {inboxes.length} inbox(es) operacionais encontrados.
                   </p>
@@ -348,14 +465,23 @@ export default function AtendimentoEquipesPage() {
 
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
                   {inboxes.map((inbox) => (
-                    <div key={inbox.id} className="flex items-center justify-between gap-4 p-4">
+                    <div
+                      key={inbox.id}
+                      className="flex items-center justify-between gap-4 p-4"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#374b89]/10">
                           <Inbox className="h-5 w-5 text-[#374b89]" />
                         </div>
+
                         <div>
-                          <p className="font-medium text-slate-900">{inbox.name}</p>
-                          <p className="text-sm text-slate-500">{inbox.channelType ?? inbox.channel}</p>
+                          <p className="font-medium text-slate-900">
+                            {inbox.name}
+                          </p>
+
+                          <p className="text-sm text-slate-500">
+                            {inbox.channelType ?? inbox.channel}
+                          </p>
                         </div>
                       </div>
 
