@@ -322,6 +322,20 @@ export async function listChatwootInboxes(
   return chatwootApi<ChatwootInbox[]>(credentials, '/inboxes')
 }
 
+export async function addChatwootInboxMembers(
+  credentials: ChatwootCredentials,
+  inboxId: number,
+  agentIds: number[]
+): Promise<void> {
+  await chatwootApi(credentials, '/inbox_members', {
+    method: 'POST',
+    body: {
+      inbox_id: inboxId,
+      user_ids: agentIds,
+    },
+  })
+}
+
 export function normalizeChatwootChannel(channel?: string | null): string {
   if (!channel) return 'unknown'
 
