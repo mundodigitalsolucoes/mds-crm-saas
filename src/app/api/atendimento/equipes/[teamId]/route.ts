@@ -15,6 +15,27 @@ function parseTeamId(teamId: string): number | null {
   return parsed
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return 'Erro desconhecido'
+}
+
+function safeErrorDetail(error: unknown): string {
+  const message = errorMessage(error)
+  const normalized = message.trim().toLowerCase()
+
+  if (
+    normalized.startsWith('<!doctype') ||
+    normalized.startsWith('<html') ||
+    normalized.includes('<body') ||
+    normalized.includes('</html>')
+  ) {
+    return 'A API do Atendimento retornou uma resposta inválida.'
+  }
+
+  return message
+}
+
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
@@ -53,7 +74,10 @@ export async function DELETE(
     console.error('[ATENDIMENTO EQUIPE] Erro ao excluir equipe:', error)
 
     return NextResponse.json(
-      { error: 'Erro ao excluir equipe do Atendimento' },
+      {
+        error: 'Erro ao excluir equipe do Atendimento',
+        detail: safeErrorDetail(error),
+      },
       { status: 502 }
     )
   }
