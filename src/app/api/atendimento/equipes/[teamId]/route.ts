@@ -7,6 +7,7 @@ import { checkPermission } from '@/lib/checkPermission'
 import {
   deleteChatwootTeam,
   getChatwootCredentials,
+  listChatwootTeams,
 } from '@/lib/chatwoot'
 
 function parseTeamId(teamId: string): number | null {
@@ -72,6 +73,16 @@ export async function DELETE(
     })
   } catch (error) {
     console.error('[ATENDIMENTO EQUIPE] Erro ao excluir equipe:', error)
+
+    const teams = await listChatwootTeams(credentials).catch(() => null)
+
+    if (teams && !teams.some((team) => team.id === parsedTeamId)) {
+      return NextResponse.json({
+        success: true,
+        teamId: parsedTeamId,
+        recoveredFromInvalidDeleteResponse: true,
+      })
+    }
 
     return NextResponse.json(
       {
