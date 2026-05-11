@@ -290,6 +290,20 @@ export async function deleteChatwootTeam(
   })
 }
 
+export async function listChatwootTeamMembers(
+  credentials: ChatwootCredentials,
+  teamId: number
+): Promise<ChatwootAgent[]> {
+  const response = await chatwootApi<ChatwootAgent[] | { payload?: ChatwootAgent[] }>(
+    credentials,
+    `/teams/${teamId}/team_members`
+  )
+
+  if (Array.isArray(response)) return response
+
+  return response.payload || []
+}
+
 export async function addChatwootTeamMembers(
   credentials: ChatwootCredentials,
   teamId: number,
