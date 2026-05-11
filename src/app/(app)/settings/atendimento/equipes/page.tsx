@@ -14,6 +14,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Trash2,
+  X,
 } from 'lucide-react'
 
 type Tab = 'agentes' | 'equipes' | 'inboxes'
@@ -96,6 +97,11 @@ export default function AtendimentoEquipesPage() {
   const [creatingTeam, setCreatingTeam] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [deletingTeamId, setDeletingTeamId] = useState<number | null>(null)
+
+  const [managingTeam, setManagingTeam] = useState<Team | null>(null)
+  const [teamMemberIds, setTeamMemberIds] = useState<number[]>([])
+  const [loadingMembers, setLoadingMembers] = useState(false)
+  const [updatingAgentId, setUpdatingAgentId] = useState<number | null>(null)
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -216,9 +222,7 @@ export default function AtendimentoEquipesPage() {
       const data = await readApi(res)
 
       if (!res.ok) {
-        throw new Error(
-          apiErrorMessage(data, 'Erro ao criar equipe')
-        )
+        throw new Error(apiErrorMessage(data, 'Erro ao criar equipe'))
       }
 
       setMessage({
@@ -259,9 +263,7 @@ export default function AtendimentoEquipesPage() {
       const data = await readApi(res)
 
       if (!res.ok) {
-        throw new Error(
-          apiErrorMessage(data, 'Erro ao excluir equipe')
-        )
+        throw new Error(apiErrorMessage(data, 'Erro ao excluir equipe'))
       }
 
       setMessage({
@@ -282,6 +284,109 @@ export default function AtendimentoEquipesPage() {
       setDeletingTeamId(null)
     }
   }
+
+  async function openTeamManager(team: Team) {
+    setManagingTeam(team)
+    setTeamMemberIds([])
+    setLoadingMembers(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/atendimento/equipes/${team.id}/members`)
+      const data = await readApi(res)
+
+      if (!res.ok) {
+        throw new Error(
+          apiErrorMessage(data, 'Erro ao carregar agentes da equipe')
+        )
+      }
+
+      setTeamMemberIds(Array.isArray(data.memberIds) ? data.memberIds : [])
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao carregar agentes da equipe',
+      })
+
+      setManagingTeam(null)
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  async function toggleTeamMember(agent: Agent) {
+    if (!managingTeam || !agent.chatwootUserId) return
+
+    const agentId = agent.chatwootUserId
+    const isMember = teamMemberIds.includes(agentId)
+
+    setUpdatingAgentId(agentId)
+    setMessage(null)
+
+    try {
+      const res = await fetch(
+        `/api/atendimento/equipes/${managingTeam.id}/members`,
+        {
+          method: isMember ? 'DELETE' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            agentId,
+          }),
+        }
+      )
+
+      const data = await readApi(res)
+
+      if (!res.ok) {
+        throw new Error(
+          apiErrorMessage(
+            data,
+            isMember
+              ? 'Erro ao remover agente da equipe'
+              : 'Erro ao adicionar agente na equipe'
+          )
+        )
+      }
+
+      setTeamMemberIds((current) =>
+        isMember
+          ? current.filter((id) => id !== agentId)
+          : [...current, agentId]
+      )
+
+      setTeams((currentTeams) =>
+        currentTeams.map((team) => {
+          if (team.id !== managingTeam.id) return team
+
+          const currentCount = team.agents_count ?? 0
+
+          return {
+            ...team,
+            agents_count: isMember
+              ? Math.max(currentCount - 1, 0)
+              : currentCount + 1,
+          }
+        })
+      )
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Erro ao atualizar agentes da equipe',
+      })
+    } finally {
+      setUpdatingAgentId(null)
+    }
+  }
+
+  const linkedAgents = agents.filter((agent) => agent.chatwootUserId)
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
@@ -493,7 +598,7 @@ export default function AtendimentoEquipesPage() {
                   {teams.map((team) => (
                     <div
                       key={team.id}
-                      className="flex items-center justify-between gap-4 p-4"
+                      className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between"
                     >
                       <div>
                         <p className="font-medium text-slate-900">
@@ -507,10 +612,18 @@ export default function AtendimentoEquipesPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                           {team.agents_count ?? 0} agente(s)
                         </span>
+
+                        <button
+                          onClick={() => openTeamManager(team)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-[#374b89]/20 bg-[#374b89]/10 px-3 py-2 text-sm font-semibold text-[#374b89] hover:bg-[#374b89]/15"
+                        >
+                          <Users className="h-4 w-4" />
+                          Gerenciar agentes
+                        </button>
 
                         <button
                           onClick={() => handleDeleteTeam(team.id)}
@@ -589,6 +702,95 @@ export default function AtendimentoEquipesPage() {
           </div>
         )}
       </div>
+
+      {managingTeam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-xl rounded-3xl bg-white shadow-xl">
+            <div className="flex items-start justify-between border-b border-slate-200 p-5">
+              <div>
+                <h3 className="text-lg font-bold text-[#2f3453]">
+                  Gerenciar agentes
+                </h3>
+
+                <p className="text-sm text-slate-500">
+                  Equipe: {managingTeam.name}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setManagingTeam(null)}
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              {loadingMembers ? (
+                <div className="flex h-32 items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#374b89]" />
+                </div>
+              ) : linkedAgents.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  Nenhum agente vinculado ao Atendimento. Sincronize os
+                  agentes antes de gerenciar equipes.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
+                  {linkedAgents.map((agent) => {
+                    const agentId = agent.chatwootUserId!
+                    const checked = teamMemberIds.includes(agentId)
+
+                    return (
+                      <label
+                        key={agent.userId}
+                        className="flex cursor-pointer items-center justify-between gap-4 p-4 hover:bg-slate-50"
+                      >
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {agent.name}
+                          </p>
+
+                          <p className="text-sm text-slate-500">
+                            {agent.email}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-400">
+                            ID Atendimento {agentId}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {updatingAgentId === agentId && (
+                            <Loader2 className="h-4 w-4 animate-spin text-[#374b89]" />
+                          )}
+
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={updatingAgentId === agentId}
+                            onChange={() => toggleTeamMember(agent)}
+                            className="h-5 w-5 rounded border-slate-300 text-[#374b89]"
+                          />
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end border-t border-slate-200 p-5">
+              <button
+                onClick={() => setManagingTeam(null)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
