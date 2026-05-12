@@ -87,6 +87,7 @@ async function parseResponseBody<T>(res: Response): Promise<T> {
   if (res.status === 204) return null as T
 
   const contentType = res.headers.get('content-type') || ''
+
   if (contentType.includes('application/json')) {
     return res.json() as Promise<T>
   }
@@ -294,10 +295,9 @@ export async function listChatwootTeamMembers(
   credentials: ChatwootCredentials,
   teamId: number
 ): Promise<ChatwootAgent[]> {
-  const response = await chatwootApi<ChatwootAgent[] | { payload?: ChatwootAgent[] }>(
-    credentials,
-    `/teams/${teamId}/team_members`
-  )
+  const response = await chatwootApi<
+    ChatwootAgent[] | { payload?: ChatwootAgent[] }
+  >(credentials, `/teams/${teamId}/team_members`)
 
   if (Array.isArray(response)) return response
 
@@ -341,6 +341,17 @@ export async function listChatwootInboxes(
   return response.payload || []
 }
 
+export async function listChatwootInboxMembers(
+  credentials: ChatwootCredentials,
+  inboxId: number
+): Promise<ChatwootAgent[]> {
+  const response = await chatwootApi<{
+    payload?: ChatwootAgent[]
+  }>(credentials, `/inbox_members/${inboxId}`)
+
+  return response.payload || []
+}
+
 export async function addChatwootInboxMembers(
   credentials: ChatwootCredentials,
   inboxId: number,
@@ -348,6 +359,20 @@ export async function addChatwootInboxMembers(
 ): Promise<void> {
   await chatwootApi(credentials, '/inbox_members', {
     method: 'POST',
+    body: {
+      inbox_id: inboxId,
+      user_ids: agentIds,
+    },
+  })
+}
+
+export async function removeChatwootInboxMembers(
+  credentials: ChatwootCredentials,
+  inboxId: number,
+  agentIds: number[]
+): Promise<void> {
+  await chatwootApi(credentials, '/inbox_members', {
+    method: 'DELETE',
     body: {
       inbox_id: inboxId,
       user_ids: agentIds,
