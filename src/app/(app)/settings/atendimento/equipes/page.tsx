@@ -100,6 +100,10 @@ export default function AtendimentoEquipesPage() {
 
   const [managingTeam, setManagingTeam] = useState<Team | null>(null)
   const [teamMemberIds, setTeamMemberIds] = useState<number[]>([])
+
+  const [managingInbox, setManagingInbox] = useState<InboxItem | null>(null)
+  const [inboxMemberIds, setInboxMemberIds] = useState<number[]>([])
+
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [updatingAgentId, setUpdatingAgentId] = useState<number | null>(null)
 
@@ -119,35 +123,24 @@ export default function AtendimentoEquipesPage() {
       const inboxesData = await readApi(inboxesRes)
 
       if (!agentsRes.ok) {
-        throw new Error(
-          apiErrorMessage(agentsData, 'Erro ao carregar agentes')
-        )
+        throw new Error(apiErrorMessage(agentsData, 'Erro ao carregar agentes'))
       }
 
       if (!teamsRes.ok) {
-        throw new Error(
-          apiErrorMessage(teamsData, 'Erro ao carregar equipes')
-        )
+        throw new Error(apiErrorMessage(teamsData, 'Erro ao carregar equipes'))
       }
 
       if (!inboxesRes.ok) {
-        throw new Error(
-          apiErrorMessage(inboxesData, 'Erro ao carregar inboxes')
-        )
+        throw new Error(apiErrorMessage(inboxesData, 'Erro ao carregar inboxes'))
       }
 
       setAgents(Array.isArray(agentsData.agents) ? agentsData.agents : [])
       setTeams(Array.isArray(teamsData.teams) ? teamsData.teams : [])
-      setInboxes(
-        Array.isArray(inboxesData.inboxes) ? inboxesData.inboxes : []
-      )
+      setInboxes(Array.isArray(inboxesData.inboxes) ? inboxesData.inboxes : [])
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao carregar operação',
+        text: error instanceof Error ? error.message : 'Erro ao carregar operação',
       })
     } finally {
       setLoading(false)
@@ -163,16 +156,11 @@ export default function AtendimentoEquipesPage() {
     setMessage(null)
 
     try {
-      const res = await fetch('/api/atendimento/agentes/sync', {
-        method: 'POST',
-      })
-
+      const res = await fetch('/api/atendimento/agentes/sync', { method: 'POST' })
       const data = await readApi(res)
 
       if (!res.ok) {
-        throw new Error(
-          apiErrorMessage(data, 'Erro ao sincronizar agentes')
-        )
+        throw new Error(apiErrorMessage(data, 'Erro ao sincronizar agentes'))
       }
 
       setMessage({
@@ -184,10 +172,7 @@ export default function AtendimentoEquipesPage() {
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao sincronizar agentes',
+        text: error instanceof Error ? error.message : 'Erro ao sincronizar agentes',
       })
     } finally {
       setSyncing(false)
@@ -196,11 +181,7 @@ export default function AtendimentoEquipesPage() {
 
   async function handleCreateTeam() {
     if (!teamName.trim()) {
-      setMessage({
-        type: 'error',
-        text: 'Informe o nome da equipe',
-      })
-
+      setMessage({ type: 'error', text: 'Informe o nome da equipe' })
       return
     }
 
@@ -210,9 +191,7 @@ export default function AtendimentoEquipesPage() {
     try {
       const res = await fetch('/api/atendimento/equipes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: teamName.trim(),
           description: teamDescription.trim() || undefined,
@@ -225,22 +204,14 @@ export default function AtendimentoEquipesPage() {
         throw new Error(apiErrorMessage(data, 'Erro ao criar equipe'))
       }
 
-      setMessage({
-        type: 'success',
-        text: 'Equipe criada com sucesso.',
-      })
-
+      setMessage({ type: 'success', text: 'Equipe criada com sucesso.' })
       setTeamName('')
       setTeamDescription('')
-
       await fetchAll()
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao criar equipe',
+        text: error instanceof Error ? error.message : 'Erro ao criar equipe',
       })
     } finally {
       setCreatingTeam(false)
@@ -248,9 +219,7 @@ export default function AtendimentoEquipesPage() {
   }
 
   async function handleDeleteTeam(teamId: number) {
-    if (!window.confirm('Deseja realmente excluir esta equipe?')) {
-      return
-    }
+    if (!window.confirm('Deseja realmente excluir esta equipe?')) return
 
     setDeletingTeamId(teamId)
     setMessage(null)
@@ -266,19 +235,12 @@ export default function AtendimentoEquipesPage() {
         throw new Error(apiErrorMessage(data, 'Erro ao excluir equipe'))
       }
 
-      setMessage({
-        type: 'success',
-        text: 'Equipe excluída com sucesso.',
-      })
-
+      setMessage({ type: 'success', text: 'Equipe excluída com sucesso.' })
       await fetchAll()
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao excluir equipe',
+        text: error instanceof Error ? error.message : 'Erro ao excluir equipe',
       })
     } finally {
       setDeletingTeamId(null)
@@ -287,7 +249,9 @@ export default function AtendimentoEquipesPage() {
 
   async function openTeamManager(team: Team) {
     setManagingTeam(team)
+    setManagingInbox(null)
     setTeamMemberIds([])
+    setInboxMemberIds([])
     setLoadingMembers(true)
     setMessage(null)
 
@@ -296,22 +260,44 @@ export default function AtendimentoEquipesPage() {
       const data = await readApi(res)
 
       if (!res.ok) {
-        throw new Error(
-          apiErrorMessage(data, 'Erro ao carregar agentes da equipe')
-        )
+        throw new Error(apiErrorMessage(data, 'Erro ao carregar agentes da equipe'))
       }
 
       setTeamMemberIds(Array.isArray(data.memberIds) ? data.memberIds : [])
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao carregar agentes da equipe',
+        text: error instanceof Error ? error.message : 'Erro ao carregar agentes da equipe',
       })
-
       setManagingTeam(null)
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  async function openInboxManager(inbox: InboxItem) {
+    setManagingInbox(inbox)
+    setManagingTeam(null)
+    setInboxMemberIds([])
+    setTeamMemberIds([])
+    setLoadingMembers(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/atendimento/inboxes/${inbox.id}/members`)
+      const data = await readApi(res)
+
+      if (!res.ok) {
+        throw new Error(apiErrorMessage(data, 'Erro ao carregar agentes da inbox'))
+      }
+
+      setInboxMemberIds(Array.isArray(data.memberIds) ? data.memberIds : [])
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Erro ao carregar agentes da inbox',
+      })
+      setManagingInbox(null)
     } finally {
       setLoadingMembers(false)
     }
@@ -327,18 +313,11 @@ export default function AtendimentoEquipesPage() {
     setMessage(null)
 
     try {
-      const res = await fetch(
-        `/api/atendimento/equipes/${managingTeam.id}/members`,
-        {
-          method: isMember ? 'DELETE' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            agentId,
-          }),
-        }
-      )
+      const res = await fetch(`/api/atendimento/equipes/${managingTeam.id}/members`, {
+        method: isMember ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId }),
+      })
 
       const data = await readApi(res)
 
@@ -346,17 +325,13 @@ export default function AtendimentoEquipesPage() {
         throw new Error(
           apiErrorMessage(
             data,
-            isMember
-              ? 'Erro ao remover agente da equipe'
-              : 'Erro ao adicionar agente na equipe'
+            isMember ? 'Erro ao remover agente da equipe' : 'Erro ao adicionar agente na equipe'
           )
         )
       }
 
       setTeamMemberIds((current) =>
-        isMember
-          ? current.filter((id) => id !== agentId)
-          : [...current, agentId]
+        isMember ? current.filter((id) => id !== agentId) : [...current, agentId]
       )
 
       setTeams((currentTeams) =>
@@ -367,19 +342,54 @@ export default function AtendimentoEquipesPage() {
 
           return {
             ...team,
-            agents_count: isMember
-              ? Math.max(currentCount - 1, 0)
-              : currentCount + 1,
+            agents_count: isMember ? Math.max(currentCount - 1, 0) : currentCount + 1,
           }
         })
       )
     } catch (error) {
       setMessage({
         type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao atualizar agentes da equipe',
+        text: error instanceof Error ? error.message : 'Erro ao atualizar agentes da equipe',
+      })
+    } finally {
+      setUpdatingAgentId(null)
+    }
+  }
+
+  async function toggleInboxMember(agent: Agent) {
+    if (!managingInbox || !agent.chatwootUserId) return
+
+    const agentId = agent.chatwootUserId
+    const isMember = inboxMemberIds.includes(agentId)
+
+    setUpdatingAgentId(agentId)
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/atendimento/inboxes/${managingInbox.id}/members`, {
+        method: isMember ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentIds: [agentId] }),
+      })
+
+      const data = await readApi(res)
+
+      if (!res.ok) {
+        throw new Error(
+          apiErrorMessage(
+            data,
+            isMember ? 'Erro ao remover agente da inbox' : 'Erro ao adicionar agente na inbox'
+          )
+        )
+      }
+
+      setInboxMemberIds((current) =>
+        isMember ? current.filter((id) => id !== agentId) : [...current, agentId]
+      )
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Erro ao atualizar agentes da inbox',
       })
     } finally {
       setUpdatingAgentId(null)
@@ -403,8 +413,7 @@ export default function AtendimentoEquipesPage() {
               </h1>
 
               <p className="mt-1 max-w-2xl text-sm text-slate-600">
-                Gerencie agentes, equipes e inboxes sem recriar a engine
-                nativa do Atendimento.
+                Gerencie agentes, equipes e inboxes sem recriar a engine nativa do Atendimento.
               </p>
             </div>
           </div>
@@ -433,7 +442,6 @@ export default function AtendimentoEquipesPage() {
           ) : (
             <AlertCircle className="h-4 w-4" />
           )}
-
           <span>{message.text}</span>
         </div>
       )}
@@ -479,10 +487,7 @@ export default function AtendimentoEquipesPage() {
               <div className="space-y-4">
                 <div className="flex justify-between gap-3">
                   <div>
-                    <h2 className="font-semibold text-[#2f3453]">
-                      Agentes
-                    </h2>
-
+                    <h2 className="font-semibold text-[#2f3453]">Agentes</h2>
                     <p className="text-sm text-slate-500">
                       {agents.length} membro(s) ativos encontrados.
                     </p>
@@ -498,7 +503,6 @@ export default function AtendimentoEquipesPage() {
                     ) : (
                       <UserCheck className="h-4 w-4" />
                     )}
-
                     Sincronizar agentes
                   </button>
                 </div>
@@ -516,32 +520,16 @@ export default function AtendimentoEquipesPage() {
                       className="flex items-center justify-between gap-4 p-4"
                     >
                       <div>
-                        <p className="font-medium text-slate-900">
-                          {agent.name}
-                        </p>
-
-                        <p className="text-sm text-slate-500">
-                          {agent.email}
-                        </p>
+                        <p className="font-medium text-slate-900">{agent.name}</p>
+                        <p className="text-sm text-slate-500">{agent.email}</p>
                       </div>
 
                       <div className="text-right text-sm">
                         <p className="font-semibold text-slate-700">
-                          {agent.chatwootUserId
-                            ? `ID ${agent.chatwootUserId}`
-                            : 'Sem vínculo'}
+                          {agent.chatwootUserId ? `ID ${agent.chatwootUserId}` : 'Sem vínculo'}
                         </p>
-
-                        <p
-                          className={
-                            agent.matchedInAtendimento
-                              ? 'text-emerald-600'
-                              : 'text-amber-600'
-                          }
-                        >
-                          {agent.matchedInAtendimento
-                            ? 'Encontrado no Atendimento'
-                            : 'Não encontrado'}
+                        <p className={agent.matchedInAtendimento ? 'text-emerald-600' : 'text-amber-600'}>
+                          {agent.matchedInAtendimento ? 'Encontrado no Atendimento' : 'Não encontrado'}
                         </p>
                       </div>
                     </div>
@@ -553,9 +541,7 @@ export default function AtendimentoEquipesPage() {
             {tab === 'equipes' && (
               <div className="space-y-5">
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <h2 className="font-semibold text-[#2f3453]">
-                    Nova equipe
-                  </h2>
+                  <h2 className="font-semibold text-[#2f3453]">Nova equipe</h2>
 
                   <input
                     value={teamName}
@@ -566,9 +552,7 @@ export default function AtendimentoEquipesPage() {
 
                   <input
                     value={teamDescription}
-                    onChange={(e) =>
-                      setTeamDescription(e.target.value)
-                    }
+                    onChange={(e) => setTeamDescription(e.target.value)}
                     placeholder="Descrição opcional"
                     className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
                   />
@@ -583,7 +567,6 @@ export default function AtendimentoEquipesPage() {
                     ) : (
                       <Plus className="h-4 w-4" />
                     )}
-
                     Criar equipe
                   </button>
                 </div>
@@ -601,14 +584,9 @@ export default function AtendimentoEquipesPage() {
                       className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between"
                     >
                       <div>
-                        <p className="font-medium text-slate-900">
-                          {team.name}
-                        </p>
-
+                        <p className="font-medium text-slate-900">{team.name}</p>
                         {team.description && (
-                          <p className="text-sm text-slate-500">
-                            {team.description}
-                          </p>
+                          <p className="text-sm text-slate-500">{team.description}</p>
                         )}
                       </div>
 
@@ -635,7 +613,6 @@ export default function AtendimentoEquipesPage() {
                           ) : (
                             <Trash2 className="h-4 w-4" />
                           )}
-
                           Excluir
                         </button>
                       </div>
@@ -648,10 +625,7 @@ export default function AtendimentoEquipesPage() {
             {tab === 'inboxes' && (
               <div className="space-y-4">
                 <div>
-                  <h2 className="font-semibold text-[#2f3453]">
-                    Inboxes / Canais
-                  </h2>
-
+                  <h2 className="font-semibold text-[#2f3453]">Inboxes / Canais</h2>
                   <p className="text-sm text-slate-500">
                     {inboxes.length} inbox(es) operacionais encontrados.
                   </p>
@@ -667,7 +641,7 @@ export default function AtendimentoEquipesPage() {
                   {inboxes.map((inbox) => (
                     <div
                       key={inbox.id}
-                      className="flex items-center justify-between gap-4 p-4"
+                      className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between"
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#374b89]/10">
@@ -675,25 +649,26 @@ export default function AtendimentoEquipesPage() {
                         </div>
 
                         <div>
-                          <p className="font-medium text-slate-900">
-                            {inbox.name}
-                          </p>
-
+                          <p className="font-medium text-slate-900">{inbox.name}</p>
                           <p className="text-sm text-slate-500">
-                            {inbox.channelType ??
-                              inbox.canalType ??
-                              inbox.channel ??
-                              inbox.canal ??
-                              'Canal'}
+                            {inbox.channelType ?? inbox.canalType ?? inbox.channel ?? inbox.canal ?? 'Canal'}
                           </p>
                         </div>
                       </div>
 
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {inbox.channelLabel ??
-                          inbox.canalLabel ??
-                          'Canal'}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                          {inbox.channelLabel ?? inbox.canalLabel ?? 'Canal'}
+                        </span>
+
+                        <button
+                          onClick={() => openInboxManager(inbox)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-[#374b89]/20 bg-[#374b89]/10 px-3 py-2 text-sm font-semibold text-[#374b89] hover:bg-[#374b89]/15"
+                        >
+                          <Users className="h-4 w-4" />
+                          Gerenciar agentes
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -703,7 +678,7 @@ export default function AtendimentoEquipesPage() {
         )}
       </div>
 
-      {managingTeam && (
+      {(managingTeam || managingInbox) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
           <div className="w-full max-w-xl rounded-3xl bg-white shadow-xl">
             <div className="flex items-start justify-between border-b border-slate-200 p-5">
@@ -711,14 +686,16 @@ export default function AtendimentoEquipesPage() {
                 <h3 className="text-lg font-bold text-[#2f3453]">
                   Gerenciar agentes
                 </h3>
-
                 <p className="text-sm text-slate-500">
-                  Equipe: {managingTeam.name}
+                  {managingTeam ? `Equipe: ${managingTeam.name}` : `Inbox: ${managingInbox?.name}`}
                 </p>
               </div>
 
               <button
-                onClick={() => setManagingTeam(null)}
+                onClick={() => {
+                  setManagingTeam(null)
+                  setManagingInbox(null)
+                }}
                 className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
               >
                 <X className="h-5 w-5" />
@@ -732,14 +709,15 @@ export default function AtendimentoEquipesPage() {
                 </div>
               ) : linkedAgents.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  Nenhum agente vinculado ao Atendimento. Sincronize os
-                  agentes antes de gerenciar equipes.
+                  Nenhum agente vinculado ao Atendimento. Sincronize os agentes antes de gerenciar vínculos.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
                   {linkedAgents.map((agent) => {
                     const agentId = agent.chatwootUserId!
-                    const checked = teamMemberIds.includes(agentId)
+                    const checked = managingTeam
+                      ? teamMemberIds.includes(agentId)
+                      : inboxMemberIds.includes(agentId)
 
                     return (
                       <label
@@ -747,14 +725,8 @@ export default function AtendimentoEquipesPage() {
                         className="flex cursor-pointer items-center justify-between gap-4 p-4 hover:bg-slate-50"
                       >
                         <div>
-                          <p className="font-medium text-slate-900">
-                            {agent.name}
-                          </p>
-
-                          <p className="text-sm text-slate-500">
-                            {agent.email}
-                          </p>
-
+                          <p className="font-medium text-slate-900">{agent.name}</p>
+                          <p className="text-sm text-slate-500">{agent.email}</p>
                           <p className="mt-1 text-xs text-slate-400">
                             ID Atendimento {agentId}
                           </p>
@@ -769,7 +741,9 @@ export default function AtendimentoEquipesPage() {
                             type="checkbox"
                             checked={checked}
                             disabled={updatingAgentId === agentId}
-                            onChange={() => toggleTeamMember(agent)}
+                            onChange={() =>
+                              managingTeam ? toggleTeamMember(agent) : toggleInboxMember(agent)
+                            }
                             className="h-5 w-5 rounded border-slate-300 text-[#374b89]"
                           />
                         </div>
@@ -782,7 +756,10 @@ export default function AtendimentoEquipesPage() {
 
             <div className="flex justify-end border-t border-slate-200 p-5">
               <button
-                onClick={() => setManagingTeam(null)}
+                onClick={() => {
+                  setManagingTeam(null)
+                  setManagingInbox(null)
+                }}
                 className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 Fechar
