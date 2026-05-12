@@ -320,8 +320,11 @@ export async function removeChatwootTeamMember(
   teamId: number,
   agentId: number
 ): Promise<void> {
-  await chatwootApi(credentials, `/teams/${teamId}/team_members/${agentId}`, {
+  await chatwootApi(credentials, `/teams/${teamId}/team_members`, {
     method: 'DELETE',
+    body: {
+      user_ids: [agentId],
+    },
   })
 }
 
