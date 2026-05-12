@@ -115,13 +115,36 @@ export async function POST(
   try {
     await addChatwootTeamMembers(credentials, parsedTeamId, [parsed.data.agentId])
 
+    const members = await listChatwootTeamMembers(credentials, parsedTeamId)
+
     return NextResponse.json({
       success: true,
       teamId: parsedTeamId,
       agentId: parsed.data.agentId,
+      memberIds: members.map((member) => member.id),
+      summary: {
+        total: members.length,
+      },
     })
   } catch (error) {
     console.error('[ATENDIMENTO EQUIPE MEMBERS] Erro ao adicionar agente:', error)
+
+    const members = await listChatwootTeamMembers(credentials, parsedTeamId).catch(
+      () => null
+    )
+
+    if (members?.some((member) => member.id === parsed.data.agentId)) {
+      return NextResponse.json({
+        success: true,
+        teamId: parsedTeamId,
+        agentId: parsed.data.agentId,
+        memberIds: members.map((member) => member.id),
+        summary: {
+          total: members.length,
+        },
+        recoveredFromInvalidResponse: true,
+      })
+    }
 
     return NextResponse.json(
       {
@@ -168,13 +191,36 @@ export async function DELETE(
   try {
     await removeChatwootTeamMember(credentials, parsedTeamId, parsed.data.agentId)
 
+    const members = await listChatwootTeamMembers(credentials, parsedTeamId)
+
     return NextResponse.json({
       success: true,
       teamId: parsedTeamId,
       agentId: parsed.data.agentId,
+      memberIds: members.map((member) => member.id),
+      summary: {
+        total: members.length,
+      },
     })
   } catch (error) {
     console.error('[ATENDIMENTO EQUIPE MEMBERS] Erro ao remover agente:', error)
+
+    const members = await listChatwootTeamMembers(credentials, parsedTeamId).catch(
+      () => null
+    )
+
+    if (members && !members.some((member) => member.id === parsed.data.agentId)) {
+      return NextResponse.json({
+        success: true,
+        teamId: parsedTeamId,
+        agentId: parsed.data.agentId,
+        memberIds: members.map((member) => member.id),
+        summary: {
+          total: members.length,
+        },
+        recoveredFromInvalidResponse: true,
+      })
+    }
 
     return NextResponse.json(
       {
