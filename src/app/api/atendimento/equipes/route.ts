@@ -9,6 +9,7 @@ import { checkPermission } from '@/lib/checkPermission'
 import {
   createChatwootTeam,
   getChatwootCredentials,
+  listChatwootTeamMembers,
   listChatwootTeams,
 } from '@/lib/chatwoot'
 
@@ -42,11 +43,25 @@ export async function GET() {
   try {
     const teams = await listChatwootTeams(credentials)
 
+    const teamsWithMembersCount = await Promise.all(
+      teams.map(async (team) => {
+        const members = await listChatwootTeamMembers(
+          credentials,
+          team.id
+        ).catch(() => [])
+
+        return {
+          ...team,
+          agents_count: members.length,
+        }
+      })
+    )
+
     return NextResponse.json({
       connected: true,
-      teams,
+      teams: teamsWithMembersCount,
       summary: {
-        total: teams.length,
+        total: teamsWithMembersCount.length,
       },
     })
   } catch (error) {
@@ -93,7 +108,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        team,
+        team: {
+          ...team,
+          agents_count: 0,
+        },
       },
       { status: 201 }
     )
