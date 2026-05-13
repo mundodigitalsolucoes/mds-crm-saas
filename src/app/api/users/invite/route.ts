@@ -2,7 +2,7 @@
 // API para convidar/criar membro na mesma organização
 // Acesso: owner e admin apenas (via checkAdminAccess)
 // Dispara email de boas-vindas com credenciais via Resend
-// Após criar: sincroniza agente no Chatwoot e adiciona ao time se informado
+// Após criar: provisiona usuário confirmado no Atendimento via Platform API
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -13,11 +13,17 @@ import {
   serializePermissions,
 } from '@/lib/permissions'
 import { sendInviteEmail } from '@/lib/email'
-import { decryptToken } from '@/lib/integrations/crypto'
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { parseBody, userInviteSchema } from '@/lib/validations'
 import { z } from 'zod'
 import type { UserRole } from '@/types/permissions'
+import {
+  addChatwootTeamMembers,
+  attachChatwootPlatformUserToAccount,
+  createChatwootPlatformUser,
+  getChatwootCredentials,
+} from '@/lib/chatwoot'
 
 const ROLE_HIERARCHY: Record<string, number> = {
   user: 1,
@@ -26,9 +32,9 @@ const ROLE_HIERARCHY: Record<string, number> = {
   owner: 4,
 }
 
-// ─── Sync silencioso com Chatwoot ───────────────────────────────────────────
-// Cria agente no Chatwoot e opcionalmente adiciona ao time
-// Falha silenciosa — nunca bloqueia a criação do membro no CRM
+function createTechnicalPassword(): string {
+  return `${randomBytes(24).toString('base64url')}A1!`
+}
 
 async function syncAgentToChatwoot(params: {
   userId: string
@@ -39,86 +45,55 @@ async function syncAgentToChatwoot(params: {
   chatwootTeamId?: number
 }): Promise<void> {
   try {
-    const account = await prisma.connectedAccount.findUnique({
-      where: {
-        provider_organizationId: {
-          provider: 'chatwoot',
-          organizationId: params.organizationId,
-        },
-      },
-      select: { isActive: true, accessTokenEnc: true, data: true },
-    })
+    const credentials = await getChatwootCredentials(params.organizationId)
 
-    if (!account || !account.isActive) return
-
-    const { chatwootUrl, chatwootAccountId } = JSON.parse(account.data) as {
-      chatwootUrl: string
-      chatwootAccountId: number
-    }
-
-    const apiToken = decryptToken(account.accessTokenEnc)
-    const internalUrl = process.env.CHATWOOT_INTERNAL_URL?.replace(/\/$/, '')
-    const baseUrl = internalUrl ?? chatwootUrl
+    if (!credentials) return
 
     const chatwootRole =
       params.role === 'owner' || params.role === 'admin'
         ? 'administrator'
         : 'agent'
 
-    const agentRes = await fetch(
-      `${baseUrl}/api/v1/accounts/${chatwootAccountId}/agents`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          api_access_token: apiToken,
-        },
-        body: JSON.stringify({
-          name: params.name,
-          email: params.email,
-          role: chatwootRole,
-        }),
-        signal: AbortSignal.timeout(8_000),
-      }
-    )
+    const platformUser = await createChatwootPlatformUser({
+      chatwootUrl: credentials.chatwootUrl,
+      name: params.name,
+      email: params.email,
+      password: createTechnicalPassword(),
+      crmUserId: params.userId,
+      organizationId: params.organizationId,
+    })
 
-    if (!agentRes.ok) {
-      console.warn('[CHATWOOT SYNC] Falha ao criar agente:', await agentRes.text())
+    if (!platformUser.id) {
+      console.warn('[CHATWOOT PLATFORM] Usuário criado sem ID:', platformUser)
       return
     }
 
-    const agent = await agentRes.json() as { id: number }
+    await attachChatwootPlatformUserToAccount({
+      chatwootUrl: credentials.chatwootUrl,
+      accountId: credentials.accountId,
+      userId: platformUser.id,
+      role: chatwootRole,
+    })
 
-    if (agent.id) {
-      await prisma.user.update({
-        where: { id: params.userId },
-        data: {
-          chatwootUserId: agent.id,
-          isChatwootAgent: true,
-        },
+    await prisma.user.update({
+      where: { id: params.userId },
+      data: {
+        chatwootUserId: platformUser.id,
+        isChatwootAgent: true,
+      },
+    })
+
+    if (params.chatwootTeamId) {
+      await addChatwootTeamMembers(
+        credentials,
+        params.chatwootTeamId,
+        [platformUser.id]
+      ).catch((error) => {
+        console.warn('[CHATWOOT PLATFORM] Falha ao adicionar ao time:', error)
       })
     }
-
-    if (params.chatwootTeamId && agent.id) {
-      const teamRes = await fetch(
-        `${baseUrl}/api/v1/accounts/${chatwootAccountId}/teams/${params.chatwootTeamId}/team_members`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            api_access_token: apiToken,
-          },
-          body: JSON.stringify({ user_ids: [agent.id] }),
-          signal: AbortSignal.timeout(8_000),
-        }
-      )
-
-      if (!teamRes.ok) {
-        console.warn('[CHATWOOT SYNC] Falha ao adicionar ao time:', await teamRes.text())
-      }
-    }
-  } catch (err) {
-    console.error('[CHATWOOT SYNC] Erro inesperado:', err)
+  } catch (error) {
+    console.error('[CHATWOOT PLATFORM] Erro ao provisionar agente:', error)
   }
 }
 
@@ -216,8 +191,8 @@ export async function POST(request: NextRequest) {
       role: data.role,
       invitedBy: inviter?.name || 'Um administrador',
       organizationName: organization?.name,
-    }).catch((err) => {
-      console.error('[API INVITE] Falha ao enviar email de convite:', err)
+    }).catch((error) => {
+      console.error('[API INVITE] Falha ao enviar email de convite:', error)
     })
 
     syncAgentToChatwoot({
@@ -227,8 +202,8 @@ export async function POST(request: NextRequest) {
       email: newUser.email,
       role: newUser.role,
       chatwootTeamId: data.chatwootTeamId,
-    }).catch((err) => {
-      console.error('[API INVITE] Falha no sync Chatwoot:', err)
+    }).catch((error) => {
+      console.error('[API INVITE] Falha no provisionamento Atendimento:', error)
     })
 
     return NextResponse.json({
