@@ -152,6 +152,7 @@ model User {
   // Atendimento / Chatwoot
   chatwootUserId                Int?                    @map("chatwoot_user_id")
   isChatwootAgent               Boolean                 @default(false) @map("is_chatwoot_agent")
+  atendimentoVisibility         String                  @default("assigned") @map("atendimento_visibility")
 
   // Permissões específicas
   permissions                   String                  @default("{}")
