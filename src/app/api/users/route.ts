@@ -24,6 +24,7 @@ export async function GET() {
         email: true,
         role: true,
         permissions: true,
+        atendimentoVisibility: true,
         createdAt: true,
       },
       orderBy: [

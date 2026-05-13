@@ -50,12 +50,15 @@ import type {
 // TIPOS
 // ============================================
 
+type AtendimentoVisibility = 'all' | 'assigned' | 'team';
+
 interface OrgUser {
   id: string;
   name: string;
   email: string;
   role: string;
   permissions: string | null;
+  atendimentoVisibility: AtendimentoVisibility;
   createdAt: string;
 }
 
@@ -114,6 +117,8 @@ export default function MembersPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [editAtendimentoVisibility, setEditAtendimentoVisibility] =
+  useState<AtendimentoVisibility>('assigned');
 
   // Modal de convite
   const [showInvite, setShowInvite] = useState(false);
@@ -213,6 +218,7 @@ export default function MembersPage() {
   const handleOpenEdit = (user: OrgUser) => {
     const parsed = parsePermissions(user.permissions, user.role as UserRole);
     setEditPermissions(parsed);
+    setEditAtendimentoVisibility(user.atendimentoVisibility ?? 'assigned');
     setEditingUser(user);
     setSaveMessage(null);
     setExpandedModules(new Set(ALL_MODULES));
@@ -267,7 +273,10 @@ export default function MembersPage() {
       const res = await fetch(`/api/users/${editingUser.id}/permissions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ permissions: editPermissions }),
+        body: JSON.stringify({
+          permissions: editPermissions,
+          atendimentoVisibility: editAtendimentoVisibility,
+      }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao salvar');
@@ -275,7 +284,11 @@ export default function MembersPage() {
       setUsers((prev) =>
         prev.map((u) =>
           u.id === editingUser.id
-            ? { ...u, permissions: JSON.stringify(editPermissions) }
+            ? {
+               ...u,
+               permissions: JSON.stringify(editPermissions),
+               atendimentoVisibility: data.atendimentoVisibility ?? editAtendimentoVisibility,
+              }
             : u
         )
       );
@@ -812,137 +825,170 @@ export default function MembersPage() {
         </div>
       )}
 
-      {/* ============================================ */}
-      {/* MODAL DE EDIÇÃO DE PERMISSÕES               */}
-      {/* ============================================ */}
-      {editingUser && editPermissions && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Permissões</h2>
-                  <p className="text-sm text-gray-500">
-                    {editingUser.name} •{' '}
-                    <span className="capitalize">{ROLE_LABELS[editingUser.role] || editingUser.role}</span>
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleCloseEdit}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
-              <div className="flex justify-end mb-2">
-                <button
-                  onClick={handleResetToDefault}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Restaurar padrão do cargo
-                </button>
-              </div>
-
-              {ALL_MODULES.map((module) => {
-                const isExpanded = expandedModules.has(module);
-                const allEnabled = isAllEnabled(module);
-                const partial = isPartialEnabled(module);
-
-                return (
-                  <div key={module} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div
-                      className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => toggleModuleExpand(module)}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isExpanded
-                          ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                          : <ChevronDown className="w-4 h-4 text-gray-400" />
-                        }
-                        <span className="font-medium text-gray-800 text-sm">{MODULE_LABELS[module]}</span>
-                        {allEnabled && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">TOTAL</span>
-                        )}
-                        {partial && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">PARCIAL</span>
-                        )}
-                        {!allEnabled && !partial && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">BLOQUEADO</span>
-                        )}
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleModuleAll(module, !allEnabled); }}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${allEnabled ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {(['view', 'create', 'edit', 'delete'] as PermissionAction[]).map((action) => {
-                          const enabled = editPermissions[module][action];
-                          return (
-                            <button
-                              key={action}
-                              onClick={() => handleTogglePermission(module, action)}
-                              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
-                                enabled
-                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-                                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
-                              }`}
-                            >
-                              {enabled && <Check className="w-3.5 h-3.5" />}
-                              {ACTION_LABELS[action]}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between gap-3">
-              <div className="flex-1">
-                {saveMessage && (
-                  <p className={`text-sm flex items-center gap-1.5 ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
-                    {saveMessage.type === 'success'
-                      ? <Check className="w-4 h-4" />
-                      : <AlertCircle className="w-4 h-4" />
-                    }
-                    {saveMessage.text}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleCloseEdit}
-                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  {saving ? 'Salvando...' : 'Salvar Permissões'}
-                </button>
-              </div>
-            </div>
+{/* ============================================ */}
+{/* MODAL DE EDIÇÃO DE PERMISSÕES               */}
+{/* ============================================ */}
+{editingUser && editPermissions && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+            <Shield className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Permissões</h2>
+            <p className="text-sm text-gray-500">
+              {editingUser.name} •{' '}
+              <span className="capitalize">{ROLE_LABELS[editingUser.role] || editingUser.role}</span>
+            </p>
           </div>
         </div>
-      )}
+
+        <button
+          onClick={handleCloseEdit}
+          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={handleResetToDefault}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Restaurar padrão do cargo
+          </button>
+        </div>
+
+        <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50/70 p-4">
+          <label className="block text-sm font-semibold text-gray-900 mb-2">
+            Visibilidade no Atendimento
+          </label>
+
+          <select
+            value={editAtendimentoVisibility}
+            onChange={(e) =>
+              setEditAtendimentoVisibility(e.target.value as AtendimentoVisibility)
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">Todas as conversas</option>
+            <option value="assigned">Somente atribuídas ao agente</option>
+            <option value="team">Conversas da equipe</option>
+          </select>
+
+          <p className="mt-2 text-xs text-gray-500">
+            Controla a visibilidade operacional do usuário dentro do Atendimento.
+          </p>
+        </div>
+
+        {ALL_MODULES.map((module) => {
+          const isExpanded = expandedModules.has(module);
+          const allEnabled = isAllEnabled(module);
+          const partial = isPartialEnabled(module);
+
+          return (
+            <div key={module} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div
+                className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => toggleModuleExpand(module)}
+              >
+                <div className="flex items-center gap-3">
+                  {isExpanded
+                    ? <ChevronUp className="w-4 h-4 text-gray-400" />
+                    : <ChevronDown className="w-4 h-4 text-gray-400" />
+                  }
+                  <span className="font-medium text-gray-800 text-sm">{MODULE_LABELS[module]}</span>
+
+                  {allEnabled && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">TOTAL</span>
+                  )}
+
+                  {partial && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">PARCIAL</span>
+                  )}
+
+                  {!allEnabled && !partial && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-600 rounded font-medium">BLOQUEADO</span>
+                  )}
+                </div>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleModuleAll(module, !allEnabled);
+                  }}
+                  className={`relative w-9 h-5 rounded-full transition-colors ${allEnabled ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${allEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              {isExpanded && (
+                <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(['view', 'create', 'edit', 'delete'] as PermissionAction[]).map((action) => {
+                    const enabled = editPermissions[module][action];
+
+                    return (
+                      <button
+                        key={action}
+                        onClick={() => handleTogglePermission(module, action)}
+                        className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                          enabled
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
+                            : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                        }`}
+                      >
+                        {enabled && <Check className="w-3.5 h-3.5" />}
+                        {ACTION_LABELS[action]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between gap-3">
+        <div className="flex-1">
+          {saveMessage && (
+            <p className={`text-sm flex items-center gap-1.5 ${saveMessage.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+              {saveMessage.type === 'success'
+                ? <Check className="w-4 h-4" />
+                : <AlertCircle className="w-4 h-4" />
+              }
+              {saveMessage.text}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCloseEdit}
+            className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Cancelar
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? 'Salvando...' : 'Salvar Permissões'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
