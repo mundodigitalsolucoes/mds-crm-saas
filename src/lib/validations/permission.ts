@@ -2,13 +2,11 @@
 // Schema Zod para API de Permissões de Usuário — MDS CRM
 import { z } from 'zod';
 import { ALL_MODULES } from '@/lib/permissions';
-import type { PermissionModule } from '@/types/permissions';
 
 // ============================================
 // HELPERS
 // ============================================
 
-/** Schema de um módulo individual: { view, create, edit, delete } — todos boolean */
 const modulePermissionSchema = z.object({
   view: z.boolean(),
   create: z.boolean(),
@@ -16,10 +14,6 @@ const modulePermissionSchema = z.object({
   delete: z.boolean(),
 });
 
-/**
- * Gera o schema de permissões completo baseado em ALL_MODULES.
- * Garante que todos os 11 módulos estejam presentes com as 4 ações.
- */
 function buildPermissionsSchema() {
   const shape: Record<string, typeof modulePermissionSchema> = {};
   for (const mod of ALL_MODULES) {
@@ -30,23 +24,21 @@ function buildPermissionsSchema() {
 
 const fullPermissionsSchema = buildPermissionsSchema();
 
-// ============================================
-// PUT /api/users/[id]/permissions
-// ============================================
+export const atendimentoVisibilitySchema = z.enum([
+  'all',
+  'assigned',
+  'team',
+]);
 
-/**
- * Aceita dois formatos mutuamente exclusivos:
- * 1. `{ resetToDefault: true }` — reseta permissões para o padrão do role
- * 2. `{ permissions: { leads: { view, create, edit, delete }, ... } }` — permissões custom
- */
 export const userPermissionsUpdateSchema = z
   .object({
     resetToDefault: z.literal(true).optional(),
     permissions: fullPermissionsSchema.optional(),
+    atendimentoVisibility: atendimentoVisibilitySchema.optional(),
   })
   .refine(
-    (data) => data.resetToDefault || data.permissions,
-    { message: 'Informe "resetToDefault: true" ou um objeto "permissions" válido' }
+    (data) => data.resetToDefault || data.permissions || data.atendimentoVisibility,
+    { message: 'Informe permissões, reset ou visibilidade do Atendimento' }
   )
   .refine(
     (data) => !(data.resetToDefault && data.permissions),
