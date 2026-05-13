@@ -121,13 +121,42 @@ export async function POST(
       parsed.data.agentIds
     )
 
+    const members = await listChatwootInboxMembers(credentials, parsedInboxId)
+
     return NextResponse.json({
       success: true,
       inboxId: parsedInboxId,
       agentIds: parsed.data.agentIds,
+      memberIds: members.map((member) => member.id),
+      summary: {
+        total: members.length,
+      },
     })
   } catch (error) {
     console.error('[ATENDIMENTO INBOX MEMBERS] Erro ao vincular agentes:', error)
+
+    const members = await listChatwootInboxMembers(
+      credentials,
+      parsedInboxId
+    ).catch(() => null)
+
+    if (
+      members &&
+      parsed.data.agentIds.every((agentId) =>
+        members.some((member) => member.id === agentId)
+      )
+    ) {
+      return NextResponse.json({
+        success: true,
+        inboxId: parsedInboxId,
+        agentIds: parsed.data.agentIds,
+        memberIds: members.map((member) => member.id),
+        summary: {
+          total: members.length,
+        },
+        recoveredFromInvalidResponse: true,
+      })
+    }
 
     return NextResponse.json(
       {
@@ -178,13 +207,42 @@ export async function DELETE(
       parsed.data.agentIds
     )
 
+    const members = await listChatwootInboxMembers(credentials, parsedInboxId)
+
     return NextResponse.json({
       success: true,
       inboxId: parsedInboxId,
       agentIds: parsed.data.agentIds,
+      memberIds: members.map((member) => member.id),
+      summary: {
+        total: members.length,
+      },
     })
   } catch (error) {
     console.error('[ATENDIMENTO INBOX MEMBERS] Erro ao remover agentes:', error)
+
+    const members = await listChatwootInboxMembers(
+      credentials,
+      parsedInboxId
+    ).catch(() => null)
+
+    if (
+      members &&
+      parsed.data.agentIds.every(
+        (agentId) => !members.some((member) => member.id === agentId)
+      )
+    ) {
+      return NextResponse.json({
+        success: true,
+        inboxId: parsedInboxId,
+        agentIds: parsed.data.agentIds,
+        memberIds: members.map((member) => member.id),
+        summary: {
+          total: members.length,
+        },
+        recoveredFromInvalidResponse: true,
+      })
+    }
 
     return NextResponse.json(
       {
