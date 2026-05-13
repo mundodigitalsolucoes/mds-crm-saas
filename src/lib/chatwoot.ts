@@ -51,6 +51,20 @@ export interface ChatwootInbox {
   channel_type?: string
 }
 
+export interface ChatwootPlatformUser {
+  id: number
+  name: string
+  email: string
+  confirmed?: boolean
+  role?: string
+  access_token?: string
+  accounts?: Array<{
+    id: number
+    role?: string
+    status?: string
+  }>
+}
+
 function normalizeBaseUrl(url?: string | null): string | null {
   return url?.trim().replace(/\/$/, '') || null
 }
@@ -102,6 +116,10 @@ export function resolveChatwootBaseUrl(chatwootUrl: string): string {
     normalizeBaseUrl(chatwootUrl) ||
     ''
   )
+}
+
+function getChatwootPlatformToken(): string | null {
+  return process.env.CHATWOOT_PLATFORM_TOKEN?.trim() || null
 }
 
 export async function getChatwootConnectionMeta(
@@ -260,6 +278,80 @@ export async function chatwootApi<T = unknown>(
   if (!res.ok) throw new Error(await readChatwootError(res))
 
   return parseResponseBody<T>(res)
+}
+
+export async function chatwootPlatformApi<T = unknown>(
+  chatwootUrl: string,
+  path: string,
+  options: ChatwootApiOptions = {}
+): Promise<T> {
+  const token = getChatwootPlatformToken()
+  if (!token) throw new Error('CHATWOOT_PLATFORM_TOKEN não configurado')
+
+  const { method = 'GET', body, timeoutMs = 8_000 } = options
+  const baseUrl = resolveChatwootBaseUrl(chatwootUrl)
+  const url = `${baseUrl}/platform/api/v1${path}`
+
+  const res = await fetch(url, {
+    method,
+    headers: {
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      api_access_token: token,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(timeoutMs),
+  })
+
+  if (!res.ok) throw new Error(await readChatwootError(res))
+
+  return parseResponseBody<T>(res)
+}
+
+export async function createChatwootPlatformUser(input: {
+  chatwootUrl: string
+  name: string
+  email: string
+  password: string
+  crmUserId: string
+  organizationId: string
+}): Promise<ChatwootPlatformUser> {
+  return chatwootPlatformApi<ChatwootPlatformUser>(
+    input.chatwootUrl,
+    '/users',
+    {
+      method: 'POST',
+      body: {
+        name: input.name,
+        display_name: input.name,
+        email: input.email,
+        password: input.password,
+        custom_attributes: {
+          crmUserId: input.crmUserId,
+          organizationId: input.organizationId,
+          source: 'mds-crm',
+        },
+      },
+    }
+  )
+}
+
+export async function attachChatwootPlatformUserToAccount(input: {
+  chatwootUrl: string
+  accountId: number
+  userId: number
+  role: 'agent' | 'administrator'
+}): Promise<void> {
+  await chatwootPlatformApi(
+    input.chatwootUrl,
+    `/accounts/${input.accountId}/account_users`,
+    {
+      method: 'POST',
+      body: {
+        user_id: input.userId,
+        role: input.role,
+      },
+    }
+  )
 }
 
 export async function listChatwootTeams(
