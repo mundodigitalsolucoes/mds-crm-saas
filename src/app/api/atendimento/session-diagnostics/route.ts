@@ -15,31 +15,37 @@ type PlatformLoginResponse = {
   url?: string
 }
 
+type SafeUser = {
+  id: string
+  name: string
+  email: string
+  role: string
+  chatwootUserId: number | null
+  isChatwootAgent: boolean
+  atendimentoVisibility?: string | null
+}
+
 function normalizeEmail(email: string | null | undefined): string {
   return email?.trim().toLowerCase() || ''
 }
 
-export async function GET() {
-  const perm = await checkPermission('atendimento', 'view')
-
-  if (!perm.allowed || !perm.session) {
-    return perm.errorResponse ?? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+async function getSafeUser(params: {
+  organizationId: string
+  sessionUserId?: string
+  sessionEmail?: string | null
+}): Promise<SafeUser | null> {
+  const where = {
+    organizationId: params.organizationId,
+    deletedAt: null,
+    OR: [
+      ...(params.sessionUserId ? [{ id: params.sessionUserId }] : []),
+      ...(params.sessionEmail ? [{ email: params.sessionEmail }] : []),
+    ],
   }
 
-  const organizationId = perm.session.user.organizationId
-  const sessionUserId = perm.session.user.id
-  const sessionEmail = perm.session.user.email
-
-  const [user, account, credentials] = await Promise.all([
-    prisma.user.findFirst({
-      where: {
-        organizationId,
-        deletedAt: null,
-        OR: [
-          ...(sessionUserId ? [{ id: sessionUserId }] : []),
-          ...(sessionEmail ? [{ email: sessionEmail }] : []),
-        ],
-      },
+  try {
+    return await prisma.user.findFirst({
+      where,
       select: {
         id: true,
         name: true,
@@ -49,87 +55,140 @@ export async function GET() {
         isChatwootAgent: true,
         atendimentoVisibility: true,
       },
-    }),
-
-    prisma.connectedAccount.findUnique({
-      where: {
-        provider_organizationId: {
-          provider: 'chatwoot',
-          organizationId,
-        },
-      },
+    })
+  } catch {
+    return await prisma.user.findFirst({
+      where,
       select: {
-        isActive: true,
-        data: true,
-        lastError: true,
-        updatedAt: true,
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        chatwootUserId: true,
+        isChatwootAgent: true,
       },
-    }),
-
-    getChatwootCredentials(organizationId),
-  ])
-
-  const result = {
-    organizationId,
-    session: {
-      userId: sessionUserId,
-      email: sessionEmail,
-    },
-    crmUser: user,
-    connectedAccount: {
-      exists: Boolean(account),
-      isActive: account?.isActive ?? false,
-      lastError: account?.lastError ?? null,
-      updatedAt: account?.updatedAt ?? null,
-    },
-    chatwoot: {
-      connected: Boolean(credentials),
-      accountId: credentials?.accountId ?? null,
-      url: credentials?.chatwootUrl ?? null,
-      userFoundById: false,
-      userFoundByEmail: false,
-      ssoStatus: 'not_tested' as 'not_tested' | 'ok' | 'failed' | 'missing_user_id',
-      ssoError: null as string | null,
-    },
+    })
   }
+}
 
-  if (!credentials || !user) {
-    return NextResponse.json(result)
-  }
-
+export async function GET() {
   try {
-    const agents = await listChatwootAgents(credentials)
+    const perm = await checkPermission('atendimento', 'view')
 
-    result.chatwoot.userFoundById = user.chatwootUserId
-      ? agents.some((agent) => agent.id === user.chatwootUserId)
-      : false
+    if (!perm.allowed || !perm.session) {
+      return (
+        perm.errorResponse ??
+        NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+      )
+    }
 
-    result.chatwoot.userFoundByEmail = agents.some(
-      (agent) => normalizeEmail(agent.email) === normalizeEmail(user.email)
-    )
-  } catch (error) {
-    result.chatwoot.ssoError =
-      error instanceof Error ? error.message : 'Erro ao listar agentes'
-  }
+    const organizationId = perm.session.user.organizationId
+    const sessionUserId = perm.session.user.id
+    const sessionEmail = perm.session.user.email
 
-  if (!user.chatwootUserId) {
-    result.chatwoot.ssoStatus = 'missing_user_id'
+    const [user, account, credentials] = await Promise.all([
+      getSafeUser({
+        organizationId,
+        sessionUserId,
+        sessionEmail,
+      }),
+
+      prisma.connectedAccount.findUnique({
+        where: {
+          provider_organizationId: {
+            provider: 'chatwoot',
+            organizationId,
+          },
+        },
+        select: {
+          isActive: true,
+          data: true,
+          lastError: true,
+          updatedAt: true,
+        },
+      }),
+
+      getChatwootCredentials(organizationId),
+    ])
+
+    const result = {
+      organizationId,
+      session: {
+        userId: sessionUserId,
+        email: sessionEmail,
+      },
+      crmUser: user,
+      connectedAccount: {
+        exists: Boolean(account),
+        isActive: account?.isActive ?? false,
+        lastError: account?.lastError ?? null,
+        updatedAt: account?.updatedAt ?? null,
+      },
+      chatwoot: {
+        connected: Boolean(credentials),
+        accountId: credentials?.accountId ?? null,
+        url: credentials?.chatwootUrl ?? null,
+        userFoundById: false,
+        userFoundByEmail: false,
+        ssoStatus: 'not_tested' as
+          | 'not_tested'
+          | 'ok'
+          | 'failed'
+          | 'missing_user_id',
+        ssoError: null as string | null,
+      },
+    }
+
+    if (!credentials || !user) {
+      return NextResponse.json(result)
+    }
+
+    try {
+      const agents = await listChatwootAgents(credentials)
+
+      result.chatwoot.userFoundById = user.chatwootUserId
+        ? agents.some((agent) => agent.id === user.chatwootUserId)
+        : false
+
+      result.chatwoot.userFoundByEmail = agents.some(
+        (agent) => normalizeEmail(agent.email) === normalizeEmail(user.email)
+      )
+    } catch (error) {
+      result.chatwoot.ssoError =
+        error instanceof Error ? error.message : 'Erro ao listar agentes'
+    }
+
+    if (!user.chatwootUserId) {
+      result.chatwoot.ssoStatus = 'missing_user_id'
+      return NextResponse.json(result)
+    }
+
+    try {
+      const login = await chatwootPlatformApi<PlatformLoginResponse>(
+        credentials.chatwootUrl,
+        `/users/${user.chatwootUserId}/login`
+      )
+
+      result.chatwoot.ssoStatus = login.url ? 'ok' : 'failed'
+      result.chatwoot.ssoError = login.url
+        ? null
+        : 'Platform API não retornou URL'
+    } catch (error) {
+      result.chatwoot.ssoStatus = 'failed'
+      result.chatwoot.ssoError =
+        error instanceof Error ? error.message : 'Erro ao gerar SSO'
+    }
+
     return NextResponse.json(result)
-  }
-
-  try {
-    const login = await chatwootPlatformApi<PlatformLoginResponse>(
-      credentials.chatwootUrl,
-      `/users/${user.chatwootUserId}/login`
-    )
-
-    result.chatwoot.ssoStatus = login.url ? 'ok' : 'failed'
-    result.chatwoot.ssoError = login.url ? null : 'Platform API não retornou URL'
   } catch (error) {
-    result.chatwoot.ssoStatus = 'failed'
-    result.chatwoot.ssoError =
-      error instanceof Error ? error.message : 'Erro ao gerar SSO'
-  }
+    console.error('[ATENDIMENTO SESSION DIAGNOSTICS] Erro:', error)
 
-  return NextResponse.json(result)
+    return NextResponse.json(
+      {
+        error: 'session_diagnostics_failed',
+        detail: error instanceof Error ? error.message : 'Erro desconhecido',
+      },
+      { status: 500 }
+    )
+  }
 }
