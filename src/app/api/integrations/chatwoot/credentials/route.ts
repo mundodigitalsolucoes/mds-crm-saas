@@ -77,7 +77,7 @@ async function getChatwootSsoUrl(baseUrl: string, chatwootUserId: number) {
     {
       method: 'GET',
       headers: {
-        api_access_token: platformToken,
+        'api_access_token': platformToken,
       },
       signal: AbortSignal.timeout(8_000),
       cache: 'no-store',
@@ -106,10 +106,7 @@ export async function GET() {
   const perm = await checkPermission('atendimento', 'view')
 
   if (!perm.allowed || !perm.session) {
-    return (
-      perm.errorResponse ??
-      NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-    )
+    return perm.errorResponse ?? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
   const organizationId = perm.session.user.organizationId
@@ -119,7 +116,7 @@ export async function GET() {
     sessionUser.email?.trim() ||
     'unknown-user'
 
-  const [organization, account, user] = await Promise.all([
+  const [organization, account] = await Promise.all([
     prisma.organization.findUnique({
       where: { id: organizationId },
       select: {
@@ -146,23 +143,6 @@ export async function GET() {
         lastError: true,
       },
     }),
-
-    prisma.user.findFirst({
-      where: {
-        organizationId,
-        deletedAt: null,
-        OR: [
-          ...(sessionUser.id ? [{ id: sessionUser.id }] : []),
-          ...(sessionUser.email ? [{ email: sessionUser.email }] : []),
-        ],
-      },
-      select: {
-        id: true,
-        email: true,
-        chatwootUserId: true,
-        atendimentoVisibility: true,
-      },
-    }),
   ])
 
   if (!organization || organization.deletedAt) {
@@ -183,16 +163,6 @@ export async function GET() {
     return NextResponse.json(
       { error: 'organization_mismatch' },
       { status: 403, headers: buildNoStoreHeaders() }
-    )
-  }
-
-  if (!user) {
-    return NextResponse.json(
-      {
-        error: 'crm_user_not_found',
-        detail: 'Usuário logado não encontrado nesta organização',
-      },
-      { status: 404, headers: buildNoStoreHeaders() }
     )
   }
 
@@ -236,19 +206,20 @@ export async function GET() {
     normalizeBaseUrl(data.chatwootUrl) ||
     'https://app.mundodigitalsolucoes.com.br'
 
-  const chatwootUserId = toPositiveInt(user.chatwootUserId)
+  const chatwootUserId = toPositiveInt(data.chatwootUserId)
 
   if (!chatwootUserId) {
     return NextResponse.json(
       {
-        error: 'missing_user_chatwoot_user_id',
-        detail: 'Usuário logado ainda não foi provisionado como agente do Atendimento',
+        error: 'missing_chatwoot_user_id',
+        detail: 'Usuário do Chatwoot ausente para esta organização',
       },
       { status: 409, headers: buildNoStoreHeaders() }
     )
   }
 
-  await confirmChatwootUser(chatwootUrl, user.email)
+  const ownerEmail = data.ownerEmail?.trim() || ''
+  await confirmChatwootUser(chatwootUrl, ownerEmail)
 
   try {
     const ssoUrl = await getChatwootSsoUrl(chatwootUrl, chatwootUserId)
@@ -257,11 +228,9 @@ export async function GET() {
       {
         organizationId,
         userId: crmUserId,
-        cacheKey: `${organizationId}:${crmUserId}:${chatwootUserId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
+        cacheKey: `${organizationId}:${crmUserId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
         chatwootUrl,
         chatwootAccountId: connectedAccountId,
-        chatwootUserId,
-        atendimentoVisibility: user.atendimentoVisibility,
         ssoUrl,
       },
       {
