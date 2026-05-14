@@ -47,9 +47,12 @@ function buildNoStoreHeaders() {
   }
 }
 
+function userSsoEnabled() {
+  return process.env.ATENDIMENTO_USER_SSO_ENABLED === 'true'
+}
+
 async function confirmChatwootUser(baseUrl: string, email: string) {
   const secret = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
-
   if (!secret || !email) return
 
   try {
@@ -77,7 +80,7 @@ async function getChatwootSsoUrl(baseUrl: string, chatwootUserId: number) {
     {
       method: 'GET',
       headers: {
-        'api_access_token': platformToken,
+        api_access_token: platformToken,
       },
       signal: AbortSignal.timeout(8_000),
       cache: 'no-store',
@@ -106,7 +109,10 @@ export async function GET() {
   const perm = await checkPermission('atendimento', 'view')
 
   if (!perm.allowed || !perm.session) {
-    return perm.errorResponse ?? NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    return (
+      perm.errorResponse ??
+      NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+    )
   }
 
   const organizationId = perm.session.user.organizationId
@@ -116,7 +122,7 @@ export async function GET() {
     sessionUser.email?.trim() ||
     'unknown-user'
 
-  const [organization, account] = await Promise.all([
+  const [organization, account, user] = await Promise.all([
     prisma.organization.findUnique({
       where: { id: organizationId },
       select: {
@@ -141,6 +147,22 @@ export async function GET() {
         data: true,
         updatedAt: true,
         lastError: true,
+      },
+    }),
+
+    prisma.user.findFirst({
+      where: {
+        organizationId,
+        deletedAt: null,
+        OR: [
+          ...(sessionUser.id ? [{ id: sessionUser.id }] : []),
+          ...(sessionUser.email ? [{ email: sessionUser.email }] : []),
+        ],
+      },
+      select: {
+        id: true,
+        email: true,
+        chatwootUserId: true,
       },
     }),
   ])
@@ -206,47 +228,72 @@ export async function GET() {
     normalizeBaseUrl(data.chatwootUrl) ||
     'https://app.mundodigitalsolucoes.com.br'
 
-  const chatwootUserId = toPositiveInt(data.chatwootUserId)
+  const integrationChatwootUserId = toPositiveInt(data.chatwootUserId)
+  const userChatwootUserId = toPositiveInt(user?.chatwootUserId)
 
-  if (!chatwootUserId) {
+  if (!integrationChatwootUserId && !userChatwootUserId) {
     return NextResponse.json(
       {
         error: 'missing_chatwoot_user_id',
-        detail: 'Usuário do Chatwoot ausente para esta organização',
+        detail: 'Usuário do Atendimento ausente para esta organização',
       },
       { status: 409, headers: buildNoStoreHeaders() }
     )
   }
 
-  const ownerEmail = data.ownerEmail?.trim() || ''
-  await confirmChatwootUser(chatwootUrl, ownerEmail)
+  const shouldUseUserSso = userSsoEnabled() && Boolean(userChatwootUserId)
+  const preferredChatwootUserId = shouldUseUserSso
+    ? userChatwootUserId!
+    : integrationChatwootUserId!
+
+  await confirmChatwootUser(
+    chatwootUrl,
+    shouldUseUserSso ? user?.email || '' : data.ownerEmail?.trim() || ''
+  )
+
+  let ssoUrl: string
+  let chatwootUserId = preferredChatwootUserId
+  let ssoMode: 'user' | 'integration' = shouldUseUserSso ? 'user' : 'integration'
 
   try {
-    const ssoUrl = await getChatwootSsoUrl(chatwootUrl, chatwootUserId)
-
-    return NextResponse.json(
-      {
-        organizationId,
-        userId: crmUserId,
-        cacheKey: `${organizationId}:${crmUserId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
-        chatwootUrl,
-        chatwootAccountId: connectedAccountId,
-        ssoUrl,
-      },
-      {
-        headers: buildNoStoreHeaders(),
-      }
-    )
+    ssoUrl = await getChatwootSsoUrl(chatwootUrl, preferredChatwootUserId)
   } catch (error) {
-    const reason =
-      error instanceof Error ? error.message : 'chatwoot_sso_failed'
+    if (shouldUseUserSso && integrationChatwootUserId) {
+      console.warn(
+        `[CREDENTIALS] Fallback para usuário da integração após falha no SSO individual. user=${preferredChatwootUserId}`
+      )
 
-    return NextResponse.json(
-      {
-        error: reason,
-        detail: 'Não foi possível iniciar a sessão automática do Atendimento',
-      },
-      { status: 409, headers: buildNoStoreHeaders() }
-    )
+      ssoUrl = await getChatwootSsoUrl(chatwootUrl, integrationChatwootUserId)
+      chatwootUserId = integrationChatwootUserId
+      ssoMode = 'integration'
+    } else {
+      const reason =
+        error instanceof Error ? error.message : 'chatwoot_sso_failed'
+
+      return NextResponse.json(
+        {
+          error: reason,
+          detail: 'Não foi possível iniciar a sessão automática do Atendimento',
+        },
+        { status: 409, headers: buildNoStoreHeaders() }
+      )
+    }
   }
+
+  return NextResponse.json(
+    {
+      organizationId,
+      userId: crmUserId,
+      cacheKey: `${organizationId}:${crmUserId}:${chatwootUserId}:${connectedAccountId}:${account.updatedAt.toISOString()}`,
+      chatwootUrl,
+      chatwootAccountId: connectedAccountId,
+      chatwootUserId,
+      ssoMode,
+      userSsoEnabled: userSsoEnabled(),
+      ssoUrl,
+    },
+    {
+      headers: buildNoStoreHeaders(),
+    }
+  )
 }
