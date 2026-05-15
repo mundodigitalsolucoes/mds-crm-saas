@@ -670,7 +670,25 @@ export default function KanbanPage() {
                                               <span className="font-medium">Tel:</span> {lead.phone}
                                             </p>
                                           )}
+                                        {lead.tags && lead.tags.length > 0 && (
+  <div className="flex flex-wrap gap-1 pt-2">
+    {lead.tags.slice(0, 3).map((tag) => (
+      <span
+        key={tag.id}
+        className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+        style={{ backgroundColor: tag.color || '#6366f1' }}
+      >
+        {tag.name}
+      </span>
+    ))}
 
+    {lead.tags.length > 3 && (
+      <span className="text-[10px] text-gray-500">
+        +{lead.tags.length - 3}
+      </span>
+    )}
+  </div>
+)}
                                           <div className="flex items-center justify-between pt-1">
                                             <p className="text-xs text-gray-600">
                                               <span className="font-medium text-green-700">
