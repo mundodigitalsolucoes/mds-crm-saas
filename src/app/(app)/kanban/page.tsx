@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, type DropResult } from '@hello-pangea/dnd';
 import {
   Edit,
@@ -9,6 +9,7 @@ import {
   Settings,
   Trash2,
   FileText,
+  Tag,
   Loader2,
   RefreshCw,
   ChevronLeft,
@@ -371,11 +372,29 @@ export default function KanbanPage() {
   const [isSavingLead, setIsSavingLead] = useState(false);
   const [, setIsDragging] = useState(false);
   const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  const [allTags, setAllTags] = useState<any[]>([]);
+  const [selectedTagLeadId, setSelectedTagLeadId] = useState<string | null>(null);
+  const [tagSearch, setTagSearch] = useState('');
   const { canAccess, isLoading: permLoading } = usePermission();
+  
+  const fetchTags = useCallback(async () => {
+  try {
+    const res = await fetch('/api/tags');
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setAllTags(data.tags || []);
+  } catch (error) {
+    console.error('Erro ao buscar tags:', error);
+  }
+}, []);
 
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+  fetchLeads();
+  fetchTags();
+}, [fetchLeads, fetchTags]);
 
   const leadsById = useMemo(() => {
     const map = new Map<string, Lead>();
@@ -482,6 +501,44 @@ export default function KanbanPage() {
   const expandAllColumns = () => {
     setCollapsedColumns({});
   };
+
+  const addTagToLead = async (leadId: string, tagId: string) => {
+  try {
+    const res = await fetch(`/api/leads/${leadId}/tags`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ tagId }),
+    });
+
+    if (!res.ok) {
+      console.error('Erro ao adicionar tag');
+      return;
+    }
+
+    await fetchLeads();
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+const removeTagFromLead = async (leadId: string, tagId: string) => {
+  try {
+    const res = await fetch(`/api/leads/${leadId}/tags?tagId=${tagId}`, {
+      method: 'DELETE',
+    });
+
+    if (!res.ok) {
+      console.error('Erro ao remover tag');
+      return;
+    }
+
+    await fetchLeads();
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
 
@@ -670,25 +727,83 @@ export default function KanbanPage() {
                                               <span className="font-medium">Tel:</span> {lead.phone}
                                             </p>
                                           )}
-                                        {lead.tags && lead.tags.length > 0 && (
-  <div className="flex flex-wrap gap-1 pt-2">
-    {lead.tags.slice(0, 3).map((tag) => (
-      <span
-        key={tag.id}
-        className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
-        style={{ backgroundColor: tag.color || '#6366f1' }}
-      >
-        {tag.name}
-      </span>
-    ))}
+                                        <div className="pt-2">
+  {lead.tags && lead.tags.length > 0 && (
+    <div className="mb-2 flex flex-wrap gap-1">
+      {lead.tags.map((tag) => (
+        <button
+          key={tag.id}
+          type="button"
+          onClick={() => removeTagFromLead(lead.id, tag.id)}
+          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white transition hover:opacity-80"
+          style={{ backgroundColor: tag.color || '#6366f1' }}
+          title="Remover tag"
+        >
+          {tag.name} ×
+        </button>
+      ))}
+    </div>
+  )}
 
-    {lead.tags.length > 3 && (
-      <span className="text-[10px] text-gray-500">
-        +{lead.tags.length - 3}
-      </span>
-    )}
-  </div>
-)}
+  {selectedTagLeadId === lead.id ? (
+    <div className="space-y-2">
+      <input
+        value={tagSearch}
+        onChange={(e) => setTagSearch(e.target.value)}
+        placeholder="Buscar tag..."
+        className="w-full rounded border border-gray-300 px-2 py-1 text-xs"
+      />
+
+      <div className="max-h-28 overflow-y-auto rounded border border-gray-200 bg-white">
+        {allTags
+          .filter((tag) =>
+            tag.name.toLowerCase().includes(tagSearch.toLowerCase())
+          )
+          .slice(0, 8)
+          .map((tag) => (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={async () => {
+                await addTagToLead(lead.id, tag.id);
+                setSelectedTagLeadId(null);
+                setTagSearch('');
+              }}
+              className="flex w-full items-center gap-2 px-2 py-1 text-left text-xs hover:bg-gray-100"
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: tag.color }}
+              />
+
+              {tag.name}
+            </button>
+          ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedTagLeadId(null);
+          setTagSearch('');
+        }}
+        className="text-[10px] text-gray-500 hover:text-gray-700"
+      >
+        Cancelar
+      </button>
+    </div>
+  ) : (
+    <button
+      type="button"
+      onClick={() => setSelectedTagLeadId(lead.id)}
+      className="flex items-center gap-1 text-[10px] font-medium text-indigo-600 hover:text-indigo-700"
+    >
+      <Tag size={12} />
+      Adicionar tag
+    </button>
+  )}
+</div>
+
                                           <div className="flex items-center justify-between pt-1">
                                             <p className="text-xs text-gray-600">
                                               <span className="font-medium text-green-700">
