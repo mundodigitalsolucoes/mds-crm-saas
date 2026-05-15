@@ -111,6 +111,7 @@ model Organization {
   serviceOrders         ServiceOrder[]
   agendaEvents          AgendaEvent[]
   chatwootConversations ChatwootConversation[]
+  tags                  Tag[]
 
   @@map("organizations")
 }
@@ -255,12 +256,58 @@ model Lead {
   activities             Activity[]
   agendaEvents           AgendaEvent[]
   chatwootConversations  ChatwootConversation[]
+  tags                   LeadTag[]
 
   @@index([organizationId])
   @@index([status])
   @@index([assignedToId])
   @@index([chatwootContactId])
   @@map("leads")
+}
+
+// ============================================
+// TAGS / SEGMENTAÇÃO COMERCIAL
+// ============================================
+
+model Tag {
+  id             String       @id @default(uuid())
+
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name           String
+  slug           String
+  color          String       @default("#6366f1")
+  category       String       @default("custom")
+  isSystem       Boolean      @default(false) @map("is_system")
+  description    String?
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  leads          LeadTag[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([category])
+  @@map("tags")
+}
+
+model LeadTag {
+  id        String   @id @default(uuid())
+
+  leadId    String   @map("lead_id")
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  tagId     String   @map("tag_id")
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([leadId, tagId])
+  @@index([leadId])
+  @@index([tagId])
+  @@map("lead_tags")
 }
 
 // ============================================
