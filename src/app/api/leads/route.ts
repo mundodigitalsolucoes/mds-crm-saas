@@ -106,6 +106,12 @@ export async function GET(req: NextRequest) {
         include: {
           assignedTo: { select: { id: true, name: true, email: true } },
           createdBy: { select: { id: true, name: true } },
+
+          tags: {
+            include: {
+              tag: true,
+           },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -114,8 +120,22 @@ export async function GET(req: NextRequest) {
       prisma.lead.count({ where }),
     ]);
 
+
+    const formattedLeads = leads.map((lead) => ({
+  ...lead,
+
+  tags: lead.tags.map((item: any) => ({
+    id: item.tag.id,
+    name: item.tag.name,
+    slug: item.tag.slug,
+    color: item.tag.color,
+    category: item.tag.category,
+    isSystem: item.tag.isSystem,
+  })),
+}));
+
     return NextResponse.json({
-      leads,
+      leads: formattedLeads,
       pagination: {
         total,
         page,

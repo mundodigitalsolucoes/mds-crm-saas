@@ -24,6 +24,15 @@ export interface Lead {
   assignedTo?: { id: string; name: string; email: string } | null;
   createdById: string | null;
   createdBy?: { id: string; name: string } | null;
+  tags?: {
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  category: string;
+  isSystem: boolean;
+}[];
+
   createdAt: string;
   updatedAt: string;
 }
