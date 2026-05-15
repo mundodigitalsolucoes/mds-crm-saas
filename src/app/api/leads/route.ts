@@ -34,13 +34,8 @@ export async function GET(req: NextRequest) {
       AND: [],
     };
 
-    if (status) {
-      where.AND.push({ status });
-    }
-
-    if (source) {
-      where.AND.push({ source });
-    }
+    if (status) where.AND.push({ status });
+    if (source) where.AND.push({ source });
 
     if (city) {
       where.AND.push({
@@ -48,30 +43,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    if (inKanban === 'true') {
-      where.AND.push({ inKanban: true });
-    }
-
-    if (inKanban === 'false') {
-      where.AND.push({ inKanban: false });
-    }
+    if (inKanban === 'true') where.AND.push({ inKanban: true });
+    if (inKanban === 'false') where.AND.push({ inKanban: false });
 
     if (hasWhatsapp === 'true') {
-      where.AND.push({
-        whatsapp: { not: null },
-      });
-      where.AND.push({
-        NOT: { whatsapp: '' },
-      });
+      where.AND.push({ whatsapp: { not: null } });
+      where.AND.push({ NOT: { whatsapp: '' } });
     }
 
     if (hasWebsite === 'true') {
-      where.AND.push({
-        website: { not: null },
-      });
-      where.AND.push({
-        NOT: { website: '' },
-      });
+      where.AND.push({ website: { not: null } });
+      where.AND.push({ NOT: { website: '' } });
     }
 
     const minScore = minScoreRaw ? Number(minScoreRaw) : null;
@@ -106,12 +88,6 @@ export async function GET(req: NextRequest) {
         include: {
           assignedTo: { select: { id: true, name: true, email: true } },
           createdBy: { select: { id: true, name: true } },
-
-          tags: {
-            include: {
-              tag: true,
-           },
-          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -120,22 +96,8 @@ export async function GET(req: NextRequest) {
       prisma.lead.count({ where }),
     ]);
 
-
-    const formattedLeads = leads.map((lead) => ({
-  ...lead,
-
-  tags: lead.tags.map((item: any) => ({
-    id: item.tag.id,
-    name: item.tag.name,
-    slug: item.tag.slug,
-    color: item.tag.color,
-    category: item.tag.category,
-    isSystem: item.tag.isSystem,
-  })),
-}));
-
     return NextResponse.json({
-      leads: formattedLeads,
+      leads,
       pagination: {
         total,
         page,
@@ -169,6 +131,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = parseBody(leadCreateSchema, body);
     if (!parsed.success) return parsed.response;
+
     const data = parsed.data;
 
     const lead = await prisma.lead.create({
