@@ -181,7 +181,11 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       const res = await fetch(`/api/leads/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(
+  Object.fromEntries(
+    Object.entries(updates).filter(([key]) => key !== 'tags')
+  )
+),
       });
 
       if (!res.ok) {
