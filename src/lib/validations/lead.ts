@@ -7,15 +7,10 @@ import {
   optionalDecimalNullable,
 } from './helpers';
 
-const leadStatusEnum = z.enum([
-  'new',
-  'contacted',
-  'qualified',
-  'proposal',
-  'negotiation',
-  'won',
-  'lost',
-]);
+const leadStatusSchema = z
+  .string()
+  .min(1, 'Status é obrigatório')
+  .max(100, 'Status deve ter no máximo 100 caracteres');
 
 const leadSourceEnum = z.enum([
   'manual',
@@ -93,7 +88,7 @@ export const leadCreateSchema = z.object({
     .transform((v) => v?.trim() || null),
 
   source: leadSourceEnum.optional().default('manual'),
-  status: leadStatusEnum.optional().default('new'),
+  status: leadStatusSchema.optional().default('new'),
   inKanban: z.boolean().optional().default(true),
   score: optionalScoreCreate,
   value: optionalDecimalNullable,
@@ -204,7 +199,7 @@ export const leadUpdateSchema = z
       .optional(),
 
     source: leadSourceEnum.nullable().optional(),
-    status: leadStatusEnum.optional(),
+    status: leadStatusSchema.optional(),
     inKanban: z.boolean().optional(),
     score: optionalScoreUpdate,
     value: optionalDecimalNullable,
