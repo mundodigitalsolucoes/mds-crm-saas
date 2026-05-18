@@ -335,8 +335,35 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     }
   },
 
-  moveLeadInKanban: async (leadId, toStatus) => {
-    return get().updateLead(leadId, { status: toStatus });
+    moveLeadInKanban: async (leadId, toStatus) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: toStatus }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao mover lead no pipeline');
+      }
+
+      const updatedLead = await res.json();
+
+      set((state) => ({
+        leads: state.leads.map((lead) =>
+          lead.id === leadId ? { ...lead, ...updatedLead } : lead
+        ),
+      }));
+
+      return updatedLead;
+    } catch (error: any) {
+      console.error('Erro ao mover lead no pipeline:', error);
+      set({ error: error.message });
+      return null;
+    }
   },
 
   addStage: (stageData) => {
