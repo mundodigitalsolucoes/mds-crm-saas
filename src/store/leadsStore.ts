@@ -25,14 +25,13 @@ export interface Lead {
   createdById: string | null;
   createdBy?: { id: string; name: string } | null;
   tags?: {
-  id: string;
-  name: string;
-  slug: string;
-  color: string;
-  category: string;
-  isSystem: boolean;
-}[];
-
+    id: string;
+    name: string;
+    slug: string;
+    color: string;
+    category: string;
+    isSystem: boolean;
+  }[];
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +85,28 @@ interface LeadsStore {
 
   moveLeadInKanban: (leadId: string, toStatus: string) => Promise<Lead | null>;
 }
+
+const LEAD_UPDATE_ALLOWED_KEYS = [
+  'name',
+  'email',
+  'phone',
+  'whatsapp',
+  'company',
+  'position',
+  'source',
+  'status',
+  'inKanban',
+  'score',
+  'value',
+  'productOrService',
+  'city',
+  'website',
+  'instagram',
+  'facebook',
+  'linkedin',
+  'notes',
+  'assignedToId',
+];
 
 export const useLeadsStore = create<LeadsStore>((set, get) => ({
   leads: [],
@@ -178,14 +199,14 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     set({ error: null });
 
     try {
+      const cleanUpdates = Object.fromEntries(
+        Object.entries(updates).filter(([key]) => LEAD_UPDATE_ALLOWED_KEYS.includes(key))
+      );
+
       const res = await fetch(`/api/leads/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-  Object.fromEntries(
-    Object.entries(updates).filter(([key]) => key !== 'tags')
-  )
-),
+        body: JSON.stringify(cleanUpdates),
       });
 
       if (!res.ok) {
@@ -196,7 +217,9 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       const updatedLead = await res.json();
 
       set((state) => ({
-        leads: state.leads.map((l) => (l.id === id ? updatedLead : l)),
+        leads: state.leads.map((lead) =>
+          lead.id === id ? { ...lead, ...updatedLead } : lead
+        ),
       }));
 
       return updatedLead;
@@ -221,7 +244,7 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       }
 
       set((state) => ({
-        leads: state.leads.filter((l) => l.id !== id),
+        leads: state.leads.filter((lead) => lead.id !== id),
         pagination: {
           ...state.pagination,
           total: Math.max(0, state.pagination.total - 1),
@@ -255,7 +278,7 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       const deletedCount = Number(data.deletedCount || 0);
 
       set((state) => ({
-        leads: state.leads.filter((l) => !ids.includes(l.id)),
+        leads: state.leads.filter((lead) => !ids.includes(lead.id)),
         pagination: {
           ...state.pagination,
           total: Math.max(0, state.pagination.total - deletedCount),
@@ -321,6 +344,7 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
       ...stageData,
       id: `stage_${Date.now()}`,
     };
+
     set((state) => ({
       stages: [...state.stages, newStage].sort((a, b) => a.order - b.order),
     }));
@@ -328,26 +352,35 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
 
   updateStage: (id, updates) => {
     set((state) => ({
-      stages: state.stages.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+      stages: state.stages.map((stage) =>
+        stage.id === id ? { ...stage, ...updates } : stage
+      ),
     }));
   },
 
   deleteStage: (id) => {
     const state = get();
+
     if (state.stages.length <= 1) return;
 
-    const hasLeads = state.leads.some((l) => l.status === id && l.inKanban);
+    const hasLeads = state.leads.some((lead) => lead.status === id && lead.inKanban);
+
     if (hasLeads) {
       alert('Não é possível excluir um estágio que contém leads no pipeline. Mova os leads primeiro.');
       return;
     }
 
     set((state) => ({
-      stages: state.stages.filter((s) => s.id !== id),
+      stages: state.stages.filter((stage) => stage.id !== id),
     }));
   },
 
   reorderStages: (newOrder) => {
-    set({ stages: newOrder.map((stage, index) => ({ ...stage, order: index })) });
+    set({
+      stages: newOrder.map((stage, index) => ({
+        ...stage,
+        order: index,
+      })),
+    });
   },
 }));
