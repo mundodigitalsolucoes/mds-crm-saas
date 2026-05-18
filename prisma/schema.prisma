@@ -112,6 +112,7 @@ model Organization {
   agendaEvents          AgendaEvent[]
   chatwootConversations ChatwootConversation[]
   tags                  Tag[]
+  leadPipelineStages    LeadPipelineStage[]
 
   @@map("organizations")
 }
@@ -263,6 +264,28 @@ model Lead {
   @@index([assignedToId])
   @@index([chatwootContactId])
   @@map("leads")
+}
+
+model LeadPipelineStage {
+  id             String       @id @default(uuid())
+
+  organizationId String       @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  key            String
+  title          String
+  color          String       @default("blue")
+  order          Int          @default(0)
+  isDefault      Boolean      @default(false) @map("is_default")
+  isSystem       Boolean      @default(false) @map("is_system")
+
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@index([organizationId, order])
+  @@map("lead_pipeline_stages")
 }
 
 // ============================================
