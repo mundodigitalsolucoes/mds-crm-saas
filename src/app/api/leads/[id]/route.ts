@@ -1,11 +1,38 @@
-// src/app/api/leads/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, leadUpdateSchema } from '@/lib/validations';
 
+const LEAD_UPDATE_ALLOWED_KEYS = [
+  'name',
+  'email',
+  'phone',
+  'whatsapp',
+  'company',
+  'position',
+  'source',
+  'status',
+  'inKanban',
+  'score',
+  'value',
+  'productOrService',
+  'city',
+  'website',
+  'instagram',
+  'facebook',
+  'linkedin',
+  'notes',
+  'assignedToId',
+];
+
+function sanitizeLeadUpdateBody(body: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(body).filter(([key]) => LEAD_UPDATE_ALLOWED_KEYS.includes(key))
+  );
+}
+
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -55,8 +82,11 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    const parsed = parseBody(leadUpdateSchema, body);
+    const cleanBody = sanitizeLeadUpdateBody(body);
+
+    const parsed = parseBody(leadUpdateSchema, cleanBody);
     if (!parsed.success) return parsed.response;
+
     const data = parsed.data;
 
     const existing = await prisma.lead.findFirst({
@@ -109,7 +139,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
