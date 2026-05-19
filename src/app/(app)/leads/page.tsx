@@ -377,6 +377,7 @@ export default function LeadsPage() {
     error,
     pagination,
     fetchLeads,
+    fetchStages,
     bulkDeleteLeads,
     bulkUpdateLeads,
     updateLead,
@@ -413,6 +414,10 @@ export default function LeadsPage() {
     minScore: filters.minScore,
     page,
   });
+  
+  useEffect(() => {
+    fetchStages();
+  }, [fetchStages]);
 
   useEffect(() => {
     fetchLeads(buildFetchParams(1));
