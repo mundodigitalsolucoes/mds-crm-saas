@@ -359,6 +359,7 @@ export default function KanbanPage() {
     isLoading,
     error,
     fetchLeads,
+    fetchStages,
     updateLead,
     moveLeadInKanban,
     addStage,
@@ -392,9 +393,10 @@ export default function KanbanPage() {
 }, []);
 
   useEffect(() => {
+  fetchStages();
   fetchLeads();
   fetchTags();
-}, [fetchLeads, fetchTags]);
+}, [fetchStages, fetchLeads, fetchTags]);
 
   const leadsById = useMemo(() => {
     const map = new Map<string, Lead>();
