@@ -1,503 +1,534 @@
+// src/store/osStore.ts
+// Store de Ordens de Serviço — Zustand com API
 import { create } from 'zustand';
+import { OS, OSStage, ServiceOrderAPI, mapApiToOS, mapOSToApi, PilaresMDS, ChecklistItem } from '@/types/os';
+import axios from 'axios';
 
-export interface Lead {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  whatsapp: string | null;
-  company: string | null;
-  position: string | null;
-  source: string | null;
-  status: string;
-  inKanban: boolean;
-  score: number;
-  value: number | null;
-  productOrService: string | null;
-  city: string | null;
-  website: string | null;
-  instagram: string | null;
-  facebook: string | null;
-  linkedin: string | null;
-  notes: string | null;
-  assignedToId: string | null;
-  assignedTo?: { id: string; name: string; email: string } | null;
-  createdById: string | null;
-  createdBy?: { id: string; name: string } | null;
-  tags?: {
-    id: string;
-    name: string;
-    slug: string;
-    color: string;
-    category: string;
-    isSystem: boolean;
-  }[];
-  createdAt: string;
-  updatedAt: string;
-}
+// ============================================
+// TEMPLATE DE CHECKLIST PARA IMPLANTAÇÃO MDS
+// ============================================
 
-export interface Stage {
-  id: string;
-  title: string;
-  order: number;
-  color: string;
-  isDefault?: boolean;
-  isSystem?: boolean;
-}
+const createMDSTemplate = (): PilaresMDS => ({
+  benchmarking: {
+    concorrentes: [],
+    ambienteLocal: '',
+    checklist: [
+      { id: '1', title: 'Identificar concorrentes diretos', done: false },
+      { id: '2', title: 'Identificar concorrentes indiretos', done: false },
+      { id: '3', title: 'Identificar referências em outras regiões', done: false },
+      { id: '4', title: 'Levantar preços e ticket médio', done: false },
+      { id: '5', title: 'Analisar qualidade dos produtos/serviços', done: false },
+      { id: '6', title: 'Avaliar estratégias de marketing', done: false },
+      { id: '7', title: 'Analisar atendimento ao cliente', done: false },
+      { id: '8', title: 'Visitar fisicamente (cliente oculto)', done: false },
+      { id: '9', title: 'Analisar ambiente local e localização', done: false },
+    ],
+  },
+  planejamento: {
+    icpPersonas: '',
+    swot: { forcas: [], fraquezas: [], oportunidades: [], ameacas: [] },
+    dores: [],
+    desejos: [],
+    palavrasChave: [],
+    checklist: [
+      { id: '10', title: 'Definir ICP e Personas', done: false },
+      { id: '11', title: 'Realizar análise SWOT', done: false },
+      { id: '12', title: 'Identificar dores do cliente', done: false },
+      { id: '13', title: 'Identificar desejos do cliente', done: false },
+      { id: '14', title: 'Criar mapa de palavras-chave', done: false },
+      { id: '15', title: 'Definir metas SMART', done: false },
+    ],
+  },
+  canais: {
+    selecionados: [],
+    instagram: {
+      checklist: [
+        { id: '16', title: 'Otimizar nome de usuário', done: false },
+        { id: '17', title: 'Configurar foto de perfil (logo)', done: false },
+        { id: '18', title: 'Escrever biografia (4 linhas)', done: false },
+        { id: '19', title: 'Criar destaques', done: false },
+        { id: '20', title: 'Fixar promoções', done: false },
+        { id: '21', title: 'Definir Big Idea de conteúdo', done: false },
+        { id: '22', title: 'Planejar frequência de posts (3-5/semana)', done: false },
+      ],
+    },
+    facebook: {
+      checklist: [
+        { id: '23', title: 'Configurar nome da página', done: false },
+        { id: '24', title: 'Adicionar foto de perfil', done: false },
+        { id: '25', title: 'Criar foto de capa', done: false },
+        { id: '26', title: 'Preencher seção "Sobre"', done: false },
+        { id: '27', title: 'Configurar horários de funcionamento', done: false },
+        { id: '28', title: 'Adicionar botão CTA WhatsApp', done: false },
+        { id: '29', title: 'Vincular Instagram e WhatsApp', done: false },
+      ],
+    },
+    gmb: {
+      checklist: [
+        { id: '30', title: 'Preencher informações básicas', done: false },
+        { id: '31', title: 'Adicionar fotos de qualidade', done: false },
+        { id: '32', title: 'Escrever descrição da empresa', done: false },
+        { id: '33', title: 'Configurar produtos e serviços', done: false },
+        { id: '34', title: 'Criar postagens regulares (1-2/semana)', done: false },
+        { id: '35', title: 'Configurar FAQ', done: false },
+        { id: '36', title: 'Solicitar avaliações', done: false },
+        { id: '37', title: 'Otimizar SEO local', done: false },
+      ],
+    },
+    whatsapp: {
+      checklist: [
+        { id: '38', title: 'Configurar perfil business', done: false },
+        { id: '39', title: 'Criar mensagens automatizadas', done: false },
+        { id: '40', title: 'Configurar catálogo', done: false },
+        { id: '41', title: 'Organizar etiquetas', done: false },
+        { id: '42', title: 'Criar listas de transmissão', done: false },
+        { id: '43', title: 'Implementar bot com IA', done: false },
+      ],
+    },
+    site: {
+      checklist: [
+        { id: '44', title: 'Criar landing pages', done: false },
+        { id: '45', title: 'Configurar formulários', done: false },
+        { id: '46', title: 'Instalar pixels de tracking', done: false },
+        { id: '47', title: 'Otimizar para conversão', done: false },
+      ],
+    },
+    metaAds: {
+      estrutura: '',
+      checklist: [
+        { id: '48', title: 'Estruturar campanhas geolocalizadas', done: false },
+        { id: '49', title: 'Criar públicos personalizados', done: false },
+        { id: '50', title: 'Desenvolver criativos', done: false },
+        { id: '51', title: 'Configurar conversões WhatsApp', done: false },
+        { id: '52', title: 'Implementar remarketing', done: false },
+      ],
+    },
+    googleAds: {
+      estrutura: '',
+      checklist: [
+        { id: '53', title: 'Criar campanhas de pesquisa local', done: false },
+        { id: '54', title: 'Configurar extensões de localização', done: false },
+        { id: '55', title: 'Otimizar palavras-chave', done: false },
+        { id: '56', title: 'Configurar remarketing', done: false },
+      ],
+    },
+  },
+  dadosGCAO: {
+    ciclos: [
+      { ciclo: 1, gerar: '', coletar: '', analisar: '', otimizar: '', metricas: {} },
+      { ciclo: 2, gerar: '', coletar: '', analisar: '', otimizar: '', metricas: {} },
+      { ciclo: 3, gerar: '', coletar: '', analisar: '', otimizar: '', metricas: {} },
+      { ciclo: 4, gerar: '', coletar: '', analisar: '', otimizar: '', metricas: {} },
+    ],
+    checklist: [
+      { id: '57', title: 'Configurar tracking e pixels', done: false },
+      { id: '58', title: 'Implementar CRM', done: false },
+      { id: '59', title: 'Definir métricas de acompanhamento', done: false },
+      { id: '60', title: 'Criar relatórios automáticos', done: false },
+    ],
+  },
+  segmentacao: {
+    listas: [],
+    funis: [],
+    checklist: [
+      { id: '61', title: 'Criar lista de Novos Leads', done: false },
+      { id: '62', title: 'Criar lista de Compradores Frequentes', done: false },
+      { id: '63', title: 'Criar lista de Clientes Inativos', done: false },
+      { id: '64', title: 'Segmentar por interesse', done: false },
+      { id: '65', title: 'Configurar segmentação por aniversário', done: false },
+      { id: '66', title: 'Criar funis personalizados', done: false },
+    ],
+  },
+  fidelizacao: {
+    programa: { regras: '', recompensas: '', niveis: '' },
+    comunidade: '',
+    nps: '',
+    indicacao: '',
+    checklist: [
+      { id: '67', title: 'Definir programa de fidelidade', done: false },
+      { id: '68', title: 'Criar comunidade VIP', done: false },
+      { id: '69', title: 'Implementar pesquisa NPS', done: false },
+      { id: '70', title: 'Criar campanha de indicação', done: false },
+    ],
+  },
+});
 
-export interface LeadFilters {
-  search?: string;
-  status?: string;
-  source?: string;
-  city?: string;
-  inKanban?: string;
-  hasWhatsapp?: string;
-  hasWebsite?: string;
-  minScore?: number | '';
-  page?: number;
-}
+// ============================================
+// INTERFACE DA STORE
+// ============================================
 
-export type BulkLeadUpdatePayload =
-  | { action: 'setInKanban'; inKanban: boolean }
-  | { action: 'setStatus'; status: string };
-
-interface LeadsStore {
-  leads: Lead[];
-  stages: Stage[];
-  isLoading: boolean;
+interface OSStore {
+  // Estado
+  ordens: OS[];
+  loading: boolean;
   error: string | null;
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
 
-  fetchLeads: (params?: LeadFilters) => Promise<void>;
-  addLead: (data: Partial<Lead>) => Promise<Lead | null>;
-  updateLead: (id: string, updates: Partial<Lead>) => Promise<Lead | null>;
-  deleteLead: (id: string) => Promise<boolean>;
-  bulkDeleteLeads: (ids: string[], confirmationText: string) => Promise<number | null>;
-  bulkUpdateLeads: (ids: string[], payload: BulkLeadUpdatePayload) => Promise<number | null>;
+  // CRUD via API
+  fetchOS: (filters?: { search?: string; status?: string; type?: string }) => Promise<void>;
+  addOS: (os: Omit<OS, 'id' | 'codigo'>) => Promise<OS>;
+  updateOS: (id: number | string, updates: Partial<OS>) => Promise<void>;
+  deleteOS: (id: number | string) => Promise<void>;
 
-  fetchStages: () => Promise<void>;
-  addStage: (stage: Omit<Stage, 'id'>) => Promise<Stage | null>;
-  updateStage: (id: string, updates: Partial<Stage>) => Promise<Stage | null>;
-  deleteStage: (id: string) => Promise<boolean>;
-  reorderStages: (newOrder: Stage[]) => Promise<void>;
+  // Stages da OS (local — sem persistência no banco por enquanto)
+  osStages: OSStage[];
+  addOSStage: (stage: Omit<OSStage, 'id'>) => void;
+  updateOSStage: (id: string, updates: Partial<OSStage>) => void;
+  deleteOSStage: (id: string) => void;
+  reorderOSStages: (newOrder: OSStage[]) => void;
 
-  moveLeadInKanban: (leadId: string, toStatus: string) => Promise<Lead | null>;
+  // Column order no kanban (local)
+  osColumnOrder: Record<string, (number | string)[]>;
+  setOSColumnOrder: (order: Record<string, (number | string)[]>) => void;
+  moveOSInColumns: (osId: number | string, fromStage: string, toStage: string, newIndex: number) => void;
+
+  // Helpers
+  getOSByProject: (projectId: number | string) => OS[];
+  calculateProgress: (osId: number | string) => number;
+  recalculateAndSetOSProgress: (osId: number | string) => void;
+
+  // Rebuild column order a partir das OS carregadas
+  rebuildColumnOrder: () => void;
 }
 
-const LEAD_UPDATE_ALLOWED_KEYS = [
-  'name',
-  'email',
-  'phone',
-  'whatsapp',
-  'company',
-  'position',
-  'source',
-  'status',
-  'inKanban',
-  'score',
-  'value',
-  'productOrService',
-  'city',
-  'website',
-  'instagram',
-  'facebook',
-  'linkedin',
-  'notes',
-  'assignedToId',
-];
+// ============================================
+// STORE
+// ============================================
 
-const FALLBACK_STAGES: Stage[] = [
-  { id: 'new', title: 'Novo', order: 0, color: 'blue', isDefault: true, isSystem: true },
-  { id: 'contacted', title: 'Contactado', order: 1, color: 'yellow', isDefault: true, isSystem: true },
-  { id: 'qualified', title: 'Qualificado', order: 2, color: 'orange', isDefault: true, isSystem: true },
-  { id: 'proposal', title: 'Proposta', order: 3, color: 'purple', isDefault: true, isSystem: true },
-  { id: 'negotiation', title: 'Negociação', order: 4, color: 'yellow', isDefault: true, isSystem: true },
-  { id: 'won', title: 'Ganho', order: 5, color: 'green', isDefault: true, isSystem: true },
-  { id: 'lost', title: 'Perdido', order: 6, color: 'red', isDefault: true, isSystem: true },
-];
-
-export const useLeadsStore = create<LeadsStore>((set, get) => ({
-  leads: [],
-  stages: FALLBACK_STAGES,
-  isLoading: false,
+export const useOSStore = create<OSStore>((set, get) => ({
+  // Estado inicial
+  ordens: [],
+  loading: false,
   error: null,
-  pagination: { total: 0, page: 1, limit: 50, totalPages: 0 },
 
-  fetchStages: async () => {
-    set({ error: null });
+  osStages: [
+    { id: 'em_planejamento', title: 'Em Planejamento', order: 0, color: 'blue' },
+    { id: 'em_execucao', title: 'Em Execução', order: 1, color: 'orange' },
+    { id: 'aguardando_cliente', title: 'Aguardando Cliente', order: 2, color: 'yellow' },
+    { id: 'concluida', title: 'Concluída', order: 3, color: 'green' },
+    { id: 'cancelada', title: 'Cancelada', order: 4, color: 'red' },
+  ],
 
+  osColumnOrder: {
+    em_planejamento: [],
+    em_execucao: [],
+    aguardando_cliente: [],
+    concluida: [],
+    cancelada: [],
+  },
+
+  // ==========================================
+  // CRUD VIA API
+  // ==========================================
+
+  /**
+   * Buscar ordens de serviço da API
+   */
+  fetchOS: async (filters) => {
+    set({ loading: true, error: null });
     try {
-      const res = await fetch('/api/kanban/stages');
+      const params = new URLSearchParams();
+      if (filters?.search) params.set('search', filters.search);
+      if (filters?.status) params.set('status', filters.status);
+      if (filters?.type) params.set('type', filters.type);
+      params.set('limit', '200'); // Buscar todas para o kanban
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao buscar etapas do pipeline');
-      }
+      const response = await axios.get(`/api/os?${params.toString()}`);
+      const { serviceOrders } = response.data;
 
-      const data = await res.json();
+      // Mapear API → tipo OS da UI
+      const ordens: OS[] = (serviceOrders || []).map((api: ServiceOrderAPI) => mapApiToOS(api));
 
-      set({
-        stages: Array.isArray(data.stages) && data.stages.length > 0
-          ? data.stages
-          : FALLBACK_STAGES,
-      });
+      set({ ordens, loading: false });
+
+      // Reconstruir column order para o kanban
+      get().rebuildColumnOrder();
     } catch (error: any) {
-      console.error('Erro ao buscar etapas do pipeline:', error);
+      console.error('[osStore] Erro ao buscar OS:', error);
       set({
-        stages: FALLBACK_STAGES,
-        error: error.message,
+        error: error.response?.data?.error || 'Erro ao carregar ordens de serviço',
+        loading: false,
       });
     }
   },
 
-  fetchLeads: async (params) => {
-    set({ isLoading: true, error: null });
-
+  /**
+   * Criar nova OS via API
+   */
+  addOS: async (osData) => {
+    set({ loading: true, error: null });
     try {
-      const query = new URLSearchParams();
+      // Se for implantação MDS, aplicar template
+      const pilares = osData.tipo === 'implantacao_mds' ? createMDSTemplate() : osData.pilares;
 
-      if (params?.search) query.set('search', params.search);
-      if (params?.status) query.set('status', params.status);
-      if (params?.source) query.set('source', params.source);
-      if (params?.city) query.set('city', params.city);
-      if (params?.inKanban) query.set('inKanban', params.inKanban);
-      if (params?.hasWhatsapp) query.set('hasWhatsapp', params.hasWhatsapp);
-      if (params?.hasWebsite) query.set('hasWebsite', params.hasWebsite);
-      if (params?.minScore !== '' && params?.minScore !== undefined) {
-        query.set('minScore', String(params.minScore));
-      }
-      if (params?.page) query.set('page', String(params.page));
+      // Mapear campos da UI para a API
+      const apiData = mapOSToApi({ ...osData, pilares });
 
-      const res = await fetch(`/api/leads?${query.toString()}`);
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao buscar leads');
-      }
-
-      const data = await res.json();
-
-      set({
-        leads: data.leads,
-        pagination: data.pagination,
-        isLoading: false,
-      });
-    } catch (error: any) {
-      console.error('Erro ao buscar leads:', error);
-      set({ error: error.message, isLoading: false });
-    }
-  },
-
-  addLead: async (data) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao criar lead');
-      }
-
-      const newLead = await res.json();
+      const response = await axios.post('/api/os', apiData);
+      const newOS = mapApiToOS(response.data);
 
       set((state) => ({
-        leads: [newLead, ...state.leads],
-        pagination: {
-          ...state.pagination,
-          total: state.pagination.total + 1,
+        ordens: [newOS, ...state.ordens],
+        loading: false,
+        osColumnOrder: {
+          ...state.osColumnOrder,
+          [newOS.status]: [newOS.id, ...(state.osColumnOrder[newOS.status] || [])],
         },
       }));
 
-      return newLead;
+      return newOS;
     } catch (error: any) {
-      console.error('Erro ao criar lead:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  updateLead: async (id, updates) => {
-    set({ error: null });
-
-    try {
-      const cleanUpdates = Object.fromEntries(
-        Object.entries(updates).filter(([key]) => LEAD_UPDATE_ALLOWED_KEYS.includes(key))
-      );
-
-      const res = await fetch(`/api/leads/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanUpdates),
+      console.error('[osStore] Erro ao criar OS:', error);
+      set({
+        error: error.response?.data?.error || 'Erro ao criar ordem de serviço',
+        loading: false,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao atualizar lead');
-      }
-
-      const updatedLead = await res.json();
-
-      set((state) => ({
-        leads: state.leads.map((lead) =>
-          lead.id === id ? { ...lead, ...updatedLead } : lead
-        ),
-      }));
-
-      return updatedLead;
-    } catch (error: any) {
-      console.error('Erro ao atualizar lead:', error);
-      set({ error: error.message });
-      return null;
+      throw error;
     }
   },
 
-  deleteLead: async (id) => {
-    set({ error: null });
+  /**
+   * Atualizar OS via API
+   */
+  updateOS: async (id, updates) => {
+    const prevOS = get().ordens.find((o) => String(o.id) === String(id));
+    if (!prevOS) return;
 
-    try {
-      const res = await fetch(`/api/leads/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao excluir lead');
-      }
-
-      set((state) => ({
-        leads: state.leads.filter((lead) => lead.id !== id),
-        pagination: {
-          ...state.pagination,
-          total: Math.max(0, state.pagination.total - 1),
-        },
-      }));
-
-      return true;
-    } catch (error: any) {
-      console.error('Erro ao excluir lead:', error);
-      set({ error: error.message });
-      return false;
-    }
-  },
-
-  bulkDeleteLeads: async (ids, confirmationText) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch('/api/leads/bulk-delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, confirmationText }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao excluir leads em massa');
-      }
-
-      const data = await res.json();
-      const deletedCount = Number(data.deletedCount || 0);
-
-      set((state) => ({
-        leads: state.leads.filter((lead) => !ids.includes(lead.id)),
-        pagination: {
-          ...state.pagination,
-          total: Math.max(0, state.pagination.total - deletedCount),
-        },
-      }));
-
-      return deletedCount;
-    } catch (error: any) {
-      console.error('Erro ao excluir leads em massa:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  bulkUpdateLeads: async (ids, payload) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch('/api/leads/bulk-update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ids, ...payload }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao atualizar leads em massa');
-      }
-
-      const data = await res.json();
-      const updatedCount = Number(data.updatedCount || 0);
-
-      set((state) => ({
-        leads: state.leads.map((lead) => {
-          if (!ids.includes(lead.id)) return lead;
-
-          if (payload.action === 'setInKanban') {
-            return { ...lead, inKanban: payload.inKanban };
-          }
-
-          if (payload.action === 'setStatus') {
-            return { ...lead, status: payload.status };
-          }
-
-          return lead;
-        }),
-      }));
-
-      return updatedCount;
-    } catch (error: any) {
-      console.error('Erro ao atualizar leads em massa:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  moveLeadInKanban: async (leadId, toStatus) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch(`/api/leads/${leadId}/stage`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: toStatus }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao mover lead no pipeline');
-      }
-
-      const updatedLead = await res.json();
-
-      set((state) => ({
-        leads: state.leads.map((lead) =>
-          lead.id === leadId ? { ...lead, ...updatedLead } : lead
-        ),
-      }));
-
-      return updatedLead;
-    } catch (error: any) {
-      console.error('Erro ao mover lead no pipeline:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  addStage: async (stageData) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch('/api/kanban/stages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stageData),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao criar etapa');
-      }
-
-      const newStage = await res.json();
-
-      set((state) => ({
-        stages: [...state.stages, newStage].sort((a, b) => a.order - b.order),
-      }));
-
-      return newStage;
-    } catch (error: any) {
-      console.error('Erro ao criar etapa:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  updateStage: async (id, updates) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch(`/api/kanban/stages/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao atualizar etapa');
-      }
-
-      const updatedStage = await res.json();
-
-      set((state) => ({
-        stages: state.stages
-          .map((stage) => (stage.id === id ? updatedStage : stage))
-          .sort((a, b) => a.order - b.order),
-      }));
-
-      return updatedStage;
-    } catch (error: any) {
-      console.error('Erro ao atualizar etapa:', error);
-      set({ error: error.message });
-      return null;
-    }
-  },
-
-  deleteStage: async (id) => {
-    set({ error: null });
-
-    try {
-      const res = await fetch(`/api/kanban/stages/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Erro ao excluir etapa');
-      }
-
-      set((state) => ({
-        stages: state.stages.filter((stage) => stage.id !== id),
-      }));
-
-      return true;
-    } catch (error: any) {
-      console.error('Erro ao excluir etapa:', error);
-      set({ error: error.message });
-      return false;
-    }
-  },
-
-  reorderStages: async (newOrder) => {
-    const orderedStages = newOrder.map((stage, index) => ({
-      ...stage,
-      order: index,
+    // Atualização otimista na UI
+    set((state) => ({
+      ordens: state.ordens.map((o) =>
+        String(o.id) === String(id) ? { ...o, ...updates } : o
+      ),
     }));
 
-    set({ stages: orderedStages });
+    try {
+      const apiData = mapOSToApi(updates);
+      const response = await axios.put(`/api/os/${id}`, apiData);
+      const updatedOS = mapApiToOS(response.data);
 
-    await Promise.all(
-      orderedStages.map((stage) =>
-        fetch(`/api/kanban/stages/${stage.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order: stage.order }),
-        })
-      )
-    );
+      set((state) => {
+        let newColumnOrder = { ...state.osColumnOrder };
+
+        // Se mudou de status, atualizar colunas do kanban
+        if (updates.status && updates.status !== prevOS.status) {
+          newColumnOrder[prevOS.status] = (newColumnOrder[prevOS.status] || []).filter(
+            (osId) => String(osId) !== String(id)
+          );
+          newColumnOrder[updates.status] = [
+            ...(newColumnOrder[updates.status] || []),
+            id,
+          ];
+        }
+
+        return {
+          ordens: state.ordens.map((o) =>
+            String(o.id) === String(id) ? updatedOS : o
+          ),
+          osColumnOrder: newColumnOrder,
+        };
+      });
+    } catch (error: any) {
+      console.error('[osStore] Erro ao atualizar OS:', error);
+      // Reverter atualização otimista
+      set((state) => ({
+        ordens: state.ordens.map((o) =>
+          String(o.id) === String(id) ? prevOS : o
+        ),
+        error: error.response?.data?.error || 'Erro ao atualizar ordem de serviço',
+      }));
+    }
+  },
+
+  /**
+   * Excluir OS via API
+   */
+  deleteOS: async (id) => {
+    const os = get().ordens.find((o) => String(o.id) === String(id));
+    if (!os) return;
+
+    // Remoção otimista
+    set((state) => ({
+      ordens: state.ordens.filter((o) => String(o.id) !== String(id)),
+      osColumnOrder: {
+        ...state.osColumnOrder,
+        [os.status]: (state.osColumnOrder[os.status] || []).filter(
+          (osId) => String(osId) !== String(id)
+        ),
+      },
+    }));
+
+    try {
+      await axios.delete(`/api/os/${id}`);
+    } catch (error: any) {
+      console.error('[osStore] Erro ao excluir OS:', error);
+      // Reverter remoção otimista
+      set((state) => ({
+        ordens: [...state.ordens, os],
+        osColumnOrder: {
+          ...state.osColumnOrder,
+          [os.status]: [...(state.osColumnOrder[os.status] || []), os.id],
+        },
+        error: error.response?.data?.error || 'Erro ao excluir ordem de serviço',
+      }));
+    }
+  },
+
+  // ==========================================
+  // STAGES (LOCAL)
+  // ==========================================
+
+  addOSStage: (stageData) => {
+    const newStage: OSStage = {
+      ...stageData,
+      id: `stage_${Date.now()}`,
+    };
+    set((state) => ({
+      osStages: [...state.osStages, newStage].sort((a, b) => a.order - b.order),
+      osColumnOrder: {
+        ...state.osColumnOrder,
+        [newStage.id]: [],
+      },
+    }));
+  },
+
+  updateOSStage: (id, updates) => {
+    set((state) => ({
+      osStages: state.osStages.map((s) => (s.id === id ? { ...s, ...updates } : s)),
+    }));
+  },
+
+  deleteOSStage: (id) => {
+    const state = get();
+    if (state.osStages.length <= 1) return;
+    if ((state.osColumnOrder[id] || []).length > 0) {
+      alert('Não é possível excluir um estágio que contém OS. Mova as OS primeiro.');
+      return;
+    }
+
+    set((state) => {
+      const newColumnOrder = { ...state.osColumnOrder };
+      delete newColumnOrder[id];
+      return {
+        osStages: state.osStages.filter((s) => s.id !== id),
+        osColumnOrder: newColumnOrder,
+      };
+    });
+  },
+
+  reorderOSStages: (newOrder) => {
+    set({ osStages: newOrder.map((stage, index) => ({ ...stage, order: index })) });
+  },
+
+  // ==========================================
+  // KANBAN COLUMN ORDER
+  // ==========================================
+
+  setOSColumnOrder: (order) => set({ osColumnOrder: order }),
+
+  moveOSInColumns: (osId, fromStage, toStage, newIndex) => {
+    set((state) => {
+      const newColumnOrder = { ...state.osColumnOrder };
+
+      // Remover da coluna de origem
+      newColumnOrder[fromStage] = (newColumnOrder[fromStage] || []).filter(
+        (id) => String(id) !== String(osId)
+      );
+
+      // Inserir na coluna de destino
+      const destColumn = [...(newColumnOrder[toStage] || [])];
+      destColumn.splice(newIndex, 0, osId);
+      newColumnOrder[toStage] = destColumn;
+
+      return {
+        osColumnOrder: newColumnOrder,
+        ordens:
+          fromStage !== toStage
+            ? state.ordens.map((o) =>
+                String(o.id) === String(osId) ? { ...o, status: toStage } : o
+              )
+            : state.ordens,
+      };
+    });
+
+    // Se mudou de coluna, persistir no banco
+    if (fromStage !== toStage) {
+      axios.put(`/api/os/${osId}`, { status: toStage }).catch((err) => {
+        console.error('[osStore] Erro ao mover OS no kanban:', err);
+      });
+    }
+  },
+
+  // ==========================================
+  // HELPERS
+  // ==========================================
+
+  /**
+   * Reconstruir order das colunas a partir das OS carregadas
+   */
+  rebuildColumnOrder: () => {
+    const { ordens, osStages } = get();
+    const newColumnOrder: Record<string, (number | string)[]> = {};
+
+    // Inicializar todas as colunas
+    osStages.forEach((stage) => {
+      newColumnOrder[stage.id] = [];
+    });
+
+    // Distribuir OS nas colunas pelo status
+    ordens.forEach((os) => {
+      if (newColumnOrder[os.status]) {
+        newColumnOrder[os.status].push(os.id);
+      } else {
+        // Se o status não tem coluna, colocar na primeira
+        const firstStage = osStages[0]?.id || 'em_planejamento';
+        if (!newColumnOrder[firstStage]) newColumnOrder[firstStage] = [];
+        newColumnOrder[firstStage].push(os.id);
+      }
+    });
+
+    set({ osColumnOrder: newColumnOrder });
+  },
+
+  getOSByProject: (projectId) => {
+    return get().ordens.filter((o) => String(o.projetoId) === String(projectId));
+  },
+
+  calculateProgress: (osId) => {
+    const os = get().ordens.find((o) => String(o.id) === String(osId));
+    if (!os || !os.pilares) return 0;
+
+    // Coletar todos os checklists de todos os pilares
+    const allChecklists: ChecklistItem[] = [];
+
+    try {
+      if (os.pilares.benchmarking?.checklist) allChecklists.push(...os.pilares.benchmarking.checklist);
+      if (os.pilares.planejamento?.checklist) allChecklists.push(...os.pilares.planejamento.checklist);
+      if (os.pilares.canais?.instagram?.checklist) allChecklists.push(...os.pilares.canais.instagram.checklist);
+      if (os.pilares.canais?.facebook?.checklist) allChecklists.push(...os.pilares.canais.facebook.checklist);
+      if (os.pilares.canais?.gmb?.checklist) allChecklists.push(...os.pilares.canais.gmb.checklist);
+      if (os.pilares.canais?.whatsapp?.checklist) allChecklists.push(...os.pilares.canais.whatsapp.checklist);
+      if (os.pilares.canais?.site?.checklist) allChecklists.push(...os.pilares.canais.site.checklist);
+      if (os.pilares.canais?.metaAds?.checklist) allChecklists.push(...os.pilares.canais.metaAds.checklist);
+      if (os.pilares.canais?.googleAds?.checklist) allChecklists.push(...os.pilares.canais.googleAds.checklist);
+      if (os.pilares.dadosGCAO?.checklist) allChecklists.push(...os.pilares.dadosGCAO.checklist);
+      if (os.pilares.segmentacao?.checklist) allChecklists.push(...os.pilares.segmentacao.checklist);
+      if (os.pilares.fidelizacao?.checklist) allChecklists.push(...os.pilares.fidelizacao.checklist);
+    } catch {
+      return os.progresso || 0;
+    }
+
+    if (allChecklists.length === 0) return os.progresso || 0;
+
+    const completed = allChecklists.filter((item) => item.done).length;
+    return Math.round((completed / allChecklists.length) * 100);
+  },
+
+  recalculateAndSetOSProgress: (osId) => {
+    const progress = get().calculateProgress(osId);
+    // Atualizar apenas localmente por performance
+    set((state) => ({
+      ordens: state.ordens.map((o) =>
+        String(o.id) === String(osId) ? { ...o, progresso: progress } : o
+      ),
+    }));
   },
 }));
