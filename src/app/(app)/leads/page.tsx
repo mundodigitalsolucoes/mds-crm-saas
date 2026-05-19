@@ -457,10 +457,7 @@ export default function LeadsPage() {
     setDrawerLead(updatedLeadFromList);
   }, [leads, drawerLead]);
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('leads')) return <AccessDenied module="leads" />;
-
-  const limitReached = isAtLimit('leads');
+    const limitReached = isAtLimit('leads');
   const planInactive = isPlanInactive();
   const createBlocked = limitReached || planInactive;
 
@@ -480,6 +477,9 @@ export default function LeadsPage() {
     const selectedSet = new Set(pendingDeleteIds);
     return leads.filter((lead) => selectedSet.has(lead.id)).map((lead) => lead.name);
   }, [leads, pendingDeleteIds]);
+
+  if (permLoading) return <PermissionLoading />;
+  if (!canAccess('leads')) return <AccessDenied module="leads" />;
 
   const openCreateModal = () => {
     if (createBlocked) return;
