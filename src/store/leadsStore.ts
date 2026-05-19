@@ -41,6 +41,8 @@ export interface Stage {
   title: string;
   order: number;
   color: string;
+  isDefault?: boolean;
+  isSystem?: boolean;
 }
 
 export interface LeadFilters {
@@ -78,10 +80,11 @@ interface LeadsStore {
   bulkDeleteLeads: (ids: string[], confirmationText: string) => Promise<number | null>;
   bulkUpdateLeads: (ids: string[], payload: BulkLeadUpdatePayload) => Promise<number | null>;
 
-  addStage: (stage: Omit<Stage, 'id'>) => void;
-  updateStage: (id: string, updates: Partial<Stage>) => void;
-  deleteStage: (id: string) => void;
-  reorderStages: (newOrder: Stage[]) => void;
+  fetchStages: () => Promise<void>;
+  addStage: (stage: Omit<Stage, 'id'>) => Promise<Stage | null>;
+  updateStage: (id: string, updates: Partial<Stage>) => Promise<Stage | null>;
+  deleteStage: (id: string) => Promise<boolean>;
+  reorderStages: (newOrder: Stage[]) => Promise<void>;
 
   moveLeadInKanban: (leadId: string, toStatus: string) => Promise<Lead | null>;
 }
@@ -108,21 +111,50 @@ const LEAD_UPDATE_ALLOWED_KEYS = [
   'assignedToId',
 ];
 
-export const useLeadsStore = create<LeadsStore>((set, get) => ({
+const FALLBACK_STAGES: Stage[] = [
+  { id: 'new', title: 'Novo', order: 0, color: 'blue', isDefault: true, isSystem: true },
+  { id: 'contacted', title: 'Contactado', order: 1, color: 'yellow', isDefault: true, isSystem: true },
+  { id: 'qualified', title: 'Qualificado', order: 2, color: 'orange', isDefault: true, isSystem: true },
+  { id: 'proposal', title: 'Proposta', order: 3, color: 'purple', isDefault: true, isSystem: true },
+  { id: 'negotiation', title: 'Negociação', order: 4, color: 'yellow', isDefault: true, isSystem: true },
+  { id: 'won', title: 'Ganho', order: 5, color: 'green', isDefault: true, isSystem: true },
+  { id: 'lost', title: 'Perdido', order: 6, color: 'red', isDefault: true, isSystem: true },
+];
+
+export const useLeadsStore = create<LeadsStore>((set) => ({
   leads: [],
+  stages: FALLBACK_STAGES,
   isLoading: false,
   error: null,
   pagination: { total: 0, page: 1, limit: 50, totalPages: 0 },
 
-  stages: [
-    { id: 'new', title: 'Novo', order: 0, color: 'blue' },
-    { id: 'contacted', title: 'Contactado', order: 1, color: 'yellow' },
-    { id: 'qualified', title: 'Qualificado', order: 2, color: 'orange' },
-    { id: 'proposal', title: 'Proposta', order: 3, color: 'purple' },
-    { id: 'negotiation', title: 'Negociação', order: 4, color: 'yellow' },
-    { id: 'won', title: 'Ganho', order: 5, color: 'green' },
-    { id: 'lost', title: 'Perdido', order: 6, color: 'red' },
-  ],
+  fetchStages: async () => {
+    set({ error: null });
+
+    try {
+      const res = await fetch('/api/kanban/stages');
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao buscar etapas do pipeline');
+      }
+
+      const data = await res.json();
+
+      set({
+        stages:
+          Array.isArray(data.stages) && data.stages.length > 0
+            ? data.stages
+            : FALLBACK_STAGES,
+      });
+    } catch (error: any) {
+      console.error('Erro ao buscar etapas do pipeline:', error);
+      set({
+        stages: FALLBACK_STAGES,
+        error: error.message,
+      });
+    }
+  },
 
   fetchLeads: async (params) => {
     set({ isLoading: true, error: null });
@@ -335,7 +367,7 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     }
   },
 
-    moveLeadInKanban: async (leadId, toStatus) => {
+  moveLeadInKanban: async (leadId, toStatus) => {
     set({ error: null });
 
     try {
@@ -366,48 +398,111 @@ export const useLeadsStore = create<LeadsStore>((set, get) => ({
     }
   },
 
-  addStage: (stageData) => {
-    const newStage: Stage = {
-      ...stageData,
-      id: `stage_${Date.now()}`,
-    };
+  addStage: async (stageData) => {
+    set({ error: null });
 
-    set((state) => ({
-      stages: [...state.stages, newStage].sort((a, b) => a.order - b.order),
-    }));
-  },
+    try {
+      const res = await fetch('/api/kanban/stages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stageData),
+      });
 
-  updateStage: (id, updates) => {
-    set((state) => ({
-      stages: state.stages.map((stage) =>
-        stage.id === id ? { ...stage, ...updates } : stage
-      ),
-    }));
-  },
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao criar etapa');
+      }
 
-  deleteStage: (id) => {
-    const state = get();
+      const newStage = await res.json();
 
-    if (state.stages.length <= 1) return;
+      set((state) => ({
+        stages: [...state.stages, newStage].sort((a, b) => a.order - b.order),
+      }));
 
-    const hasLeads = state.leads.some((lead) => lead.status === id && lead.inKanban);
-
-    if (hasLeads) {
-      alert('Não é possível excluir um estágio que contém leads no pipeline. Mova os leads primeiro.');
-      return;
+      return newStage;
+    } catch (error: any) {
+      console.error('Erro ao criar etapa:', error);
+      set({ error: error.message });
+      return null;
     }
-
-    set((state) => ({
-      stages: state.stages.filter((stage) => stage.id !== id),
-    }));
   },
 
-  reorderStages: (newOrder) => {
-    set({
-      stages: newOrder.map((stage, index) => ({
-        ...stage,
-        order: index,
-      })),
-    });
+  updateStage: async (id, updates) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch(`/api/kanban/stages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao atualizar etapa');
+      }
+
+      const updatedStage = await res.json();
+
+      set((state) => ({
+        stages: state.stages
+          .map((stage) => (stage.id === id ? updatedStage : stage))
+          .sort((a, b) => a.order - b.order),
+      }));
+
+      return updatedStage;
+    } catch (error: any) {
+      console.error('Erro ao atualizar etapa:', error);
+      set({ error: error.message });
+      return null;
+    }
+  },
+
+  deleteStage: async (id) => {
+    set({ error: null });
+
+    try {
+      const res = await fetch(`/api/kanban/stages/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro ao excluir etapa');
+      }
+
+      set((state) => ({
+        stages: state.stages.filter((stage) => stage.id !== id),
+      }));
+
+      return true;
+    } catch (error: any) {
+      console.error('Erro ao excluir etapa:', error);
+      set({ error: error.message });
+      return false;
+    }
+  },
+
+  reorderStages: async (newOrder) => {
+    const orderedStages = newOrder.map((stage, index) => ({
+      ...stage,
+      order: index,
+    }));
+
+    set({ stages: orderedStages });
+
+    try {
+      await Promise.all(
+        orderedStages.map((stage) =>
+          fetch(`/api/kanban/stages/${stage.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: stage.order }),
+          })
+        )
+      );
+    } catch (error) {
+      console.error('Erro ao reordenar etapas:', error);
+    }
   },
 }));
