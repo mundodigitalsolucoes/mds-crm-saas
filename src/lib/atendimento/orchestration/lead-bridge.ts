@@ -372,8 +372,10 @@ export async function bridgeIncomingMessage(
   const channel = normalizeChatwootChannel(rawChannel)
   const status = payload.conversation?.status ?? 'open'
 
+  let leadId: string | null = null
+
   if (contact?.id) {
-    await upsertLeadFromChatwootContact({
+    leadId = await upsertLeadFromChatwootContact({
       organizationId,
       contact: contact as ChatwootContact,
       chatwootConversationId: conversationId,
@@ -400,6 +402,7 @@ export async function bridgeIncomingMessage(
         contactPhone: (contact as ChatwootContact)?.phone_number ?? null,
         contactEmail: (contact as ChatwootContact)?.email ?? null,
         contactAvatarUrl: (contact as ChatwootContact)?.avatar_url ?? null,
+        leadId,
         lastMessage: content.slice(0, 255),
         lastMessageAt: now,
         unreadCount: 1,
@@ -408,6 +411,7 @@ export async function bridgeIncomingMessage(
         lastMessage: content.slice(0, 255),
         lastMessageAt: now,
         unreadCount: { increment: 1 },
+        ...(leadId && { leadId }),
       },
     })
   } else {
@@ -417,6 +421,35 @@ export async function bridgeIncomingMessage(
         lastMessage: content.slice(0, 255),
         lastMessageAt: now,
         unreadCount: { increment: 1 },
+        ...(leadId && { leadId }),
+      },
+    })
+  }
+
+  if (leadId && inboxId) {
+    await prisma.lead.updateMany({
+      where: {
+        id: leadId,
+        organizationId,
+      },
+      data: {
+        chatwootInboxId: inboxId,
+        chatwootConversationId: conversationId,
+      },
+    })
+
+    await prisma.activity.create({
+      data: {
+        entityType: 'lead',
+        entityId: leadId,
+        action: 'message_received',
+        description: `Mensagem recebida pelo Atendimento: ${content.slice(0, 120)}`,
+        metadata: JSON.stringify({
+          chatwootConversationId: conversationId,
+          inboxId,
+          channel,
+        }),
+        leadId,
       },
     })
   }
@@ -438,7 +471,7 @@ export async function bridgeIncomingMessage(
   }
 
   console.log(
-    `[Chatwoot] Mensagem recebida na conversa #${conversationId} | type: ${payload.message_type}`
+    `[Chatwoot] Mensagem recebida na conversa #${conversationId} | type: ${payload.message_type} | lead: ${leadId ?? 'sem vínculo'}`
   )
 }
 
