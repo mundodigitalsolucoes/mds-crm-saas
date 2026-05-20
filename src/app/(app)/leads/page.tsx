@@ -485,6 +485,7 @@ export default function LeadsPage() {
   const [drawerLead, setDrawerLead] = useState<Lead | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isUpdatingDrawerKanban, setIsUpdatingDrawerKanban] = useState(false);
+  const [isLoadingLeadDetails, setIsLoadingLeadDetails] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -588,10 +589,27 @@ export default function LeadsPage() {
     setShowNewLead(true);
   };
 
-  const openDrawer = (lead: Lead) => {
-    setDrawerLead(lead);
-    setIsDrawerOpen(true);
-  };
+  const openDrawer = async (lead: Lead) => {
+  setDrawerLead(lead);
+  setIsDrawerOpen(true);
+  setIsLoadingLeadDetails(true);
+
+  try {
+    const response = await fetch(`/api/leads/${lead.id}`);
+
+    if (!response.ok) {
+      throw new Error('Erro ao carregar detalhes do lead');
+    }
+
+    const detailedLead = await response.json();
+
+    setDrawerLead(detailedLead);
+  } catch (error) {
+    console.error('Erro ao carregar detalhes do lead:', error);
+  } finally {
+    setIsLoadingLeadDetails(false);
+  }
+};
 
   const closeDrawer = () => {
     setIsDrawerOpen(false);
@@ -1285,7 +1303,7 @@ export default function LeadsPage() {
   onDelete={handleDeleteFromDrawer}
   onToggleKanban={handleToggleKanbanFromDrawer}
   isUpdatingKanban={isUpdatingDrawerKanban}
-  isLoadingDetails={false}
+  isLoadingDetails={isLoadingLeadDetails}
 />
     </div>
   );
