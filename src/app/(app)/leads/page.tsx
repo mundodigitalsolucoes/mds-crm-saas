@@ -235,6 +235,7 @@ function LeadDrawer({
   onDelete,
   onToggleKanban,
   isUpdatingKanban,
+  isLoadingDetails,
 }: {
   lead: Lead | null;
   isOpen: boolean;
@@ -243,6 +244,7 @@ function LeadDrawer({
   onDelete: (lead: Lead) => void;
   onToggleKanban: (lead: Lead) => void;
   isUpdatingKanban: boolean;
+  isLoadingDetails: boolean;
 }) {
   if (!isOpen || !lead) return null;
 
@@ -354,6 +356,98 @@ function LeadDrawer({
             </div>
           </div>
         </div>
+        {isLoadingDetails ? (
+  <div className="mt-6 flex items-center justify-center rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
+    <Loader2 size={18} className="mr-2 animate-spin" />
+    Carregando histórico comercial...
+  </div>
+) : (
+  <>
+    <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+        Atendimento
+      </p>
+
+      {lead.chatwootConversations?.length ? (
+        <div className="space-y-3">
+          {lead.chatwootConversations.map((conversation) => (
+            <div key={conversation.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-800">
+                  {conversation.inboxName || 'Canal de Atendimento'}
+                </p>
+                <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+                  {conversation.status}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-gray-600">
+                {conversation.lastMessage || 'Sem mensagem recente.'}
+              </p>
+              {conversation.lastMessageAt && (
+                <p className="mt-2 text-xs text-gray-400">
+                  {new Date(conversation.lastMessageAt).toLocaleString('pt-BR')}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">Nenhuma conversa vinculada.</p>
+      )}
+    </div>
+
+    <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+        Follow-ups / Tarefas
+      </p>
+
+      {lead.tasks?.length ? (
+        <div className="space-y-3">
+          {lead.tasks.map((task) => (
+            <div key={task.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-gray-800">{task.title}</p>
+                <span className="rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
+                  {task.status}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Prioridade: {task.priority}
+                {task.dueDate ? ` • Vence em ${new Date(task.dueDate).toLocaleDateString('pt-BR')}` : ''}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">Nenhuma tarefa vinculada.</p>
+      )}
+    </div>
+
+    <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+        Timeline Comercial
+      </p>
+
+      {lead.activities?.length ? (
+        <div className="space-y-3">
+          {lead.activities.map((activity) => (
+            <div key={activity.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-sm font-semibold text-gray-800">{activity.action}</p>
+              <p className="mt-1 text-sm text-gray-600">
+                {activity.description || 'Atividade registrada.'}
+              </p>
+              <p className="mt-2 text-xs text-gray-400">
+                {new Date(activity.createdAt).toLocaleString('pt-BR')}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">Nenhuma atividade registrada.</p>
+      )}
+    </div>
+  </>
+)}
       </aside>
     </>
   );
@@ -1184,14 +1278,15 @@ export default function LeadsPage() {
       />
 
       <LeadDrawer
-        lead={drawerLead}
-        isOpen={isDrawerOpen}
-        onClose={closeDrawer}
-        onEdit={handleEditFromDrawer}
-        onDelete={handleDeleteFromDrawer}
-        onToggleKanban={handleToggleKanbanFromDrawer}
-        isUpdatingKanban={isUpdatingDrawerKanban}
-      />
+  lead={drawerLead}
+  isOpen={isDrawerOpen}
+  onClose={closeDrawer}
+  onEdit={handleEditFromDrawer}
+  onDelete={handleDeleteFromDrawer}
+  onToggleKanban={handleToggleKanbanFromDrawer}
+  isUpdatingKanban={isUpdatingDrawerKanban}
+  isLoadingDetails={false}
+/>
     </div>
   );
 }
