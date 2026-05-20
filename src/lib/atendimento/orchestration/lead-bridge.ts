@@ -363,19 +363,7 @@ export async function bridgeIncomingMessage(
   const inboxId = payload.conversation?.inbox_id
   const contact =
     payload.conversation?.meta?.sender ?? payload.contact ?? payload.sender
-  console.log(
-  '[DEBUG CHATWOOT CONTACT]',
-  JSON.stringify(
-    {
-      payloadContact: payload.contact,
-      payloadSender: payload.sender,
-      metaSender: payload.conversation?.meta?.sender,
-      resolvedContact: contact,
-    },
-    null,
-    2
-  )
-)
+  
   const rawChannel =
     payload.conversation?.channel ??
     payload.conversation?.meta?.channel ??
