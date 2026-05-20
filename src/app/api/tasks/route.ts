@@ -260,15 +260,16 @@ export async function POST(request: NextRequest) {
 
     // Registrar atividade
     await prisma.activity.create({
-      data: {
-        entityType: 'task',
-        entityId: task.id,
-        action: 'created',
-        description: `Tarefa "${task.title}" criada`,
-        userId,
-        projectId: task.projectId,
-      },
-    });
+    data: {
+    entityType: 'task',
+    entityId: task.id,
+    action: 'created',
+    description: `Tarefa "${task.title}" criada`,
+    userId,
+    projectId: task.projectId,
+    leadId: task.leadId,
+  },
+});
 
     // Formatar resposta
     return NextResponse.json({
