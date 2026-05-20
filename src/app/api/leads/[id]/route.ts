@@ -57,6 +57,10 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
           take: 20,
         },
+        chatwootConversations: {
+          orderBy: { lastMessageAt: 'desc' },
+          take: 5,
+        },
       },
     });
 
@@ -88,11 +92,13 @@ export async function PUT(
     if (!parsed.success) return parsed.response;
 
     const data = parsed.data;
+    const organizationId = session!.user.organizationId;
+    const userId = session!.user.id;
 
     const existing = await prisma.lead.findFirst({
       where: {
         id,
-        organizationId: session!.user.organizationId,
+        organizationId,
       },
     });
 
@@ -122,6 +128,17 @@ export async function PUT(
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
 
+    const changedFields = Object.keys(updateData).filter((key) => {
+      const beforeValue = (existing as any)[key];
+      const afterValue = updateData[key];
+
+      if (beforeValue instanceof Date || afterValue instanceof Date) {
+        return String(beforeValue) !== String(afterValue);
+      }
+
+      return beforeValue !== afterValue;
+    });
+
     const updated = await prisma.lead.update({
       where: { id },
       data: updateData,
@@ -130,6 +147,22 @@ export async function PUT(
         createdBy: { select: { id: true, name: true } },
       },
     });
+
+    if (changedFields.length > 0) {
+      await prisma.activity.create({
+        data: {
+          entityType: 'lead',
+          entityId: id,
+          action: 'lead_updated',
+          description: `Lead atualizado: ${changedFields.join(', ')}`,
+          metadata: JSON.stringify({
+            changedFields,
+          }),
+          userId,
+          leadId: id,
+        },
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
