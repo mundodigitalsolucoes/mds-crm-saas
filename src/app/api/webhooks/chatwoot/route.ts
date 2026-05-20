@@ -17,8 +17,18 @@ function validateSecret(req: NextRequest): boolean {
     return true
   }
 
-  const secret = req.nextUrl.searchParams.get('secret')
-  return secret === WEBHOOK_SECRET
+  const querySecret = req.nextUrl.searchParams.get('secret')
+
+  const headerSecret =
+    req.headers.get('x-chatwoot-token') ??
+    req.headers.get('x-webhook-token') ??
+    req.headers.get('x-webhook-secret') ??
+    req.headers.get('authorization')?.replace('Bearer ', '')
+
+  return (
+    querySecret === WEBHOOK_SECRET ||
+    headerSecret === WEBHOOK_SECRET
+  )
 }
 
 export async function POST(req: NextRequest) {
