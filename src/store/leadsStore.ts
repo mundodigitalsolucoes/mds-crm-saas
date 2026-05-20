@@ -20,10 +20,20 @@ export interface Lead {
   facebook: string | null;
   linkedin: string | null;
   notes: string | null;
+
   assignedToId: string | null;
-  assignedTo?: { id: string; name: string; email: string } | null;
+  assignedTo?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+
   createdById: string | null;
-  createdBy?: { id: string; name: string } | null;
+  createdBy?: {
+    id: string;
+    name: string;
+  } | null;
+
   tags?: {
     id: string;
     name: string;
@@ -32,6 +42,35 @@ export interface Lead {
     category: string;
     isSystem: boolean;
   }[];
+
+  tasks?: {
+    id: string;
+    title: string;
+    status: string;
+    priority: string;
+    dueDate: string | null;
+    createdAt: string;
+  }[];
+
+  activities?: {
+    id: string;
+    action: string;
+    description: string | null;
+    createdAt: string;
+  }[];
+
+  chatwootConversations?: {
+    id: string;
+    chatwootId: number;
+    status: string;
+    channel: string;
+    inboxName: string | null;
+    contactName: string | null;
+    contactPhone: string | null;
+    lastMessage: string | null;
+    lastMessageAt: string | null;
+  }[];
+
   createdAt: string;
   updatedAt: string;
 }
