@@ -681,45 +681,61 @@ export default function LeadsPage() {
     setFollowUpDueDate('');
   };
 
-  const handleCreateFollowUp = async () => {
-    if (!drawerLead || !followUpTitle.trim()) return;
+const handleCreateFollowUp = async () => {
+  if (!drawerLead || !followUpTitle.trim()) return;
 
-    setIsCreatingFollowUp(true);
+  setIsCreatingFollowUp(true);
 
-    try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: followUpTitle.trim(),
-          description: followUpDescription.trim() || null,
-          status: 'todo',
-          priority: 'medium',
-          dueDate: followUpDueDate || null,
-          leadId: drawerLead.id,
-          assignedToId: drawerLead.assignedToId || null,
-        }),
-      });
+  try {
+    const payload: Record<string, unknown> = {
+      title: followUpTitle.trim(),
+      status: 'todo',
+      priority: 'medium',
+      leadId: drawerLead.id,
+    };
 
-      if (!response.ok) {
-        throw new Error('Erro ao criar follow-up');
-      }
-
-      setFollowUpTitle('');
-      setFollowUpDescription('');
-      setFollowUpDueDate('');
-
-      const detailResponse = await fetch(`/api/leads/${drawerLead.id}`);
-      if (detailResponse.ok) {
-        const detailedLead = await detailResponse.json();
-        setDrawerLead(detailedLead);
-      }
-    } catch (error) {
-      console.error('Erro ao criar follow-up:', error);
-    } finally {
-      setIsCreatingFollowUp(false);
+    if (followUpDescription.trim()) {
+      payload.description = followUpDescription.trim();
     }
-  };
+
+    if (followUpDueDate) {
+      payload.dueDate = followUpDueDate;
+    }
+
+    if (drawerLead.assignedToId) {
+      payload.assignedToId = drawerLead.assignedToId;
+    }
+
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error('Erro ao criar follow-up:', errorData);
+      alert(errorData?.error || 'Erro ao criar follow-up');
+      return;
+    }
+
+    setFollowUpTitle('');
+    setFollowUpDescription('');
+    setFollowUpDueDate('');
+
+    const detailResponse = await fetch(`/api/leads/${drawerLead.id}`);
+
+    if (detailResponse.ok) {
+      const detailedLead = await detailResponse.json();
+      setDrawerLead(detailedLead);
+    }
+  } catch (error) {
+    console.error('Erro ao criar follow-up:', error);
+    alert('Erro ao criar follow-up');
+  } finally {
+    setIsCreatingFollowUp(false);
+  }
+};
 
   const openSingleDeleteModal = (lead: Lead) => {
     setPendingDeleteIds([lead.id]);
