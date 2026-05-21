@@ -23,6 +23,7 @@ import {
   Star,
   Link as LinkIcon,
   CheckCheck,
+  Clock,
 } from 'lucide-react';
 import CSVImport from '@/components/CSVImport';
 import NewLeadModal from '@/components/NewLeadModal';
@@ -234,8 +235,16 @@ function LeadDrawer({
   onEdit,
   onDelete,
   onToggleKanban,
+  onCreateFollowUp,
   isUpdatingKanban,
   isLoadingDetails,
+  followUpTitle,
+  setFollowUpTitle,
+  followUpDescription,
+  setFollowUpDescription,
+  followUpDueDate,
+  setFollowUpDueDate,
+  isCreatingFollowUp,
 }: {
   lead: Lead | null;
   isOpen: boolean;
@@ -243,8 +252,16 @@ function LeadDrawer({
   onEdit: (lead: Lead) => void;
   onDelete: (lead: Lead) => void;
   onToggleKanban: (lead: Lead) => void;
+  onCreateFollowUp: () => void;
   isUpdatingKanban: boolean;
   isLoadingDetails: boolean;
+  followUpTitle: string;
+  setFollowUpTitle: (value: string) => void;
+  followUpDescription: string;
+  setFollowUpDescription: (value: string) => void;
+  followUpDueDate: string;
+  setFollowUpDueDate: (value: string) => void;
+  isCreatingFollowUp: boolean;
 }) {
   if (!isOpen || !lead) return null;
 
@@ -401,6 +418,47 @@ function LeadDrawer({
         Follow-ups / Tarefas
       </p>
 
+      <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-indigo-900">
+          <Clock size={16} />
+          Novo follow-up
+        </div>
+
+        <div className="space-y-2">
+          <input
+            value={followUpTitle}
+            onChange={(e) => setFollowUpTitle(e.target.value)}
+            placeholder="Ex: Retornar com proposta"
+            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          />
+
+          <input
+            type="date"
+            value={followUpDueDate}
+            onChange={(e) => setFollowUpDueDate(e.target.value)}
+            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          />
+
+          <textarea
+            value={followUpDescription}
+            onChange={(e) => setFollowUpDescription(e.target.value)}
+            placeholder="Observação do follow-up"
+            rows={2}
+            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+          />
+
+          <button
+            type="button"
+            onClick={onCreateFollowUp}
+            disabled={isCreatingFollowUp || !followUpTitle.trim()}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isCreatingFollowUp && <Loader2 size={16} className="animate-spin" />}
+            Criar follow-up
+          </button>
+        </div>
+      </div>
+
       {lead.tasks?.length ? (
         <div className="space-y-3">
           {lead.tasks.map((task) => (
@@ -486,6 +544,10 @@ export default function LeadsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isUpdatingDrawerKanban, setIsUpdatingDrawerKanban] = useState(false);
   const [isLoadingLeadDetails, setIsLoadingLeadDetails] = useState(false);
+  const [followUpTitle, setFollowUpTitle] = useState('');
+  const [followUpDescription, setFollowUpDescription] = useState('');
+  const [followUpDueDate, setFollowUpDueDate] = useState('');
+  const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -614,6 +676,49 @@ export default function LeadsPage() {
   const closeDrawer = () => {
     setIsDrawerOpen(false);
     setDrawerLead(null);
+    setFollowUpTitle('');
+    setFollowUpDescription('');
+    setFollowUpDueDate('');
+  };
+
+  const handleCreateFollowUp = async () => {
+    if (!drawerLead || !followUpTitle.trim()) return;
+
+    setIsCreatingFollowUp(true);
+
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: followUpTitle.trim(),
+          description: followUpDescription.trim() || null,
+          status: 'todo',
+          priority: 'medium',
+          dueDate: followUpDueDate || null,
+          leadId: drawerLead.id,
+          assignedToId: drawerLead.assignedToId || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar follow-up');
+      }
+
+      setFollowUpTitle('');
+      setFollowUpDescription('');
+      setFollowUpDueDate('');
+
+      const detailResponse = await fetch(`/api/leads/${drawerLead.id}`);
+      if (detailResponse.ok) {
+        const detailedLead = await detailResponse.json();
+        setDrawerLead(detailedLead);
+      }
+    } catch (error) {
+      console.error('Erro ao criar follow-up:', error);
+    } finally {
+      setIsCreatingFollowUp(false);
+    }
   };
 
   const openSingleDeleteModal = (lead: Lead) => {
@@ -1296,15 +1401,23 @@ export default function LeadsPage() {
       />
 
       <LeadDrawer
-  lead={drawerLead}
-  isOpen={isDrawerOpen}
-  onClose={closeDrawer}
-  onEdit={handleEditFromDrawer}
-  onDelete={handleDeleteFromDrawer}
-  onToggleKanban={handleToggleKanbanFromDrawer}
-  isUpdatingKanban={isUpdatingDrawerKanban}
-  isLoadingDetails={isLoadingLeadDetails}
-/>
+        lead={drawerLead}
+        isOpen={isDrawerOpen}
+        onClose={closeDrawer}
+        onEdit={handleEditFromDrawer}
+        onDelete={handleDeleteFromDrawer}
+        onToggleKanban={handleToggleKanbanFromDrawer}
+        onCreateFollowUp={handleCreateFollowUp}
+        isUpdatingKanban={isUpdatingDrawerKanban}
+        isLoadingDetails={isLoadingLeadDetails}
+        followUpTitle={followUpTitle}
+        setFollowUpTitle={setFollowUpTitle}
+        followUpDescription={followUpDescription}
+        setFollowUpDescription={setFollowUpDescription}
+        followUpDueDate={followUpDueDate}
+        setFollowUpDueDate={setFollowUpDueDate}
+        isCreatingFollowUp={isCreatingFollowUp}
+      />
     </div>
   );
 }
