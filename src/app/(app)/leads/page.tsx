@@ -184,25 +184,28 @@ function InfoItem({
   value: string | number | null | undefined;
   isLink?: boolean;
 }) {
+  const baseClass = 'min-w-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-3';
+
   if (value === null || value === undefined || value === '') {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+      <div className={baseClass}>
+        <div className="mb-1 flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
           {icon}
-          {label}
+          <span className="truncate">{label}</span>
         </div>
-        <div className="text-sm text-gray-400">—</div>
+        <div className="truncate text-sm text-gray-400">—</div>
       </div>
     );
   }
 
   if (isLink && typeof value === 'string') {
     const href = normalizeUrl(value);
+
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+      <div className={baseClass}>
+        <div className="mb-1 flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
           {icon}
-          {label}
+          <span className="truncate">{label}</span>
         </div>
         <a
           href={href || '#'}
@@ -218,12 +221,14 @@ function InfoItem({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-      <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
+    <div className={baseClass}>
+      <div className="mb-1 flex min-w-0 items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500">
         {icon}
-        {label}
+        <span className="truncate">{label}</span>
       </div>
-      <div className="break-words text-sm font-medium text-gray-800">{value}</div>
+      <div className="truncate text-sm font-medium text-gray-800" title={String(value)}>
+        {value}
+      </div>
     </div>
   );
 }
