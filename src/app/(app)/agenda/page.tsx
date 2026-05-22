@@ -347,8 +347,20 @@ const eventsOfSelectedDay = useMemo(() => {
                             <span className="font-semibold text-gray-900">{event.title}</span>
                             {getStatusBadge(event.status)}
                             {event.sourceType === 'task' && (
-  <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
-    Follow-up
+  <span
+    className={`rounded-full px-2 py-1 text-xs ${
+      event.taskStatus === 'done'
+        ? 'bg-green-100 text-green-700'
+        : new Date(event.date) < new Date()
+          ? 'bg-red-100 text-red-700'
+          : 'bg-indigo-100 text-indigo-700'
+    }`}
+  >
+    {event.taskStatus === 'done'
+      ? 'Concluído'
+      : new Date(event.date) < new Date()
+        ? 'Atrasado'
+        : 'Follow-up'}
   </span>
 )}
                           </div>
