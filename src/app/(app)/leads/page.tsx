@@ -332,7 +332,7 @@ function LeadDrawer({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div key={lead.id} className="flex-1 overflow-y-auto p-6">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <InfoItem icon={<Mail size={14} />} label="Email" value={lead.email} />
             <InfoItem icon={<Phone size={14} />} label="Telefone Fixo" value={lead.phone} />
