@@ -2,7 +2,19 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, Edit, Trash2, Calendar, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths, isSameMonth } from 'date-fns';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameDay,
+  isToday,
+  addMonths,
+  subMonths,
+  isSameMonth,
+  startOfWeek,
+  endOfWeek,
+} from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '@/store/agendaStore';
 import type { AgendaEvent } from '@/types/agenda';
@@ -18,7 +30,11 @@ function normalizeDate(date: string): string {
   // Se for ISO (2026-02-14T00:00:00.000Z), pega só os primeiros 10 chars
   return date.substring(0, 10);
 }
-
+type CalendarItem = AgendaEvent & {
+  sourceType: 'event' | 'task';
+  taskStatus?: string;
+  taskPriority?: string;
+};
 export default function AgendaPage() {
   const { events, loading, error, fetchEvents, deleteEvent } = useAgendaStore();
 
@@ -26,37 +42,111 @@ export default function AgendaPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selected, setSelected] = useState<AgendaEvent | null>(null);
+  const [agendaTasks, setAgendaTasks] = useState<CalendarItem[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const { canAccess, isLoading: permLoading } = usePermission();
 
   // ✅ Buscar eventos ao montar a página e quando o mês muda
   useEffect(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
+  const start = startOfMonth(currentMonth);
+  const end = endOfMonth(currentMonth);
 
-    fetchEvents({
-      startDate: format(start, 'yyyy-MM-dd'),
-      endDate: format(end, 'yyyy-MM-dd'),
-    });
-  }, [currentMonth, fetchEvents]);
+  const startDate = format(start, 'yyyy-MM-dd');
+  const endDate = format(end, 'yyyy-MM-dd');
+
+  fetchEvents({
+    startDate,
+    endDate,
+  });
+
+  const fetchAgendaTasks = async () => {
+    try {
+      setLoadingTasks(true);
+
+      const response = await fetch(
+        `/api/tasks?dueDateFrom=${startDate}&dueDateTo=${endDate}&pageSize=200`
+      );
+
+      if (!response.ok) {
+        throw new Error('Erro ao buscar tasks');
+      }
+
+      const data = await response.json();
+
+      const formattedTasks: CalendarItem[] = (data.tasks || [])
+        .filter((task: any) => task.dueDate)
+        .map((task: any) => ({
+          id: task.id,
+          organizationId: '',
+          title: task.title,
+          description: task.description,
+          date: task.dueDate.substring(0, 10),
+          startTime: null,
+          endTime: null,
+          allDay: true,
+          type: 'follow_up',
+          status: task.status === 'done' ? 'concluido' : 'agendado',
+          color: '#4f46e5',
+          location: null,
+          isRecurring: false,
+          recurrenceRule: null,
+          reminderMinutes: null,
+          reminderSent: false,
+          leadId: task.leadId,
+          projectId: task.projectId,
+          assignedToId: task.assignedToId,
+          createdById: task.createdById,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          lead: task.lead,
+          project: task.project,
+          assignedTo: task.assignedTo,
+          createdBy: task.createdBy,
+          sourceType: 'task',
+          taskStatus: task.status,
+          taskPriority: task.priority,
+        }));
+
+      setAgendaTasks(formattedTasks);
+    } catch (error) {
+      console.error('Erro ao buscar tasks da agenda:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  fetchAgendaTasks();
+}, [currentMonth, fetchEvents]);
 
   // Eventos do dia selecionado (com normalização de data)
-  const eventsOfSelectedDay = useMemo(() => {
-    const dateString = format(selectedDate, 'yyyy-MM-dd');
-    return events
-      .filter(event => normalizeDate(event.date) === dateString)
-      .sort((a, b) => {
-        const aKey = a.startTime || '99:99';
-        const bKey = b.startTime || '99:99';
-        return aKey.localeCompare(bKey);
-      });
-  }, [events, selectedDate]);
+  const calendarItems = useMemo<CalendarItem[]>(() => {
+  const eventItems: CalendarItem[] = events.map((event) => ({
+    ...event,
+    sourceType: 'event',
+  }));
+
+  return [...eventItems, ...agendaTasks];
+}, [events, agendaTasks]);
+
+const eventsOfSelectedDay = useMemo(() => {
+  const dateString = format(selectedDate, 'yyyy-MM-dd');
+
+  return calendarItems
+    .filter((item) => normalizeDate(item.date) === dateString)
+    .sort((a, b) => {
+      const aKey = a.startTime || '99:99';
+      const bKey = b.startTime || '99:99';
+      return aKey.localeCompare(bKey);
+    });
+}, [calendarItems, selectedDate]);
 
   // Dias do mês atual para o calendário
   const calendarDays = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
+  const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
+  const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
+
+  return eachDayOfInterval({ start, end });
+}, [currentMonth]);
 
   // ✅ Early returns DEPOIS de todos os hooks
   if (permLoading) return <PermissionLoading />;
@@ -65,7 +155,7 @@ export default function AgendaPage() {
   // Verifica se um dia tem eventos (com normalização)
   const hasEvents = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
-    return events.some(event => normalizeDate(event.date) === dateString);
+    return calendarItems.some((item) => normalizeDate(item.date) === dateString);
   };
 
   const openNew = () => {
@@ -256,6 +346,11 @@ export default function AgendaPage() {
                             <Clock className="text-gray-400" size={16} />
                             <span className="font-semibold text-gray-900">{event.title}</span>
                             {getStatusBadge(event.status)}
+                            {event.sourceType === 'task' && (
+  <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs text-indigo-700">
+    Follow-up
+  </span>
+)}
                           </div>
 
                           <div className="text-sm text-gray-600 space-y-1">
