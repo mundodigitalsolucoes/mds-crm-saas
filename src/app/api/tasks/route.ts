@@ -257,6 +257,17 @@ export async function POST(request: NextRequest) {
         entityId: task.id,
       });
     }
+    
+    if (task.dueDate) {
+  await createNotification({
+    userId: task.assignedToId || userId,
+    type: 'task_due',
+    title: 'Follow-up agendado',
+    message: `Follow-up "${task.title}" agendado para ${task.dueDate.toLocaleDateString('pt-BR')}`,
+    entityType: 'task',
+    entityId: task.id,
+  });
+}
 
     // Registrar atividade
     await prisma.activity.create({
