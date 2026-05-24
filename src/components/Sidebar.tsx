@@ -82,6 +82,7 @@ const salesItems: MenuItem[] = [
   { name: 'Leads', icon: Users, path: '/leads', module: 'leads' },
   { name: 'Kanban', icon: Kanban, path: '/kanban', module: 'kanban' },
   { name: 'Agenda', icon: Calendar, path: '/agenda', module: 'agenda' },
+  { name: 'Follow-ups', icon: CheckSquare, path: '/follow-ups', module: 'leads' },
   { name: 'Metas', icon: Target, path: '/goals', module: 'goals' },
 ];
 
