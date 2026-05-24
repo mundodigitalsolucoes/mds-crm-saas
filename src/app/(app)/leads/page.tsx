@@ -527,6 +527,12 @@ const emptyFilters: Omit<LeadFilters, 'search' | 'page'> = {
 };
 
 export default function LeadsPage() {
+  const [leadIdFromUrl, setLeadIdFromUrl] = useState<string | null>(null);
+
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  setLeadIdFromUrl(params.get('leadId'));
+}, []);
   const {
     leads,
     stages,
@@ -677,6 +683,40 @@ export default function LeadsPage() {
     setIsLoadingLeadDetails(false);
   }
 };
+    
+  useEffect(() => {
+    if (!leadIdFromUrl || isDrawerOpen || isLoadingLeadDetails) return;
+
+    const leadFromList = leads.find((lead) => lead.id === leadIdFromUrl);
+
+    if (leadFromList) {
+      openDrawer(leadFromList);
+      return;
+    }
+
+    const fetchLeadFromUrl = async () => {
+      setIsLoadingLeadDetails(true);
+
+      try {
+        const response = await fetch(`/api/leads/${leadIdFromUrl}`);
+
+        if (!response.ok) {
+          throw new Error('Erro ao carregar lead pelo link');
+        }
+
+        const detailedLead = await response.json();
+
+        setDrawerLead(detailedLead);
+        setIsDrawerOpen(true);
+      } catch (error) {
+        console.error('Erro ao abrir lead pelo link:', error);
+      } finally {
+        setIsLoadingLeadDetails(false);
+      }
+    };
+
+    fetchLeadFromUrl();
+  }, [leadIdFromUrl, leads, isDrawerOpen, isLoadingLeadDetails]);
 
   const closeDrawer = () => {
     setIsDrawerOpen(false);
