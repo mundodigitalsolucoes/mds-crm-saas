@@ -719,12 +719,18 @@ useEffect(() => {
   }, [leadIdFromUrl, leads, isDrawerOpen, isLoadingLeadDetails]);
 
   const closeDrawer = () => {
-    setIsDrawerOpen(false);
-    setDrawerLead(null);
-    setFollowUpTitle('');
-    setFollowUpDescription('');
-    setFollowUpDueDate('');
-  };
+  setIsDrawerOpen(false);
+  setDrawerLead(null);
+  setFollowUpTitle('');
+  setFollowUpDescription('');
+  setFollowUpDueDate('');
+
+  if (typeof window !== 'undefined') {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('leadId');
+    window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+  }
+};
 
 const handleCreateFollowUp = async () => {
   if (!drawerLead || !followUpTitle.trim()) return;
