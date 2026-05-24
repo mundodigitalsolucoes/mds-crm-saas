@@ -724,6 +724,7 @@ useEffect(() => {
   setFollowUpTitle('');
   setFollowUpDescription('');
   setFollowUpDueDate('');
+  setLeadIdFromUrl(null);
 
   if (typeof window !== 'undefined') {
     const url = new URL(window.location.href);
