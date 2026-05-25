@@ -37,6 +37,29 @@ function getScore(value: unknown): number {
   return score;
 }
 
+function getLastFourDigits(value: string | null): string | null {
+  if (!value) return null;
+
+  const digits = value.replace(/\D/g, '');
+  if (!digits) return null;
+
+  return digits.slice(-4);
+}
+
+function buildFallbackName(phone: string | null, whatsapp: string | null, email: string | null): string {
+  const lastFourDigits = getLastFourDigits(whatsapp || phone);
+
+  if (lastFourDigits) {
+    return `Sem nome - ${lastFourDigits}`;
+  }
+
+  if (email) {
+    return `Sem nome - ${email}`;
+  }
+
+  return 'Sem nome';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
@@ -54,16 +77,13 @@ export async function POST(request: NextRequest) {
 
     for (const lead of leads) {
       try {
-        const name = getString(lead?.name, lead?.nome);
-
-        if (!name) {
-          falhas++;
-          continue;
-        }
-
         const email = getString(lead?.email);
         const phone = getString(lead?.phone, lead?.telefone, lead?.telefone_fixo);
         const whatsapp = getString(lead?.whatsapp);
+        const name =
+          getString(lead?.name, lead?.nome) ||
+          buildFallbackName(phone, whatsapp, email);
+
         const company = getString(lead?.company, lead?.empresa);
         const source = getString(lead?.source, lead?.origem) || 'csv_import';
         const status = getString(lead?.status) || 'new';
