@@ -59,6 +59,9 @@ export interface Lead {
     createdAt: string;
   }[];
 
+  chatwootContactId?: number | null;
+  chatwootConversationId?: number | null;
+  chatwootInboxId?: number | null;
   chatwootConversations?: {
     id: string;
     chatwootId: number;

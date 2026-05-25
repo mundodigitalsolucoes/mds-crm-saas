@@ -391,37 +391,64 @@ function LeadDrawer({
       </p>
 
       {lead.chatwootConversations?.length ? (
-        <div className="space-y-3">
-          {lead.chatwootConversations.map((conversation) => (
-            <div key={conversation.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-800">
-                  {conversation.inboxName || 'Canal de Atendimento'}
-                </p>
-                <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
-                  {conversation.status}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-gray-600">
-                {conversation.lastMessage || 'Sem mensagem recente.'}
-              </p>
-              {conversation.lastMessageAt && (
-                <p className="mt-2 text-xs text-gray-400">
-                  {new Date(conversation.lastMessageAt).toLocaleString('pt-BR')}
-                </p>
-              )}
-              <a
-  href="/atendimento"
-  className="mt-3 inline-flex items-center justify-center rounded-lg border border-indigo-200 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
->
-  Abrir Atendimento
-</a>
-            </div>
-          ))}
+  <div className="space-y-3">
+    {lead.chatwootConversations.map((conversation) => (
+      <div key={conversation.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-gray-800">
+            {conversation.inboxName || 'Canal de Atendimento'}
+          </p>
+
+          <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+            {conversation.status}
+          </span>
         </div>
-      ) : (
-        <p className="text-sm text-gray-500">Nenhuma conversa vinculada.</p>
-      )}
+
+        <p className="mt-1 text-sm text-gray-600">
+          {conversation.lastMessage || 'Sem mensagem recente.'}
+        </p>
+
+        {conversation.lastMessageAt && (
+          <p className="mt-2 text-xs text-gray-400">
+            {new Date(conversation.lastMessageAt).toLocaleString('pt-BR')}
+          </p>
+        )}
+
+        <a
+          href="/atendimento"
+          className="mt-3 inline-flex items-center justify-center rounded-lg border border-indigo-200 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+        >
+          Abrir Atendimento
+        </a>
+      </div>
+    ))}
+  </div>
+) : lead.chatwootConversationId ? (
+  <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-sm font-semibold text-indigo-900">
+        Conversa vinculada ao Atendimento
+      </p>
+
+      <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+        #{lead.chatwootConversationId}
+      </span>
+    </div>
+
+    <p className="mt-1 text-sm text-indigo-700">
+      Inbox #{lead.chatwootInboxId || '—'} • Contato #{lead.chatwootContactId || '—'}
+    </p>
+
+    <a
+      href="/atendimento"
+      className="mt-3 inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-white px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+    >
+      Abrir Atendimento
+    </a>
+  </div>
+) : (
+  <p className="text-sm text-gray-500">Nenhuma conversa vinculada.</p>
+)}
     </div>
 
     <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
