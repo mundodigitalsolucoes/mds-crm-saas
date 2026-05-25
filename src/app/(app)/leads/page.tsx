@@ -410,6 +410,12 @@ function LeadDrawer({
                   {new Date(conversation.lastMessageAt).toLocaleString('pt-BR')}
                 </p>
               )}
+              <a
+  href="/atendimento"
+  className="mt-3 inline-flex items-center justify-center rounded-lg border border-indigo-200 px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+>
+  Abrir Atendimento
+</a>
             </div>
           ))}
         </div>
