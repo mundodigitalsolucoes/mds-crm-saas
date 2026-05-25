@@ -155,19 +155,29 @@ async function resolvePhoneNumberFromEvolution(instanceName: string): Promise<st
   }
 }
 
-async function ensureEvolutionInstanceCleaned(instanceName: string) {
-  const disconnected = await disconnectInstance(instanceName)
-  const inactive = await waitUntilInstanceInactive(instanceName)
+async function ensureEvolutionInstanceCleaned(instanceName: string): Promise<{
+  success: boolean
+  error: string | null
+}> {
+  try {
+    const disconnected = await disconnectInstance(instanceName)
+    const inactive = await waitUntilInstanceInactive(instanceName)
 
-  if (!disconnected || !inactive) {
-    throw new ChannelLifecycleError(
-      'Falha ao limpar a instância na Evolution. Verifique a instância antes de continuar.',
-      502,
-      'EVOLUTION_CLEANUP_FAILED'
-    )
+    if (!disconnected || !inactive) {
+      return {
+        success: false,
+        error: 'Evolution não confirmou a limpeza completa da instância.',
+      }
+    }
+
+    return { success: true, error: null }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Erro desconhecido ao limpar instância na Evolution.',
+    }
   }
 }
-
 export async function ensureLegacyWhatsappMirrored(params: {
   organizationId: string
   userId: string
@@ -729,7 +739,9 @@ export async function disconnectWhatsappChannel(
   const previousMetadata =
     safeJsonParse<Record<string, unknown>>(targetInstance.metadata) ?? {}
 
-  await ensureEvolutionInstanceCleaned(targetInstance.instanceName)
+  const cleanupResult = await ensureEvolutionInstanceCleaned(
+  targetInstance.instanceName
+)
 
   await removeChatwootInboxIfUnused({
     organizationId,
@@ -744,7 +756,9 @@ export async function disconnectWhatsappChannel(
       status: 'disconnected',
       chatwootInboxId: null,
       phoneNumber: null,
-      lastError: null,
+      lastError: cleanupResult.success
+  ? null
+  : cleanupResult.error ?? 'Falha parcial ao limpar instância na Evolution.',
       disconnectedAt: new Date(),
       metadata: JSON.stringify({
         ...previousMetadata,
