@@ -1476,7 +1476,7 @@ const handleCreateFollowUp = async () => {
             'facebook',
             'linkedin',
           ]}
-          requiredFields={['name']}
+          requiredFields={[]}
           onImport={handleImport}
           onClose={() => setShowImport(false)}
         />
