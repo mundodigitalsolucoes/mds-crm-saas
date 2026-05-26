@@ -257,8 +257,8 @@ npx prisma generate
 
 ## 🤝 Suporte
 
-- Email: suporte@mundodigital.com.br
-- Website: https://mundodigital.com.br
+- Email: contato@mundodigitalsolucoes.com.br
+- Website: https://www.mundodigitalsolucoes.com.br
 
 ## 📄 Licença
 
