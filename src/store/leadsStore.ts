@@ -12,7 +12,7 @@ export interface Lead {
   status: string;
   inKanban: boolean;
   score: number;
-  value: number | null;
+  value: number | string | null;
   productOrService: string | null;
   city: string | null;
   website: string | null;
