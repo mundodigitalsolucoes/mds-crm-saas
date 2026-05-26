@@ -41,7 +41,7 @@ const optionalScoreUpdate = z.preprocess(
     const num = typeof val === 'string' ? Number(val) : val;
     return typeof num === 'number' && !isNaN(num) ? num : val;
   },
-  z.number().int().min(0).max(100).nullable()
+  z.number().int().min(0).max(100).nullable().optional()
 );
 
 export const leadCreateSchema = z.object({
