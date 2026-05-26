@@ -203,7 +203,7 @@ function LeadEditModal({
       position: form.position.trim() || null,
       source: form.source || null,
       status: form.status,
-      value: form.value ? parseFloat(form.value) : null,
+      value: form.value ? form.value.replace(',', '.') : null,
       notes: form.notes.trim() || null,
     });
   };

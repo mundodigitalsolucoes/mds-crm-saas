@@ -349,7 +349,7 @@ function LeadDrawer({
                   : new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL',
-                    }).format(lead.value)
+                    }).format(Number(lead.value) || 0)
               }
             />
             <InfoItem icon={<MapPin size={14} />} label="Cidade" value={lead.city} />
@@ -967,10 +967,10 @@ const handleCreateFollowUp = async () => {
     return sourceMap[source || ''] || source || '—';
   };
 
-  const formatCurrency = (value: number | null) => {
-    if (value === null || value === undefined) return '—';
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
+  const formatCurrency = (value: number | string | null) => {
+  if (value === null || value === undefined) return '—';
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value) || 0);
+};
 
   const toggleSelectLead = (leadId: string) => {
     setSelectedLeadIds((prev) =>
