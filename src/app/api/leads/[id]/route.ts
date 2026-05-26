@@ -89,7 +89,15 @@ export async function PUT(
     const cleanBody = sanitizeLeadUpdateBody(body);
 
     const parsed = parseBody(leadUpdateSchema, cleanBody);
-    if (!parsed.success) return parsed.response;
+
+if (!parsed.success) {
+  console.error('Erro de validação ao atualizar lead:', {
+    body,
+    cleanBody,
+  });
+
+  return parsed.response;
+}
 
     const data = parsed.data;
     const organizationId = session!.user.organizationId;
