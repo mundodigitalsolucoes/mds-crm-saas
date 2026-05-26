@@ -679,9 +679,6 @@ useEffect(() => {
     return leads.filter((lead) => selectedSet.has(lead.id)).map((lead) => lead.name);
   }, [leads, pendingDeleteIds]);
 
-  if (permLoading) return <PermissionLoading />;
-  if (!canAccess('leads')) return <AccessDenied module="leads" />;
-
   const openCreateModal = () => {
     if (createBlocked) return;
     setModalMode('create');
@@ -695,7 +692,7 @@ useEffect(() => {
     setShowNewLead(true);
   };
 
-  const openDrawer = async (lead: Lead) => {
+const openDrawer = async (lead: Lead) => {
   setDrawerLead(lead);
   setIsDrawerOpen(true);
   setIsLoadingLeadDetails(true);
@@ -708,7 +705,6 @@ useEffect(() => {
     }
 
     const detailedLead = await response.json();
-
     setDrawerLead(detailedLead);
   } catch (error) {
     console.error('Erro ao carregar detalhes do lead:', error);
@@ -716,40 +712,43 @@ useEffect(() => {
     setIsLoadingLeadDetails(false);
   }
 };
-    
-  useEffect(() => {
-    if (!leadIdFromUrl || isDrawerOpen || isLoadingLeadDetails) return;
 
-    const leadFromList = leads.find((lead) => lead.id === leadIdFromUrl);
+useEffect(() => {
+  if (!leadIdFromUrl || isDrawerOpen || isLoadingLeadDetails) return;
 
-    if (leadFromList) {
-      openDrawer(leadFromList);
-      return;
-    }
+  const leadFromList = leads.find((lead) => lead.id === leadIdFromUrl);
 
-    const fetchLeadFromUrl = async () => {
-      setIsLoadingLeadDetails(true);
+  if (leadFromList) {
+    openDrawer(leadFromList);
+    return;
+  }
 
-      try {
-        const response = await fetch(`/api/leads/${leadIdFromUrl}`);
+  const fetchLeadFromUrl = async () => {
+    setIsLoadingLeadDetails(true);
 
-        if (!response.ok) {
-          throw new Error('Erro ao carregar lead pelo link');
-        }
+    try {
+      const response = await fetch(`/api/leads/${leadIdFromUrl}`);
 
-        const detailedLead = await response.json();
-
-        setDrawerLead(detailedLead);
-        setIsDrawerOpen(true);
-      } catch (error) {
-        console.error('Erro ao abrir lead pelo link:', error);
-      } finally {
-        setIsLoadingLeadDetails(false);
+      if (!response.ok) {
+        throw new Error('Erro ao carregar lead pelo link');
       }
-    };
 
-    fetchLeadFromUrl();
-  }, [leadIdFromUrl, leads, isDrawerOpen, isLoadingLeadDetails]);
+      const detailedLead = await response.json();
+
+      setDrawerLead(detailedLead);
+      setIsDrawerOpen(true);
+    } catch (error) {
+      console.error('Erro ao abrir lead pelo link:', error);
+    } finally {
+      setIsLoadingLeadDetails(false);
+    }
+  };
+
+  fetchLeadFromUrl();
+}, [leadIdFromUrl, leads, isDrawerOpen, isLoadingLeadDetails]);
+
+if (permLoading) return <PermissionLoading />;
+if (!canAccess('leads')) return <AccessDenied module="leads" />;
 
   const closeDrawer = () => {
   setIsDrawerOpen(false);
