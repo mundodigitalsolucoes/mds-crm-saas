@@ -88,18 +88,25 @@ export async function PUT(
 
     const cleanBody = sanitizeLeadUpdateBody(body);
 
-    const parsed = parseBody(leadUpdateSchema, cleanBody);
+    const result = leadUpdateSchema.safeParse(cleanBody);
 
-if (!parsed.success) {
+if (!result.success) {
   console.error('Erro de validação ao atualizar lead:', {
     body,
     cleanBody,
+    details: result.error.flatten().fieldErrors,
   });
 
-  return parsed.response;
+  return NextResponse.json(
+    {
+      error: 'Dados inválidos',
+      details: result.error.flatten().fieldErrors,
+    },
+    { status: 400 }
+  );
 }
 
-    const data = parsed.data;
+    const data = result.data;
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
 
