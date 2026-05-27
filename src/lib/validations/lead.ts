@@ -23,6 +23,12 @@ const leadSourceEnum = z.enum([
   'linkedin',
   'facebook',
   'csv_import',
+
+  // Compatibilidade legado
+  'Google Maps',
+  'Instagram',
+  'Facebook',
+  'LinkedIn',
 ]);
 
 const optionalScoreCreate = z.preprocess(

@@ -91,12 +91,6 @@ export async function PUT(
     const result = leadUpdateSchema.safeParse(cleanBody);
 
 if (!result.success) {
-  console.error('Erro de validação ao atualizar lead:', {
-    body,
-    cleanBody,
-    details: result.error.flatten().fieldErrors,
-  });
-
   return NextResponse.json(
     {
       error: 'Dados inválidos',
@@ -123,25 +117,52 @@ if (!result.success) {
 
     const updateData: Record<string, any> = {};
 
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.email !== undefined) updateData.email = data.email;
-    if (data.phone !== undefined) updateData.phone = data.phone;
-    if (data.whatsapp !== undefined) updateData.whatsapp = data.whatsapp;
-    if (data.company !== undefined) updateData.company = data.company;
-    if (data.position !== undefined) updateData.position = data.position;
-    if (data.source !== undefined) updateData.source = data.source;
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.inKanban !== undefined) updateData.inKanban = data.inKanban;
-    if (data.score !== undefined) updateData.score = data.score ?? 0;
-    if (data.value !== undefined) updateData.value = data.value;
-    if (data.productOrService !== undefined) updateData.productOrService = data.productOrService;
-    if (data.city !== undefined) updateData.city = data.city;
-    if (data.website !== undefined) updateData.website = data.website;
-    if (data.instagram !== undefined) updateData.instagram = data.instagram;
-    if (data.facebook !== undefined) updateData.facebook = data.facebook;
-    if (data.linkedin !== undefined) updateData.linkedin = data.linkedin;
-    if (data.notes !== undefined) updateData.notes = data.notes;
-    if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
+    function normalizeLeadStatus(status: string) {
+  const normalized = status.trim().toLowerCase();
+
+  const systemStatusMap: Record<string, string> = {
+    'novo lead': 'new',
+    'novo': 'new',
+    'lead novo': 'new',
+
+    'em contato': 'contact',
+    'contato': 'contact',
+
+    'proposta enviada': 'proposal',
+    'proposta': 'proposal',
+
+    'fechado': 'closed',
+    'ganho': 'closed',
+
+    'perdido': 'lost',
+  };
+
+  return systemStatusMap[normalized] || status;
+}
+
+if (data.name !== undefined) updateData.name = data.name;
+if (data.email !== undefined) updateData.email = data.email;
+if (data.phone !== undefined) updateData.phone = data.phone;
+if (data.whatsapp !== undefined) updateData.whatsapp = data.whatsapp;
+if (data.company !== undefined) updateData.company = data.company;
+if (data.position !== undefined) updateData.position = data.position;
+if (data.source !== undefined) updateData.source = data.source;
+
+if (data.status !== undefined) {
+  updateData.status = normalizeLeadStatus(data.status);
+}
+
+if (data.inKanban !== undefined) updateData.inKanban = data.inKanban;
+if (data.score !== undefined) updateData.score = data.score ?? 0;
+if (data.value !== undefined) updateData.value = data.value;
+if (data.productOrService !== undefined) updateData.productOrService = data.productOrService;
+if (data.city !== undefined) updateData.city = data.city;
+if (data.website !== undefined) updateData.website = data.website;
+if (data.instagram !== undefined) updateData.instagram = data.instagram;
+if (data.facebook !== undefined) updateData.facebook = data.facebook;
+if (data.linkedin !== undefined) updateData.linkedin = data.linkedin;
+if (data.notes !== undefined) updateData.notes = data.notes;
+if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
 
     const changedFields = Object.keys(updateData).filter((key) => {
       const beforeValue = (existing as any)[key];
