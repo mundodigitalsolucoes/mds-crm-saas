@@ -78,7 +78,11 @@ function isOverdue(task: FollowUpTask) {
   if (task.status === 'done' || task.status === 'cancelled') return false;
 
   const today = getTodayRange().start;
+
   const dueDate = new Date(task.dueDate);
+
+  // Normaliza timezone para evitar task de hoje virar atrasada
+  dueDate.setHours(0, 0, 0, 0);
 
   return dueDate < today;
 }
