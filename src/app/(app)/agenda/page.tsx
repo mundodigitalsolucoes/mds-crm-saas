@@ -383,21 +383,34 @@ const eventsOfSelectedDay = useMemo(() => {
                         </div>
 
                         <div className="flex items-center gap-2 ml-4">
-                          <button
-                            onClick={() => openEdit(event)}
-                            className="p-2 rounded-md text-gray-500 hover:bg-gray-200 hover:text-indigo-600 transition-colors"
-                            title="Editar evento"
-                          >
-                            <Edit size={18} />
-                          </button>
-                          <button
-                            onClick={() => onDelete(event.id)}
-                            className="p-2 rounded-md text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors"
-                            title="Excluir evento"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+  {event.sourceType === 'event' ? (
+    <>
+      <button
+        onClick={() => openEdit(event)}
+        className="p-2 rounded-md text-gray-500 hover:bg-gray-200 hover:text-indigo-600 transition-colors"
+        title="Editar evento"
+      >
+        <Edit size={18} />
+      </button>
+
+      <button
+        onClick={() => onDelete(event.id)}
+        className="p-2 rounded-md text-gray-500 hover:bg-red-100 hover:text-red-600 transition-colors"
+        title="Excluir evento"
+      >
+        <Trash2 size={18} />
+      </button>
+    </>
+  ) : (
+    <a
+      href="/follow-ups"
+      className="p-2 rounded-md text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+      title="Abrir follow-ups"
+    >
+      <Edit size={18} />
+    </a>
+  )}
+</div>
                       </div>
                     </div>
                   ))

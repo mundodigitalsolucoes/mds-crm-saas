@@ -5,6 +5,16 @@ import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, taskUpdateSchema } from '@/lib/validations';
 
+function parseLocalDate(dateString: string) {
+  if (dateString.includes('T')) {
+    return new Date(dateString);
+  }
+
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
 // GET /api/tasks/[id]
 export async function GET(
   request: NextRequest,
@@ -165,8 +175,10 @@ export async function PUT(
 
     // Converter datas
     if (data.dueDate !== undefined) {
-      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
-    }
+  updateData.dueDate = data.dueDate
+    ? parseLocalDate(data.dueDate)
+    : null;
+}
     if (data.startDate !== undefined) {
       updateData.startDate = data.startDate ? new Date(data.startDate) : null;
     }
