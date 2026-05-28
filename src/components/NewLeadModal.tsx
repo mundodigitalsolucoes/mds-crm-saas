@@ -336,7 +336,7 @@ export default function NewLeadModal({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">Nome *</label>
                   <input
