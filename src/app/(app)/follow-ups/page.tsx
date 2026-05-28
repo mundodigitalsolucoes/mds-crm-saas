@@ -8,8 +8,10 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Plus,
   RefreshCw,
   Search,
+  Trash2,
   UserCircle,
 } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
@@ -78,10 +80,8 @@ function isOverdue(task: FollowUpTask) {
   if (task.status === 'done' || task.status === 'cancelled') return false;
 
   const today = getTodayRange().start;
-
   const dueDate = new Date(task.dueDate);
 
-  // Normaliza timezone para evitar task de hoje virar atrasada
   dueDate.setHours(0, 0, 0, 0);
 
   return dueDate < today;
@@ -131,6 +131,10 @@ export default function FollowUpsPage() {
   const [tasks, setTasks] = useState<FollowUpTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [newDueDate, setNewDueDate] = useState('');
+  const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
+  const [creatingTask, setCreatingTask] = useState(false);
   const [error, setError] = useState('');
 
   const [search, setSearch] = useState('');
@@ -161,14 +165,14 @@ export default function FollowUpsPage() {
   };
 
   useEffect(() => {
-  if (!canAccess('tasks')) {
-    setLoading(false);
-    setError('Seu usuário não tem permissão para visualizar tarefas/follow-ups.');
-    return;
-  }
+    if (!canAccess('tasks')) {
+      setLoading(false);
+      setError('Seu usuário não tem permissão para visualizar tarefas/follow-ups.');
+      return;
+    }
 
-  fetchFollowUps();
-}, [canAccess]);
+    fetchFollowUps();
+  }, [canAccess]);
 
   const responsibleOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -242,13 +246,13 @@ export default function FollowUpsPage() {
 
   const rescheduleTask = async (task: FollowUpTask) => {
     const currentDateTime = task.dueDate
-  ? new Date(task.dueDate).toISOString().slice(0, 16)
-  : '';
+      ? new Date(task.dueDate).toISOString().slice(0, 16)
+      : '';
 
-const newDate = window.prompt(
-  'Nova data e horário do follow-up (AAAA-MM-DDTHH:mm)',
-  currentDateTime
-);
+    const newDate = window.prompt(
+      'Nova data e horário do follow-up (AAAA-MM-DDTHH:mm)',
+      currentDateTime
+    );
 
     if (!newDate) return;
 
@@ -258,7 +262,10 @@ const newDate = window.prompt(
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dueDate: newDate, status: task.status === 'done' ? 'todo' : task.status }),
+        body: JSON.stringify({
+          dueDate: newDate,
+          status: task.status === 'done' ? 'todo' : task.status,
+        }),
       });
 
       if (!response.ok) {
@@ -274,8 +281,73 @@ const newDate = window.prompt(
     }
   };
 
+  const createTask = async () => {
+    if (!newTitle.trim() || !newDueDate) {
+      alert('Preencha título e data do follow-up');
+      return;
+    }
+
+    try {
+      setCreatingTask(true);
+
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          dueDate: newDueDate,
+          priority: newPriority,
+          status: 'todo',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar follow-up');
+      }
+
+      const createdTask = await response.json();
+
+      setTasks((prev) => [createdTask, ...prev]);
+      setNewTitle('');
+      setNewDueDate('');
+      setNewPriority('medium');
+    } catch (err) {
+      console.error('Erro ao criar follow-up:', err);
+      alert('Erro ao criar follow-up.');
+    } finally {
+      setCreatingTask(false);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    const confirmed = window.confirm('Deseja realmente excluir este follow-up?');
+
+    if (!confirmed) return;
+
+    try {
+      setUpdatingTaskId(taskId);
+
+      const response = await fetch(`/api/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir follow-up');
+      }
+
+      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+    } catch (err) {
+      console.error('Erro ao excluir follow-up:', err);
+      alert('Erro ao excluir follow-up.');
+    } finally {
+      setUpdatingTaskId(null);
+    }
+  };
+
   if (permLoading) return <PermissionLoading />;
-  if (!canAccess('leads')) return <AccessDenied module="leads" />;
+  if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -303,6 +375,57 @@ const newDate = window.prompt(
             {error}
           </div>
         )}
+
+        <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Novo Follow-up</h2>
+            <p className="text-sm text-gray-500">Crie rapidamente um follow-up operacional</p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <input
+              type="text"
+              placeholder="Título do follow-up"
+              value={newTitle}
+              onChange={(event) => setNewTitle(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            />
+
+            <input
+              type="datetime-local"
+              value={newDueDate}
+              onChange={(event) => setNewDueDate(event.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            />
+
+            <select
+              value={newPriority}
+              onChange={(event) => setNewPriority(event.target.value as TaskPriority)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+            >
+              <option value="low">Baixa</option>
+              <option value="medium">Média</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
+            </select>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={createTask}
+              disabled={creatingTask}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {creatingTask ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                <Plus size={16} />
+              )}
+              Criar Follow-up
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="rounded-xl border border-red-200 bg-white p-4">
@@ -361,7 +484,7 @@ const newDate = window.prompt(
             <select
               value={periodFilter}
               onChange={(event) => setPeriodFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Todos os períodos</option>
               <option value="overdue">Atrasados</option>
@@ -373,42 +496,46 @@ const newDate = window.prompt(
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">Todos os status</option>
-              <option value="todo">Pendente</option>
-              <option value="in_progress">Em andamento</option>
-              <option value="done">Concluído</option>
-              <option value="cancelled">Cancelado</option>
+              {Object.entries(statusLabel).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
 
             <select
               value={priorityFilter}
               onChange={(event) => setPriorityFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">Todas as prioridades</option>
-              <option value="low">Baixa</option>
-              <option value="medium">Média</option>
-              <option value="high">Alta</option>
-              <option value="urgent">Urgente</option>
-            </select>
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <select
-              value={assignedFilter}
-              onChange={(event) => setAssignedFilter(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Todos os responsáveis</option>
-              {responsibleOptions.map((responsible) => (
-                <option key={responsible.id} value={responsible.id}>
-                  {responsible.name}
+              <option value="">Todas prioridades</option>
+              {Object.entries(priorityLabel).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
                 </option>
               ))}
             </select>
           </div>
+
+          {responsibleOptions.length > 0 && (
+            <div className="mt-3">
+              <select
+                value={assignedFilter}
+                onChange={(event) => setAssignedFilter(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500 md:w-auto"
+              >
+                <option value="">Todos os responsáveis</option>
+                {responsibleOptions.map((responsible) => (
+                  <option key={responsible.id} value={responsible.id}>
+                    {responsible.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -474,7 +601,11 @@ const newDate = window.prompt(
                           disabled={updatingTaskId === task.id}
                           className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                         >
-                          {updatingTaskId === task.id ? <Loader2 className="animate-spin" size={15} /> : <CheckCircle2 size={15} />}
+                          {updatingTaskId === task.id ? (
+                            <Loader2 className="animate-spin" size={15} />
+                          ) : (
+                            <CheckCircle2 size={15} />
+                          )}
                           Concluir
                         </button>
                       )}
@@ -493,7 +624,7 @@ const newDate = window.prompt(
                         href={task.leadId ? `/leads?leadId=${task.leadId}` : '/leads'}
                         className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
                       >
-                         Abrir Lead
+                        Abrir Lead
                       </Link>
 
                       <Link
@@ -502,6 +633,16 @@ const newDate = window.prompt(
                       >
                         Atendimento
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteTask(task.id)}
+                        disabled={updatingTaskId === task.id}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 size={15} />
+                        Excluir
+                      </button>
                     </div>
                   </div>
                 </div>
