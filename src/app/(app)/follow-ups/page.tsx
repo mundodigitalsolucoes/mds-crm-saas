@@ -134,6 +134,13 @@ export default function FollowUpsPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newDueDate, setNewDueDate] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
+
+  const [newLeadId, setNewLeadId] = useState('');
+  const [newAssignedToId, setNewAssignedToId] = useState('');
+
+  const [leads, setLeads] = useState<{ id: string; name: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+
   const [creatingTask, setCreatingTask] = useState(false);
   const [error, setError] = useState('');
 
@@ -165,14 +172,49 @@ export default function FollowUpsPage() {
   };
 
   useEffect(() => {
-    if (!canAccess('tasks')) {
-      setLoading(false);
-      setError('Seu usuário não tem permissão para visualizar tarefas/follow-ups.');
-      return;
-    }
+  if (!canAccess('tasks')) {
+    setLoading(false);
+    setError('Seu usuário não tem permissão para visualizar tarefas/follow-ups.');
+    return;
+  }
 
-    fetchFollowUps();
-  }, [canAccess]);
+  fetchFollowUps();
+
+  const fetchDependencies = async () => {
+    try {
+      const [usersResponse, leadsResponse] = await Promise.all([
+        fetch('/api/users'),
+        fetch('/api/leads?limit=500'),
+      ]);
+
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+
+        setUsers(
+          (usersData || []).map((user: any) => ({
+            id: user.id,
+            name: user.name,
+          }))
+        );
+      }
+
+      if (leadsResponse.ok) {
+        const leadsData = await leadsResponse.json();
+
+        setLeads(
+          (leadsData.leads || []).map((lead: any) => ({
+            id: lead.id,
+            name: lead.name || 'Lead sem nome',
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Erro ao carregar dependências do follow-up:', err);
+    }
+  };
+
+  fetchDependencies();
+}, [canAccess]);
 
   const responsibleOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -296,11 +338,13 @@ export default function FollowUpsPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: newTitle.trim(),
-          dueDate: newDueDate,
-          priority: newPriority,
-          status: 'todo',
-        }),
+  title: newTitle.trim(),
+  dueDate: newDueDate,
+  priority: newPriority,
+  status: 'todo',
+  leadId: newLeadId || null,
+  assignedToId: newAssignedToId || null,
+}),
       });
 
       if (!response.ok) {
@@ -313,6 +357,8 @@ export default function FollowUpsPage() {
       setNewTitle('');
       setNewDueDate('');
       setNewPriority('medium');
+      setNewLeadId('');
+      setNewAssignedToId('');
     } catch (err) {
       console.error('Erro ao criar follow-up:', err);
       alert('Erro ao criar follow-up.');
@@ -382,33 +428,61 @@ export default function FollowUpsPage() {
             <p className="text-sm text-gray-500">Crie rapidamente um follow-up operacional</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <input
-              type="text"
-              placeholder="Título do follow-up"
-              value={newTitle}
-              onChange={(event) => setNewTitle(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+  <input
+    type="text"
+    placeholder="Título do follow-up"
+    value={newTitle}
+    onChange={(event) => setNewTitle(event.target.value)}
+    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+  />
 
-            <input
-              type="datetime-local"
-              value={newDueDate}
-              onChange={(event) => setNewDueDate(event.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            />
+  <input
+    type="datetime-local"
+    value={newDueDate}
+    onChange={(event) => setNewDueDate(event.target.value)}
+    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+  />
 
-            <select
-              value={newPriority}
-              onChange={(event) => setNewPriority(event.target.value as TaskPriority)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-            >
-              <option value="low">Baixa</option>
-              <option value="medium">Média</option>
-              <option value="high">Alta</option>
-              <option value="urgent">Urgente</option>
-            </select>
-          </div>
+  <select
+    value={newPriority}
+    onChange={(event) => setNewPriority(event.target.value as TaskPriority)}
+    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+  >
+    <option value="low">Baixa</option>
+    <option value="medium">Média</option>
+    <option value="high">Alta</option>
+    <option value="urgent">Urgente</option>
+  </select>
+
+  <select
+    value={newLeadId}
+    onChange={(event) => setNewLeadId(event.target.value)}
+    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+  >
+    <option value="">Selecionar lead</option>
+
+    {leads.map((lead) => (
+      <option key={lead.id} value={lead.id}>
+        {lead.name}
+      </option>
+    ))}
+  </select>
+
+  <select
+    value={newAssignedToId}
+    onChange={(event) => setNewAssignedToId(event.target.value)}
+    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+  >
+    <option value="">Selecionar responsável</option>
+
+    {users.map((user) => (
+      <option key={user.id} value={user.id}>
+        {user.name}
+      </option>
+    ))}
+  </select>
+</div>
 
           <div className="mt-4 flex justify-end">
             <button
