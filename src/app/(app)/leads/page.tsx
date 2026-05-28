@@ -273,7 +273,7 @@ function LeadDrawer({
   return (
     <>
       <div className="fixed inset-0 z-[55] bg-black/35" onClick={onClose} />
-      <aside className="fixed right-0 top-0 z-[60] flex h-full w-full max-w-5xl flex-col border-l border-gray-200 bg-white shadow-2xl">
+      <aside className="fixed right-0 top-0 z-[60] flex h-screen w-full max-w-5xl flex-col overflow-hidden border-l border-gray-200 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100">
@@ -332,7 +332,7 @@ function LeadDrawer({
           </button>
         </div>
 
-        <div key={lead.id} className="flex-1 overflow-y-auto p-8">
+        <div key={lead.id} className="flex-1 overflow-y-auto p-8 pb-24">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             <InfoItem icon={<Mail size={14} />} label="Email" value={lead.email} />
             <InfoItem icon={<Phone size={14} />} label="Telefone Fixo" value={lead.phone} />
@@ -369,7 +369,7 @@ function LeadDrawer({
             <InfoItem icon={<Globe size={14} />} label="LinkedIn" value={lead.linkedin} isLink />
           </div>
 
-          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+          <div className="rounded-xl border border-gray-200 bg-white p-4">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
               Observações
             </p>
@@ -542,7 +542,7 @@ function LeadDrawer({
         <p className="text-sm text-gray-500">Nenhuma atividade registrada.</p>
       )}
     </div>
-  </>
+    </>
 )}
       </aside>
     </>
