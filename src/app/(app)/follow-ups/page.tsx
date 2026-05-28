@@ -103,7 +103,10 @@ function isNextSevenDays(task: FollowUpTask) {
 function formatDate(dateValue?: string | null) {
   if (!dateValue) return 'Sem data';
 
-  return new Date(dateValue).toLocaleDateString('pt-BR');
+  return new Date(dateValue).toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
 }
 
 function getVisualStatus(task: FollowUpTask) {
@@ -238,10 +241,14 @@ export default function FollowUpsPage() {
   };
 
   const rescheduleTask = async (task: FollowUpTask) => {
-    const newDate = window.prompt(
-      'Nova data do follow-up no formato AAAA-MM-DD',
-      task.dueDate ? task.dueDate.substring(0, 10) : ''
-    );
+    const currentDateTime = task.dueDate
+  ? new Date(task.dueDate).toISOString().slice(0, 16)
+  : '';
+
+const newDate = window.prompt(
+  'Nova data e horário do follow-up (AAAA-MM-DDTHH:mm)',
+  currentDateTime
+);
 
     if (!newDate) return;
 

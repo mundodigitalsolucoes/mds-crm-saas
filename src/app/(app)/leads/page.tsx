@@ -471,11 +471,11 @@ function LeadDrawer({
           />
 
           <input
-            type="date"
-            value={followUpDueDate}
-            onChange={(e) => setFollowUpDueDate(e.target.value)}
-            className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
-          />
+  type="datetime-local"
+  value={followUpDueDate}
+  onChange={(e) => setFollowUpDueDate(e.target.value)}
+  className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+/>
 
           <textarea
             value={followUpDescription}
