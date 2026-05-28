@@ -81,9 +81,12 @@ export default function AgendaPage() {
           title: task.title,
           description: task.description,
           date: task.dueDate.substring(0, 10),
-          startTime: null,
+          startTime: new Date(task.dueDate).toLocaleTimeString('pt-BR', {
+          hour: '2-digit',
+          minute: '2-digit',
+      }),
           endTime: null,
-          allDay: true,
+          allDay: false,
           type: 'follow_up',
           status: task.status === 'done' ? 'concluido' : 'agendado',
           color: '#4f46e5',
@@ -357,10 +360,16 @@ const eventsOfSelectedDay = useMemo(() => {
     }`}
   >
     {event.taskStatus === 'done'
-      ? 'Concluído'
-      : new Date(event.date) < new Date()
+  ? 'Concluído'
+  : (() => {
+      const comparisonDate = event.startTime
+        ? new Date(`${event.date}T${event.startTime}`)
+        : new Date(event.date);
+
+      return comparisonDate < new Date()
         ? 'Atrasado'
-        : 'Follow-up'}
+        : 'Follow-up';
+    })()}
   </span>
 )}
                           </div>
