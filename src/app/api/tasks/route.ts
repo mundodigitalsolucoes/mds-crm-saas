@@ -169,18 +169,24 @@ export async function GET(request: NextRequest) {
     const commentMap = new Map(commentCounts.map(c => [c.entityId, c._count]));
 
     // Formatar resposta
-    const formattedTasks = tasks.map(task => ({
-      ...task,
-      dueDate: task.dueDate?.toISOString(),
-      startDate: task.startDate?.toISOString(),
-      completedAt: task.completedAt?.toISOString(),
-      createdAt: task.createdAt.toISOString(),
-      updatedAt: task.updatedAt.toISOString(),
-      subtasks: task.subtasks.map(st => ({
-        ...st,
-        completedAt: st.completedAt?.toISOString(),
-        createdAt: st.createdAt.toISOString(),
-      })),
+const formattedTasks = tasks.map(task => ({
+  ...task,
+  dueDate: task.dueDate
+    ? task.dueDate.toISOString().replace('Z', '')
+    : null,
+  startDate: task.startDate
+    ? task.startDate.toISOString().replace('Z', '')
+    : null,
+  completedAt: task.completedAt
+    ? task.completedAt.toISOString().replace('Z', '')
+    : null,
+  createdAt: task.createdAt.toISOString(),
+  updatedAt: task.updatedAt.toISOString(),
+  subtasks: task.subtasks.map(st => ({
+    ...st,
+    completedAt: st.completedAt?.toISOString(),
+    createdAt: st.createdAt.toISOString(),
+  })),
       _count: {
         subtasks: task._count.subtasks,
         attachments: attachmentMap.get(task.id) || 0,
