@@ -81,10 +81,9 @@ export default function AgendaPage() {
           title: task.title,
           description: task.description,
           date: task.dueDate.substring(0, 10),
-          startTime: new Date(task.dueDate).toLocaleTimeString('pt-BR', {
-          hour: '2-digit',
-          minute: '2-digit',
-      }),
+          startTime: task.dueDate
+  ? task.dueDate.split('T')[1].slice(0, 5)
+  : '',
           endTime: null,
           allDay: false,
           type: 'follow_up',

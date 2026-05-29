@@ -103,10 +103,9 @@ function isNextSevenDays(task: FollowUpTask) {
 function formatDate(dateValue?: string | null) {
   if (!dateValue) return 'Sem data';
 
-  return new Date(dateValue).toLocaleString('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  });
+  const [date, time] = dateValue.split('T');
+
+  return `${date.split('-').reverse().join('/')} ${time.slice(0, 5)}`;
 }
 
 function getVisualStatus(task: FollowUpTask) {
