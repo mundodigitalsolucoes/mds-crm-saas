@@ -67,9 +67,12 @@ export async function GET(request: NextRequest) {
 
     // Filtro: tarefas atrasadas
     if (params.isOverdue === 'true') {
-      where.dueDate = { lt: new Date() };
-      where.status = { notIn: ['done', 'cancelled'] };
-    }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  where.dueDate = { lt: today };
+  where.status = { notIn: ['done', 'cancelled'] };
+}
 
     // Filtro: tarefas de hoje — usa UTC-3 (America/Sao_Paulo) explícito
     if (params.isToday === 'true') {
