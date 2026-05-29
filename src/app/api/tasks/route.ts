@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
         estimatedMinutes: data.estimatedMinutes,
         projectId: data.projectId || null,
         leadId: data.leadId || null,
-        assignedToId: data.assignedToId || null,
+        assignedToId: data.assignedToId || userId,
         createdById: userId,
         organizationId,
       },
