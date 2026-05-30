@@ -248,8 +248,13 @@ function LeadDrawer({
   followUpDescription,
   setFollowUpDescription,
   followUpDueDate,
-  setFollowUpDueDate,
-  isCreatingFollowUp,
+setFollowUpDueDate,
+
+users,
+selectedAssignedToId,
+setSelectedAssignedToId,
+
+isCreatingFollowUp,
 }: {
   lead: Lead | null;
   isOpen: boolean;
@@ -265,8 +270,20 @@ function LeadDrawer({
   followUpDescription: string;
   setFollowUpDescription: (value: string) => void;
   followUpDueDate: string;
-  setFollowUpDueDate: (value: string) => void;
-  isCreatingFollowUp: boolean;
+setFollowUpDueDate: (value: string) => void;
+
+users: {
+  id: string;
+  name: string;
+}[];
+
+selectedAssignedToId: string;
+
+setSelectedAssignedToId: (
+  value: string
+) => void;
+
+isCreatingFollowUp: boolean;
 }) {
   if (!isOpen || !lead) return null;
 
@@ -476,6 +493,26 @@ function LeadDrawer({
   onChange={(e) => setFollowUpDueDate(e.target.value)}
   className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
 />
+<select
+  value={selectedAssignedToId}
+  onChange={(e) =>
+    setSelectedAssignedToId(e.target.value)
+  }
+  className="w-full rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-indigo-500"
+>
+  <option value="">
+    Responsável padrão (usuário logado)
+  </option>
+
+  {users.map((user) => (
+    <option
+      key={user.id}
+      value={user.id}
+    >
+      {user.name}
+    </option>
+  ))}
+</select>
 
           <textarea
             value={followUpDescription}
@@ -592,6 +629,12 @@ useEffect(() => {
   const [followUpDescription, setFollowUpDescription] = useState('');
   const [followUpDueDate, setFollowUpDueDate] = useState('');
   const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
+  const [users, setUsers] = useState<
+  { id: string; name: string }[]
+>([]);
+
+const [selectedAssignedToId, setSelectedAssignedToId] =
+  useState('');
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -633,6 +676,29 @@ useEffect(() => {
     filters.minScore,
     fetchLeads,
   ]);
+  
+  useEffect(() => {
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      setUsers(
+        data.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+        }))
+      );
+    } catch (error) {
+      console.error('Erro ao carregar usuários:', error);
+    }
+  };
+
+  loadUsers();
+}, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -705,7 +771,12 @@ const openDrawer = async (lead: Lead) => {
     }
 
     const detailedLead = await response.json();
-    setDrawerLead(detailedLead);
+
+  setDrawerLead(detailedLead);
+
+  setSelectedAssignedToId(
+  detailedLead.assignedToId || ''
+);
   } catch (error) {
     console.error('Erro ao carregar detalhes do lead:', error);
   } finally {
@@ -736,7 +807,12 @@ useEffect(() => {
       const detailedLead = await response.json();
 
       setDrawerLead(detailedLead);
-      setIsDrawerOpen(true);
+
+setSelectedAssignedToId(
+  detailedLead.assignedToId || ''
+);
+
+setIsDrawerOpen(true);
     } catch (error) {
       console.error('Erro ao abrir lead pelo link:', error);
     } finally {
@@ -786,9 +862,9 @@ const handleCreateFollowUp = async () => {
       payload.dueDate = followUpDueDate;
     }
 
-    if (drawerLead.assignedToId) {
-      payload.assignedToId = drawerLead.assignedToId;
-    }
+    if (selectedAssignedToId) {
+  payload.assignedToId = selectedAssignedToId;
+}
 
     const response = await fetch('/api/tasks', {
       method: 'POST',
@@ -806,6 +882,7 @@ const handleCreateFollowUp = async () => {
     setFollowUpTitle('');
     setFollowUpDescription('');
     setFollowUpDueDate('');
+    setSelectedAssignedToId('');
 
     const detailResponse = await fetch(`/api/leads/${drawerLead.id}`);
 
@@ -1501,23 +1578,26 @@ const handleCreateFollowUp = async () => {
       />
 
       <LeadDrawer
-        lead={drawerLead}
-        isOpen={isDrawerOpen}
-        onClose={closeDrawer}
-        onEdit={handleEditFromDrawer}
-        onDelete={handleDeleteFromDrawer}
-        onToggleKanban={handleToggleKanbanFromDrawer}
-        onCreateFollowUp={handleCreateFollowUp}
-        isUpdatingKanban={isUpdatingDrawerKanban}
-        isLoadingDetails={isLoadingLeadDetails}
-        followUpTitle={followUpTitle}
-        setFollowUpTitle={setFollowUpTitle}
-        followUpDescription={followUpDescription}
-        setFollowUpDescription={setFollowUpDescription}
-        followUpDueDate={followUpDueDate}
-        setFollowUpDueDate={setFollowUpDueDate}
-        isCreatingFollowUp={isCreatingFollowUp}
-      />
+  lead={drawerLead}
+  isOpen={isDrawerOpen}
+  onClose={closeDrawer}
+  onEdit={handleEditFromDrawer}
+  onDelete={handleDeleteFromDrawer}
+  onToggleKanban={handleToggleKanbanFromDrawer}
+  onCreateFollowUp={handleCreateFollowUp}
+  isUpdatingKanban={isUpdatingDrawerKanban}
+  isLoadingDetails={isLoadingLeadDetails}
+  followUpTitle={followUpTitle}
+  setFollowUpTitle={setFollowUpTitle}
+  followUpDescription={followUpDescription}
+  setFollowUpDescription={setFollowUpDescription}
+  followUpDueDate={followUpDueDate}
+  setFollowUpDueDate={setFollowUpDueDate}
+  users={users}
+  selectedAssignedToId={selectedAssignedToId}
+  setSelectedAssignedToId={setSelectedAssignedToId}
+  isCreatingFollowUp={isCreatingFollowUp}
+/>
     </div>
   );
 }
