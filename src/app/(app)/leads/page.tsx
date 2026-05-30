@@ -241,6 +241,7 @@ function LeadDrawer({
   onDelete,
   onToggleKanban,
   onCreateFollowUp,
+  onEditTask,
   isUpdatingKanban,
   isLoadingDetails,
   followUpTitle,
@@ -263,6 +264,7 @@ isCreatingFollowUp,
   onDelete: (lead: Lead) => void;
   onToggleKanban: (lead: Lead) => void;
   onCreateFollowUp: () => void;
+  onEditTask: (task: any) => void;
   isUpdatingKanban: boolean;
   isLoadingDetails: boolean;
   followUpTitle: string;
@@ -539,15 +541,41 @@ isCreatingFollowUp: boolean;
           {lead.tasks.map((task) => (
             <div key={task.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-800">{task.title}</p>
-                <span className="rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
-                  {task.status}
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-gray-500">
-                Prioridade: {task.priority}
-                {task.dueDate ? ` • Vence em ${new Date(task.dueDate).toLocaleDateString('pt-BR')}` : ''}
-              </p>
+  <p className="text-sm font-semibold text-gray-800">
+    {task.title}
+  </p>
+
+  <span className="rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
+    {task.status}
+  </span>
+</div>
+
+<p className="mt-1 text-xs text-gray-500">
+  Prioridade: {task.priority}
+  {task.dueDate
+    ? ` • Vence em ${new Date(task.dueDate).toLocaleDateString('pt-BR')}`
+    : ''}
+</p>
+
+<div className="mt-3 flex gap-2">
+  <button
+    type="button"
+    onClick={() => onEditTask(task)}
+    className="
+      rounded-md
+      border
+      border-indigo-200
+      px-3
+      py-1
+      text-xs
+      font-medium
+      text-indigo-700
+      hover:bg-indigo-50
+    "
+  >
+    Editar
+  </button>
+</div>
             </div>
           ))}
         </div>
@@ -628,6 +656,12 @@ useEffect(() => {
   const [followUpTitle, setFollowUpTitle] = useState('');
   const [followUpDescription, setFollowUpDescription] = useState('');
   const [followUpDueDate, setFollowUpDueDate] = useState('');
+  const [editingTask, setEditingTask] = useState<any | null>(null);
+
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskDescription, setEditTaskDescription] = useState('');
+  const [editTaskDueDate, setEditTaskDueDate] = useState('');
+  const [editTaskAssignedToId, setEditTaskAssignedToId] = useState('');
   const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
   const [users, setUsers] = useState<
   { id: string; name: string }[]
@@ -712,17 +746,27 @@ const [selectedAssignedToId, setSelectedAssignedToId] =
   }, [leads]);
 
   useEffect(() => {
-    if (!drawerLead) return;
+  if (!drawerLead) return;
 
-    const updatedLeadFromList = leads.find((lead) => lead.id === drawerLead.id);
-    if (!updatedLeadFromList) {
-      setDrawerLead(null);
-      setIsDrawerOpen(false);
-      return;
-    }
+  const updatedLeadFromList = leads.find(
+    (lead) => lead.id === drawerLead.id
+  );
 
-    setDrawerLead(updatedLeadFromList);
-  }, [leads, drawerLead]);
+  if (!updatedLeadFromList) {
+    setDrawerLead(null);
+    setIsDrawerOpen(false);
+    return;
+  }
+
+  setDrawerLead((prev) =>
+    prev
+      ? {
+          ...prev,
+          ...updatedLeadFromList,
+        }
+      : updatedLeadFromList
+  );
+}, [leads]);
 
     const limitReached = isAtLimit('leads');
   const planInactive = isPlanInactive();
@@ -772,7 +816,7 @@ const openDrawer = async (lead: Lead) => {
 
     const detailedLead = await response.json();
 
-  setDrawerLead(detailedLead);
+setDrawerLead(detailedLead);
 
   setSelectedAssignedToId(
   detailedLead.assignedToId || ''
@@ -895,6 +939,62 @@ const handleCreateFollowUp = async () => {
     alert('Erro ao criar follow-up');
   } finally {
     setIsCreatingFollowUp(false);
+  }
+};
+
+  const openTaskEditor = (task: any) => {
+  setEditingTask(task);
+
+  setEditTaskTitle(task.title || '');
+  setEditTaskDescription(task.description || '');
+
+  setEditTaskDueDate(
+    task.dueDate
+      ? new Date(task.dueDate).toISOString().slice(0, 16)
+      : ''
+  );
+
+  setEditTaskAssignedToId(task.assignedToId || '');
+};
+
+const saveTaskChanges = async () => {
+  if (!editingTask) return;
+
+  try {
+    const response = await fetch(
+      `/api/tasks/${editingTask.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editTaskTitle,
+          description: editTaskDescription,
+          dueDate: editTaskDueDate || null,
+          assignedToId: editTaskAssignedToId || null,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar follow-up');
+    }
+
+    const detailResponse = await fetch(
+      `/api/leads/${drawerLead?.id}`
+    );
+
+    if (detailResponse.ok) {
+      const detailedLead = await detailResponse.json();
+
+      setDrawerLead(detailedLead);
+    }
+
+    setEditingTask(null);
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao atualizar follow-up');
   }
 };
 
@@ -1585,6 +1685,7 @@ const handleCreateFollowUp = async () => {
   onDelete={handleDeleteFromDrawer}
   onToggleKanban={handleToggleKanbanFromDrawer}
   onCreateFollowUp={handleCreateFollowUp}
+  onEditTask={openTaskEditor}
   isUpdatingKanban={isUpdatingDrawerKanban}
   isLoadingDetails={isLoadingLeadDetails}
   followUpTitle={followUpTitle}
@@ -1598,6 +1699,119 @@ const handleCreateFollowUp = async () => {
   setSelectedAssignedToId={setSelectedAssignedToId}
   isCreatingFollowUp={isCreatingFollowUp}
 />
+{editingTask && (
+  <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4">
+    <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+
+      <div className="border-b border-gray-200 px-6 py-4">
+        <h3 className="text-lg font-semibold text-gray-800">
+          Editar Follow-up
+        </h3>
+      </div>
+
+      <div className="space-y-4 p-6">
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Título
+          </label>
+
+          <input
+            value={editTaskTitle}
+            onChange={(e) =>
+              setEditTaskTitle(e.target.value)
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Data/Hora
+          </label>
+
+          <input
+            type="datetime-local"
+            value={editTaskDueDate}
+            onChange={(e) =>
+              setEditTaskDueDate(e.target.value)
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Responsável
+          </label>
+
+          <select
+            value={editTaskAssignedToId}
+            onChange={(e) =>
+              setEditTaskAssignedToId(
+                e.target.value
+              )
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          >
+            <option value="">
+              Sem responsável
+            </option>
+
+            {users.map((user) => (
+              <option
+                key={user.id}
+                value={user.id}
+              >
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Observação
+          </label>
+
+          <textarea
+            rows={4}
+            value={editTaskDescription}
+            onChange={(e) =>
+              setEditTaskDescription(
+                e.target.value
+              )
+            }
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+      </div>
+
+      <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+
+        <button
+          type="button"
+          onClick={() =>
+            setEditingTask(null)
+          }
+          className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={saveTaskChanges}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+        >
+          Salvar
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
