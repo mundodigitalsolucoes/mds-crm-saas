@@ -290,7 +290,7 @@ isCreatingFollowUp: boolean;
   return (
     <>
       <div className="fixed inset-0 z-[55] bg-black/35" onClick={onClose} />
-      <aside className="fixed right-0 top-0 z-[60] flex h-screen w-full max-w-5xl flex-col overflow-hidden border-l border-gray-200 bg-white shadow-2xl">
+      <aside className="fixed right-0 top-0 z-[60] flex h-screen w-full max-w-5xl flex-col overflow-y-auto border-l border-gray-200 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-5 text-white">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-100">
