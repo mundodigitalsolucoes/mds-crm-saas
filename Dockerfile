@@ -1,7 +1,12 @@
-# Build stage
+# =========================
+# BUILD STAGE
+# =========================
 FROM node:22-alpine AS builder
 
 WORKDIR /app
+
+# Alinha versão do npm com ambiente local
+RUN npm install -g npm@11.6.2
 
 # Copy package files
 COPY package*.json ./
@@ -19,23 +24,31 @@ RUN npx prisma generate
 # Build application
 RUN npm run build
 
-# Production stage
+# =========================
+# PRODUCTION STAGE
+# =========================
 FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Install only production dependencies
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+# Alinha versão do npm com ambiente local
+RUN npm install -g npm@11.6.2
 
-# Copy built application from builder
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy build artifacts
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Set environment to production
+# Environment
 ENV NODE_ENV=production
 ENV PORT=3000
 
