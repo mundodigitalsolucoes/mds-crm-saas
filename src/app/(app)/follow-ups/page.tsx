@@ -140,6 +140,13 @@ export default function FollowUpsPage() {
   const [leads, setLeads] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
 
+  const [editingTask, setEditingTask] = useState<FollowUpTask | null>(null);
+
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskDescription, setEditTaskDescription] = useState('');
+  const [editTaskDueDate, setEditTaskDueDate] = useState('');
+  const [editTaskAssignedToId, setEditTaskAssignedToId] = useState('');
+
   const [creatingTask, setCreatingTask] = useState(false);
   const [error, setError] = useState('');
 
@@ -253,14 +260,13 @@ export default function FollowUpsPage() {
   }, [tasks, search, statusFilter, priorityFilter, assignedFilter, periodFilter]);
 
   const kpis = useMemo(() => {
-    return {
-      overdue: tasks.filter(isOverdue).length,
-      today: tasks.filter((task) => isSameDay(task.dueDate) && task.status !== 'done').length,
-      next7: tasks.filter(isNextSevenDays).length,
-      completedToday: tasks.filter((task) => task.status === 'done' && isSameDay(task.completedAt)).length,
-      noAssignee: tasks.filter((task) => !task.assignedToId && task.status !== 'done').length,
-    };
-  }, [tasks]);
+  return {
+    overdue: tasks.filter(isOverdue).length,
+    today: tasks.filter((task) => isSameDay(task.dueDate) && task.status !== 'done').length,
+    next7: tasks.filter(isNextSevenDays).length,
+    completedToday: tasks.filter((task) => task.status === 'done' && isSameDay(task.completedAt)).length,
+  };
+}, [tasks]);
 
   const completeTask = async (taskId: string) => {
     try {
@@ -366,30 +372,108 @@ export default function FollowUpsPage() {
     }
   };
 
-  const deleteTask = async (taskId: string) => {
-    const confirmed = window.confirm('Deseja realmente excluir este follow-up?');
+    const deleteTask = async (taskId: string) => {
+  const confirmed = window.confirm(
+    'Deseja realmente excluir este follow-up?'
+  );
 
-    if (!confirmed) return;
+  if (!confirmed) return;
 
-    try {
-      setUpdatingTaskId(taskId);
+  try {
+    setUpdatingTaskId(taskId);
 
-      const response = await fetch(`/api/tasks/${taskId}`, {
+    const response = await fetch(
+      `/api/tasks/${taskId}`,
+      {
         method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao excluir follow-up');
       }
+    );
 
-      setTasks((prev) => prev.filter((task) => task.id !== taskId));
-    } catch (err) {
-      console.error('Erro ao excluir follow-up:', err);
-      alert('Erro ao excluir follow-up.');
-    } finally {
-      setUpdatingTaskId(null);
+    if (!response.ok) {
+      throw new Error(
+        'Erro ao excluir follow-up'
+      );
     }
-  };
+
+    setTasks((prev) =>
+      prev.filter(
+        (task) => task.id !== taskId
+      )
+    );
+  } catch (err) {
+    console.error(
+      'Erro ao excluir follow-up:',
+      err
+    );
+
+    alert('Erro ao excluir follow-up.');
+  } finally {
+    setUpdatingTaskId(null);
+  }
+};
+
+const openTaskEditor = (
+  task: FollowUpTask
+) => {
+  setEditingTask(task);
+
+  setEditTaskTitle(task.title || '');
+
+  setEditTaskDescription(
+    task.description || ''
+  );
+
+  setEditTaskDueDate(
+    task.dueDate
+      ? new Date(task.dueDate)
+          .toISOString()
+          .slice(0, 16)
+      : ''
+  );
+
+  setEditTaskAssignedToId(
+    task.assignedToId || ''
+  );
+};
+
+const saveTaskChanges = async () => {
+  if (!editingTask) return;
+
+  try {
+    const response = await fetch(
+      `/api/tasks/${editingTask.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editTaskTitle,
+          description: editTaskDescription,
+          dueDate: editTaskDueDate || null,
+          assignedToId:
+            editTaskAssignedToId || null,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        'Erro ao atualizar follow-up'
+      );
+    }
+
+    await fetchFollowUps();
+
+    setEditingTask(null);
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      'Erro ao atualizar follow-up'
+    );
+  }
+};
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
@@ -532,14 +616,7 @@ export default function FollowUpsPage() {
             </div>
             <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.completedToday}</p>
           </div>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="flex items-center gap-2 text-gray-600">
-              <UserCircle size={18} />
-              <span className="text-sm font-medium">Sem responsável</span>
-            </div>
-            <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.noAssignee}</p>
-          </div>
+         
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -563,8 +640,7 @@ export default function FollowUpsPage() {
               <option value="overdue">Atrasados</option>
               <option value="today">Hoje</option>
               <option value="next7">Próximos 7 dias</option>
-              <option value="no_assignee">Sem responsável</option>
-            </select>
+              </select>
 
             <select
               value={statusFilter}
@@ -682,6 +758,13 @@ export default function FollowUpsPage() {
                           Concluir
                         </button>
                       )}
+                       <button
+                        type="button"
+                        onClick={() => openTaskEditor(task)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+                      >
+                         Editar
+                      </button>
 
                       <button
                         type="button"
@@ -722,7 +805,89 @@ export default function FollowUpsPage() {
               ))}
             </div>
           )}
-        </div>
+                </div>
+
+        {editingTask && (
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+
+              <div className="border-b border-gray-200 px-6 py-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Editar Follow-up
+                </h3>
+              </div>
+
+              <div className="space-y-4 p-6">
+
+                <input
+                  value={editTaskTitle}
+                  onChange={(e) =>
+                    setEditTaskTitle(e.target.value)
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
+
+                <input
+                  type="datetime-local"
+                  value={editTaskDueDate}
+                  onChange={(e) =>
+                    setEditTaskDueDate(e.target.value)
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
+
+                <select
+                  value={editTaskAssignedToId}
+                  onChange={(e) =>
+                    setEditTaskAssignedToId(e.target.value)
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                >
+                  {users.map((user) => (
+                    <option
+                      key={user.id}
+                      value={user.id}
+                    >
+                      {user.name}
+                    </option>
+                  ))}
+                </select>
+
+                <textarea
+                  rows={4}
+                  value={editTaskDescription}
+                  onChange={(e) =>
+                    setEditTaskDescription(
+                      e.target.value
+                    )
+                  }
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+
+                <button
+                  onClick={() =>
+                    setEditingTask(null)
+                  }
+                  className="rounded-lg border border-gray-300 px-4 py-2"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  onClick={saveTaskChanges}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-white"
+                >
+                  Salvar
+                </button>
+
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
