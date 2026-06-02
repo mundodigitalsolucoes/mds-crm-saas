@@ -371,6 +371,16 @@ export default function KanbanPage() {
   const [selectedStage, setSelectedStage] = useState<Stage | null>(null);
   const [showStageModal, setShowStageModal] = useState(false);
   const [isSavingLead, setIsSavingLead] = useState(false);
+
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [followUpLead, setFollowUpLead] = useState<Lead | null>(null);
+
+  const [followUpTitle, setFollowUpTitle] = useState('');
+  const [followUpDescription, setFollowUpDescription] = useState('');
+  const [followUpDueDate, setFollowUpDueDate] = useState('');
+
+  const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
+
   const [, setIsDragging] = useState(false);
   const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
   const [allTags, setAllTags] = useState<any[]>([]);
@@ -542,7 +552,78 @@ const removeTagFromLead = async (leadId: string, tagId: string) => {
   }
 };
 
-  const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
+const openFollowUpModal = (lead: Lead) => {
+  setFollowUpLead(lead);
+
+  setFollowUpTitle('');
+  setFollowUpDescription('');
+  setFollowUpDueDate('');
+
+  setShowFollowUpModal(true);
+};
+
+const handleCreateFollowUp = async () => {
+  if (!followUpLead || !followUpTitle.trim()) return;
+
+  setIsCreatingFollowUp(true);
+
+  try {
+    const payload: Record<string, unknown> = {
+      title: followUpTitle.trim(),
+      status: 'todo',
+      priority: 'medium',
+      leadId: followUpLead.id,
+    };
+
+    if (followUpDescription.trim()) {
+      payload.description = followUpDescription.trim();
+    }
+
+    if (followUpDueDate) {
+      payload.dueDate = followUpDueDate;
+    }
+
+    if (followUpLead.assignedToId) {
+      payload.assignedToId = followUpLead.assignedToId;
+    }
+
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+
+      alert(
+        errorData?.error ||
+        'Erro ao criar follow-up'
+      );
+
+      return;
+    }
+
+    setShowFollowUpModal(false);
+
+    setFollowUpLead(null);
+
+    setFollowUpTitle('');
+    setFollowUpDescription('');
+    setFollowUpDueDate('');
+
+    alert('Follow-up criado com sucesso');
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao criar follow-up');
+  } finally {
+    setIsCreatingFollowUp(false);
+  }
+};
+
+const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lead.value) || 0), 0);
 
   return (
     <div className="flex h-[calc(100vh-5rem)] flex-col p-6">
@@ -699,22 +780,32 @@ const removeTagFromLead = async (leadId: string, tagId: string) => {
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-semibold text-gray-800">
-                                              {lead.name}
-                                            </p>
-                                            <p className="truncate text-xs text-gray-500">
-                                              {lead.company || '—'}
-                                              {lead.position ? ` • ${lead.position}` : ''}
-                                            </p>
-                                          </div>
+  <p className="truncate text-sm font-semibold text-gray-800">
+    {lead.name}
+  </p>
+  <p className="truncate text-xs text-gray-500">
+    {lead.company || '—'}
+    {lead.position ? ` • ${lead.position}` : ''}
+  </p>
+</div>
 
-                                          <button
-                                            onClick={() => setSelectedLeadId(lead.id)}
-                                            className="flex-shrink-0 rounded-md border border-gray-200 p-1 hover:bg-gray-50"
-                                            title="Editar lead"
-                                          >
-                                            <Edit size={14} />
-                                          </button>
+<div className="flex items-center gap-1">
+  <button
+    onClick={() => openFollowUpModal(lead)}
+    className="flex-shrink-0 rounded-md border border-indigo-200 p-1 text-indigo-600 hover:bg-indigo-50"
+    title="Criar Follow-up"
+  >
+    <Plus size={14} />
+  </button>
+
+  <button
+    onClick={() => setSelectedLeadId(lead.id)}
+    className="flex-shrink-0 rounded-md border border-gray-200 p-1 hover:bg-gray-50"
+    title="Editar lead"
+  >
+    <Edit size={14} />
+  </button>
+</div>
                                         </div>
 
                                         <div className="mt-2 space-y-1">
@@ -857,20 +948,97 @@ const removeTagFromLead = async (leadId: string, tagId: string) => {
       </div>
 
       <StageModal
-        isOpen={showStageModal}
-        onClose={() => setShowStageModal(false)}
-        stage={selectedStage}
-        onSave={handleSaveStage}
-      />
+  isOpen={showStageModal}
+  onClose={() => setShowStageModal(false)}
+  stage={selectedStage}
+  onSave={handleSaveStage}
+/>
 
-      <LeadEditModal
-        isOpen={selectedLeadId !== null}
-        onClose={() => setSelectedLeadId(null)}
-        lead={selectedLead}
-        onSave={handleSaveLead}
-        isSaving={isSavingLead}
-        availableStatuses={stages}
-      />
+{showFollowUpModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+      <h2 className="mb-4 text-lg font-semibold">
+        Criar Follow-up
+      </h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Título *
+          </label>
+
+          <input
+            type="text"
+            value={followUpTitle}
+            onChange={(e) => setFollowUpTitle(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            placeholder="Ex: Ligar para apresentar proposta"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Descrição
+          </label>
+
+          <textarea
+            value={followUpDescription}
+            onChange={(e) => setFollowUpDescription(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            rows={3}
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            Data e Hora
+          </label>
+
+          <input
+            type="datetime-local"
+            value={followUpDueDate}
+            onChange={(e) => setFollowUpDueDate(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          />
+        </div>
+
+        {followUpLead && (
+          <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+            Lead: <strong>{followUpLead.name}</strong>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={() => setShowFollowUpModal(false)}
+            className="rounded-lg border border-gray-300 px-4 py-2"
+          >
+            Cancelar
+          </button>
+
+          <button
+            onClick={handleCreateFollowUp}
+            disabled={isCreatingFollowUp}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isCreatingFollowUp
+              ? 'Criando...'
+              : 'Criar Follow-up'}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<LeadEditModal
+  isOpen={selectedLeadId !== null}
+  onClose={() => setSelectedLeadId(null)}
+  lead={selectedLead}
+  onSave={handleSaveLead}
+  isSaving={isSavingLead}
+  availableStatuses={stages}
+/>
     </div>
   );
 }
