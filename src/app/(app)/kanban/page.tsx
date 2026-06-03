@@ -386,6 +386,7 @@ export default function KanbanPage() {
   const [allTags, setAllTags] = useState<any[]>([]);
   const [selectedTagLeadId, setSelectedTagLeadId] = useState<string | null>(null);
   const [tagSearch, setTagSearch] = useState('');
+  const [tasks, setTasks] = useState<any[]>([]);
   const { canAccess, isLoading: permLoading } = usePermission();
   
   const fetchTags = useCallback(async () => {
@@ -402,11 +403,26 @@ export default function KanbanPage() {
   }
 }, []);
 
+const fetchTasks = useCallback(async () => {
+  try {
+    const res = await fetch('/api/tasks?pageSize=500');
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+
+    setTasks(data.tasks || []);
+  } catch (error) {
+    console.error('Erro ao buscar tasks:', error);
+  }
+}, []);
+
   useEffect(() => {
   fetchStages();
   fetchLeads();
   fetchTags();
-}, [fetchStages, fetchLeads, fetchTags]);
+  fetchTasks();
+}, [fetchStages, fetchLeads, fetchTags, fetchTasks]);
 
   const leadsById = useMemo(() => {
     const map = new Map<string, Lead>();
@@ -434,6 +450,22 @@ export default function KanbanPage() {
       return { ...stage, items: stageLeads, totalValue };
     });
   }, [orderedStages, pipelineLeads]);
+
+  const tasksByLead = useMemo(() => {
+  const map = new Map<string, any[]>();
+
+  for (const task of tasks) {
+    if (!task.leadId) continue;
+
+    if (!map.has(task.leadId)) {
+      map.set(task.leadId, []);
+    }
+
+    map.get(task.leadId)!.push(task);
+  }
+
+  return map;
+}, [tasks]);
 
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('kanban')) return <AccessDenied module="kanban" />;
@@ -820,6 +852,33 @@ const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lea
                                               <span className="font-medium">Tel:</span> {lead.phone}
                                             </p>
                                           )}
+
+                                          {(() => {
+  const leadTasks = tasksByLead.get(lead.id) || [];
+
+  const hasFutureFollowUp = leadTasks.some((task) => {
+    if (!task.dueDate) return false;
+
+    if (task.status === 'done') return false;
+
+    return new Date(task.dueDate) > new Date();
+  });
+
+  return (
+    <div className="pt-1">
+      {hasFutureFollowUp ? (
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-medium text-green-700">
+          🟢 Follow-up Agendado
+        </span>
+      ) : (
+        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">
+          🔴 Sem Follow-up
+        </span>
+      )}
+    </div>
+  );
+})()}
+
                                         <div className="pt-2">
   {lead.tags && lead.tags.length > 0 && (
     <div className="mb-2 flex flex-wrap gap-1">
