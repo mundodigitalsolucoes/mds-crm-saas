@@ -879,6 +879,46 @@ const totalPipelineValue = pipelineLeads.reduce((sum, lead) => sum + (Number(lea
   );
 })()}
 
+{(() => {
+  const leadTasks = tasksByLead.get(lead.id) || [];
+
+  if (leadTasks.length === 0) {
+    return (
+      <div className="pt-1 text-[10px] text-gray-500">
+        Sem contato
+      </div>
+    );
+  }
+
+  const latestTask = [...leadTasks].sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() -
+      new Date(a.updatedAt).getTime()
+  )[0];
+
+  if (!latestTask?.updatedAt) {
+    return (
+      <div className="pt-1 text-[10px] text-gray-500">
+        Sem contato
+      </div>
+    );
+  }
+
+  const diffMs =
+    Date.now() -
+    new Date(latestTask.updatedAt).getTime();
+
+  const diffDays = Math.floor(
+    diffMs / (1000 * 60 * 60 * 24)
+  );
+
+  return (
+    <div className="pt-1 text-[10px] text-gray-600">
+      Último contato: {diffDays}d
+    </div>
+  );
+})()}
+
                                         <div className="pt-2">
   {lead.tags && lead.tags.length > 0 && (
     <div className="mb-2 flex flex-wrap gap-1">
