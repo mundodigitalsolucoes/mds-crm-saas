@@ -9,9 +9,9 @@ import {
 } from '@/lib/help-center';
 
 interface HelpArticlePageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 function getYoutubeEmbedUrl(url?: string) {
@@ -33,8 +33,9 @@ export function generateStaticParams() {
   return helpArticles.map((article) => ({ slug: article.slug }));
 }
 
-export default function HelpArticlePage({ params }: HelpArticlePageProps) {
-  const article = getArticleBySlug(params.slug);
+export default async function HelpArticlePage({ params }: HelpArticlePageProps) {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
 
   if (!article) {
     notFound();
