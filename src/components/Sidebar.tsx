@@ -30,6 +30,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronDown,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
@@ -102,6 +103,10 @@ const settingsItems: MenuItem[] = [
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
   { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
   { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
+];
+
+const helpItems: MenuItem[] = [
+  { name: 'Central de Ajuda', icon: HelpCircle, path: '/help' },
 ];
 
 function SidebarSkeleton({
@@ -212,6 +217,12 @@ export default function Sidebar() {
         title: 'Configurações',
         icon: Shield,
         items: settingsItems,
+      },
+      {
+        key: 'ajuda',
+        title: 'Ajuda',
+        icon: HelpCircle,
+        items: helpItems,
       },
     ];
 
