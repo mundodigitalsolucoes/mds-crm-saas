@@ -2,15 +2,36 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, HelpCircle, Search, X } from 'lucide-react';
-import { helpArticles, helpCategories, searchHelpArticles } from '@/lib/help-center';
+import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, Search, X } from 'lucide-react';
+import { helpArticles, helpCategories, type HelpCategoryKey, searchHelpArticles } from '@/lib/help-center';
 
 export default function HelpCenterPage() {
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<HelpCategoryKey | null>(null);
 
-  const filteredArticles = useMemo(() => searchHelpArticles(search), [search]);
+  const selectedCategoryData = selectedCategory
+    ? helpCategories.find((category) => category.key === selectedCategory)
+    : null;
 
-  const featuredArticles = filteredArticles.slice(0, search ? 12 : 8);
+  const filteredArticles = useMemo(() => {
+    const articles = searchHelpArticles(search);
+
+    if (!selectedCategory) return articles;
+
+    return articles.filter((article) => article.category === selectedCategory);
+  }, [search, selectedCategory]);
+
+  const featuredArticles = filteredArticles.slice(0, search || selectedCategory ? 24 : 8);
+
+  const handleSelectCategory = (category: HelpCategoryKey) => {
+    setSelectedCategory(category);
+    setSearch('');
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setSelectedCategory(null);
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-7xl mx-auto w-full">
@@ -36,66 +57,104 @@ export default function HelpCenterPage() {
             placeholder="Pesquisar tutoriais..."
             className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-10 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
           />
-          {search && (
+          {(search || selectedCategory) && (
             <button
               type="button"
-              onClick={() => setSearch('')}
+              onClick={handleClearFilters}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Limpar busca"
+              aria-label="Limpar filtros"
             >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
+
+        {selectedCategoryData && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+            <span>Categoria selecionada:</span>
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-medium text-indigo-600">
+              {selectedCategoryData.title}
+            </span>
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="font-medium text-gray-500 hover:text-indigo-600"
+            >
+              Limpar
+            </button>
+          </div>
+        )}
       </div>
 
-      {!search && (
-        <div>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">Categorias</h2>
-              <p className="text-sm text-gray-500">Escolha um módulo para encontrar tutoriais relacionados.</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {helpCategories.map((category) => {
-              const Icon = category.icon;
-              const total = helpArticles.filter((article) => article.category === category.key).length;
-
-              return (
-                <div key={category.key} className="bg-white border border-gray-200 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600">
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-gray-900">{category.title}</h3>
-                      <p className="mt-1 text-xs text-gray-500 leading-relaxed">{category.description}</p>
-                      <p className="mt-3 text-xs font-medium text-indigo-600">
-                        {total} {total === 1 ? 'tutorial' : 'tutoriais'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+      <div>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Categorias</h2>
+            <p className="text-sm text-gray-500">Clique em um módulo para encontrar tutoriais relacionados.</p>
           </div>
         </div>
-      )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {helpCategories.map((category) => {
+            const Icon = category.icon;
+            const total = helpArticles.filter((article) => article.category === category.key).length;
+            const isSelected = selectedCategory === category.key;
+
+            return (
+              <button
+                key={category.key}
+                type="button"
+                onClick={() => handleSelectCategory(category.key)}
+                className={`group bg-white border rounded-xl p-4 text-left transition-all hover:border-indigo-300 hover:shadow-sm ${
+                  isSelected ? 'border-indigo-300 ring-2 ring-indigo-500/20' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">{category.title}</h3>
+                    <p className="mt-1 text-xs text-gray-500 leading-relaxed">{category.description}</p>
+                    <p className="mt-3 text-xs font-medium text-indigo-600">
+                      {total} {total === 1 ? 'tutorial' : 'tutoriais'}
+                    </p>
+                  </div>
+                  <ArrowRight className="mt-1 w-4 h-4 text-gray-300 transition-colors group-hover:text-indigo-500" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-gray-900">
-              {search ? 'Resultado da busca' : 'Tutoriais principais'}
+              {search
+                ? 'Resultado da busca'
+                : selectedCategoryData
+                  ? `Tutoriais de ${selectedCategoryData.title}`
+                  : 'Tutoriais principais'}
             </h2>
             <p className="text-sm text-gray-500">
-              {search
+              {search || selectedCategory
                 ? `${filteredArticles.length} tutorial(is) encontrado(s).`
                 : 'Conteúdos essenciais para começar a operar.'}
             </p>
           </div>
+
+          {(search || selectedCategory) && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Ver todos
+            </button>
+          )}
         </div>
 
         {featuredArticles.length === 0 ? (
@@ -105,7 +164,7 @@ export default function HelpCenterPage() {
             </div>
             <div className="text-center">
               <p className="text-base font-semibold text-gray-900">Nenhum tutorial encontrado</p>
-              <p className="text-sm text-gray-500 mt-1">Tente buscar por outro termo.</p>
+              <p className="text-sm text-gray-500 mt-1">Tente buscar por outro termo ou limpe os filtros.</p>
             </div>
           </div>
         ) : (
