@@ -96,23 +96,34 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
         </div>
       )}
 
-      {embedUrl ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <div className="mb-4 flex items-center gap-2">
-            <PlayCircle className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-base font-semibold text-gray-900">Vídeo tutorial</h2>
-          </div>
-          <div className="aspect-video overflow-hidden rounded-xl bg-gray-100">
-            <iframe
-              src={embedUrl}
-              title={article.title}
-              className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      ) : null}
+      <div className="bg-white border border-gray-200 rounded-2xl p-5">
+  <div className="mb-4 flex items-center gap-2">
+    <PlayCircle className="w-5 h-5 text-indigo-600" />
+    <h2 className="text-base font-semibold text-gray-900">Vídeo tutorial</h2>
+  </div>
+
+  {embedUrl ? (
+    <div className="aspect-video overflow-hidden rounded-xl bg-gray-100">
+      <iframe
+        src={embedUrl}
+        title={article.title}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+      />
+    </div>
+  ) : (
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
+      <div className="mb-4 rounded-2xl bg-white p-4 text-indigo-600 shadow-sm">
+        <PlayCircle className="h-10 w-10" />
+      </div>
+      <h3 className="text-sm font-semibold text-gray-900">Vídeo em breve</h3>
+      <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-500">
+        Este tutorial ainda não possui vídeo cadastrado. Quando o link do vídeo for adicionado, o player aparecerá automaticamente aqui.
+      </p>
+    </div>
+  )}
+</div>
 
       <div className="bg-white border border-gray-200 rounded-2xl p-6">
         <div className="mb-5 flex items-center gap-2">
