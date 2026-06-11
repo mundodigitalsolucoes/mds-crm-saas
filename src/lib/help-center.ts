@@ -45,6 +45,7 @@ export interface HelpArticle {
   title: string;
   description: string;
   category: HelpCategoryKey;
+  subCategory: string;
   videoUrl?: string;
   planHint?: string;
   steps: string[];
@@ -55,102 +56,22 @@ export interface HelpArticle {
 }
 
 export const helpCategories: HelpCategory[] = [
-  {
-    key: 'onboarding',
-    title: 'Onboarding',
-    description: 'Primeiros passos e visão geral do MDS CRM.',
-    icon: HelpCircle,
-  },
-  {
-    key: 'dashboard',
-    title: 'Dashboard',
-    description: 'Entenda os indicadores principais da operação.',
-    icon: LayoutDashboard,
-  },
-  {
-    key: 'configuracoes',
-    title: 'Configurações',
-    description: 'Canais, widget, equipes e agentes.',
-    icon: Settings,
-  },
-  {
-    key: 'membros',
-    title: 'Membros',
-    description: 'Convites, usuários e permissões.',
-    icon: Shield,
-  },
-  {
-    key: 'assinatura',
-    title: 'Assinatura',
-    description: 'Planos, upgrade, downgrade e limites.',
-    icon: CreditCard,
-  },
-  {
-    key: 'atendimento',
-    title: 'Atendimento',
-    description: 'Conversas, caixas de entrada, agentes e contatos.',
-    icon: MessageSquare,
-  },
-  {
-    key: 'vendas',
-    title: 'Vendas',
-    description: 'Fluxo comercial, rotina e acompanhamento.',
-    icon: Target,
-  },
-  {
-    key: 'leads',
-    title: 'Leads',
-    description: 'Cadastro, importação, filtros e follow-ups.',
-    icon: Users,
-  },
-  {
-    key: 'kanban',
-    title: 'Kanban',
-    description: 'Etapas, movimentação, tags e follow-ups.',
-    icon: FolderKanban,
-  },
-  {
-    key: 'agenda',
-    title: 'Agenda',
-    description: 'Eventos, compromissos e Pomodoro.',
-    icon: Calendar,
-  },
-  {
-    key: 'metas',
-    title: 'Metas',
-    description: 'Criação, edição e acompanhamento de objetivos.',
-    icon: Target,
-  },
-  {
-    key: 'marketing',
-    title: 'Marketing',
-    description: 'Projetos, OS e tarefas operacionais.',
-    icon: Megaphone,
-  },
-  {
-    key: 'projetos',
-    title: 'Projetos',
-    description: 'Gestão dos projetos da operação.',
-    icon: FolderKanban,
-  },
-  {
-    key: 'os',
-    title: 'Ordens de Serviço',
-    description: 'Criação, edição e busca de OS.',
-    icon: CheckSquare,
-  },
-  {
-    key: 'tarefas',
-    title: 'Tarefas',
-    description: 'Criar, editar, buscar e concluir tarefas.',
-    icon: CheckSquare,
-  },
-  {
-    key: 'faq',
-    title: 'Dúvidas Frequentes',
-    description: 'Respostas rápidas para problemas comuns.',
-    icon: Search,
-  },
+  { key: 'onboarding', title: 'Onboarding', description: 'Primeiros passos e visão geral do MDS CRM.', icon: HelpCircle },
+  { key: 'dashboard', title: 'Dashboard', description: 'Entenda os indicadores principais da operação.', icon: LayoutDashboard },
+  { key: 'configuracoes', title: 'Configurações', description: 'Canais, widget, equipes e agentes.', icon: Settings },
+  { key: 'membros', title: 'Membros', description: 'Convites, usuários e permissões.', icon: Shield },
+  { key: 'assinatura', title: 'Assinatura', description: 'Planos, upgrade, downgrade e limites.', icon: CreditCard },
+  { key: 'atendimento', title: 'Atendimento', description: 'Conversas, caixas de entrada, agentes e contatos.', icon: MessageSquare },
+  { key: 'vendas', title: 'Vendas', description: 'Fluxo comercial, rotina e acompanhamento.', icon: Target },
+  { key: 'leads', title: 'Leads', description: 'Cadastro, importação, filtros e follow-ups.', icon: Users },
+  { key: 'kanban', title: 'Kanban', description: 'Etapas, movimentação, tags e follow-ups.', icon: FolderKanban },
+  { key: 'agenda', title: 'Agenda', description: 'Eventos, compromissos e Pomodoro.', icon: Calendar },
+  { key: 'metas', title: 'Metas', description: 'Criação, edição e acompanhamento de objetivos.', icon: Target },
+  { key: 'marketing', title: 'Marketing', description: 'Projetos, OS e tarefas operacionais.', icon: Megaphone },
+  { key: 'projetos', title: 'Projetos', description: 'Gestão dos projetos da operação.', icon: FolderKanban },
+  { key: 'os', title: 'Ordens de Serviço', description: 'Criação, edição e busca de OS.', icon: CheckSquare },
+  { key: 'tarefas', title: 'Tarefas', description: 'Criar, editar, buscar e concluir tarefas.', icon: CheckSquare },
+  { key: 'faq', title: 'Dúvidas Frequentes', description: 'Respostas rápidas para problemas comuns.', icon: Search },
 ];
 
 export const helpArticles: HelpArticle[] = [
@@ -159,6 +80,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Visão geral do sistema',
     description: 'Entenda como Atendimento, Vendas, Marketing e Configurações se conectam no MDS CRM.',
     category: 'onboarding',
+    subCategory: 'Visão geral',
     steps: [
       'Acesse o Dashboard para ter uma visão inicial da operação.',
       'Configure os canais de atendimento antes de iniciar a rotina comercial.',
@@ -178,6 +100,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Primeiros passos no MDS CRM',
     description: 'Sequência recomendada para começar a operar o CRM com segurança.',
     category: 'onboarding',
+    subCategory: 'Primeiro acesso',
     steps: [
       'Revise os dados da empresa e da conta.',
       'Convide os membros da equipe.',
@@ -191,6 +114,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Como interpretar o Dashboard',
     description: 'Veja como usar o Dashboard para acompanhar indicadores e gargalos da operação.',
     category: 'dashboard',
+    subCategory: 'Indicadores',
     steps: [
       'Acesse o menu Dashboard.',
       'Observe os indicadores principais exibidos no topo da tela.',
@@ -204,6 +128,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Configurar WhatsApp via Evolution',
     description: 'Oriente a conexão operacional do WhatsApp Business no Atendimento.',
     category: 'configuracoes',
+    subCategory: 'Canais',
     planHint: 'Alguns recursos de canais podem depender do plano contratado.',
     steps: [
       'Acesse Configurações e depois Atendimento.',
@@ -218,6 +143,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Configurar WhatsApp Oficial',
     description: 'Entenda o caminho para operar com API Oficial do WhatsApp.',
     category: 'configuracoes',
+    subCategory: 'Canais',
     planHint: 'A API Oficial costuma estar disponível em planos superiores ou mediante configuração assistida.',
     steps: [
       'Acesse Configurações e depois Atendimento.',
@@ -232,6 +158,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Configurar Widget de atendimento',
     description: 'Configure o widget para captação e atendimento via site.',
     category: 'configuracoes',
+    subCategory: 'Widget',
     steps: [
       'Acesse Configurações de Atendimento.',
       'Localize a área de Widget.',
@@ -245,6 +172,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Configurar equipes e agentes',
     description: 'Organize a distribuição de conversas entre usuários e times.',
     category: 'configuracoes',
+    subCategory: 'Equipes e agentes',
     steps: [
       'Acesse Configurações de Atendimento.',
       'Crie ou revise as equipes existentes.',
@@ -258,6 +186,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Convidar membro',
     description: 'Adicione novos usuários à organização.',
     category: 'membros',
+    subCategory: 'Convites',
     steps: [
       'Acesse Configurações e depois Membros.',
       'Clique em convidar novo membro.',
@@ -271,6 +200,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Configurar permissões',
     description: 'Defina o que cada membro pode visualizar e operar.',
     category: 'membros',
+    subCategory: 'Permissões',
     steps: [
       'Acesse Configurações e depois Membros.',
       'Selecione o membro que deseja ajustar.',
@@ -284,6 +214,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Upgrade e downgrade de planos',
     description: 'Entenda como alterar o plano da sua assinatura.',
     category: 'assinatura',
+    subCategory: 'Planos',
     planHint: 'Recursos avançados podem ser desbloqueados em planos superiores.',
     steps: [
       'Acesse Configurações e depois Assinatura.',
@@ -298,6 +229,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Visão geral do Atendimento',
     description: 'Entenda como operar conversas, contatos, caixas de entrada, agentes e equipes.',
     category: 'atendimento',
+    subCategory: 'Visão geral',
     steps: [
       'Acesse o menu Atendimento.',
       'Selecione a caixa de entrada desejada.',
@@ -311,6 +243,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Selecionar caixa de entrada e enviar mensagens',
     description: 'Use as caixas de entrada para separar canais e conversas.',
     category: 'atendimento',
+    subCategory: 'Conversas',
     steps: [
       'Acesse Atendimento.',
       'Selecione a caixa de entrada desejada.',
@@ -324,6 +257,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Atribuir e encerrar conversas',
     description: 'Organize responsabilidades e finalize atendimentos concluídos.',
     category: 'atendimento',
+    subCategory: 'Conversas',
     steps: [
       'Abra uma conversa no Atendimento.',
       'Verifique o responsável atual.',
@@ -337,6 +271,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Gerenciar contatos pelo Atendimento',
     description: 'Edite, bloqueie ou inicie contato com clientes pelo Atendimento.',
     category: 'atendimento',
+    subCategory: 'Contatos',
     steps: [
       'Acesse Atendimento.',
       'Abra a conversa do contato desejado.',
@@ -350,6 +285,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Visão geral de Vendas',
     description: 'Entenda como Leads, Kanban, Agenda, Follow-ups e Metas se conectam.',
     category: 'vendas',
+    subCategory: 'Visão geral',
     steps: [
       'Use Leads para cadastrar oportunidades.',
       'Use Kanban para acompanhar a etapa comercial.',
@@ -363,6 +299,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar e excluir Lead',
     description: 'Gerencie o cadastro individual de oportunidades comerciais.',
     category: 'leads',
+    subCategory: 'Cadastro',
     steps: [
       'Acesse o menu Leads.',
       'Clique em criar novo Lead.',
@@ -376,6 +313,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Importar Leads',
     description: 'Importe listas comerciais para acelerar a prospecção.',
     category: 'leads',
+    subCategory: 'Importação',
     steps: [
       'Acesse Leads.',
       'Clique em importar lista ou importar CSV.',
@@ -389,6 +327,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Buscar Leads por filtros',
     description: 'Use filtros para localizar oportunidades específicas.',
     category: 'leads',
+    subCategory: 'Busca e filtros',
     steps: [
       'Acesse Leads.',
       'Use o campo de busca para procurar por nome, empresa ou contato.',
@@ -402,6 +341,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Ações em massa em Leads',
     description: 'Envie Leads para o Kanban ou exclua registros em lote quando disponível.',
     category: 'leads',
+    subCategory: 'Ações em massa',
     steps: [
       'Acesse Leads.',
       'Selecione os registros desejados.',
@@ -415,6 +355,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar Follow-up',
     description: 'Programe retornos comerciais vinculados ao Lead.',
     category: 'leads',
+    subCategory: 'Follow-ups',
     steps: [
       'Abra o Lead desejado.',
       'Clique na opção de criar Follow-up.',
@@ -428,6 +369,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar e excluir estágios do Kanban',
     description: 'Ajuste as etapas do processo comercial.',
     category: 'kanban',
+    subCategory: 'Estágios',
     steps: [
       'Acesse Kanban.',
       'Localize a área de estágios ou colunas.',
@@ -441,6 +383,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Editar Lead pelo Kanban',
     description: 'Atualize dados comerciais sem sair da visão do funil.',
     category: 'kanban',
+    subCategory: 'Cards',
     steps: [
       'Acesse Kanban.',
       'Clique no card do Lead.',
@@ -454,6 +397,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Adicionar Tags pelo Kanban',
     description: 'Classifique oportunidades diretamente no funil comercial.',
     category: 'kanban',
+    subCategory: 'Tags',
     steps: [
       'Acesse Kanban.',
       'Abra o Lead desejado.',
@@ -467,6 +411,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar e excluir evento',
     description: 'Organize compromissos comerciais e operacionais na Agenda.',
     category: 'agenda',
+    subCategory: 'Eventos',
     steps: [
       'Acesse Agenda.',
       'Clique para criar um novo evento.',
@@ -480,6 +425,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Usar Pomodoro',
     description: 'Use ciclos de foco para organizar execução e produtividade.',
     category: 'agenda',
+    subCategory: 'Produtividade',
     steps: [
       'Acesse Agenda.',
       'Localize a função Pomodoro quando disponível.',
@@ -493,6 +439,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar e excluir Meta',
     description: 'Cadastre objetivos e acompanhe o progresso da equipe.',
     category: 'metas',
+    subCategory: 'Gestão de metas',
     steps: [
       'Acesse Metas.',
       'Clique em Nova Meta.',
@@ -506,6 +453,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Visão geral de Marketing',
     description: 'Entenda como Projetos, OS e Tarefas ajudam na execução operacional.',
     category: 'marketing',
+    subCategory: 'Visão geral',
     steps: [
       'Use Projetos para organizar entregas maiores.',
       'Use OS para formalizar demandas operacionais.',
@@ -519,6 +467,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar, excluir e buscar Projetos',
     description: 'Organize projetos internos e entregas para clientes.',
     category: 'projetos',
+    subCategory: 'Gestão de projetos',
     steps: [
       'Acesse Projetos.',
       'Crie um novo projeto.',
@@ -532,6 +481,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar, excluir e buscar OS',
     description: 'Controle ordens de serviço da operação.',
     category: 'os',
+    subCategory: 'Gestão de OS',
     steps: [
       'Acesse OS.',
       'Crie uma nova ordem de serviço.',
@@ -545,6 +495,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Criar, editar, excluir e buscar Tarefas',
     description: 'Distribua atividades e acompanhe execução diária.',
     category: 'tarefas',
+    subCategory: 'Gestão de tarefas',
     steps: [
       'Acesse Tarefas.',
       'Crie uma nova tarefa.',
@@ -558,6 +509,7 @@ export const helpArticles: HelpArticle[] = [
     title: 'Dúvidas frequentes',
     description: 'Respostas rápidas para problemas comuns da operação.',
     category: 'faq',
+    subCategory: 'Dúvidas comuns',
     steps: [
       'Identifique o módulo relacionado à dúvida.',
       'Use a busca da Central de Ajuda.',
@@ -594,6 +546,22 @@ export function getArticlesByCategory(category: HelpCategoryKey) {
   return helpArticles.filter((article) => article.category === category);
 }
 
+export function getSubCategoriesByCategory(category: HelpCategoryKey) {
+  return Array.from(
+    new Set(
+      helpArticles
+        .filter((article) => article.category === category)
+        .map((article) => article.subCategory)
+    )
+  );
+}
+
+export function getArticlesBySubCategory(category: HelpCategoryKey, subCategory: string) {
+  return helpArticles.filter(
+    (article) => article.category === category && article.subCategory === subCategory
+  );
+}
+
 export function searchHelpArticles(query: string) {
   const term = query.trim().toLowerCase();
 
@@ -604,6 +572,7 @@ export function searchHelpArticles(query: string) {
     const searchable = [
       article.title,
       article.description,
+      article.subCategory,
       category?.title ?? '',
       ...article.steps,
       ...(article.faqs?.flatMap((faq) => [faq.question, faq.answer]) ?? []),
