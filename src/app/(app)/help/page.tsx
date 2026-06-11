@@ -86,47 +86,46 @@ export default function HelpCenterPage() {
         )}
       </div>
 
-      <div>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Categorias</h2>
-            <p className="text-sm text-gray-500">Clique em um módulo para encontrar tutoriais relacionados.</p>
+      {!search && !selectedCategory && (
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Categorias</h2>
+              <p className="text-sm text-gray-500">Clique em um módulo para encontrar tutoriais relacionados.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {helpCategories.map((category) => {
+              const Icon = category.icon;
+              const total = helpArticles.filter((article) => article.category === category.key).length;
+
+              return (
+                <button
+                  key={category.key}
+                  type="button"
+                  onClick={() => handleSelectCategory(category.key)}
+                  className="group bg-white border border-gray-200 rounded-xl p-4 text-left transition-all hover:border-indigo-300 hover:shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">{category.title}</h3>
+                      <p className="mt-1 text-xs text-gray-500 leading-relaxed">{category.description}</p>
+                      <p className="mt-3 text-xs font-medium text-indigo-600">
+                        {total} {total === 1 ? 'tutorial' : 'tutoriais'}
+                      </p>
+                    </div>
+                    <ArrowRight className="mt-1 w-4 h-4 text-gray-300 transition-colors group-hover:text-indigo-500" />
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {helpCategories.map((category) => {
-            const Icon = category.icon;
-            const total = helpArticles.filter((article) => article.category === category.key).length;
-            const isSelected = selectedCategory === category.key;
-
-            return (
-              <button
-                key={category.key}
-                type="button"
-                onClick={() => handleSelectCategory(category.key)}
-                className={`group bg-white border rounded-xl p-4 text-left transition-all hover:border-indigo-300 hover:shadow-sm ${
-                  isSelected ? 'border-indigo-300 ring-2 ring-indigo-500/20' : 'border-gray-200'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600">{category.title}</h3>
-                    <p className="mt-1 text-xs text-gray-500 leading-relaxed">{category.description}</p>
-                    <p className="mt-3 text-xs font-medium text-indigo-600">
-                      {total} {total === 1 ? 'tutorial' : 'tutoriais'}
-                    </p>
-                  </div>
-                  <ArrowRight className="mt-1 w-4 h-4 text-gray-300 transition-colors group-hover:text-indigo-500" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       <div>
         <div className="mb-3 flex items-center justify-between gap-3">
