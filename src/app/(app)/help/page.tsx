@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, PlayCircle, Search, X } from 'lucide-react';
 import {
   getSubCategoriesByCategory,
   helpArticles,
@@ -11,10 +11,29 @@ import {
   searchHelpArticles,
 } from '@/lib/help-center';
 
+const welcomeVideoUrl = '';
+
+function getYoutubeEmbedUrl(url?: string) {
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    const videoId = parsed.searchParams.get('v') || parsed.pathname.split('/').filter(Boolean).pop();
+
+    if (!videoId) return null;
+
+    return `https://www.youtube.com/embed/${videoId}`;
+  } catch {
+    return null;
+  }
+}
+
 export default function HelpCenterPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<HelpCategoryKey | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+
+  const welcomeEmbedUrl = getYoutubeEmbedUrl(welcomeVideoUrl);
 
   const selectedCategoryData = selectedCategory
     ? helpCategories.find((category) => category.key === selectedCategory)
@@ -82,6 +101,45 @@ export default function HelpCenterPage() {
           </p>
         </div>
       </div>
+
+      {showCategories && (
+        <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-indigo-100 bg-white lg:grid-cols-[1fr_420px]">
+          <div className="flex flex-col justify-center p-6 lg:p-8">
+            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600">
+              <PlayCircle className="h-4 w-4" />
+              Comece por aqui
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">Boas-vindas à Central de Ajuda</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-500">
+              Assista à visão geral do MDS CRM antes de navegar pelos tutoriais. Este vídeo deve apresentar os módulos principais, a lógica da operação e o melhor caminho para começar.
+            </p>
+          </div>
+
+          <div className="bg-gray-50 p-4 lg:p-5">
+            {welcomeEmbedUrl ? (
+              <div className="aspect-video overflow-hidden rounded-xl bg-gray-100">
+                <iframe
+                  src={welcomeEmbedUrl}
+                  title="Comece por aqui"
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <div className="flex aspect-video flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white px-6 text-center">
+                <div className="mb-3 rounded-2xl bg-indigo-50 p-4 text-indigo-600">
+                  <PlayCircle className="h-9 w-9" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900">Vídeo em breve</h3>
+                <p className="mt-2 max-w-xs text-xs leading-relaxed text-gray-500">
+                  Aqui ficará o vídeo de boas-vindas da Central de Ajuda.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white border border-gray-200 rounded-2xl p-5">
         <div className="relative">
