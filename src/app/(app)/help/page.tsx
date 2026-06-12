@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, PlayCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, HelpCircle, Mail, PlayCircle, Search, X } from 'lucide-react';
 import {
   getSubCategoriesByCategory,
   helpArticles,
@@ -12,6 +12,7 @@ import {
 } from '@/lib/help-center';
 
 const welcomeVideoUrl = '';
+const supportEmailAddress = 'suporte@mundodigitalsolucoes.com.br';
 
 function getYoutubeEmbedUrl(url?: string) {
   if (!url) return null;
@@ -32,6 +33,8 @@ export default function HelpCenterPage() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<HelpCategoryKey | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
 
   const welcomeEmbedUrl = getYoutubeEmbedUrl(welcomeVideoUrl);
 
@@ -82,6 +85,12 @@ export default function HelpCenterPage() {
     setSearch('');
     setSelectedCategory(null);
     setSelectedSubCategory(null);
+  };
+
+  const handleSupportSubmit = () => {
+    const subject = encodeURIComponent('Suporte MDS CRM');
+    const body = encodeURIComponent(`Email do cliente: ${supportEmail}\n\nMensagem:\n${supportMessage}`);
+    window.location.href = `mailto:${supportEmailAddress}?subject=${subject}&body=${body}`;
   };
 
   const showCategories = !search && !selectedCategory;
@@ -192,6 +201,49 @@ export default function HelpCenterPage() {
           </div>
         )}
       </div>
+
+      {showCategories && (
+        <div className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200 bg-white p-5 lg:grid-cols-[1fr_420px]">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-indigo-50 p-3 text-indigo-600">
+              <Mail className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Falar com suporte</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-500">
+                Não encontrou o que precisava? Informe seu e-mail e descreva sua dúvida. Nossa equipe responderá em até 24h úteis.
+              </p>
+              <p className="mt-3 text-xs font-medium text-gray-500">
+                As solicitações são organizadas em fila e respondidas por ordem de chegada.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <input
+              type="email"
+              value={supportEmail}
+              onChange={(event) => setSupportEmail(event.target.value)}
+              placeholder="Seu e-mail"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            />
+            <textarea
+              value={supportMessage}
+              onChange={(event) => setSupportMessage(event.target.value)}
+              placeholder="Como podemos ajudar?"
+              rows={4}
+              className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            />
+            <button
+              type="button"
+              onClick={handleSupportSubmit}
+              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            >
+              Enviar solicitação
+            </button>
+          </div>
+        </div>
+      )}
 
       {showCategories && (
         <div>
