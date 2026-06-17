@@ -78,6 +78,42 @@ function getErrorText(error: unknown, fallback: string) {
   return fallback
 }
 
+function getChannelStatusText(item: WhatsAppInstanceItem) {
+  const isCloudApi = item.provider === 'whatsapp_cloud'
+
+  if (item.status === 'connected' || item.isConnected) {
+    return isCloudApi
+      ? 'WhatsApp API Oficial conectado'
+      : 'WhatsApp Business conectado'
+  }
+
+  if (item.status === 'connecting') {
+    return 'Aguardando leitura do QR Code'
+  }
+
+  if (item.status === 'missing') {
+    return 'Instância não encontrada'
+  }
+
+  return 'WhatsApp desconectado'
+}
+
+function getChannelStatusDescription(item: WhatsAppInstanceItem) {
+  if (item.status === 'connected' || item.isConnected) {
+    return 'Canal ativo e pronto para atendimento.'
+  }
+
+  if (item.status === 'connecting') {
+    return 'Escaneie o QR Code para concluir a conexão.'
+  }
+
+  if (item.status === 'missing') {
+    return 'O canal perdeu o vínculo técnico. Clique em conectar novamente.'
+  }
+
+  return item.lastError ?? 'A sessão expirou. Clique em conectar novamente.'
+}
+
 function StatusBadge({ status }: { status: InstanceStatus }) {
   if (status === 'connected') {
     return (
@@ -238,12 +274,20 @@ function WhatsAppCard({
             <Wifi className="h-5 w-5 text-emerald-700" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-700">
-              {isCloudApi ? 'WhatsApp API Oficial conectado' : 'WhatsApp Business conectado'}
-            </p>
-            {item.phoneNumber && <p className="mt-1 text-sm text-slate-700">Número: +{item.phoneNumber}</p>}
-            {connectedAt && <p className="mt-1 text-xs text-slate-500">Conectado em {connectedAt}</p>}
-          </div>
+  <p className={`text-sm font-semibold ${item.isConnected ? 'text-emerald-700' : 'text-yellow-700'}`}>
+    {getChannelStatusText(item)}
+  </p>
+
+  <p className="mt-1 text-xs text-slate-500">
+    {getChannelStatusDescription(item)}
+  </p>
+
+  {item.phoneNumber && <p className="mt-1 text-sm text-slate-700">Número: +{item.phoneNumber}</p>}
+
+  {item.isConnected && connectedAt && (
+    <p className="mt-1 text-xs text-slate-500">Conectado em {connectedAt}</p>
+  )}
+</div>
         </div>
       </div>
 
