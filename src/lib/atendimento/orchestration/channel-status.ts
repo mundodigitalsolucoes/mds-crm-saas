@@ -61,6 +61,50 @@ function resolveStatus(params: {
   return 'offline'
 }
 
+async function syncEvolutionRuntimeStatus(params: {
+  instanceId: string
+  currentStatus: string
+  runtimeStatus: InstanceStatus
+  isConnected: boolean
+  effectiveState: EvolutionConnectionState | 'inactive'
+}) {
+  const {
+    instanceId,
+    currentStatus,
+    runtimeStatus,
+    isConnected,
+    effectiveState,
+  } = params
+
+  if (effectiveState === 'inactive') return
+  if (runtimeStatus === 'disconnected') return
+  if (currentStatus === runtimeStatus) return
+
+  try {
+    await prisma.whatsappInstance.update({
+      where: { id: instanceId },
+      data: {
+        status: runtimeStatus,
+        lastError:
+          runtimeStatus === 'connected' || runtimeStatus === 'connecting'
+            ? null
+            : 'WhatsApp desconectado. Verifique o celular.',
+        disconnectedAt:
+          isConnected || runtimeStatus === 'connecting'
+            ? null
+            : new Date(),
+      },
+    })
+  } catch (error) {
+    console.error('[ChannelStatus] Falha ao sincronizar status runtime:', {
+      instanceId,
+      currentStatus,
+      runtimeStatus,
+      error,
+    })
+  }
+}
+
 export async function ensureLegacyWhatsappMirroredIfNeeded(organizationId: string) {
   const currentCount = await prisma.whatsappInstance.count({
     where: { organizationId },
@@ -215,9 +259,17 @@ export async function readWhatsappInstanceRuntime(instance: {
         ? null
         : instance.lastError ?? 'WhatsApp desconectado. Verifique o celular.'
 
-  const status = resolveStatus({
+    const status = resolveStatus({
     isActive: instance.isActive,
     state: effectiveState,
+  })
+
+  await syncEvolutionRuntimeStatus({
+    instanceId: instance.id,
+    currentStatus: instance.status,
+    runtimeStatus: status,
+    isConnected,
+    effectiveState,
   })
 
   return {
