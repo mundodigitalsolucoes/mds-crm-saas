@@ -159,6 +159,9 @@ export default function FollowUpsPage() {
   const [assignedFilter, setAssignedFilter] = useState('');
   const [periodFilter, setPeriodFilter] = useState('');
 
+  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
   const fetchFollowUps = async () => {
     try {
       setLoading(true);
@@ -413,6 +416,87 @@ export default function FollowUpsPage() {
     alert('Erro ao excluir follow-up.');
   } finally {
     setUpdatingTaskId(null);
+  }
+};
+
+const toggleTaskSelection = (taskId: string) => {
+  setSelectedTaskIds((prev) =>
+    prev.includes(taskId)
+      ? prev.filter((id) => id !== taskId)
+      : [...prev, taskId]
+  );
+};
+
+const selectAllFilteredTasks = () => {
+  setSelectedTaskIds(filteredTasks.map((task) => task.id));
+};
+
+const clearTaskSelection = () => {
+  setSelectedTaskIds([]);
+};
+
+const completeSelectedTasks = async () => {
+  if (selectedTaskIds.length === 0) return;
+
+  const confirmed = window.confirm(
+    `Deseja concluir ${selectedTaskIds.length} follow-up(s) selecionado(s)?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setBulkUpdating(true);
+
+    await Promise.all(
+      selectedTaskIds.map((taskId) =>
+        fetch(`/api/tasks/${taskId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done' }),
+        })
+      )
+    );
+
+    setSelectedTaskIds([]);
+    await fetchFollowUps();
+  } catch (err) {
+    console.error('Erro ao concluir follow-ups em massa:', err);
+    alert('Erro ao concluir follow-ups selecionados.');
+  } finally {
+    setBulkUpdating(false);
+  }
+};
+
+const deleteSelectedTasks = async () => {
+  if (selectedTaskIds.length === 0) return;
+
+  const confirmed = window.confirm(
+    `Deseja realmente excluir ${selectedTaskIds.length} follow-up(s) selecionado(s)? Essa ação não poderá ser desfeita.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setBulkUpdating(true);
+
+    await Promise.all(
+      selectedTaskIds.map((taskId) =>
+        fetch(`/api/tasks/${taskId}`, {
+          method: 'DELETE',
+        })
+      )
+    );
+
+    setTasks((prev) =>
+      prev.filter((task) => !selectedTaskIds.includes(task.id))
+    );
+
+    setSelectedTaskIds([]);
+  } catch (err) {
+    console.error('Erro ao excluir follow-ups em massa:', err);
+    alert('Erro ao excluir follow-ups selecionados.');
+  } finally {
+    setBulkUpdating(false);
   }
 };
 
@@ -698,11 +782,55 @@ const saveTaskChanges = async () => {
           )}
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
-          <div className="border-b border-gray-200 px-5 py-4">
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 md:flex-row md:items-center md:justify-between">
             <h2 className="text-sm font-semibold text-gray-900">
               Follow-ups encontrados: {filteredTasks.length}
             </h2>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedTaskIds.length > 0 && (
+                <span className="text-sm font-medium text-indigo-700">
+                  {selectedTaskIds.length} selecionado(s)
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={selectAllFilteredTasks}
+                disabled={filteredTasks.length === 0 || bulkUpdating}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Selecionar todos
+              </button>
+
+              <button
+                type="button"
+                onClick={clearTaskSelection}
+                disabled={selectedTaskIds.length === 0 || bulkUpdating}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Limpar
+              </button>
+
+              <button
+                type="button"
+                onClick={completeSelectedTasks}
+                disabled={selectedTaskIds.length === 0 || bulkUpdating}
+                className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              >
+                Concluir selecionados
+              </button>
+
+              <button
+               type="button"
+               onClick={deleteSelectedTasks}
+               disabled={selectedTaskIds.length === 0 || bulkUpdating}
+               className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+             >
+               Excluir selecionados
+             </button>
+            </div>
           </div>
 
           {loading ? (
@@ -718,8 +846,17 @@ const saveTaskChanges = async () => {
             <div className="divide-y divide-gray-100">
               {filteredTasks.map((task) => (
                 <div key={task.id} className="p-5 hover:bg-gray-50">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0 flex-1">
+  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <label className="flex items-center pt-1">
+      <input
+        type="checkbox"
+        checked={selectedTaskIds.includes(task.id)}
+        onChange={() => toggleTaskSelection(task.id)}
+        className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+      />
+    </label>
+
+    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={`rounded-full border px-2 py-1 text-xs font-medium ${getVisualStatus(task)}`}>
                           {task.status === 'done'
