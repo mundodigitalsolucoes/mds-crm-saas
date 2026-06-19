@@ -50,18 +50,18 @@ export default function TasksPage() {
     setSearchQuery('');
     setShowFilters(false);
 
-    switch (activeTab) {
+       switch (activeTab) {
       case 'today':
-        fetchTasks({ isToday: true });
+        fetchTasks({ type: 'task', isToday: true });
         break;
       case 'overdue':
-        fetchTasks({ isOverdue: true });
+        fetchTasks({ type: 'task', isOverdue: true });
         break;
       case 'done':
-        fetchTasks({ status: 'done' });
+        fetchTasks({ type: 'task', status: 'done' });
         break;
       default:
-        fetchTasks({});
+        fetchTasks({ type: 'task' });
         break;
     }
   }, [activeTab, permLoading]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -62,12 +62,9 @@ export default async function DashboardPage() {
 
   const orgId = session.user.organizationId;
 
-  // ─── Filtro seguro para Tasks (não tem organizationId direto) ───
+   // ─── Filtro seguro para Tasks com isolamento multi-tenant ───
   const taskOrgFilter = {
-    OR: [
-      { assignedTo: { organizationId: orgId } },
-      { createdBy: { organizationId: orgId } },
-    ],
+    organizationId: orgId,
   };
 
   // ─── Consultas paralelas ao banco ───

@@ -6,6 +6,16 @@ import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, taskCreateSchema, taskFiltersSchema } from '@/lib/validations';
 import { createNotification } from '@/lib/notify';
 
+function parseLocalDate(dateString: string) {
+  if (dateString.includes('T')) {
+    return new Date(dateString);
+  }
+
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
 // GET /api/tasks - Listar tasks com filtros e isolamento multi-tenant
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +36,11 @@ export async function GET(request: NextRequest) {
     const where: any = {
       organizationId,
     };
+
+        // Filtro por tipo: task ou follow_up
+    if (params.type) {
+      where.type = params.type;
+    }
 
     // Filtro por status (pode ser múltiplo: "todo,in_progress")
     if (params.status) {
@@ -74,36 +89,46 @@ export async function GET(request: NextRequest) {
   where.status = { notIn: ['done', 'cancelled'] };
 }
 
-    // Filtro: tarefas de hoje — usa UTC-3 (America/Sao_Paulo) explícito
+        // Filtro: tarefas ativas hoje
+    // Regra:
+    // - tarefa com startDate e dueDate aparece enquanto hoje estiver dentro do período
+    // - tarefa sem startDate usa dueDate como data única
+    // - concluídas e canceladas não entram em Hoje
     if (params.isToday === 'true') {
-      // Offset UTC-3 em ms
-      const TZ_OFFSET_MS = -3 * 60 * 60 * 1000;
+      const now = new Date();
 
-      // "Agora" no horário de Brasília
-      const nowUtc = Date.now();
-      const nowBrt = new Date(nowUtc + TZ_OFFSET_MS);
-
-      // Início do dia BRT → converte de volta para UTC para salvar no Prisma
-      const startBrt = new Date(
-        Date.UTC(
-          nowBrt.getUTCFullYear(),
-          nowBrt.getUTCMonth(),
-          nowBrt.getUTCDate(),
-          0, 0, 0, 0
-        ) - TZ_OFFSET_MS
+      const startOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        0,
+        0,
+        0,
+        0
       );
 
-      // Fim do dia BRT → converte de volta para UTC
-      const endBrt = new Date(
-        Date.UTC(
-          nowBrt.getUTCFullYear(),
-          nowBrt.getUTCMonth(),
-          nowBrt.getUTCDate(),
-          23, 59, 59, 999
-        ) - TZ_OFFSET_MS
+      const endOfToday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+        999
       );
 
-      where.dueDate = { gte: startBrt, lte: endBrt };
+      where.status = { notIn: ['done', 'cancelled'] };
+
+      where.OR = [
+        {
+          startDate: { lte: endOfToday },
+          dueDate: { gte: startOfToday },
+        },
+        {
+          startDate: null,
+          dueDate: { gte: startOfToday, lte: endOfToday },
+        },
+      ];
     }
 
     // Busca textual
@@ -233,10 +258,11 @@ export async function POST(request: NextRequest) {
       data: {
         title: data.title,
         description: data.description,
+        type: data.type,
         status: data.status,
         priority: data.priority,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        startDate: data.startDate ? new Date(data.startDate) : null,
+        dueDate: data.dueDate ? parseLocalDate(data.dueDate) : null,
+        startDate: data.startDate ? parseLocalDate(data.startDate) : null,
         isRecurring: data.isRecurring,
         recurrenceRule: data.recurrenceRule,
         estimatedMinutes: data.estimatedMinutes,

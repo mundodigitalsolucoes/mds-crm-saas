@@ -449,6 +449,7 @@ model Task {
   id               String            @id @default(uuid())
   title            String
   description      String?
+  type             String            @default("task")
   status           String            @default("todo")
   priority         String            @default("medium")
 
@@ -485,9 +486,11 @@ model Task {
 
   @@index([organizationId])
   @@index([status])
+  @@index([type])
   @@index([assignedToId])
   @@index([dueDate])
   @@index([organizationId, status])
+  @@index([organizationId, type])
   @@index([organizationId, dueDate])
   @@map("tasks")
 }

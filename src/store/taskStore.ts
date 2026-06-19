@@ -127,6 +127,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       params.set('page', page.toString());
       params.set('pageSize', pageSize.toString());
 
+            if (currentFilters.type) {
+        params.set('type', currentFilters.type);
+      }
+
       if (currentFilters.status) {
         const statuses = Array.isArray(currentFilters.status)
           ? currentFilters.status.join(',')
