@@ -259,6 +259,9 @@ export default function FollowUpsPage() {
         (periodFilter === 'overdue' && isOverdue(task)) ||
         (periodFilter === 'today' && isSameDay(task.dueDate)) ||
         (periodFilter === 'next7' && isNextSevenDays(task)) ||
+        (periodFilter === 'completed_today' &&
+     task.status === 'done' &&
+     isSameDay(task.completedAt)) ||
         (periodFilter === 'no_assignee' && !task.assignedToId);
 
       return matchesSearch && matchesStatus && matchesPriority && matchesAssigned && matchesPeriod;
@@ -680,37 +683,53 @@ const saveTaskChanges = async () => {
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <div className="rounded-xl border border-red-200 bg-white p-4">
+          <button
+          type="button"
+          onClick={() => setPeriodFilter('overdue')}
+          className="rounded-xl border border-red-200 bg-white p-4 text-left transition hover:bg-red-50"
+>
             <div className="flex items-center gap-2 text-red-600">
               <AlertTriangle size={18} />
               <span className="text-sm font-medium">Atrasados</span>
             </div>
             <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.overdue}</p>
-          </div>
+          </button>
 
-          <div className="rounded-xl border border-yellow-200 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('today')}
+            className="rounded-xl border border-yellow-200 bg-white p-4 text-left transition hover:bg-yellow-50"
+>
             <div className="flex items-center gap-2 text-yellow-600">
               <Clock size={18} />
               <span className="text-sm font-medium">Hoje</span>
             </div>
             <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.today}</p>
-          </div>
+          </button>
 
-          <div className="rounded-xl border border-blue-200 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('next7')}
+            className="rounded-xl border border-blue-200 bg-white p-4 text-left transition hover:bg-blue-50"
+>
             <div className="flex items-center gap-2 text-blue-600">
               <CalendarDays size={18} />
               <span className="text-sm font-medium">Próx. 7 dias</span>
             </div>
             <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.next7}</p>
-          </div>
+          </button>
 
-          <div className="rounded-xl border border-green-200 bg-white p-4">
+          <button
+            type="button"
+            onClick={() => setPeriodFilter('completed_today')}
+            className="rounded-xl border border-green-200 bg-white p-4 text-left transition hover:bg-green-50"
+>
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle2 size={18} />
               <span className="text-sm font-medium">Concluídos hoje</span>
             </div>
             <p className="mt-3 text-3xl font-bold text-gray-900">{kpis.completedToday}</p>
-          </div>
+          </button>
          
         </div>
 
