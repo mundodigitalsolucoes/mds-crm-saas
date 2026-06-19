@@ -146,6 +146,9 @@ export default function FollowUpsPage() {
   const [editTaskDescription, setEditTaskDescription] = useState('');
   const [editTaskDueDate, setEditTaskDueDate] = useState('');
   const [editTaskAssignedToId, setEditTaskAssignedToId] = useState('');
+  const [editTaskPriority, setEditTaskPriority] = useState<TaskPriority>('medium');
+  const [editTaskStatus, setEditTaskStatus] = useState<TaskStatus>('todo');
+  const [editTaskLeadId, setEditTaskLeadId] = useState('');
 
   const [creatingTask, setCreatingTask] = useState(false);
   const [error, setError] = useState('');
@@ -343,14 +346,14 @@ export default function FollowUpsPage() {
           'Content-Type': 'application/json',
         },
           body: JSON.stringify({
-          title: newTitle.trim(),
-          type: 'follow_up',
-          dueDate: newDueDate,
-          priority: newPriority,
-          status: 'todo',
-          leadId: newLeadId || null,
-          assignedToId: newAssignedToId || null,
-        }),
+  title: newTitle.trim(),
+  type: 'follow_up',
+  dueDate: newDueDate,
+  priority: newPriority,
+  status: 'todo',
+  ...(newLeadId ? { leadId: newLeadId } : {}),
+  ...(newAssignedToId ? { assignedToId: newAssignedToId } : {}),
+}),
       });
 
       if (!response.ok) {
@@ -433,8 +436,12 @@ const openTaskEditor = (
   );
 
   setEditTaskAssignedToId(
-    task.assignedToId || ''
-  );
+  task.assignedToId || ''
+);
+
+setEditTaskPriority(task.priority || 'medium');
+setEditTaskStatus(task.status || 'todo');
+setEditTaskLeadId(task.leadId || '');
 };
 
 const saveTaskChanges = async () => {
@@ -449,12 +456,15 @@ const saveTaskChanges = async () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: editTaskTitle,
-          description: editTaskDescription,
-          dueDate: editTaskDueDate || null,
-          assignedToId:
-            editTaskAssignedToId || null,
-        }),
+  title: editTaskTitle,
+  description: editTaskDescription,
+  dueDate: editTaskDueDate || null,
+  assignedToId: editTaskAssignedToId || null,
+  priority: editTaskPriority,
+  status: editTaskStatus,
+  leadId: editTaskLeadId || null,
+  type: 'follow_up',
+}),
       }
     );
 
@@ -551,21 +561,21 @@ const saveTaskChanges = async () => {
         {lead.name}
       </option>
     ))}
-  </select>
+    </select>
 
   <select
-    value={newAssignedToId}
-    onChange={(event) => setNewAssignedToId(event.target.value)}
-    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
-  >
-    <option value="">Selecionar responsável</option>
+  value={newAssignedToId}
+  onChange={(event) => setNewAssignedToId(event.target.value)}
+  className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+>
+  <option value="">Eu mesmo</option>
 
-    {users.map((user) => (
-      <option key={user.id} value={user.id}>
-        {user.name}
-      </option>
-    ))}
-  </select>
+  {users.map((user) => (
+    <option key={user.id} value={user.id}>
+      {user.name}
+    </option>
+  ))}
+</select>
 </div>
 
           <div className="mt-4 flex justify-end">
@@ -821,12 +831,13 @@ const saveTaskChanges = async () => {
               <div className="space-y-4 p-6">
 
                 <input
-                  value={editTaskTitle}
-                  onChange={(e) =>
-                    setEditTaskTitle(e.target.value)
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                />
+  value={editTaskTitle}
+  onChange={(e) =>
+    setEditTaskTitle(e.target.value)
+  }
+  placeholder="Título do follow-up"
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+/>
 
                 <input
                   type="datetime-local"
@@ -836,34 +847,78 @@ const saveTaskChanges = async () => {
                   }
                   className="w-full rounded-lg border border-gray-300 px-3 py-2"
                 />
+                <select
+  value={editTaskPriority}
+  onChange={(e) =>
+    setEditTaskPriority(e.target.value as TaskPriority)
+  }
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+>
+  <option value="low">Prioridade baixa</option>
+  <option value="medium">Prioridade média</option>
+  <option value="high">Prioridade alta</option>
+  <option value="urgent">Prioridade urgente</option>
+</select>
+
+<select
+  value={editTaskStatus}
+  onChange={(e) =>
+    setEditTaskStatus(e.target.value as TaskStatus)
+  }
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+>
+  <option value="todo">Pendente</option>
+  <option value="in_progress">Em andamento</option>
+  <option value="done">Concluído</option>
+  <option value="cancelled">Cancelado</option>
+</select>
+
+<select
+  value={editTaskLeadId}
+  onChange={(e) =>
+    setEditTaskLeadId(e.target.value)
+  }
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+>
+  <option value="">Sem lead vinculado</option>
+
+  {leads.map((lead) => (
+    <option key={lead.id} value={lead.id}>
+      {lead.name}
+    </option>
+  ))}
+</select>
 
                 <select
-                  value={editTaskAssignedToId}
-                  onChange={(e) =>
-                    setEditTaskAssignedToId(e.target.value)
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                >
-                  {users.map((user) => (
-                    <option
-                      key={user.id}
-                      value={user.id}
-                    >
-                      {user.name}
-                    </option>
-                  ))}
-                </select>
+  value={editTaskAssignedToId}
+  onChange={(e) =>
+    setEditTaskAssignedToId(e.target.value)
+  }
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+>
+  <option value="">Sem responsável</option>
+
+  {users.map((user) => (
+    <option
+      key={user.id}
+      value={user.id}
+    >
+      {user.name}
+    </option>
+  ))}
+</select>
 
                 <textarea
-                  rows={4}
-                  value={editTaskDescription}
-                  onChange={(e) =>
-                    setEditTaskDescription(
-                      e.target.value
-                    )
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                />
+  rows={4}
+  value={editTaskDescription}
+  onChange={(e) =>
+    setEditTaskDescription(
+      e.target.value
+    )
+  }
+  placeholder="Descrição ou observação do follow-up"
+  className="w-full rounded-lg border border-gray-300 px-3 py-2"
+/>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
