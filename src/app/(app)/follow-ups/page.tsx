@@ -161,7 +161,7 @@ export default function FollowUpsPage() {
       setLoading(true);
       setError('');
 
-      const response = await fetch('/api/tasks?pageSize=500');
+                 const response = await fetch('/api/tasks?pageSize=500&type=follow_up');
 
       if (!response.ok) {
         throw new Error('Erro ao carregar follow-ups');
@@ -342,14 +342,15 @@ export default function FollowUpsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-  title: newTitle.trim(),
-  dueDate: newDueDate,
-  priority: newPriority,
-  status: 'todo',
-  leadId: newLeadId || null,
-  assignedToId: newAssignedToId || null,
-}),
+          body: JSON.stringify({
+          title: newTitle.trim(),
+          type: 'follow_up',
+          dueDate: newDueDate,
+          priority: newPriority,
+          status: 'todo',
+          leadId: newLeadId || null,
+          assignedToId: newAssignedToId || null,
+        }),
       });
 
       if (!response.ok) {

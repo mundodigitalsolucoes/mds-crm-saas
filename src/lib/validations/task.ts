@@ -16,6 +16,7 @@ import {
 
 export const taskStatusEnum = z.enum(['todo', 'in_progress', 'done', 'cancelled']);
 export const taskPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
+export const taskTypeEnum = z.enum(['task', 'follow_up']);
 
 // ============================================
 // CREATE — POST /api/tasks
@@ -24,6 +25,7 @@ export const taskPriorityEnum = z.enum(['low', 'medium', 'high', 'urgent']);
 export const taskCreateSchema = z.object({
   title: z.string().min(1, 'Título é obrigatório').max(255),
   description: optionalString,
+  type: taskTypeEnum.default('task'),
   status: taskStatusEnum.default('todo'),
   priority: taskPriorityEnum.default('medium'),
   dueDate: optionalString,
@@ -45,6 +47,7 @@ export type TaskCreateInput = z.infer<typeof taskCreateSchema>;
 export const taskUpdateSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   description: optionalStringNullable,
+  type: taskTypeEnum.optional(),
   status: taskStatusEnum.optional(),
   priority: taskPriorityEnum.optional(),
   dueDate: optionalStringNullable,
@@ -65,6 +68,7 @@ export type TaskUpdateInput = z.infer<typeof taskUpdateSchema>;
 // ============================================
 
 export const taskFiltersSchema = z.object({
+  type: z.string().optional(),
   status: z.string().optional(),
   priority: z.string().optional(),
   assignedToId: z.string().optional(),

@@ -163,6 +163,7 @@ export async function PUT(
     // Copiar campos — undefined = não enviado (não altera), null = limpar campo
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
+    if (data.type !== undefined) updateData.type = data.type;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring;

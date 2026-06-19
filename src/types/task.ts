@@ -89,10 +89,13 @@ export type CommentUpdate = Pick<Comment, 'content'>;
 // TASK (TAREFA PRINCIPAL)
 // ============================================
 
+export type TaskType = 'task' | 'follow_up';
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
+  type: TaskType;
   status: TaskStatus;
   priority: TaskPriority;
 
@@ -158,6 +161,7 @@ export interface Task {
 export type TaskCreate = {
   title: string;
   description?: string;
+  type?: TaskType;
   status?: TaskStatus;
   priority?: TaskPriority;
   dueDate?: string;
@@ -180,6 +184,7 @@ export type TaskUpdate = Partial<TaskCreate> & {
 // ============================================
 
 export interface TaskFilters {
+  type?: TaskType;
   status?: TaskStatus | TaskStatus[];
   priority?: TaskPriority | TaskPriority[];
   assignedToId?: string;
