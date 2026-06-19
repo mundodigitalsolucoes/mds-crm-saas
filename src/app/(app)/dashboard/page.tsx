@@ -62,19 +62,33 @@ export default async function DashboardPage() {
 
   const orgId = session.user.organizationId;
 
-   // ─── Filtro seguro para Tasks com isolamento multi-tenant ───
-  const taskOrgFilter = {
+     // ─── Filtros seguros para Tasks com isolamento multi-tenant ───
+  const operationalTaskFilter = {
     organizationId: orgId,
+    type: 'task',
   };
 
+  const followUpTaskFilter = {
+    organizationId: orgId,
+    type: 'follow_up',
+  };
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+
   // ─── Consultas paralelas ao banco ───
-  const [
+      const [
     totalLeadsCount,
     activeProjectsCount,
     pendingTasksCount,
+    pendingFollowUpsCount,
     wonLeadsCount,
     recentLeads,
     todaysTasks,
+    todaysFollowUps,
     organization,
     totalProjects,
     totalOS,
@@ -88,12 +102,23 @@ export default async function DashboardPage() {
       where: { organizationId: orgId, status: 'active' },
     }),
 
-    // 3. Tarefas Pendentes
+            // 3. Tarefas Pendentes
     prisma.task.count({
-      where: { ...taskOrgFilter, status: { notIn: ['done', 'cancelled'] } },
+      where: {
+        ...operationalTaskFilter,
+        status: { notIn: ['done', 'cancelled'] },
+      },
     }),
 
-    // 4. Leads Ganhos
+    // 4. Follow-ups Pendentes
+    prisma.task.count({
+      where: {
+        ...followUpTaskFilter,
+        status: { notIn: ['done', 'cancelled'] },
+      },
+    }),
+
+    // 5. Leads Ganhos
     prisma.lead.count({
       where: { organizationId: orgId, status: 'won' },
     }),
@@ -106,22 +131,46 @@ export default async function DashboardPage() {
       select: { id: true, name: true, company: true, status: true },
     }),
 
-    // 6. Tarefas de Hoje
+        // 6. Tarefas de Hoje
     prisma.task.findMany({
       where: {
-        ...taskOrgFilter,
-        dueDate: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lt: new Date(new Date().setHours(23, 59, 59, 999)),
-        },
+        ...operationalTaskFilter,
         status: { notIn: ['done', 'cancelled'] },
+        OR: [
+          {
+            startDate: { lte: todayEnd },
+            dueDate: { gte: todayStart },
+          },
+          {
+            startDate: null,
+            dueDate: { gte: todayStart, lte: todayEnd },
+          },
+        ],
       },
       orderBy: { dueDate: 'asc' },
       take: 5,
       include: { assignedTo: { select: { name: true } } },
     }),
 
-    // 7. ✅ Organização (limites do plano)
+    // 7. Follow-ups de Hoje
+    prisma.task.findMany({
+      where: {
+        ...followUpTaskFilter,
+        dueDate: {
+          gte: todayStart,
+          lte: todayEnd,
+        },
+        status: { notIn: ['done', 'cancelled'] },
+      },
+      orderBy: { dueDate: 'asc' },
+      take: 5,
+      include: {
+        assignedTo: { select: { name: true } },
+        lead: { select: { name: true } },
+      },
+    }),
+
+    // 8. ✅ Organização (limites do plano)
     prisma.organization.findUnique({
       where: { id: orgId },
       select: {
@@ -192,7 +241,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* GRID DE CARDS PRINCIPAIS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
         {/* Card Leads */}
         <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
@@ -238,6 +287,21 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+                {/* Card Follow-ups */}
+        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-orange-100 text-orange-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-500">Follow-ups Pendentes</p>
+              <p className="text-2xl font-bold text-gray-900">{pendingFollowUpsCount}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Card Conversões */}
         <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
@@ -268,7 +332,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ÁREA DE CONTEÚDO SECUNDÁRIO */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Lista de Leads Recentes */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-gray-200">
@@ -328,9 +392,64 @@ export default async function DashboardPage() {
                 </li>
               ))}
             </ul>
-          ) : (
+                    ) : (
             <div className="p-6 text-center text-gray-500 text-sm">
               Nenhuma tarefa pendente para hoje.
+            </div>
+          )}
+        </div>
+
+        {/* Lista de Follow-ups de Hoje */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Follow-ups de Hoje</h2>
+          </div>
+
+          {todaysFollowUps.length > 0 ? (
+            <ul className="divide-y divide-gray-200">
+              {todaysFollowUps.map((followUp) => (
+                <li key={followUp.id} className="p-4 hover:bg-gray-50">
+                  <div className="flex items-center">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 line-clamp-1">
+                        {followUp.title}
+                      </p>
+
+                      <div className="mt-1 space-y-1 text-xs text-gray-500">
+                        <div className="flex justify-between gap-3">
+                          <span>
+                            {followUp.lead?.name
+                              ? `Lead: ${followUp.lead.name}`
+                              : 'Sem lead vinculado'}
+                          </span>
+
+                          <span
+                            className={`capitalize ${
+                              followUp.priority === 'urgent'
+                                ? 'text-red-600 font-bold'
+                                : followUp.priority === 'high'
+                                  ? 'text-orange-600'
+                                  : 'text-gray-500'
+                            }`}
+                          >
+                            {followUp.priority}
+                          </span>
+                        </div>
+
+                        <span>
+                          {followUp.assignedTo?.name
+                            ? `Resp: ${followUp.assignedTo.name}`
+                            : 'Não atribuído'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-6 text-center text-gray-500 text-sm">
+              Nenhum follow-up pendente para hoje.
             </div>
           )}
         </div>
