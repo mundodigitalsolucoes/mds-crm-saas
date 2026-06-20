@@ -17,6 +17,7 @@ interface TaskFormModalProps {
 export interface TaskFormData {
   title: string;
   description?: string;
+  type?: 'task' | 'follow_up';
   status: 'todo' | 'in_progress' | 'done' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: string;
@@ -49,54 +50,85 @@ export function TaskFormModal({
   mode,
 }: TaskFormModalProps) {
   const [formData, setFormData] = useState<TaskFormData>({
-    title: '',
-    description: '',
-    status: 'todo',
-    priority: 'medium',
-    dueDate: '',
-    startDate: '',
-    estimatedMinutes: undefined,
-    projectId: '',
-    leadId: '',
-    assignedToId: '',
-  });
+  title: '',
+  description: '',
+  type: 'task',
+  status: 'todo',
+  priority: 'medium',
+  dueDate: '',
+  startDate: '',
+  estimatedMinutes: undefined,
+  projectId: '',
+  leadId: '',
+  assignedToId: '',
+});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
 
   // Resetar form quando o modal abre/fecha ou muda o modo
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
         setFormData({
-          title: initialData.title || '',
-          description: initialData.description || '',
-          status: initialData.status || 'todo',
-          priority: initialData.priority || 'medium',
-          dueDate: initialData.dueDate || '',
-          startDate: initialData.startDate || '',
-          estimatedMinutes: initialData.estimatedMinutes,
-          projectId: initialData.projectId || '',
-          leadId: initialData.leadId || '',
-          assignedToId: initialData.assignedToId || '',
-        });
+  title: initialData.title || '',
+  description: initialData.description || '',
+  type: initialData.type || 'task',
+  status: initialData.status || 'todo',
+  priority: initialData.priority || 'medium',
+  dueDate: initialData.dueDate || '',
+  startDate: initialData.startDate || '',
+  estimatedMinutes: initialData.estimatedMinutes,
+  projectId: initialData.projectId || '',
+  leadId: initialData.leadId || '',
+  assignedToId: initialData.assignedToId || '',
+});
       } else {
         // Reset completo para nova tarefa
         setFormData({
-          title: '',
-          description: '',
-          status: 'todo',
-          priority: 'medium',
-          dueDate: '',
-          startDate: '',
-          estimatedMinutes: undefined,
-          projectId: '',
-          leadId: '',
-          assignedToId: '',
-        });
+  title: '',
+  description: '',
+  type: 'task',
+  status: 'todo',
+  priority: 'medium',
+  dueDate: '',
+  startDate: '',
+  estimatedMinutes: undefined,
+  projectId: '',
+  leadId: '',
+  assignedToId: '',
+});
       }
       setErrors({});
     }
   }, [isOpen, initialData]);
+
+  useEffect(() => {
+  if (!isOpen) return;
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users');
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar usuários');
+      }
+
+      const data = await response.json();
+
+      setUsers(
+        (data || []).map((user: any) => ({
+          id: user.id,
+          name: user.name || 'Usuário sem nome',
+        }))
+      );
+    } catch (error) {
+      console.error('Erro ao carregar responsáveis:', error);
+    }
+  };
+
+  fetchUsers();
+}, [isOpen]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -120,10 +152,11 @@ export function TaskFormModal({
   // Limpar campos vazios antes de enviar — evita erro de Zod UUID
   const cleanFormData = (data: TaskFormData): Record<string, unknown> => {
     const cleaned: Record<string, unknown> = {
-      title: data.title.trim(),
-      status: data.status,
-      priority: data.priority,
-    };
+  title: data.title.trim(),
+  type: data.type || 'task',
+  status: data.status,
+  priority: data.priority,
+};
 
     // Só enviar campos que têm valor
     if (data.description?.trim()) cleaned.description = data.description.trim();
@@ -334,6 +367,36 @@ export function TaskFormModal({
                   placeholder="Ex: 60"
                 />
               </div>
+
+              <div>
+  <label
+    htmlFor="assignedToId"
+    className="block text-sm font-medium text-gray-700 mb-1"
+  >
+    <User className="inline h-4 w-4 mr-1" />
+    Responsável
+  </label>
+
+  <select
+    id="assignedToId"
+    name="assignedToId"
+    value={formData.assignedToId || ''}
+    onChange={handleChange}
+    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="">Eu mesmo</option>
+
+    {users.map((user) => (
+      <option key={user.id} value={user.id}>
+        {user.name}
+      </option>
+    ))}
+  </select>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Se deixar como “Eu mesmo”, a tarefa será atribuída ao usuário criador.
+  </p>
+</div>
             </div>
 
             {/* Botões */}

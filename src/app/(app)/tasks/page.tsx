@@ -1,5 +1,6 @@
-// src/app/(app)/tasks/page.tsx
 'use client';
+
+// src/app/(app)/tasks/page.tsx
 
 import { useEffect, useState } from 'react';
 import {
@@ -38,6 +39,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
+  const [periodFilter, setPeriodFilter] = useState<'today' | 'overdue' | ''>('');
 
   const { canAccess, isLoading: permLoading } = usePermission();
 
@@ -47,6 +49,7 @@ export default function TasksPage() {
 
     setStatusFilter('');
     setPriorityFilter('');
+    setPeriodFilter('');
     setSearchQuery('');
     setShowFilters(false);
 
@@ -66,31 +69,70 @@ export default function TasksPage() {
     }
   }, [activeTab, permLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 
+     const buildBaseFilters = (tab: FilterTab = activeTab) => {
+    const baseFilters: Record<string, unknown> = {
+      type: 'task',
+    };
+
+    if (tab === 'today') {
+      baseFilters.isToday = true;
+    }
+
+    if (tab === 'overdue') {
+      baseFilters.isOverdue = true;
+    }
+
+    if (tab === 'done') {
+      baseFilters.status = 'done';
+    }
+
+    return baseFilters;
+  };
+
   // ✅ Returns condicionais DEPOIS de todos os hooks
   if (permLoading) return <PermissionLoading />;
   if (!canAccess('tasks')) return <AccessDenied module="tasks" />;
 
   const handleApplyFilters = () => {
-    const newFilters: Record<string, unknown> = {};
-    if (statusFilter) newFilters.status = statusFilter;
-    if (priorityFilter) newFilters.priority = priorityFilter;
-    if (searchQuery) newFilters.search = searchQuery;
-    fetchTasks(newFilters); // ✅ direto, sem setFilters
-    setShowFilters(false);
+  const newFilters: Record<string, unknown> = {
+    type: 'task',
   };
+
+  if (statusFilter) newFilters.status = statusFilter;
+  if (priorityFilter) newFilters.priority = priorityFilter;
+  if (searchQuery) newFilters.search = searchQuery;
+
+  if (periodFilter === 'today') {
+    newFilters.isToday = true;
+  }
+
+  if (periodFilter === 'overdue') {
+    newFilters.isOverdue = true;
+  }
+
+  fetchTasks(newFilters);
+  setShowFilters(false);
+};
 
   const handleClearFilters = () => {
-    setStatusFilter('');
-    setPriorityFilter('');
-    setSearchQuery('');
-    setActiveTab('all');
-    setShowFilters(false);
-  };
+  setStatusFilter('');
+  setPriorityFilter('');
+  setPeriodFilter('');
+  setSearchQuery('');
+  setActiveTab('all');
+  setShowFilters(false);
+
+  fetchTasks({ type: 'task' });
+};
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchTasks({ ...filters, search: searchQuery });
-  };
+  e.preventDefault();
+
+  fetchTasks({
+    ...buildBaseFilters(),
+    search: searchQuery,
+  });
+};
 
   const handleEdit = (task: Task) => {
     setEditingTask(task);
@@ -111,27 +153,111 @@ export default function TasksPage() {
   };
 
   const handleFormSubmit = async (data: any) => {
-    try {
-      if (editingTask) {
-        const result = await updateTask(editingTask.id, data);
-        if (!result) throw new Error('Erro ao atualizar tarefa');
-      } else {
-        const result = await createTask(data);
-        if (!result) throw new Error('Erro ao criar tarefa');
-      }
-    } catch (error) {
-      console.error('Erro ao salvar tarefa:', error);
-      throw error;
-    }
+  const taskData = {
+    ...data,
+    type: 'task',
   };
 
+  try {
+    if (editingTask) {
+      const result = await updateTask(editingTask.id, taskData);
+      if (!result) throw new Error('Erro ao atualizar tarefa');
+    } else {
+      const result = await createTask(taskData);
+      if (!result) throw new Error('Erro ao criar tarefa');
+    }
+  } catch (error) {
+    console.error('Erro ao salvar tarefa:', error);
+    throw error;
+  }
+};
+
   const getTaskDueStatus = (task: Task) => {
-    if (!task.dueDate || task.status === 'done' || task.status === 'cancelled') return null;
-    const dueDate = parseISO(task.dueDate);
-    if (isPast(dueDate) && !isToday(dueDate)) return 'overdue';
-    if (isToday(dueDate)) return 'today';
+  if (!task.dueDate || task.status === 'done' || task.status === 'cancelled') {
     return null;
-  };
+  }
+
+  const now = new Date();
+
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+
+  const formatTaskDateRange = (task: Task) => {
+  if (!task.dueDate) {
+    return 'Sem prazo';
+  }
+
+  const dueDate = parseISO(task.dueDate);
+
+  if (task.startDate) {
+    const startDate = parseISO(task.startDate);
+
+    return `${format(startDate, 'dd/MM', { locale: ptBR })} até ${format(dueDate, 'dd/MM', { locale: ptBR })}`;
+  }
+
+  return format(dueDate, 'dd/MM', { locale: ptBR });
+};
+
+  const todayEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
+
+  const dueDate = parseISO(task.dueDate);
+  const startDate = task.startDate ? parseISO(task.startDate) : null;
+
+  if (startDate) {
+    const isActiveToday = startDate <= todayEnd && dueDate >= todayStart;
+
+    if (isActiveToday) {
+      return 'today';
+    }
+
+    if (dueDate < todayStart) {
+      return 'overdue';
+    }
+
+    return null;
+  }
+
+  if (dueDate < todayStart) {
+    return 'overdue';
+  }
+
+  if (dueDate >= todayStart && dueDate <= todayEnd) {
+    return 'today';
+  }
+
+  return null;
+};
+  
+   const formatTaskDateRange = (task: Task) => {
+  if (!task.dueDate) {
+    return 'Sem prazo';
+  }
+
+  const dueDate = parseISO(task.dueDate);
+
+  if (task.startDate) {
+    const startDate = parseISO(task.startDate);
+
+    return `${format(startDate, 'dd/MM', { locale: ptBR })} até ${format(dueDate, 'dd/MM', { locale: ptBR })}`;
+  }
+
+  return format(dueDate, 'dd/MM', { locale: ptBR });
+};
 
   const tabs = [
     { id: 'all'     as FilterTab, label: 'Todas',      icon: List          },
@@ -239,20 +365,34 @@ export default function TasksPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Prioridade</label>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Todas</option>
-                <option value="low">Baixa</option>
-                <option value="medium">Média</option>
-                <option value="high">Alta</option>
-                <option value="urgent">Urgente</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+<select
+  value={priorityFilter}
+  onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+>
+  <option value="">Todas</option>
+  <option value="low">Baixa</option>
+  <option value="medium">Média</option>
+  <option value="high">Alta</option>
+  <option value="urgent">Urgente</option>
+</select>
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-1">Período</label>
+  <select
+    value={periodFilter}
+    onChange={(e) => setPeriodFilter(e.target.value as 'today' | 'overdue' | '')}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+  >
+    <option value="">Todos</option>
+    <option value="today">Hoje</option>
+    <option value="overdue">Atrasadas</option>
+  </select>
+</div>
+</div>
+
+<div className="flex items-center gap-2">
             <button
               onClick={handleApplyFilters}
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
@@ -351,7 +491,7 @@ export default function TasksPage() {
                       }`}>
                         {dueStatus === 'overdue' && <AlertTriangle size={14} />}
                         {dueStatus === 'today'   && <Clock size={14} />}
-                        {format(parseISO(task.dueDate), 'dd/MM', { locale: ptBR })}
+                        {formatTaskDateRange(task)}
                       </span>
                     )}
 
@@ -427,6 +567,7 @@ export default function TasksPage() {
             dueDate:            editingTask.dueDate?.split('T')[0] || '',
             startDate:          editingTask.startDate?.split('T')[0] || '',
             estimatedMinutes:   editingTask.estimatedMinutes || undefined,
+            assignedToId:       editingTask.assignedToId || '',
           } : undefined
         }
         mode={editingTask ? 'edit' : 'create'}
