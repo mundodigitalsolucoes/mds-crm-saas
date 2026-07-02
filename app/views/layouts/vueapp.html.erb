@@ -1,0 +1,6 @@
+<script>
+  window.chatwootConfig = window.chatwootConfig || {};
+  window.chatwootConfig.mdsWhiteLabelMode = '<%= ActiveModel::Type::Boolean.new.cast(
+       ENV.fetch("MDS_WHITE_LABEL_MODE", false)
+     ) %>';
+</script>
