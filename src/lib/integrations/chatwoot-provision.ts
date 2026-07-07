@@ -61,6 +61,49 @@ type ChatwootWebhook = {
   subscriptions?: string[]
 }
 
+type ChatwootWebhooksResponse =
+  | ChatwootWebhook[]
+  | {
+      payload?: unknown
+      data?: unknown
+      webhooks?: unknown
+    }
+  | null
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function isChatwootWebhookArray(value: unknown): value is ChatwootWebhook[] {
+  return Array.isArray(value) && value.every((item) => isRecord(item))
+}
+
+function normalizeChatwootWebhooksResponse(
+  body: ChatwootWebhooksResponse
+): ChatwootWebhook[] {
+  if (isChatwootWebhookArray(body)) {
+    return body
+  }
+
+  if (!isRecord(body)) {
+    return []
+  }
+
+  const candidates = [
+    body.payload,
+    body.data,
+    body.webhooks,
+    isRecord(body.payload) ? body.payload.data : undefined,
+    isRecord(body.payload) ? body.payload.webhooks : undefined,
+    isRecord(body.data) ? body.data.payload : undefined,
+    isRecord(body.data) ? body.data.webhooks : undefined,
+    isRecord(body.webhooks) ? body.webhooks.payload : undefined,
+    isRecord(body.webhooks) ? body.webhooks.data : undefined,
+  ]
+
+  return candidates.find(isChatwootWebhookArray) ?? []
+}
+
 function resolveCrmPublicUrl(): string | null {
   return (
     normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
@@ -159,17 +202,10 @@ export async function ensureChatwootWebhookForAccount(params: {
   })
 
   if (listRes.ok) {
-    const body = await listRes.json().catch(() => null) as
-      | ChatwootWebhook[]
-      | {
-          payload?: ChatwootWebhook[]
-          data?: ChatwootWebhook[]
-          webhooks?: ChatwootWebhook[]
-        }
-      | null
-    const webhooks = Array.isArray(body)
-      ? body
-      : body?.payload ?? body?.data ?? body?.webhooks ?? []
+    const body = (await listRes
+      .json()
+      .catch(() => null)) as ChatwootWebhooksResponse
+    const webhooks = normalizeChatwootWebhooksResponse(body)
 
     if (
       webhooks.some((webhook) =>
