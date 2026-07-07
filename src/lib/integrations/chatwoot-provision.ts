@@ -31,6 +31,10 @@ function normalizeBaseUrl(url?: string | null) {
   return url?.trim().replace(/\/$/, '') || null
 }
 
+function normalizeChatwootBaseUrl(url?: string | null): string | null {
+  return normalizeBaseUrl(url)?.replace(/\/api\/v1$/i, '') || null
+}
+
 function toPositiveInt(value: unknown): number | null {
   const num = Number(value)
   if (!Number.isInteger(num) || num <= 0) return null
@@ -123,8 +127,13 @@ export async function ensureChatwootWebhookForAccount(params: {
   chatwootAccountId: number
 }): Promise<void> {
   const { chatwootUrl, accountApiToken, chatwootAccountId } = params
+  const chatwootBaseUrl = normalizeChatwootBaseUrl(chatwootUrl)
   const crmPublicUrl = resolveCrmPublicUrl()
   const webhookSecret = process.env.CHATWOOT_WEBHOOK_SECRET?.trim()
+
+  if (!chatwootBaseUrl) {
+    throw new Error('chatwoot_url_not_configured')
+  }
 
   if (!crmPublicUrl) {
     throw new Error('crm_public_url_not_configured')
@@ -137,7 +146,7 @@ export async function ensureChatwootWebhookForAccount(params: {
   const webhookUrl = new URL('/api/webhooks/chatwoot', crmPublicUrl)
   webhookUrl.searchParams.set('secret', webhookSecret)
   const webhookUrlWithSecret = webhookUrl.toString()
-  const webhooksEndpoint = `${chatwootUrl}/api/v1/accounts/${chatwootAccountId}/webhooks`
+  const webhooksEndpoint = `${chatwootBaseUrl}/api/v1/accounts/${chatwootAccountId}/webhooks`
   const headers = {
     'Content-Type': 'application/json',
     api_access_token: accountApiToken,
@@ -323,8 +332,8 @@ export async function provisionChatwootForOrg(
   input: ProvisionInput,
 ): Promise<ProvisionResult> {
   const chatwootUrl =
-    normalizeBaseUrl(process.env.CHATWOOT_API_URL) ||
-    normalizeBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
+    normalizeChatwootBaseUrl(process.env.CHATWOOT_API_URL) ||
+    normalizeChatwootBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
 
   const platformToken = process.env.CHATWOOT_PLATFORM_TOKEN
 
