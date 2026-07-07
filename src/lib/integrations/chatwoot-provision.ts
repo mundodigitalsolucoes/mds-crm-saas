@@ -1,6 +1,6 @@
 // src/lib/integrations/chatwoot-provision.ts
 import { prisma } from '@/lib/prisma'
-import { encryptToken } from '@/lib/integrations/crypto'
+import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
 
 interface ProvisionInput {
   organizationId: string
@@ -31,10 +31,186 @@ function normalizeBaseUrl(url?: string | null) {
   return url?.trim().replace(/\/$/, '') || null
 }
 
+function normalizeChatwootBaseUrl(url?: string | null): string | null {
+  return normalizeBaseUrl(url)?.replace(/\/api\/v1$/i, '') || null
+}
+
 function toPositiveInt(value: unknown): number | null {
   const num = Number(value)
   if (!Number.isInteger(num) || num <= 0) return null
   return num
+}
+
+const CHATWOOT_WEBHOOK_SUBSCRIPTIONS = [
+  'conversation_created',
+  'conversation_status_changed',
+  'conversation_updated',
+  'message_created',
+  'message_updated',
+  'webwidget_triggered',
+  'contact_created',
+  'contact_updated',
+  'conversation_typing_on',
+  'conversation_typing_off',
+] as const
+
+type ChatwootWebhook = {
+  id?: number
+  url?: string
+  webhook_url?: string
+  subscriptions?: string[]
+}
+
+function resolveCrmPublicUrl(): string | null {
+  return (
+    normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+    normalizeBaseUrl(process.env.APP_URL) ||
+    normalizeBaseUrl(process.env.NEXTAUTH_URL)
+  )
+}
+
+function sanitizeChatwootError(text: string): string {
+  return text
+    .replace(/([?&]secret=)[^&\s"]+/gi, '$1[REDACTED]')
+    .replace(/(Bearer\s+)[^\s"]+/gi, '$1[REDACTED]')
+    .replace(/(api_access_token["']?\s*[:=]\s*["']?)[^"'\s,}]+/gi, '$1[REDACTED]')
+    .slice(0, 500)
+}
+
+async function readSanitizedResponse(res: Response): Promise<string> {
+  const text = await res.text().catch(() => '')
+  if (!text) return `HTTP ${res.status}`
+
+  try {
+    const json = JSON.parse(text) as {
+      message?: string
+      error?: string
+      errors?: unknown
+    }
+    const message =
+      json.message || json.error || JSON.stringify(json.errors ?? json)
+    return sanitizeChatwootError(String(message))
+  } catch {
+    return sanitizeChatwootError(text)
+  }
+}
+
+function getWebhookUrlWithoutSecret(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl)
+    parsed.searchParams.delete('secret')
+    return parsed.toString()
+  } catch {
+    return null
+  }
+}
+
+function webhookMatches(
+  existingUrl: string | undefined,
+  expectedWebhookUrl: string
+): boolean {
+  if (!existingUrl) return false
+
+  const existingWithoutSecret = getWebhookUrlWithoutSecret(existingUrl)
+  const expectedWithoutSecret = getWebhookUrlWithoutSecret(expectedWebhookUrl)
+
+  return Boolean(
+    existingWithoutSecret &&
+    expectedWithoutSecret &&
+    existingWithoutSecret === expectedWithoutSecret
+  )
+}
+
+export async function ensureChatwootWebhookForAccount(params: {
+  chatwootUrl: string
+  accountApiToken: string
+  chatwootAccountId: number
+}): Promise<void> {
+  const { chatwootUrl, accountApiToken, chatwootAccountId } = params
+  const chatwootBaseUrl = normalizeChatwootBaseUrl(chatwootUrl)
+  const crmPublicUrl = resolveCrmPublicUrl()
+  const webhookSecret = process.env.CHATWOOT_WEBHOOK_SECRET?.trim()
+
+  if (!chatwootBaseUrl) {
+    throw new Error('chatwoot_url_not_configured')
+  }
+
+  if (!crmPublicUrl) {
+    throw new Error('crm_public_url_not_configured')
+  }
+
+  if (!webhookSecret) {
+    throw new Error('chatwoot_webhook_secret_not_configured')
+  }
+
+  const webhookUrl = new URL('/api/webhooks/chatwoot', crmPublicUrl)
+  webhookUrl.searchParams.set('secret', webhookSecret)
+  const webhookUrlWithSecret = webhookUrl.toString()
+  const webhooksEndpoint = `${chatwootBaseUrl}/api/v1/accounts/${chatwootAccountId}/webhooks`
+  const headers = {
+    'Content-Type': 'application/json',
+    api_access_token: accountApiToken,
+  }
+
+  const listRes = await fetch(webhooksEndpoint, {
+    method: 'GET',
+    headers,
+    signal: AbortSignal.timeout(15_000),
+  })
+
+  if (listRes.ok) {
+    const body = await listRes.json().catch(() => null) as
+      | ChatwootWebhook[]
+      | {
+          payload?: ChatwootWebhook[]
+          data?: ChatwootWebhook[]
+          webhooks?: ChatwootWebhook[]
+        }
+      | null
+    const webhooks = Array.isArray(body)
+      ? body
+      : body?.payload ?? body?.data ?? body?.webhooks ?? []
+
+    if (
+      webhooks.some((webhook) =>
+        webhookMatches(webhook.url ?? webhook.webhook_url, webhookUrlWithSecret)
+      )
+    ) {
+      console.info(
+        `[CHATWOOT PROVISION] Webhook já existente para Account #${chatwootAccountId}`
+      )
+      return
+    }
+  } else if (listRes.status !== 404 && listRes.status !== 405) {
+    const message = await readSanitizedResponse(listRes)
+    console.warn(
+      `[CHATWOOT PROVISION] Falha ao verificar webhook para Account #${chatwootAccountId}: HTTP ${listRes.status} - ${message}`
+    )
+    throw new Error('webhook_lookup_failed')
+  }
+
+  const createRes = await fetch(webhooksEndpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      name: 'MDS CRM',
+      url: webhookUrlWithSecret,
+      subscriptions: CHATWOOT_WEBHOOK_SUBSCRIPTIONS,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  })
+
+  if (!createRes.ok) {
+    const message = await readSanitizedResponse(createRes)
+    console.warn(
+      `[CHATWOOT PROVISION] Falha ao criar webhook para Account #${chatwootAccountId}: HTTP ${createRes.status} - ${message}`
+    )
+    throw new Error('webhook_creation_failed')
+  }
+
+  console.info(
+    `[CHATWOOT PROVISION] Webhook criado para Account #${chatwootAccountId}`
+  )
 }
 
 function parseStoredChatwootData(raw: string): StoredChatwootData | null {
@@ -88,6 +264,38 @@ function isReusableBinding(params: {
   return true
 }
 
+async function updateChatwootProvisionStatus(
+  organizationId: string,
+  data: { lastError: string | null; lastSyncAt?: Date }
+): Promise<void> {
+  await prisma.connectedAccount.updateMany({
+    where: { provider: 'chatwoot', organizationId },
+    data,
+  })
+}
+
+async function ensureWebhookOrRecordError(params: {
+  organizationId: string
+  chatwootUrl: string
+  accountApiToken: string
+  chatwootAccountId: number
+}): Promise<ProvisionResult | null> {
+  try {
+    await ensureChatwootWebhookForAccount(params)
+    return null
+  } catch (err) {
+    const error = err instanceof Error ? err.message : 'webhook_creation_failed'
+    await updateChatwootProvisionStatus(params.organizationId, {
+      lastError: error,
+    })
+    return {
+      success: false,
+      chatwootAccountId: params.chatwootAccountId,
+      error,
+    }
+  }
+}
+
 /**
  * Confirma o usuário via endpoint SSO customizado.
  */
@@ -111,8 +319,8 @@ async function confirmChatwootUser(baseUrl: string, email: string): Promise<void
     } else {
       console.warn(`[CHATWOOT PROVISION] Confirmação retornou ${res.status}`)
     }
-  } catch (err) {
-    console.warn('[CHATWOOT PROVISION] Falha ao confirmar usuário:', err)
+  } catch {
+    console.warn('[CHATWOOT PROVISION] Falha ao confirmar usuário')
   }
 }
 
@@ -124,8 +332,8 @@ export async function provisionChatwootForOrg(
   input: ProvisionInput,
 ): Promise<ProvisionResult> {
   const chatwootUrl =
-    normalizeBaseUrl(process.env.CHATWOOT_API_URL) ||
-    normalizeBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
+    normalizeChatwootBaseUrl(process.env.CHATWOOT_API_URL) ||
+    normalizeChatwootBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
 
   const platformToken = process.env.CHATWOOT_PLATFORM_TOKEN
 
@@ -153,6 +361,7 @@ export async function provisionChatwootForOrg(
           select: {
             id: true,
             isActive: true,
+            accessTokenEnc: true,
             data: true,
             updatedAt: true,
           },
@@ -194,6 +403,44 @@ export async function provisionChatwootForOrg(
           },
         })
 
+        let currentAccountApiToken: string | null = null
+
+        try {
+          currentAccountApiToken = currentBinding?.accessTokenEnc
+            ? decryptToken(currentBinding.accessTokenEnc)
+            : null
+        } catch {
+          currentAccountApiToken = null
+        }
+
+        if (!currentAccountApiToken) {
+          await updateChatwootProvisionStatus(input.organizationId, {
+            lastError: 'chatwoot_account_api_token_not_available',
+          })
+          return {
+            success: false,
+            chatwootAccountId: currentAccountId,
+            chatwootUserId: currentUserId,
+            error: 'chatwoot_account_api_token_not_available',
+          }
+        }
+
+        const webhookError = await ensureWebhookOrRecordError({
+          organizationId: input.organizationId,
+          chatwootUrl,
+          accountApiToken: currentAccountApiToken,
+          chatwootAccountId: currentAccountId,
+        })
+
+        if (webhookError) {
+          return { ...webhookError, chatwootUserId: currentUserId }
+        }
+
+        await updateChatwootProvisionStatus(input.organizationId, {
+          lastError: null,
+          lastSyncAt: new Date(),
+        })
+
         return {
           success: true,
           chatwootAccountId: currentAccountId,
@@ -224,8 +471,12 @@ export async function provisionChatwootForOrg(
     })
 
     if (!accountRes.ok) {
-      const errText = await accountRes.text()
-      console.warn('[CHATWOOT PROVISION] Falha criar account:', accountRes.status, errText)
+      const errText = sanitizeChatwootError(await accountRes.text())
+      console.warn(
+        '[CHATWOOT PROVISION] Falha criar account:',
+        accountRes.status,
+        errText
+      )
       return { success: false, error: 'account_creation_failed' }
     }
 
@@ -233,7 +484,10 @@ export async function provisionChatwootForOrg(
     const chatwootAccountId = accountJson?.id as number
 
     if (!chatwootAccountId) {
-      console.warn('[CHATWOOT PROVISION] Resposta inesperada ao criar account:', JSON.stringify(accountJson))
+      console.warn(
+        '[CHATWOOT PROVISION] Resposta inesperada ao criar account:',
+        JSON.stringify(accountJson)
+      )
       return { success: false, error: 'account_creation_failed' }
     }
 
@@ -256,8 +510,12 @@ export async function provisionChatwootForOrg(
     })
 
     if (!userRes.ok) {
-      const errText = await userRes.text()
-      console.warn('[CHATWOOT PROVISION] Falha criar usuário:', userRes.status, errText)
+      const errText = sanitizeChatwootError(await userRes.text())
+      console.warn(
+        '[CHATWOOT PROVISION] Falha criar usuário:',
+        userRes.status,
+        errText
+      )
       return { success: false, error: 'user_creation_failed' }
     }
 
@@ -265,8 +523,14 @@ export async function provisionChatwootForOrg(
     const chatwootUserId = userJson?.id as number
     const accessToken = userJson?.access_token as string
 
-    if (!chatwootUserId) {
-      console.warn('[CHATWOOT PROVISION] Resposta inesperada ao criar usuário:', JSON.stringify(userJson))
+    if (!chatwootUserId || !accessToken) {
+      console.warn(
+        '[CHATWOOT PROVISION] Resposta inesperada ao criar usuário:',
+        JSON.stringify({
+          ...userJson,
+          access_token: accessToken ? '[REDACTED]' : null,
+        })
+      )
       return { success: false, error: 'user_creation_failed' }
     }
 
@@ -290,8 +554,12 @@ export async function provisionChatwootForOrg(
     )
 
     if (!memberRes.ok) {
-      const errText = await memberRes.text()
-      console.warn('[CHATWOOT PROVISION] Falha vincular usuário à account:', memberRes.status, errText)
+      const errText = sanitizeChatwootError(await memberRes.text())
+      console.warn(
+        '[CHATWOOT PROVISION] Falha vincular usuário à account:',
+        memberRes.status,
+        errText
+      )
     } else {
       console.info(`[CHATWOOT PROVISION] ✅ Usuário #${chatwootUserId} vinculado à account #${chatwootAccountId}`)
     }
@@ -349,7 +617,23 @@ export async function provisionChatwootForOrg(
       }),
     ])
 
-    console.info(`[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} provisionada com sucesso`)
+    const webhookError = await ensureWebhookOrRecordError({
+      organizationId: input.organizationId,
+      chatwootUrl,
+      accountApiToken: accessToken,
+      chatwootAccountId,
+    })
+
+    if (webhookError) return { ...webhookError, chatwootUserId }
+
+    await updateChatwootProvisionStatus(input.organizationId, {
+      lastError: null,
+      lastSyncAt: new Date(),
+    })
+
+    console.info(
+      `[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} provisionada com sucesso`
+    )
 
     return { success: true, chatwootAccountId, chatwootUserId }
   } catch (err) {
