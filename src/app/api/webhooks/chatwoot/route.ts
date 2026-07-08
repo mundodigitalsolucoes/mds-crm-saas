@@ -12,6 +12,45 @@ import {
 
 const WEBHOOK_SECRET = process.env.CHATWOOT_WEBHOOK_SECRET
 
+type ChatwootWebhookDebugPayload = ChatwootWebhookPayload & {
+  account?: { id?: unknown }
+}
+
+function objectKeys(value: unknown): string[] | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+
+  return Object.keys(value)
+}
+
+function logChatwootWebhookDebug(payload: ChatwootWebhookPayload) {
+  const debugPayload = payload as ChatwootWebhookDebugPayload
+
+  console.log('[CHATWOOT WEBHOOK DEBUG]', {
+    event: debugPayload.event,
+    account_id: debugPayload.account_id,
+    account: {
+      id: debugPayload.account?.id,
+    },
+    inbox_id: debugPayload.inbox_id,
+    inbox: {
+      id: debugPayload.inbox?.id,
+    },
+    conversation: {
+      id: debugPayload.conversation?.id,
+    },
+    contact: {
+      id: debugPayload.contact?.id,
+    },
+    keys: {
+      payload: Object.keys(payload),
+      account: objectKeys(debugPayload.account),
+      conversation: objectKeys(debugPayload.conversation),
+      inbox: objectKeys(debugPayload.inbox),
+      contact: objectKeys(debugPayload.contact),
+    },
+  })
+}
+
 function validateSecret(req: NextRequest): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn('[Chatwoot Webhook] CHATWOOT_WEBHOOK_SECRET não configurado.')
@@ -45,6 +84,8 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
+
+  logChatwootWebhookDebug(payload)
 
   console.log('[Chatwoot Webhook] Evento recebido:', payload.event)
 
