@@ -5,6 +5,7 @@ import {
   processChatwootEvent,
 } from '@/lib/atendimento/orchestration/chatwoot-events'
 import {
+  extractChatwootAccountId,
   resolveOrganizationIdForChatwootAccount,
   type ChatwootWebhookPayload,
 } from '@/lib/atendimento/orchestration/lead-bridge'
@@ -47,19 +48,21 @@ export async function POST(req: NextRequest) {
 
   console.log('[Chatwoot Webhook] Evento recebido:', payload.event)
 
-  const accountId =
-    payload.account_id ??
-    payload.conversation?.account_id ??
-    undefined
+  const accountId = extractChatwootAccountId(payload)
+
+  if (!accountId) {
+    console.error('[Chatwoot Webhook] account_id ausente ou invalido; evento ignorado com seguranca.')
+    return NextResponse.json({ success: true, skipped: true, reason: 'missing_account_id' })
+  }
 
   const organizationId = await resolveOrganizationIdForChatwootAccount(accountId)
 
   if (!organizationId) {
     console.error(
-      '[Chatwoot Webhook] Organizacao nao encontrada para account_id:',
+      '[Chatwoot Webhook] Organizacao nao encontrada para account_id; evento ignorado com seguranca:',
       accountId
     )
-    return NextResponse.json({ success: true, skipped: true })
+    return NextResponse.json({ success: true, skipped: true, reason: 'unmapped_account_id' })
   }
 
   processChatwootEvent(payload, organizationId).catch((err) =>
