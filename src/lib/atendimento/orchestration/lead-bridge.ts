@@ -3,11 +3,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notify'
-import {
-  channelLabel,
-  getChatwootCredentialsByAccountId,
-  normalizeChatwootChannel,
-} from '@/lib/chatwoot'
+import { channelLabel, normalizeChatwootChannel } from '@/lib/chatwoot'
 
 export interface ChatwootContact {
   id: number
@@ -32,7 +28,7 @@ export interface ChatwootAssignee {
 
 export interface ChatwootConversationPayload {
   id: number
-  account_id?: number
+  account_id?: number | string
   inbox_id: number
   status: string
   channel?: string
@@ -47,11 +43,11 @@ export interface ChatwootConversationPayload {
 
 export interface ChatwootWebhookPayload {
   event: string
-  account_id?: number
-  id?: number
+  account_id?: number | string
+  id?: number | string
   status?: string
   channel?: string
-  inbox_id?: number
+  inbox_id?: number | string
   inbox?: ChatwootInbox
   meta?: {
     sender?: ChatwootContact
@@ -66,27 +62,64 @@ export interface ChatwootWebhookPayload {
   sender?: ChatwootContact
 }
 
-export async function resolveOrganizationIdForChatwootAccount(
-  accountId?: number
-): Promise<string | null> {
-  if (accountId) {
-    const creds = await getChatwootCredentialsByAccountId(accountId)
-    if (creds?.organizationId) return creds.organizationId
-  }
+function toPositiveInt(value: unknown): number | null {
+  const num = Number(value)
+  if (!Number.isInteger(num) || num <= 0) return null
+  return num
+}
 
-  const fallback = await prisma.connectedAccount.findFirst({
+function parseConnectedAccountData(raw: string): { chatwootAccountId?: unknown } | null {
+  try {
+    const parsed = JSON.parse(raw) as { chatwootAccountId?: unknown }
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export function extractChatwootAccountId(
+  payload: ChatwootWebhookPayload
+): number | null {
+  return toPositiveInt(payload.account_id ?? payload.conversation?.account_id)
+}
+
+export async function resolveOrganizationIdForChatwootAccount(
+  accountId?: number | string | null
+): Promise<string | null> {
+  const chatwootAccountId = toPositiveInt(accountId)
+
+  if (!chatwootAccountId) return null
+
+  const accounts = await prisma.connectedAccount.findMany({
     where: { provider: 'chatwoot', isActive: true },
-    select: { organizationId: true },
-    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      organizationId: true,
+      data: true,
+    },
   })
 
-  return fallback?.organizationId ?? null
+  const matches = accounts.filter((account) => {
+    const data = parseConnectedAccountData(account.data)
+    return toPositiveInt(data?.chatwootAccountId) === chatwootAccountId
+  })
+
+  if (matches.length !== 1) {
+    console.warn('[Chatwoot Webhook] Tenant nao resolvido por account_id', {
+      accountId: chatwootAccountId,
+      matches: matches.length,
+      connectedAccountIds: matches.map((account) => account.id),
+    })
+    return null
+  }
+
+  return matches[0].organizationId
 }
 
 export function extractConversationData(payload: ChatwootWebhookPayload) {
-  const chatwootId = payload.id ?? payload.conversation?.id
-  const accountId = payload.account_id ?? payload.conversation?.account_id
-  const inboxId = payload.inbox_id ?? payload.conversation?.inbox_id
+  const chatwootId = toPositiveInt(payload.id ?? payload.conversation?.id)
+  const accountId = extractChatwootAccountId(payload)
+  const inboxId = toPositiveInt(payload.inbox_id ?? payload.conversation?.inbox_id)
   const inboxName = payload.inbox?.name ?? payload.conversation?.inbox?.name
 
   const rawChannel =
@@ -359,8 +392,8 @@ export async function bridgeIncomingMessage(
   const contactName = payload.contact?.name ?? payload.sender?.name ?? 'Contato'
   const now = new Date()
 
-  const accountId = payload.account_id ?? payload.conversation?.account_id
-  const inboxId = payload.conversation?.inbox_id
+  const accountId = extractChatwootAccountId(payload)
+  const inboxId = toPositiveInt(payload.conversation?.inbox_id ?? payload.inbox_id)
   const contact =
     payload.conversation?.meta?.sender ?? payload.contact ?? payload.sender
   
