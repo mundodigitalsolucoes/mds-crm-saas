@@ -166,16 +166,23 @@ export async function POST(
           throw new Error('BOOKING_CONFLICT');
         }
 
-        const existingLead = await tx.lead.findFirst({
+        let existingLead = await tx.lead.findFirst({
           where: {
             organizationId: profile.organizationId,
-            OR: [
-              { whatsapp },
-              { email: { equals: data.email, mode: 'insensitive' } },
-            ],
+            whatsapp,
           },
           orderBy: { updatedAt: 'desc' },
         });
+
+        if (!existingLead) {
+          existingLead = await tx.lead.findFirst({
+            where: {
+              organizationId: profile.organizationId,
+              email: { equals: data.email, mode: 'insensitive' },
+            },
+            orderBy: { updatedAt: 'desc' },
+          });
+        }
 
         const bookingContext = {
           ...(existingLead ? safeObject(existingLead.customFields) : {}),
