@@ -110,6 +110,7 @@ model Organization {
   webhooks              Webhook[]
   serviceOrders         ServiceOrder[]
   agendaEvents          AgendaEvent[]
+  bookingProfiles       BookingProfile[]
   chatwootConversations ChatwootConversation[]
   tags                  Tag[]
   leadPipelineStages    LeadPipelineStage[]
@@ -191,6 +192,7 @@ model User {
   osCreated                     ServiceOrder[]          @relation("CreatedOS")
   eventsAssigned                AgendaEvent[]           @relation("AssignedEvents")
   eventsCreated                 AgendaEvent[]           @relation("CreatedEvents")
+  bookingProfiles               BookingProfile[]
   chatwootConversationsAssigned ChatwootConversation[]  @relation("ChatwootAssignee")
 
   @@index([organizationId])
@@ -981,6 +983,59 @@ model AgendaEvent {
   @@index([leadId])
   @@index([organizationId, date])
   @@map("agenda_events")
+}
+
+// ============================================
+// AGENDAMENTO PÚBLICO
+// ============================================
+
+model BookingProfile {
+  id                  String                @id @default(uuid())
+
+  organizationId      String                @map("organization_id")
+  organization        Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId              String                @map("user_id")
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  slug                String
+  isActive            Boolean               @default(true) @map("is_active")
+  timezone            String                @default("America/Sao_Paulo")
+  durationMinutes     Int                   @default(60) @map("duration_minutes")
+  slotIntervalMinutes Int                   @default(60) @map("slot_interval_minutes")
+  bufferMinutes       Int                   @default(0) @map("buffer_minutes")
+  minNoticeMinutes    Int                   @default(60) @map("min_notice_minutes")
+  maxAdvanceDays      Int                   @default(60) @map("max_advance_days")
+
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+
+  availability        BookingAvailability[]
+
+  @@unique([organizationId, slug])
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("booking_profiles")
+}
+
+model BookingAvailability {
+  id               String         @id @default(uuid())
+
+  bookingProfileId String         @map("booking_profile_id")
+  bookingProfile   BookingProfile @relation(fields: [bookingProfileId], references: [id], onDelete: Cascade)
+
+  weekday          Int
+  startTime        String         @map("start_time")
+  endTime          String         @map("end_time")
+  isActive         Boolean        @default(true) @map("is_active")
+
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  @@unique([bookingProfileId, weekday])
+  @@index([bookingProfileId])
+  @@map("booking_availability")
 }
 
 // ============================================
