@@ -152,7 +152,20 @@ export async function getPublicBookingProfile(
   organizationSlug: string,
   userSlug: string
 ) {
-  return prisma.bookingProfile.findFirst({
+  const include = {
+    organization: {
+      select: { id: true, name: true, slug: true },
+    },
+    user: {
+      select: { id: true, name: true, avatarUrl: true },
+    },
+    availability: {
+      where: { isActive: true },
+      orderBy: { weekday: 'asc' as const },
+    },
+  };
+
+  const profile = await prisma.bookingProfile.findFirst({
     where: {
       slug: userSlug,
       isActive: true,
@@ -164,18 +177,33 @@ export async function getPublicBookingProfile(
         deletedAt: null,
       },
     },
-    include: {
+    include,
+  });
+
+  if (profile) return profile;
+
+  // Alias público estável do MVP da MDS. O perfil continua vinculado à
+  // organização real e aos eventos do responsável no CRM.
+  if (organizationSlug !== 'mundo-digital' || userSlug !== 'fabio-alves') {
+    return null;
+  }
+
+  return prisma.bookingProfile.findFirst({
+    where: {
+      slug: userSlug,
+      isActive: true,
       organization: {
-        select: { id: true, name: true, slug: true },
+        deletedAt: null,
       },
       user: {
-        select: { id: true, name: true, avatarUrl: true },
-      },
-      availability: {
-        where: { isActive: true },
-        orderBy: { weekday: 'asc' },
+        email: {
+          equals: 'fabio@mundodigitalsolucoes.com.br',
+          mode: 'insensitive',
+        },
+        deletedAt: null,
       },
     },
+    include,
   });
 }
 
