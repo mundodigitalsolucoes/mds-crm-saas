@@ -19,6 +19,7 @@ import {
 } from '@/lib/public-booking';
 
 const bookingSchema = z.object({
+  leadId: z.string().uuid().optional(),
   name: z.string().trim().min(2).max(255),
   company: z.string().trim().min(1).max(255),
   email: z.string().trim().email().max(255),
@@ -166,13 +167,24 @@ export async function POST(
           throw new Error('BOOKING_CONFLICT');
         }
 
-        let existingLead = await tx.lead.findFirst({
-          where: {
-            organizationId: profile.organizationId,
-            whatsapp,
-          },
-          orderBy: { updatedAt: 'desc' },
-        });
+        let existingLead = data.leadId
+          ? await tx.lead.findFirst({
+              where: {
+                id: data.leadId,
+                organizationId: profile.organizationId,
+              },
+            })
+          : null;
+
+        if (!existingLead) {
+          existingLead = await tx.lead.findFirst({
+            where: {
+              organizationId: profile.organizationId,
+              whatsapp,
+            },
+            orderBy: { updatedAt: 'desc' },
+          });
+        }
 
         if (!existingLead) {
           existingLead = await tx.lead.findFirst({
@@ -192,6 +204,7 @@ export async function POST(
             landingPage: data.landingPage || null,
             referrer: data.referrer || null,
             capturedAt: new Date().toISOString(),
+            bookingStatus: 'confirmed',
           },
         };
 
