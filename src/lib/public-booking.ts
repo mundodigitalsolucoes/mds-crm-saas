@@ -197,7 +197,7 @@ export async function getPublicBookingProfile(
       },
       user: {
         email: {
-          equals: 'fabio@mundodigitalsolucoes.com.br',
+          equals: 'fabiomundodigital@gmail.com',
           mode: 'insensitive',
         },
         deletedAt: null,
