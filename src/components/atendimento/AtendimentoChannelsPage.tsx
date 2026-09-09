@@ -20,9 +20,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import WhatsAppProviderSelectorModal from '@/components/atendimento/WhatsAppProviderSelectorModal'
-import EmailChannelModal, {
-  type EmailChannelForm,
-} from '@/components/atendimento/EmailChannelModal'
+import EmailChannelModal from '@/components/atendimento/EmailChannelModal'
 
 type MessageState = { type: 'success' | 'error' | 'info'; text: string } | null
 type InstanceStatus = 'connected' | 'connecting' | 'offline' | 'missing' | 'disconnected'
@@ -57,6 +55,8 @@ type EmailChannelItem = {
   status: 'connected' | 'attention'
   inboundReady: boolean
   outboundReady: boolean
+  authMode: 'google' | 'password'
+  reauthorizationRequired: boolean
 }
 
 type EmailChannelsResponse = {
@@ -93,6 +93,7 @@ function getErrorText(error: unknown, fallback: string) {
   if (axios.isAxiosError(error)) {
     return error.response?.data?.error ?? error.response?.data?.detail ?? fallback
   }
+  if (error instanceof Error) return error.message
   return fallback
 }
 
@@ -371,10 +372,12 @@ function EmailCard({
   item,
   busy,
   onDelete,
+  onAuthorize,
 }: {
   item: EmailChannelItem
   busy: boolean
   onDelete: (item: EmailChannelItem) => void
+  onAuthorize: (item: EmailChannelItem) => void
 }) {
   const connected = item.status === 'connected'
 
@@ -392,7 +395,15 @@ function EmailCard({
             <p className="truncate text-sm text-slate-500">{item.email}</p>
           </div>
         </div>
-        <StatusBadge status={connected ? 'connected' : 'offline'} />
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            connected
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-yellow-50 text-yellow-700'
+          }`}
+        >
+          {connected ? 'Conectado' : 'Autorização necessária'}
+        </span>
       </div>
 
       <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -401,7 +412,7 @@ function EmailCard({
             connected ? 'text-emerald-700' : 'text-yellow-700'
           }`}
         >
-          {connected ? 'E-mail configurado' : 'Configuração incompleta'}
+          {connected ? 'E-mail conectado' : 'Conecte novamente com o Google'}
         </p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
           <span
@@ -429,6 +440,17 @@ function EmailCard({
         PDFs, documentos, imagens e áudios recebidos ficam disponíveis na
         conversa do Atendimento.
       </div>
+
+      {!connected && (
+        <button
+          onClick={() => onAuthorize(item)}
+          disabled={busy}
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#374b89] px-4 py-3 text-sm font-semibold text-white hover:bg-[#2f3453] disabled:opacity-50"
+        >
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+          Conectar com Google
+        </button>
+      )}
 
       <button
         onClick={() => onDelete(item)}
@@ -571,17 +593,54 @@ export default function AtendimentoChannelsPage() {
     }
   }
 
-  const handleConnectEmail = async (form: EmailChannelForm) => {
-    setEmailBusyId('new')
+  const handleConnectGoogleEmail = async (item?: EmailChannelItem) => {
+    const busyKey = item?.id ?? 'new'
+    const existingIds = new Set(emailChannels.map((channel) => channel.id))
+    const popup = window.open(
+      'about:blank',
+      'atendimento-google-email',
+      'popup,width=620,height=760'
+    )
+
+    if (!popup) {
+      showMsg('error', 'Permita pop-ups neste site para conectar com o Google.')
+      return
+    }
+
+    setEmailBusyId(busyKey)
     try {
-      await axios.post('/api/atendimento/canais/email', form)
-      setShowEmailModal(false)
-      showMsg(
-        'success',
-        `E-mail "${form.email}" configurado. Faça o teste de recebimento e resposta.`
+      const { data: authorization } = await axios.post<{ url: string }>(
+        '/api/atendimento/canais/email/google/authorize'
       )
-      await loadInstances()
+      popup.location.href = authorization.url
+
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000))
+        const { data: result } = await axios.get<EmailChannelsResponse>(
+          '/api/atendimento/canais/email'
+        )
+        const connectedChannel = result.channels.find(
+          (channel) =>
+            channel.authMode === 'google' &&
+            !channel.reauthorizationRequired &&
+            (item ? channel.id === item.id : !existingIds.has(channel.id))
+        )
+
+        if (connectedChannel) {
+          popup.close()
+          setShowEmailModal(false)
+          setEmailChannels(result.channels)
+          showMsg(
+            'success',
+            `E-mail "${connectedChannel.email}" conectado com o Google.`
+          )
+          return
+        }
+      }
+
+      throw new Error('Tempo esgotado ao aguardar a autorização do Google.')
     } catch (err) {
+      popup.close()
       showMsg('error', getErrorText(err, 'Erro ao conectar o e-mail.'))
     } finally {
       setEmailBusyId(null)
@@ -771,6 +830,7 @@ export default function AtendimentoChannelsPage() {
                 item={item}
                 busy={emailBusyId === item.id}
                 onDelete={handleDeleteEmail}
+                onAuthorize={(channel) => void handleConnectGoogleEmail(channel)}
               />
             ))}
             {data?.instances.map((item) => (
@@ -806,7 +866,7 @@ export default function AtendimentoChannelsPage() {
         open={showEmailModal}
         loading={emailBusyId === 'new'}
         onClose={() => setShowEmailModal(false)}
-        onSubmit={(form) => void handleConnectEmail(form)}
+        onConnectGoogle={() => void handleConnectGoogleEmail()}
       />
 
       {showQRModal && qrInstanceName && (

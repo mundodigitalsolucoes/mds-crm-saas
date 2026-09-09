@@ -5,10 +5,6 @@ import {
 } from '@/lib/chatwoot'
 
 const EMAIL_CHANNEL_TYPE = 'Channel::Email'
-const GOOGLE_IMAP_ADDRESS = 'imap.gmail.com'
-const GOOGLE_IMAP_PORT = 993
-const GOOGLE_SMTP_ADDRESS = 'smtp.gmail.com'
-const GOOGLE_SMTP_PORT = 587
 
 type AtendimentoEmailInbox = {
   id: number
@@ -17,6 +13,8 @@ type AtendimentoEmailInbox = {
   email?: string
   imap_enabled?: boolean
   smtp_enabled?: boolean
+  provider?: string
+  reauthorization_required?: boolean
 }
 
 export type EmailChannelSummary = {
@@ -26,13 +24,8 @@ export type EmailChannelSummary = {
   status: 'connected' | 'attention'
   inboundReady: boolean
   outboundReady: boolean
-}
-
-type ConnectGoogleWorkspaceEmailInput = {
-  organizationId: string
-  name: string
-  email: string
-  appPassword: string
+  authMode: 'google' | 'password'
+  reauthorizationRequired: boolean
 }
 
 function requireCredentials<T>(value: T | null): T {
@@ -44,8 +37,14 @@ function requireCredentials<T>(value: T | null): T {
 }
 
 function toEmailSummary(inbox: AtendimentoEmailInbox): EmailChannelSummary {
-  const inboundReady = inbox.imap_enabled === true
-  const outboundReady = inbox.smtp_enabled === true
+  const authMode = inbox.provider === 'google' ? 'google' : 'password'
+  const reauthorizationRequired =
+    authMode !== 'google' || inbox.reauthorization_required === true
+  const inboundReady =
+    inbox.imap_enabled === true && !reauthorizationRequired
+  const outboundReady =
+    (authMode === 'google' || inbox.smtp_enabled === true) &&
+    !reauthorizationRequired
 
   return {
     id: inbox.id,
@@ -54,7 +53,37 @@ function toEmailSummary(inbox: AtendimentoEmailInbox): EmailChannelSummary {
     status: inboundReady && outboundReady ? 'connected' : 'attention',
     inboundReady,
     outboundReady,
+    authMode,
+    reauthorizationRequired,
   }
+}
+
+export async function getGoogleEmailAuthorizationUrl(
+  organizationId: string
+): Promise<string> {
+  const credentials = requireCredentials(
+    await getChatwootCredentials(organizationId)
+  )
+  const response = await chatwootApi<{ success?: boolean; url?: string }>(
+    credentials,
+    '/google/authorization',
+    { method: 'POST', body: {}, timeoutMs: 10_000 }
+  )
+
+  if (!response.success || !response.url) {
+    throw new Error('A conexão com o Google ainda não está configurada.')
+  }
+
+  const authorizationUrl = new URL(response.url)
+  if (
+    authorizationUrl.protocol !== 'https:' ||
+    authorizationUrl.hostname !== 'accounts.google.com' ||
+    !authorizationUrl.searchParams.get('client_id')
+  ) {
+    throw new Error('A conexão com o Google ainda não está configurada.')
+  }
+
+  return authorizationUrl.toString()
 }
 
 export async function listEmailChannels(
@@ -68,73 +97,6 @@ export async function listEmailChannels(
   return (inboxes as AtendimentoEmailInbox[])
     .filter((inbox) => inbox.channel_type === EMAIL_CHANNEL_TYPE)
     .map(toEmailSummary)
-}
-
-export async function connectGoogleWorkspaceEmail(
-  input: ConnectGoogleWorkspaceEmailInput
-): Promise<EmailChannelSummary> {
-  const credentials = requireCredentials(
-    await getChatwootCredentials(input.organizationId)
-  )
-  const normalizedEmail = input.email.trim().toLowerCase()
-  const appPassword = input.appPassword.replace(/\s+/g, '')
-  const smtpDomain = normalizedEmail.split('@')[1]
-
-  const existingInboxes = await listChatwootInboxes(credentials)
-  const duplicated = (existingInboxes as AtendimentoEmailInbox[]).find(
-    (inbox) =>
-      inbox.channel_type === EMAIL_CHANNEL_TYPE &&
-      inbox.email?.trim().toLowerCase() === normalizedEmail
-  )
-
-  if (duplicated) {
-    throw new Error('Este e-mail já possui um canal nesta organização.')
-  }
-
-  // A atualização posterior de um canal de e-mail faz o Atendimento abrir
-  // conexões IMAP e SMTP durante a própria requisição. Em redes onde a saída
-  // para 993/587 está bloqueada ou lenta, o proxy encerra a resposta antes do
-  // backend. Criar o canal já configurado é suportado pela mesma API e evita
-  // manter a requisição do CRM presa nessa validação síncrona.
-  const inbox = await chatwootApi<AtendimentoEmailInbox>(
-    credentials,
-    '/inboxes',
-    {
-      method: 'POST',
-      timeoutMs: 20_000,
-      body: {
-        name: input.name,
-        enable_auto_assignment: true,
-        timezone: 'America/Sao_Paulo',
-        channel: {
-          type: 'email',
-          email: normalizedEmail,
-          imap_enabled: true,
-          imap_address: GOOGLE_IMAP_ADDRESS,
-          imap_port: GOOGLE_IMAP_PORT,
-          imap_login: normalizedEmail,
-          imap_password: appPassword,
-          imap_enable_ssl: true,
-          smtp_enabled: true,
-          smtp_address: GOOGLE_SMTP_ADDRESS,
-          smtp_port: GOOGLE_SMTP_PORT,
-          smtp_login: normalizedEmail,
-          smtp_password: appPassword,
-          smtp_domain: smtpDomain,
-          smtp_enable_starttls_auto: true,
-          smtp_enable_ssl_tls: false,
-          smtp_openssl_verify_mode: 'peer',
-          smtp_authentication: 'login',
-        },
-      },
-    }
-  )
-
-  if (!inbox?.id) {
-    throw new Error('Atendimento não retornou o ID do canal de e-mail.')
-  }
-
-  return toEmailSummary(inbox)
 }
 
 export async function deleteEmailChannel(input: {
