@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const credentials = await getChatwootCredentials(organizationId)
   if (!credentials) {
     return NextResponse.json(
-      { error: 'Chatwoot não está conectado nesta organização' },
+      { error: 'Atendimento não está conectado nesta organização' },
       { status: 422 }
     )
   }

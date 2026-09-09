@@ -8,6 +8,8 @@ import {
   CheckCircle,
   Crown,
   Loader2,
+  Mail,
+  MailPlus,
   MessageCircle,
   Plug,
   Plus,
@@ -18,6 +20,9 @@ import {
   XCircle,
 } from 'lucide-react'
 import WhatsAppProviderSelectorModal from '@/components/atendimento/WhatsAppProviderSelectorModal'
+import EmailChannelModal, {
+  type EmailChannelForm,
+} from '@/components/atendimento/EmailChannelModal'
 
 type MessageState = { type: 'success' | 'error' | 'info'; text: string } | null
 type InstanceStatus = 'connected' | 'connecting' | 'offline' | 'missing' | 'disconnected'
@@ -43,6 +48,19 @@ type InstancesResponse = {
   plan: string
   usage: { current: number; max: number; isUnlimited: boolean; canAddMore: boolean }
   instances: WhatsAppInstanceItem[]
+}
+
+type EmailChannelItem = {
+  id: number
+  name: string
+  email: string
+  status: 'connected' | 'attention'
+  inboundReady: boolean
+  outboundReady: boolean
+}
+
+type EmailChannelsResponse = {
+  channels: EmailChannelItem[]
 }
 
 type ConnectResponse = {
@@ -349,11 +367,93 @@ function WhatsAppCard({
   )
 }
 
+function EmailCard({
+  item,
+  busy,
+  onDelete,
+}: {
+  item: EmailChannelItem
+  busy: boolean
+  onDelete: (item: EmailChannelItem) => void
+}) {
+  const connected = item.status === 'connected'
+
+  return (
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#374b89]">
+            <Mail className="h-6 w-6 text-white" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-bold text-[#2f3453]">
+              {item.name}
+            </h3>
+            <p className="truncate text-sm text-slate-500">{item.email}</p>
+          </div>
+        </div>
+        <StatusBadge status={connected ? 'connected' : 'offline'} />
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <p
+          className={`text-sm font-semibold ${
+            connected ? 'text-emerald-700' : 'text-yellow-700'
+          }`}
+        >
+          {connected ? 'E-mail conectado' : 'Configuração incompleta'}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
+          <span
+            className={
+              item.inboundReady
+                ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
+                : 'rounded-full bg-yellow-100 px-3 py-1 text-yellow-700'
+            }
+          >
+            Recebimento {item.inboundReady ? 'ativo' : 'pendente'}
+          </span>
+          <span
+            className={
+              item.outboundReady
+                ? 'rounded-full bg-emerald-100 px-3 py-1 text-emerald-700'
+                : 'rounded-full bg-yellow-100 px-3 py-1 text-yellow-700'
+            }
+          >
+            Envio {item.outboundReady ? 'ativo' : 'pendente'}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        PDFs, documentos, imagens e áudios recebidos ficam disponíveis na
+        conversa do Atendimento.
+      </div>
+
+      <button
+        onClick={() => onDelete(item)}
+        disabled={busy}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+      >
+        {busy ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Trash2 className="h-4 w-4" />
+        )}
+        Remover canal
+      </button>
+    </div>
+  )
+}
+
 export default function AtendimentoChannelsPage() {
   const [data, setData] = useState<InstancesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [connectLoading, setConnectLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [emailChannels, setEmailChannels] = useState<EmailChannelItem[]>([])
+  const [emailBusyId, setEmailBusyId] = useState<number | 'new' | null>(null)
+  const [showEmailModal, setShowEmailModal] = useState(false)
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [showQRModal, setShowQRModal] = useState(false)
   const [qrInstanceId, setQrInstanceId] = useState<string | null>(null)
@@ -369,8 +469,29 @@ export default function AtendimentoChannelsPage() {
   const loadInstances = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await axios.get<InstancesResponse>('/api/integrations/evolution/instances')
-      setData(response.data)
+      const [whatsappResult, emailResult] = await Promise.allSettled([
+        axios.get<InstancesResponse>('/api/integrations/evolution/instances'),
+        axios.get<EmailChannelsResponse>('/api/atendimento/canais/email'),
+      ])
+
+      if (whatsappResult.status === 'rejected') {
+        throw whatsappResult.reason
+      }
+
+      setData(whatsappResult.value.data)
+
+      if (emailResult.status === 'fulfilled') {
+        setEmailChannels(emailResult.value.data.channels ?? [])
+      } else {
+        setEmailChannels([])
+        showMsg(
+          'error',
+          getErrorText(
+            emailResult.reason,
+            'Os canais de WhatsApp foram carregados, mas não foi possível consultar os canais de e-mail.'
+          )
+        )
+      }
     } catch (err) {
       showMsg('error', getErrorText(err, 'Não foi possível carregar os canais do atendimento.'))
     } finally {
@@ -450,6 +571,43 @@ export default function AtendimentoChannelsPage() {
     }
   }
 
+  const handleConnectEmail = async (form: EmailChannelForm) => {
+    setEmailBusyId('new')
+    try {
+      await axios.post('/api/atendimento/canais/email', form)
+      setShowEmailModal(false)
+      showMsg('success', `E-mail "${form.email}" conectado com sucesso.`)
+      await loadInstances()
+    } catch (err) {
+      showMsg('error', getErrorText(err, 'Erro ao conectar o e-mail.'))
+    } finally {
+      setEmailBusyId(null)
+    }
+  }
+
+  const handleDeleteEmail = async (item: EmailChannelItem) => {
+    if (
+      !window.confirm(
+        `Remover o canal "${item.name}" do Atendimento? Os e-mails já recebidos não serão apagados do Gmail.`
+      )
+    ) {
+      return
+    }
+
+    setEmailBusyId(item.id)
+    try {
+      await axios.delete('/api/atendimento/canais/email', {
+        data: { inboxId: item.id },
+      })
+      showMsg('success', `Canal "${item.name}" removido com sucesso.`)
+      await loadInstances()
+    } catch (err) {
+      showMsg('error', getErrorText(err, 'Erro ao remover o canal de e-mail.'))
+    } finally {
+      setEmailBusyId(null)
+    }
+  }
+
   const handleReconnect = async (item: WhatsAppInstanceItem) => {
     setBusyId(item.id)
     try {
@@ -522,9 +680,12 @@ export default function AtendimentoChannelsPage() {
     }
   }, [loadInstances, qrInstanceId])
 
-  const total = data?.instances.length ?? 0
-  const connected = data?.instances.filter((item) => item.isConnected).length ?? 0
-  const attention = data?.instances.filter((item) => !item.isConnected).length ?? 0
+  const whatsappTotal = data?.instances.length ?? 0
+  const total = whatsappTotal + emailChannels.length
+  const connected =
+    (data?.instances.filter((item) => item.isConnected).length ?? 0) +
+    emailChannels.filter((item) => item.status === 'connected').length
+  const attention = total - connected
 
   return (
     <>
@@ -537,7 +698,9 @@ export default function AtendimentoChannelsPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-[#2f3453]">Canais de Atendimento</h1>
-                <p className="text-sm text-slate-600">Gerencie os números de WhatsApp conectados à operação do atendimento.</p>
+                <p className="text-sm text-slate-600">
+                  Gerencie WhatsApp e E-mail conectados à operação do Atendimento.
+                </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -548,12 +711,24 @@ export default function AtendimentoChannelsPage() {
                 </div>
               )}
               <button
+                onClick={() => setShowEmailModal(true)}
+                disabled={emailBusyId === 'new' || loading}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#374b89] bg-white px-5 py-3 text-sm font-semibold text-[#374b89] shadow-sm hover:bg-[#374b89]/5 disabled:opacity-50"
+              >
+                {emailBusyId === 'new' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MailPlus className="h-4 w-4" />
+                )}
+                Adicionar E-mail
+              </button>
+              <button
                 onClick={handleOpenProviderModal}
                 disabled={connectLoading || loading}
                 className="inline-flex items-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
               >
                 {connectLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                Adicionar canal
+                Adicionar WhatsApp
               </button>
             </div>
           </div>
@@ -561,7 +736,7 @@ export default function AtendimentoChannelsPage() {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total de números</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total de canais</p>
             <p className="mt-2 text-2xl font-bold text-[#2f3453]">{total}</p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
@@ -585,9 +760,17 @@ export default function AtendimentoChannelsPage() {
           Atualizar status
         </button>
 
-        {data?.instances.length ? (
+        {total ? (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {data.instances.map((item) => (
+            {emailChannels.map((item) => (
+              <EmailCard
+                key={`email-${item.id}`}
+                item={item}
+                busy={emailBusyId === item.id}
+                onDelete={handleDeleteEmail}
+              />
+            ))}
+            {data?.instances.map((item) => (
               <WhatsAppCard
                 key={item.id}
                 item={item}
@@ -614,6 +797,13 @@ export default function AtendimentoChannelsPage() {
         onSelectEvolution={handleConnectEvolution}
         onSelectWhatsappCloud={handleConnectWhatsappCloud}
         onShowInfo={(text) => showMsg('info', text)}
+      />
+
+      <EmailChannelModal
+        open={showEmailModal}
+        loading={emailBusyId === 'new'}
+        onClose={() => setShowEmailModal(false)}
+        onSubmit={(form) => void handleConnectEmail(form)}
       />
 
       {showQRModal && qrInstanceName && (

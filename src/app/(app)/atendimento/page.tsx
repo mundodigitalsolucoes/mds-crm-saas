@@ -28,7 +28,7 @@ function NotConfigured() {
           Atendimento indisponível
         </h2>
         <p className="max-w-sm text-sm text-gray-400">
-          Não foi possível iniciar a sessão automática do Chatwoot para esta organização.
+          Não foi possível iniciar a sessão automática do Atendimento para esta organização.
         </p>
       </div>
 

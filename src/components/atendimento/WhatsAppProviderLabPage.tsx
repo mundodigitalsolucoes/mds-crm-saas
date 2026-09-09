@@ -163,7 +163,7 @@ function ProviderCard({
           {provider.setupMode === 'qr' ? 'Fluxo QR' : 'API oficial'}
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-          Chatwoot-first
+          Integração com o Atendimento
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
           Multi-org

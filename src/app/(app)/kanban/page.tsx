@@ -45,7 +45,7 @@ const SOURCE_LABELS: Record<string, string> = {
   referral: 'Indicação',
   meta_ads: 'Meta Ads',
   google_ads: 'Google Ads',
-  chatwoot: 'Chatwoot',
+  chatwoot: 'Atendimento',
   instagram: 'Instagram',
   linkedin: 'LinkedIn',
   csv_import: 'CSV',
@@ -293,7 +293,7 @@ function LeadEditModal({
                 <option value="referral">Indicação</option>
                 <option value="meta_ads">Meta Ads</option>
                 <option value="google_ads">Google Ads</option>
-                <option value="chatwoot">Chatwoot</option>
+                <option value="chatwoot">Atendimento</option>
                 <option value="instagram">Instagram</option>
                 <option value="linkedin">LinkedIn</option>
               </select>

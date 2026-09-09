@@ -17,7 +17,7 @@ const cards = [
   {
     title: 'Canais',
     description:
-      'Gerencie números de WhatsApp, status de conexão e operação dos canais.',
+      'Gerencie WhatsApp, E-mail, status de conexão e operação dos canais.',
     href: '/settings/atendimento/canais',
     icon: Smartphone,
     status: 'ativo' as const,
@@ -41,7 +41,7 @@ const cards = [
   {
     title: 'Equipes e Agentes',
     description:
-      'Organize os times do Chatwoot e mantenha a operação separada da gestão de membros.',
+      'Organize os times do Atendimento e mantenha a operação separada da gestão de membros.',
     href: '/settings/atendimento/equipes',
     icon: Users,
     status: 'ativo' as const,
@@ -104,8 +104,8 @@ export default function AtendimentoSettingsPage() {
               Configurações do Atendimento
             </h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-600">
-              Centralize aqui a operação do Atendimento sem reinventar o Chatwoot
-              dentro do CRM. Canais, widget, Instagram, equipes e futuras áreas
+              Centralize aqui a operação do Atendimento pelo CRM. Canais,
+              widget, Instagram, equipes e futuras áreas
               operacionais ficam organizadas em trilhas próprias.
             </p>
           </div>

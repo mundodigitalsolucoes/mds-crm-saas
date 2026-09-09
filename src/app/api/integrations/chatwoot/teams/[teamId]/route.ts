@@ -25,7 +25,7 @@ export async function DELETE(
 
   if (!credentials) {
     return NextResponse.json(
-      { error: 'Chatwoot não está conectado nesta organização' },
+      { error: 'Atendimento não está conectado nesta organização' },
       { status: 422 }
     )
   }
@@ -36,10 +36,7 @@ export async function DELETE(
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao excluir time no Chatwoot',
+        error: 'Erro ao excluir time do Atendimento',
       },
       { status: 502 }
     )

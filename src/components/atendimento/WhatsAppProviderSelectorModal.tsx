@@ -79,7 +79,9 @@ function ProviderCard({
 
           <div>
             <h3 className="text-lg font-bold text-[#2f3453]">{provider.title}</h3>
-            <p className="text-sm text-slate-500">{provider.id}</p>
+            <p className="text-sm text-slate-500">
+              {provider.setupMode === 'qr' ? 'Conexão por QR Code' : 'Conexão oficial'}
+            </p>
           </div>
         </div>
 
@@ -93,10 +95,10 @@ function ProviderCard({
           {provider.setupMode === 'qr' ? 'Fluxo QR' : 'API oficial'}
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-          Chatwoot-first
+          Integração com o Atendimento
         </span>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-          Multi-org
+          Multiempresa
         </span>
       </div>
 
@@ -118,7 +120,7 @@ function ProviderCard({
         ) : provider.safeToUseNow ? (
           <>
             <MessageCircle className="h-4 w-4" />
-            Continuar com este provider
+            Continuar com esta conexão
           </>
         ) : (
           <>
@@ -172,7 +174,7 @@ export default function WhatsAppProviderSelectorModal({
 
         if (cancelled) return
 
-        setFetchError('Não foi possível carregar os providers.')
+        setFetchError('Não foi possível carregar as opções de conexão.')
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -205,7 +207,7 @@ export default function WhatsAppProviderSelectorModal({
       <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
         <div className="mb-5 flex items-start justify-between gap-4">
           <h2 className="text-2xl font-bold text-[#2f3453]">
-            Escolher provider do WhatsApp
+            Escolher conexão do WhatsApp
           </h2>
 
           <button

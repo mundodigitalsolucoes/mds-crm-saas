@@ -129,7 +129,7 @@ export async function DELETE(
           const { blocked, errors } = await invalidateChatwootUserSessions(chatwootAccountId);
 
           if (errors.length > 0) {
-            warnings.push(`Falha ao conter sessões Chatwoot do owner: ${errors.join(', ')}`);
+            warnings.push(`Falha ao encerrar sessões do Atendimento: ${errors.join(', ')}`);
           } else {
             console.info(
               `[ADMIN USERS] Sessões Chatwoot invalidadas após delete de owner: ${blocked.join(', ')}`
@@ -142,7 +142,7 @@ export async function DELETE(
           );
 
           if (errors.length > 0) {
-            warnings.push(`Falha ao conter usuário no Chatwoot: ${errors.join(', ')}`);
+            warnings.push(`Falha ao remover usuário do Atendimento: ${errors.join(', ')}`);
           } else if (found) {
             console.info(
               `[ADMIN USERS] Usuário Chatwoot contido após delete individual: ${blocked.join(', ')}`
@@ -151,7 +151,7 @@ export async function DELETE(
         }
       } catch (cwErr) {
         console.warn('[ADMIN USERS] Aviso: falha no cleanup do Chatwoot:', cwErr);
-        warnings.push('Falha inesperada no cleanup do Chatwoot');
+        warnings.push('Falha inesperada na limpeza do Atendimento');
       }
     }
 
@@ -193,7 +193,7 @@ export async function DELETE(
 
     return NextResponse.json({
       message: deletingChatwootOwner
-        ? 'Usuário excluído com sucesso e Chatwoot marcado para reprovision'
+        ? 'Usuário excluído com sucesso e Atendimento marcado para nova configuração'
         : 'Usuário excluído com sucesso',
       ...(warnings.length > 0 && { warnings }),
     });

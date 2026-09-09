@@ -436,7 +436,7 @@ export default function NewLeadModal({
                     <option value="referral">Indicação</option>
                     <option value="meta_ads">Meta Ads</option>
                     <option value="google_ads">Google Ads</option>
-                    <option value="chatwoot">Chatwoot</option>
+                    <option value="chatwoot">Atendimento</option>
                     <option value="instagram">Instagram</option>
                     <option value="facebook">Facebook</option>
                     <option value="linkedin">LinkedIn</option>
