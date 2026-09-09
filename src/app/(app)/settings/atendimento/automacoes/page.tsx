@@ -14,7 +14,7 @@ export default function AtendimentoAutomacoesPage() {
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-600">
           Esta área foi reservada para a camada de automações operacionais do
-          atendimento, respeitando a lógica nativa do Chatwoot.
+          atendimento, respeitando a lógica nativa do Atendimento.
         </p>
 
         <Link

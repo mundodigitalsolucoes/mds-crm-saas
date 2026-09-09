@@ -168,9 +168,9 @@ export default function ChatwootTeamsTab() {
     return (
       <div className="flex flex-col items-center justify-center h-48 gap-3 text-center px-6">
         <Link2Off className="w-10 h-10 text-gray-300" />
-        <p className="text-gray-500 font-medium">Chatwoot não conectado</p>
+        <p className="text-gray-500 font-medium">Atendimento não conectado</p>
         <p className="text-sm text-gray-400 max-w-sm">
-          Configure a integração com o Chatwoot em{' '}
+          Configure o Atendimento em{' '}
           <span className="font-medium text-indigo-500">Configurações → Integrações</span>{' '}
           para gerenciar times de atendimento.
         </p>
@@ -200,7 +200,7 @@ export default function ChatwootTeamsTab() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-gray-900">Times do Chatwoot</h2>
+          <h2 className="text-base font-semibold text-gray-900">Times do Atendimento</h2>
           <p className="text-sm text-gray-500 mt-0.5">
             {teams.length} {teams.length === 1 ? 'time' : 'times'} configurado{teams.length !== 1 ? 's' : ''}
           </p>

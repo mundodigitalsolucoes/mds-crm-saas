@@ -499,7 +499,7 @@ export default function MembersPage() {
                 Operação do Atendimento separada da gestão de membros
               </h2>
               <p className="mt-1 text-sm text-gray-600">
-                Times e operação do Chatwoot agora ficam na trilha própria de Atendimento.
+                Times e operação ficam na trilha própria de Atendimento.
               </p>
             </div>
           </div>
@@ -749,7 +749,7 @@ export default function MembersPage() {
               {chatwootConnected && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Time Chatwoot
+                    Time do Atendimento
                     <span className="ml-1 text-xs text-gray-400 font-normal">(opcional)</span>
                   </label>
                   {loadingTeams ? (
@@ -780,7 +780,7 @@ export default function MembersPage() {
                     </select>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
-                    O membro será criado como agente no Chatwoot e adicionado ao time selecionado
+                    O membro será criado como agente do Atendimento e adicionado ao time selecionado
                   </p>
                 </div>
               )}

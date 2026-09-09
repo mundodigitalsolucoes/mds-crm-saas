@@ -82,7 +82,7 @@ export async function POST(
     })
     if (existing?.isActive) {
       return NextResponse.json({
-        error: 'Chatwoot já provisionado para esta org. Use force=true para re-provisionar.',
+        error: 'Atendimento já configurado para esta organização. Use force=true para configurar novamente.',
         chatwootAccountId: org.chatwootAccountId,
       }, { status: 409 })
     }
@@ -115,7 +115,7 @@ export async function POST(
     orgSlug:           org.slug,
     chatwootAccountId: result.chatwootAccountId,
     chatwootUserId:    result.chatwootUserId,
-    message:           `Chatwoot Account #${result.chatwootAccountId} provisionada para ${org.name}`,
+    message:           `Atendimento configurado para ${org.name}`,
   })
 }
 
@@ -165,11 +165,11 @@ function getErrorHint(error?: string): string {
     super_admin_not_configured:
       'Defina CHATWOOT_SUPER_ADMIN_EMAIL e CHATWOOT_SUPER_ADMIN_PASSWORD no Coolify.',
     super_admin_auth_failed:
-      'Credenciais do super admin incorretas. Verifique no Chatwoot Super Admin console.',
+      'Credenciais do super administrador incorretas. Verifique a configuração interna do Atendimento.',
     account_creation_failed:
-      'Falha ao criar account no Chatwoot. Verifique se a instância está saudável.',
+      'Falha ao criar a conta do Atendimento. Verifique se o serviço está saudável.',
     user_creation_failed:
-      'Falha ao criar usuário. O email pode já estar em uso em outra account do Chatwoot.',
+      'Falha ao criar usuário. O e-mail pode já estar em uso em outra conta do Atendimento.',
     unexpected_error:
       'Erro inesperado. Consulte os logs do servidor.',
   }

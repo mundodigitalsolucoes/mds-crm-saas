@@ -12,7 +12,7 @@ export async function POST() {
       error: 'Rota legada congelada.',
       code: 'LEGACY_ROUTE_FROZEN',
       detail:
-        'A criação manual de inbox pela trilha antiga foi desativada. O vínculo Chatwoot ⇄ Evolution agora segue somente a trilha oficial do canal.',
+        'A criação manual de inbox pela trilha antiga foi desativada. O vínculo técnico agora segue somente a trilha oficial do canal no Atendimento.',
     },
     { status: 410 }
   )

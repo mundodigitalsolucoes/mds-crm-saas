@@ -36,10 +36,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao buscar times no Chatwoot',
+        error: 'Erro ao buscar times do Atendimento',
       },
       { status: 502 }
     )
@@ -61,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   if (!credentials) {
     return NextResponse.json(
-      { error: 'Chatwoot não está conectado nesta organização' },
+      { error: 'Atendimento não está conectado nesta organização' },
       { status: 422 }
     )
   }
@@ -76,10 +73,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Erro ao criar time no Chatwoot',
+        error: 'Erro ao criar time do Atendimento',
       },
       { status: 502 }
     )

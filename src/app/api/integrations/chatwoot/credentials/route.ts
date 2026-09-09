@@ -215,7 +215,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'chatwoot_account_mismatch',
-        detail: 'A integração do Chatwoot está inconsistente para esta organização',
+        detail: 'A integração do Atendimento está inconsistente para esta organização',
       },
       { status: 409, headers: buildNoStoreHeaders() }
     )
