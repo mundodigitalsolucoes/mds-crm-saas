@@ -3,7 +3,7 @@
 ## Objetivo
 
 Conectar caixas do Google Workspace ou Gmail ao Atendimento pelo CRM, usando
-IMAP para recebimento e SMTP para envio.
+OAuth do Google para autorizar IMAP e SMTP.
 
 O primeiro canal previsto para homologação é:
 
@@ -11,14 +11,11 @@ O primeiro canal previsto para homologação é:
 
 ## Configuração pelo CRM
 
-1. Ative a verificação em duas etapas na Conta Google da caixa de e-mail.
-2. Gere uma senha de app de 16 caracteres para uso no Atendimento.
-3. No CRM, acesse **Configurações do Atendimento → Canais**.
-4. Clique em **Adicionar E-mail**.
-5. Informe o nome do canal, o endereço de e-mail e a senha de app.
-6. Clique em **Conectar e salvar**.
-
-A senha comum da Conta Google não deve ser usada.
+1. No CRM, acesse **Configurações do Atendimento → Canais**.
+2. Clique em **Adicionar E-mail**.
+3. Clique em **Conectar com Google**.
+4. Entre com a conta que será usada no Atendimento.
+5. Autorize o acesso solicitado pelo Google.
 
 ## Configuração técnica aplicada
 
@@ -27,8 +24,21 @@ A senha comum da Conta Google não deve ser usada.
 | Recebimento | `imap.gmail.com` | 993 | SSL |
 | Envio | `smtp.gmail.com` | 587 | STARTTLS |
 
-O CRM não persiste nem devolve a senha de app. A credencial é enviada somente
-ao Atendimento durante a ativação do canal.
+O CRM não recebe nem persiste a senha da Conta Google. A autorização OAuth é
+entregue pelo Google diretamente ao Atendimento.
+
+## Configuração única da infraestrutura
+
+1. Crie um cliente OAuth 2.0 do tipo **Aplicativo da Web** no projeto Google
+   Cloud da MDS.
+2. Cadastre a URI autorizada:
+   `https://app.mundodigitalsolucoes.com.br/google/callback`.
+3. Configure no serviço do Atendimento no Coolify:
+   `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`.
+4. Faça o redeploy do serviço do Atendimento.
+
+As credenciais OAuth são segredos de infraestrutura e não devem ser incluídas
+no código, no GitHub ou na interface do CRM.
 
 A conexão é homologada pelo teste de recebimento e resposta descrito abaixo.
 Isso evita manter uma requisição web aberta enquanto o servidor testa IMAP e
@@ -69,8 +79,7 @@ são homologados.
 
 ## Rollback
 
-Em erro de IMAP ou SMTP durante a homologação, use **Remover canal** em
-**Configurações do Atendimento → Canais**, confira a senha de app e conecte
-novamente.
+Em erro de autorização, use **Conectar com Google** novamente em
+**Configurações do Atendimento → Canais**.
 
 A remoção do canal não apaga as mensagens existentes na caixa do Google.
