@@ -16,7 +16,7 @@ O primeiro canal previsto para homologação é:
 3. No CRM, acesse **Configurações do Atendimento → Canais**.
 4. Clique em **Adicionar E-mail**.
 5. Informe o nome do canal, o endereço de e-mail e a senha de app.
-6. Clique em **Validar e conectar**.
+6. Clique em **Conectar e salvar**.
 
 A senha comum da Conta Google não deve ser usada.
 
@@ -28,7 +28,11 @@ A senha comum da Conta Google não deve ser usada.
 | Envio | `smtp.gmail.com` | 587 | STARTTLS |
 
 O CRM não persiste nem devolve a senha de app. A credencial é enviada somente
-ao Atendimento durante a validação e a ativação do canal.
+ao Atendimento durante a ativação do canal.
+
+A conexão é homologada pelo teste de recebimento e resposta descrito abaixo.
+Isso evita manter uma requisição web aberta enquanto o servidor testa IMAP e
+SMTP, situação que pode ser encerrada pelo proxy antes de receber uma resposta.
 
 ## Escopo de arquivos
 
@@ -65,8 +69,8 @@ são homologados.
 
 ## Rollback
 
-Em erro de IMAP ou SMTP durante a configuração, o CRM solicita a remoção da
-inbox recém-criada. Para rollback depois da ativação, use **Remover canal** em
-**Configurações do Atendimento → Canais**.
+Em erro de IMAP ou SMTP durante a homologação, use **Remover canal** em
+**Configurações do Atendimento → Canais**, confira a senha de app e conecte
+novamente.
 
 A remoção do canal não apaga as mensagens existentes na caixa do Google.

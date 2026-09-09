@@ -401,7 +401,7 @@ function EmailCard({
             connected ? 'text-emerald-700' : 'text-yellow-700'
           }`}
         >
-          {connected ? 'E-mail conectado' : 'Configuração incompleta'}
+          {connected ? 'E-mail configurado' : 'Configuração incompleta'}
         </p>
         <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
           <span
@@ -576,7 +576,10 @@ export default function AtendimentoChannelsPage() {
     try {
       await axios.post('/api/atendimento/canais/email', form)
       setShowEmailModal(false)
-      showMsg('success', `E-mail "${form.email}" conectado com sucesso.`)
+      showMsg(
+        'success',
+        `E-mail "${form.email}" configurado. Faça o teste de recebimento e resposta.`
+      )
       await loadInstances()
     } catch (err) {
       showMsg('error', getErrorText(err, 'Erro ao conectar o e-mail.'))
