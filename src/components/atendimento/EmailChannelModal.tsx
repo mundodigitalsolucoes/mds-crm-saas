@@ -172,7 +172,7 @@ export default function EmailChannelModal({
               className="inline-flex items-center gap-2 rounded-xl bg-[#374b89] px-5 py-3 text-sm font-semibold text-white hover:bg-[#2f3453] disabled:opacity-50"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Validar e conectar
+              Conectar e salvar
             </button>
           </div>
         </form>

@@ -91,84 +91,50 @@ export async function connectGoogleWorkspaceEmail(
     throw new Error('Este e-mail já possui um canal nesta organização.')
   }
 
-  let createdInboxId: number | null = null
-
-  try {
-    const inbox = await chatwootApi<AtendimentoEmailInbox>(
-      credentials,
-      '/inboxes',
-      {
-        method: 'POST',
-        timeoutMs: 20_000,
-        body: {
-          name: input.name,
-          enable_auto_assignment: true,
-          timezone: 'America/Sao_Paulo',
-          channel: {
-            type: 'email',
-            email: normalizedEmail,
-          },
+  // A atualização posterior de um canal de e-mail faz o Atendimento abrir
+  // conexões IMAP e SMTP durante a própria requisição. Em redes onde a saída
+  // para 993/587 está bloqueada ou lenta, o proxy encerra a resposta antes do
+  // backend. Criar o canal já configurado é suportado pela mesma API e evita
+  // manter a requisição do CRM presa nessa validação síncrona.
+  const inbox = await chatwootApi<AtendimentoEmailInbox>(
+    credentials,
+    '/inboxes',
+    {
+      method: 'POST',
+      timeoutMs: 20_000,
+      body: {
+        name: input.name,
+        enable_auto_assignment: true,
+        timezone: 'America/Sao_Paulo',
+        channel: {
+          type: 'email',
+          email: normalizedEmail,
+          imap_enabled: true,
+          imap_address: GOOGLE_IMAP_ADDRESS,
+          imap_port: GOOGLE_IMAP_PORT,
+          imap_login: normalizedEmail,
+          imap_password: appPassword,
+          imap_enable_ssl: true,
+          smtp_enabled: true,
+          smtp_address: GOOGLE_SMTP_ADDRESS,
+          smtp_port: GOOGLE_SMTP_PORT,
+          smtp_login: normalizedEmail,
+          smtp_password: appPassword,
+          smtp_domain: smtpDomain,
+          smtp_enable_starttls_auto: true,
+          smtp_enable_ssl_tls: false,
+          smtp_openssl_verify_mode: 'peer',
+          smtp_authentication: 'login',
         },
-      }
-    )
-
-    if (!inbox?.id) {
-      throw new Error('Atendimento não retornou o ID do canal de e-mail.')
+      },
     }
+  )
 
-    createdInboxId = inbox.id
-
-    const configuredInbox = await chatwootApi<AtendimentoEmailInbox>(
-      credentials,
-      `/inboxes/${inbox.id}`,
-      {
-        method: 'PATCH',
-        timeoutMs: 30_000,
-        body: {
-          channel: {
-            imap_enabled: true,
-            imap_address: GOOGLE_IMAP_ADDRESS,
-            imap_port: GOOGLE_IMAP_PORT,
-            imap_login: normalizedEmail,
-            imap_password: appPassword,
-            imap_enable_ssl: true,
-            smtp_enabled: true,
-            smtp_address: GOOGLE_SMTP_ADDRESS,
-            smtp_port: GOOGLE_SMTP_PORT,
-            smtp_login: normalizedEmail,
-            smtp_password: appPassword,
-            smtp_domain: smtpDomain,
-            smtp_enable_starttls_auto: true,
-            smtp_enable_ssl_tls: false,
-            smtp_openssl_verify_mode: 'peer',
-            smtp_authentication: 'login',
-          },
-        },
-      }
-    )
-
-    return toEmailSummary(configuredInbox)
-  } catch (error) {
-    if (createdInboxId) {
-      try {
-        await chatwootApi(credentials, `/inboxes/${createdInboxId}`, {
-          method: 'DELETE',
-          timeoutMs: 10_000,
-        })
-      } catch (rollbackError) {
-        console.error('[ATENDIMENTO EMAIL] Falha no rollback do canal:', {
-          organizationId: input.organizationId,
-          inboxId: createdInboxId,
-          error:
-            rollbackError instanceof Error
-              ? rollbackError.message
-              : rollbackError,
-        })
-      }
-    }
-
-    throw error
+  if (!inbox?.id) {
+    throw new Error('Atendimento não retornou o ID do canal de e-mail.')
   }
+
+  return toEmailSummary(inbox)
 }
 
 export async function deleteEmailChannel(input: {
