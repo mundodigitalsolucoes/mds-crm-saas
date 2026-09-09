@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
 
+const ALLOWED_ORIGINS = new Set([
+  'https://briefing.mundodigitalsolucoes.com.br',
+  'http://localhost:3000',
+  'http://localhost:5173',
+]);
+
 const payloadSchema = z.object({
   formulario: z.string().max(100).default('briefing-sites-profissionais'),
   versao: z.number().int().positive().default(1),
@@ -10,6 +16,40 @@ const payloadSchema = z.object({
   respostas: z.record(z.any()),
   rastreamento: z.record(z.string()).optional().default({}),
 });
+
+function corsHeaders(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+
+  return headers;
+}
+
+function json(req: NextRequest, body: unknown, init?: ResponseInit) {
+  return NextResponse.json(body, {
+    ...init,
+    headers: {
+      ...corsHeaders(req),
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+export async function OPTIONS(req: NextRequest) {
+  const origin = req.headers.get('origin');
+  if (!origin || !ALLOWED_ORIGINS.has(origin)) {
+    return new NextResponse(null, { status: 403, headers: corsHeaders(req) });
+  }
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
+}
 
 function normalizePhone(value?: string | null) {
   if (!value) return null;
@@ -38,8 +78,18 @@ export async function POST(
   context: { params: Promise<{ organizationSlug: string }> }
 ) {
   try {
+    const origin = req.headers.get('origin');
+    if (origin && !ALLOWED_ORIGINS.has(origin)) {
+      return json(req, { error: 'Origem não autorizada' }, { status: 403 });
+    }
+
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
-    if (blocked) return blocked;
+    if (blocked) {
+      for (const [key, value] of Object.entries(corsHeaders(req))) {
+        blocked.headers.set(key, value);
+      }
+      return blocked;
+    }
 
     const { organizationSlug } = await context.params;
     const organization = await prisma.organization.findUnique({
@@ -48,13 +98,14 @@ export async function POST(
     });
 
     if (!organization || organization.deletedAt || organization.planStatus !== 'active') {
-      return NextResponse.json({ error: 'Organização não disponível' }, { status: 404 });
+      return json(req, { error: 'Organização não disponível' }, { status: 404 });
     }
 
     const body = await req.json();
     const parsed = payloadSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
+      return json(
+        req,
         { error: 'Payload inválido', details: parsed.error.flatten() },
         { status: 400 }
       );
@@ -74,7 +125,8 @@ export async function POST(
     const projectId = typeof respostas.projectId === 'string' ? respostas.projectId.trim() : null;
 
     if (!name || (!email && !whatsapp)) {
-      return NextResponse.json(
+      return json(
+        req,
         { error: 'Nome e pelo menos e-mail ou WhatsApp são obrigatórios' },
         { status: 400 }
       );
@@ -166,7 +218,8 @@ export async function POST(
       });
     }
 
-    return NextResponse.json(
+    return json(
+      req,
       {
         ok: true,
         organization: organization.slug,
@@ -177,6 +230,6 @@ export async function POST(
     );
   } catch (error) {
     console.error('Erro ao receber briefing público:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    return json(req, { error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
