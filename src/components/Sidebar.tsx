@@ -79,7 +79,6 @@ function makePalette() {
 }
 
 const salesItems: MenuItem[] = [
-  { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { name: 'Leads', icon: Users, path: '/leads', module: 'leads' },
   { name: 'Kanban', icon: Kanban, path: '/kanban', module: 'kanban' },
   { name: 'Agenda', icon: Calendar, path: '/agenda', module: 'agenda' },
@@ -189,6 +188,8 @@ export default function Sidebar() {
     if (item.module === 'users') return isAdmin;
     return canAccess(item.module);
   };
+
+  const dashboardItem: MenuItem = { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' };
 
   const visibleSections = useMemo<MenuSection[]>(() => {
     if (isLoading) return [];
@@ -350,6 +351,32 @@ export default function Sidebar() {
             <SidebarSkeleton palette={palette} isCollapsed={isDesktopCollapsed} />
           ) : (
             <div className="space-y-2">
+              <Link
+                href={dashboardItem.path}
+                onClick={() => setIsMobileOpen(false)}
+                className={`flex items-center rounded-2xl transition-colors ${
+                  isDesktopCollapsed ? 'justify-center px-2 py-3' : 'gap-3 px-3 py-3'
+                }`}
+                style={{
+                  backgroundColor:
+                    pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
+                      ? palette.active
+                      : 'transparent',
+                  color:
+                    pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
+                      ? BRAND.white
+                      : palette.textMuted,
+                  fontWeight:
+                    pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
+                      ? 600
+                      : 500,
+                }}
+                title={isDesktopCollapsed ? dashboardItem.name : undefined}
+              >
+                <LayoutDashboard size={20} />
+                {!isDesktopCollapsed && <span className="text-sm">Dashboard</span>}
+              </Link>
+
               {visibleSections.map((section) => {
                 const SectionIcon = section.icon;
                 const isOpen = !!openSections[section.key];
