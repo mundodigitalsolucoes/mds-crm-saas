@@ -148,7 +148,6 @@ export default async function DashboardPage() {
         ],
       },
       orderBy: { dueDate: 'asc' },
-      take: 5,
       include: { assignedTo: { select: { name: true } } },
     }),
 
