@@ -64,7 +64,7 @@ export default function AgendaPage() {
       setLoadingTasks(true);
 
       const response = await fetch(
-        `/api/tasks?dueDateFrom=${startDate}&dueDateTo=${endDate}&pageSize=200`
+        `/api/tasks?dueDateFrom=${startDate}&dueDateTo=${endDate}&pageSize=200&type=follow_up`
       );
 
       if (!response.ok) {
