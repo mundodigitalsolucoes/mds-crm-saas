@@ -17,7 +17,7 @@ export function loadServerModule<T>(sourceUrl: URL, imports: Record<string, unkn
   const module = { exports: {} };
   const require = createRequire(sourceUrl);
   runInNewContext(compiled.outputText, {
-    module, exports: module.exports, console,
+    module, exports: module.exports, console, URL, URLSearchParams,
     require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id] : require(id),
   }, { filename });
   return module.exports as T;
