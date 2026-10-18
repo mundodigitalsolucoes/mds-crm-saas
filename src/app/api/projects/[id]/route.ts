@@ -2,7 +2,7 @@
 // Detalhe, atualização e exclusão de projeto com permissões granulares
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { parseBody, projectUpdateSchema } from '@/lib/validations';
 
 // GET /api/projects/[id] — Buscar projeto por ID
@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     // ✅ Permissão granular: projects.view
-    const { allowed, session, errorResponse } = await checkPermission('projects', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'marketing', permission: 'projects', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
@@ -54,7 +54,7 @@ export async function PUT(
 ) {
   try {
     // ✅ Permissão granular: projects.edit
-    const { allowed, session, errorResponse } = await checkPermission('projects', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'marketing', permission: 'projects', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
@@ -95,7 +95,7 @@ export async function PUT(
     }
 
     const project = await prisma.marketingProject.update({
-      where: { id },
+      where: { id, organizationId: session!.user.organizationId },
       data: updateData,
       include: {
         owner: {
@@ -118,7 +118,7 @@ export async function DELETE(
 ) {
   try {
     // ✅ Permissão granular: projects.delete
-    const { allowed, session, errorResponse } = await checkPermission('projects', 'delete');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'marketing', permission: 'projects', action: 'delete' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
@@ -136,7 +136,7 @@ export async function DELETE(
     }
 
     await prisma.marketingProject.delete({
-      where: { id },
+      where: { id, organizationId: session!.user.organizationId },
     });
 
     return NextResponse.json({ message: 'Projeto excluído com sucesso' });

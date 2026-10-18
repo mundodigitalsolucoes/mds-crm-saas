@@ -2,7 +2,7 @@
 // CRUD de projetos com permissões granulares, limites de plano e multi-tenant
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, projectCreateSchema } from '@/lib/validations';
 
@@ -10,7 +10,7 @@ import { parseBody, projectCreateSchema } from '@/lib/validations';
 export async function GET(request: NextRequest) {
   try {
     // ✅ Permissão granular: projects.view
-    const { allowed, session, errorResponse } = await checkPermission('projects', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'marketing', permission: 'projects', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // ✅ Permissão granular: projects.create
-    const { allowed, session, errorResponse } = await checkPermission('projects', 'create');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'marketing', permission: 'projects', action: 'create' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
