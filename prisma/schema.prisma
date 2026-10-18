@@ -146,6 +146,8 @@ model User {
   passwordHash                  String                  @map("password_hash")
   avatarUrl                     String?                 @map("avatar_url")
 
+  googleIdentity                GoogleIdentity?
+
   // Multi-tenant
   organizationId                String                  @map("organization_id")
   organization                  Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -1180,4 +1182,14 @@ model CouponUsage {
   @@index([organizationId])
   @@index([couponId])
   @@map("coupon_usages")
+}
+
+// Stable Google subject identity; email is not the OAuth account identifier.
+model GoogleIdentity {
+  googleSub String @id @map("google_sub")
+  userId    String @unique @map("user_id")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("google_identities")
 }

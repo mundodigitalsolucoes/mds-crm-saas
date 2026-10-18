@@ -3,9 +3,10 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { signIn, getProviders } from 'next-auth/react'
 import { Building2, Mail, User, Lock, ArrowRight } from 'lucide-react'
 
 export default function SignupPage() {
@@ -20,6 +21,36 @@ export default function SignupPage() {
     })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [googleLoading, setGoogleLoading] = useState(false)
+    const [googleEnabled, setGoogleEnabled] = useState(false)
+    useEffect(() => { void getProviders().then((providers) => setGoogleEnabled(Boolean(providers?.google))).catch(() => setGoogleEnabled(false)) }, [])
+
+    const handleGoogleSignup = async () => {
+        setError('')
+        if (!formData.companyName.trim()) {
+            setError('Informe o nome da empresa antes de continuar com Google.')
+            return
+        }
+        if (!formData.consent) {
+            setError('Aceite a Política de Privacidade e os Termos de Uso antes de continuar.')
+            return
+        }
+        setGoogleLoading(true)
+        try {
+            const response = await fetch('/api/auth/google-signup-intent', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyName: formData.companyName, consent: formData.consent }),
+            })
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}))
+                throw new Error(body.error || 'Não foi possível iniciar o cadastro Google.')
+            }
+            await signIn('google', { callbackUrl: '/dashboard' })
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erro ao conectar com Google.')
+            setGoogleLoading(false)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -201,6 +232,11 @@ export default function SignupPage() {
                             </label>
                         </div>
 
+                        {googleEnabled && <button type="button" onClick={handleGoogleSignup} disabled={googleLoading || loading}
+                            className="w-full border border-gray-300 hover:bg-gray-50 py-3 rounded-lg font-semibold disabled:opacity-50">
+                            {googleLoading ? 'Conectando ao Google...' : 'Continuar com Google — sem criar senha'}
+                        </button>}
+                        {googleEnabled && <p className="text-center text-xs text-gray-500">ou cadastre-se com email e senha</p>}
                         <button
                             type="submit"
                             disabled={loading}
