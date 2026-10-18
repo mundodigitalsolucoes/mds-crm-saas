@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 
 type RouteContext = {
   params: Promise<{
@@ -10,7 +10,7 @@ type RouteContext = {
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const { id: leadId } = await context.params;
@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const tags = await prisma.leadTag.findMany({
-      where: { leadId },
+      where: { leadId, lead: { organizationId }, tag: { organizationId } },
       include: { tag: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -42,7 +42,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { id: leadId } = await context.params;
@@ -80,11 +80,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
           leadId,
           tagId,
         },
+        lead: { organizationId },
+        tag: { organizationId },
       },
       update: {},
       create: {
-        leadId,
-        tagId,
+        lead: { connect: { id: leadId, organizationId } },
+        tag: { connect: { id: tagId, organizationId } },
       },
       include: {
         tag: true,
@@ -116,7 +118,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { id: leadId } = await context.params;
@@ -152,6 +154,8 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       where: {
         leadId,
         tagId,
+        lead: { organizationId },
+        tag: { organizationId },
       },
     });
 

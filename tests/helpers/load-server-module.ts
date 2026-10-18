@@ -12,7 +12,7 @@ export function loadServerModule<T>(sourceUrl: URL, imports: Record<string, unkn
   const source = readFileSync(filename, 'utf8');
   const compiled = ts.transpileModule(source, {
     fileName: filename,
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   });
   const module = { exports: {} };
   const require = createRequire(sourceUrl);

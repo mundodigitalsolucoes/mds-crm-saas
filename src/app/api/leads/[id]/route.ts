@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { parseBody, leadUpdateSchema } from '@/lib/validations';
+import { isTenantLeadAssignee, isTenantLeadStatus } from '@/lib/leads/tenant-relations';
 
 const LEAD_UPDATE_ALLOWED_KEYS = [
   'name',
@@ -36,10 +37,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
+    const organizationId = session!.user.organizationId;
 
     const lead = await prisma.lead.findFirst({
       where: {
@@ -47,9 +49,10 @@ export async function GET(
         organizationId: session!.user.organizationId,
       },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true } },
+        assignedTo: { where: { organizationId }, select: { id: true, name: true, email: true } },
+        createdBy: { where: { organizationId }, select: { id: true, name: true } },
         tasks: {
+          where: { organizationId: session!.user.organizationId },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
@@ -58,6 +61,7 @@ export async function GET(
           take: 20,
         },
         chatwootConversations: {
+          where: { organizationId: session!.user.organizationId },
           orderBy: { lastMessageAt: 'desc' },
           take: 5,
         },
@@ -80,7 +84,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
@@ -164,6 +168,13 @@ if (data.linkedin !== undefined) updateData.linkedin = data.linkedin;
 if (data.notes !== undefined) updateData.notes = data.notes;
 if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId;
 
+    if (!await isTenantLeadAssignee(organizationId, data.assignedToId)) {
+      return NextResponse.json({ error: 'Responsável inválido para esta organização' }, { status: 400 });
+    }
+    if (!await isTenantLeadStatus(organizationId, updateData.status)) {
+      return NextResponse.json({ error: 'Etapa inválida para esta organização' }, { status: 400 });
+    }
+
     const changedFields = Object.keys(updateData).filter((key) => {
       const beforeValue = (existing as any)[key];
       const afterValue = updateData[key];
@@ -176,11 +187,11 @@ if (data.assignedToId !== undefined) updateData.assignedToId = data.assignedToId
     });
 
     const updated = await prisma.lead.update({
-      where: { id },
+      where: { id, organizationId },
       data: updateData,
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true } },
+        assignedTo: { where: { organizationId }, select: { id: true, name: true, email: true } },
+        createdBy: { where: { organizationId }, select: { id: true, name: true } },
       },
     });
 
@@ -212,7 +223,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'delete');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'delete' });
     if (!allowed) return errorResponse!;
 
     const { id } = await params;
@@ -228,7 +239,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
     }
 
-    await prisma.lead.delete({ where: { id } });
+    await prisma.lead.delete({ where: { id, organizationId: session!.user.organizationId } });
 
     return NextResponse.json({ success: true, message: 'Lead excluído com sucesso' });
   } catch (error) {

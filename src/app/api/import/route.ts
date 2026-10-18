@@ -1,8 +1,9 @@
 // src/app/api/import/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { parseBody, importLeadsSchema } from '@/lib/validations';
+import { isTenantLeadStatus } from '@/lib/leads/tenant-relations';
 
 function getString(...values: unknown[]): string | null {
   for (const value of values) {
@@ -39,7 +40,7 @@ function getScore(value: unknown): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'create' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
@@ -67,6 +68,10 @@ export async function POST(request: NextRequest) {
         const company = getString(lead?.company, lead?.empresa);
         const source = getString(lead?.source, lead?.origem) || 'csv_import';
         const status = getString(lead?.status) || 'new';
+        if (!await isTenantLeadStatus(organizationId, status)) {
+          falhas++;
+          continue;
+        }
         const score = getScore(lead?.score);
         const value = getNumber(lead?.value ?? lead?.valor);
         const productOrService = getString(lead?.product_or_service, lead?.produto_servico);

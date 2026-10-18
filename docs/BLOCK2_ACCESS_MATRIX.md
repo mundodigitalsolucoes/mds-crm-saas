@@ -1,11 +1,11 @@
 # Bloco 2 — Matriz de acesso e inventário de superfícies
 
-Base da matriz original: `f93c3435fff316a548255993d749ef545c9c7670`. Revisão documental e HTTP atual: `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`, com os 12 canônicos recebidos em `docs/oficiais/` e origem preservada em `ORIGEM.md`. Esta matriz é inventário de código, não homologação de segurança de todas as rotas. Nenhuma consulta de produção foi executada.
+Base da matriz original: `f93c3435fff316a548255993d749ef545c9c7670`. Revisão documental e HTTP anterior: `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`, com os 12 canônicos recebidos em `docs/oficiais/` e origem preservada em `ORIGEM.md`. Esta matriz é inventário de código, não homologação de segurança de todas as rotas. Nenhuma consulta de produção foi executada.
 
 ## Decisões e limites de cobertura
 
 - Marketing: `MarketingProject` possui tabela própria e APIs/página de projetos. Integração server-side aditiva somente em `/projects`, `/api/projects` e `/api/projects/[id]`, inicialmente observe_only.
-- Vendas: leads, tags de leads, importação e estágios de pipeline são mapeáveis por código. Documentos oficiais confirmam que o pipeline é CORE crítico; sua integração continua dependente de plano por fluxo e testes operacionais, sem modificar handlers/Sidebar nesta correção.
+- Vendas: Leads e Pipeline Comercial integrados em observe_only na continuidade baseada em `d9ac1fe1b8e8406489c2158e5c26186580544ef7`: nove APIs, 16 métodos e layouts específicos de `/leads` e `/kanban`. Permissões operacionais, filtros tenant e sessão são obrigatórios; decisões comerciais não bloqueiam. Cadastro isolado de tags e compartilhados continuam fora deste recorte.
 - Tarefas, agenda, OS, metas, comentários e anexos têm relações/uso compartilhados. A permissão `projects` em algumas entidades não prova que todos os seus dados sejam exclusivamente Marketing. O bloco não amplia a classificação por suposição.
 - Atendimento e providers têm permissões operacionais distintas de `integrations`; callbacks/webhooks não devem receber guards de sessão de usuário indiscriminadamente. Nenhum lifecycle, inbox ou provider será alterado.
 - Dashboard, usuários, notificações, billing, branding, ajuda e relatórios são plataforma/compartilhados; exigem decisão por recurso antes de enforcement comercial. Branding por tenant ainda requer revisão de governança.
@@ -89,7 +89,7 @@ Cobertura de descoberta: 116 arquivos route.ts. Colunas de guard/scope são evid
 | `/api/goals/[id]/actions` | GET, POST | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/goals/[id]` | GET, PATCH, DELETE | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/goals` | GET, POST | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
-| `/api/import` | POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
+| `/api/import` | POST | Vendas | leads:create | Integrado: legado + decisão Vendas observada; tenant obrigatório |
 | `/api/integrations/chatwoot/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/integrations/chatwoot/credentials` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/integrations/chatwoot/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
@@ -113,14 +113,14 @@ Cobertura de descoberta: 116 arquivos route.ts. Colunas de guard/scope são evid
 | `/api/integrations/whatsapp-cloud/setup` | POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/integrations/whatsapp-cloud/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/integrations/whatsapp-cloud/validate` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
-| `/api/kanban/stages/[key]` | PUT, DELETE | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/kanban/stages` | GET, POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads/[id]` | GET, PUT, DELETE | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads/[id]/stage` | PATCH | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads/[id]/tags` | GET, POST, DELETE | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads/bulk-delete` | POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads/bulk-update` | POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/leads` | GET, POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
+| `/api/kanban/stages/[key]` | PUT, DELETE | Vendas | kanban:edit/delete | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/kanban/stages` | GET, POST | Vendas | kanban:view/create | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads/[id]` | GET, PUT, DELETE | Vendas | leads:view/edit/delete | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads/[id]/stage` | PATCH | Vendas | leads:edit | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads/[id]/tags` | GET, POST, DELETE | Vendas | leads:view/edit/edit | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads/bulk-delete` | POST | Vendas | leads:delete | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads/bulk-update` | POST | Vendas | leads:edit | Integrado: legado + decisão Vendas observada; tenant obrigatório |
+| `/api/leads` | GET, POST | Vendas | leads:view/create | Integrado: legado + decisão Vendas observada; tenant obrigatório |
 | `/api/notifications/read` | POST | Plataforma/compartilhado | Permissão/identidade atual | Legado; classificação específica pendente |
 | `/api/notifications` | GET | Plataforma/compartilhado | Permissão/identidade atual | Legado; classificação específica pendente |
 | `/api/organizations` | GET, PATCH | Plataforma/compartilhado | Permissão/identidade atual | Legado; classificação específica pendente |
@@ -162,8 +162,8 @@ Revisão HTTP com documentação oficial: o 200 histórico foi reproduzido apena
 | `/goals` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/help/[slug]` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/help` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
-| `/kanban` | Vendas | Mapeado, pipeline preservado |
-| `/leads` | Vendas | Mapeado, pipeline preservado |
+| `/kanban` | Vendas | Layout servidor: sessão obrigatória + decisão Vendas/kanban:view observada; tela e DnD preservados |
+| `/leads` | Vendas | Layout servidor: sessão obrigatória + decisão Vendas/leads:view observada; tela/store preservados |
 | `/os` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/projects` | Marketing | Sessão exigida no servidor; decisões comerciais observe_only |
 | `/reports` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
@@ -238,7 +238,7 @@ Leitura integral concluída; nomes, origem e SHA-256 em `oficiais/ORIGEM.md` e n
 | Domínio/recurso | Evidência oficial + código | Continuidade segura nesta missão | Dependência restante |
 | --- | --- | --- | --- |
 | Atendimento | 01/04/7/8/9: iframe/backend operacional, 1 número/1 inbox, providers separados | Auditar contratos e preservar os fontes; nenhuma alteração de iframe, credenciais, dispatcher ou lifecycle | Revisão por endpoint e ambiente externo de teste homologável; autorização não deve substituir callbacks/webhooks por sessão de usuário |
-| Vendas | 01/03/9/17: Lead, LeadPipelineStage, Tag/LeadTag e pipeline comercial; `/kanban` importa useLeadsStore | Mapeamento confirmado de leads/import/tags/estágios; plano de integração com testes por fluxo | PIPELINE é CORE alto; faltam execução operacional isolada e aprovação do recorte antes de inserir guards em todos os handlers |
+| Vendas | 01/03/9/17: Lead, LeadPipelineStage, Tag/LeadTag e pipeline comercial; `/kanban` importa useLeadsStore | Integração dos nove handlers e dois layouts autorizada na missão Vendas e testada isoladamente | PIPELINE é CORE alto; homologação browser autenticada/operacional e revisão independente continuam pendentes; sem enforcement |
 | Marketing | 17: MarketingProject e estruturas KanbanBoard/Column/Card de execução | Manter integração existente de Projetos e corrigir somente a ausência de sessão na página | Não confundir esses modelos com a tela comercial `/kanban`; não ativar enforcement ou criar campanhas |
 | Tasks/Subtasks e Agenda | 9/17 + Prisma: relações com lead e projeto; filhos herdam escopo do pai | Documentar como compartilhados/contextuais | Aprovar regra por entidade/relacionamento e testar criação/edição/filtros antes de guards comerciais |
 | OS/ServiceOrder | 17: execução operacional, vínculo opcional a projeto | Manter classificação operacional, sem atribuição automática a Vendas | Decisão de acesso compartilhado/por vínculo e testes de regressão |
@@ -247,4 +247,17 @@ Leitura integral concluída; nomes, origem e SHA-256 em `oficiais/ORIGEM.md` e n
 
 As regras gerais de isolamento não tornam obrigatório adicionar organizationId a cada model filho: no schema atual Subtask/GoalAction/Column/Card dependem de entidades pai. Toda operação deve demonstrar escopo pelo ancestral correto; qualquer alteração estrutural de persistência exige decisão própria, conforme 17. Nenhuma FK ou model foi alterado aqui.
 
-A indisponibilidade documental original foi resolvida. Isso não homologa integrações externas, elimina as lacunas de IDOR já listadas ou autoriza migração/enforcement. A matriz não amplia a cobertura de código além de Projetos nesta missão.
+A indisponibilidade documental original foi resolvida. Isso não homologa integrações externas, elimina as lacunas de IDOR já listadas ou autoriza migração/enforcement. Na revisão documental anterior, a cobertura não foi ampliada além de Projetos. A continuidade Vendas autorizada posteriormente está descrita a seguir.
+
+## Continuidade Vendas — contratos e limites do recorte
+
+Base `d9ac1fe1b8e8406489c2158e5c26186580544ef7`. As permissões na tabela seguem a ordem dos métodos HTTP da respectiva linha. PATCH stage é leads:edit, conforme contrato operacional atual; gerenciar etapas é kanban:create/edit/delete. Não acrescentar kanban:edit à movimentação silenciosamente. Cadastro de tags `/api/tags...` permanece legado fora da lista autorizada; associação `/api/leads/[id]/tags` está integrada.
+
+- API: checkModulePermission mantém checkPermission legado antes de observar. Sem sessão, usuário removido, organização inválida/inativa ou permissão operacional não há acesso a recurso. Sem assinatura/módulo a decisão nova nega, inclusive owner/admin, mas o efeito comercial continua observe_only. CheckPlanActive/checkOrganizationLimit anteriores de criação permanecem ativos e suas respostas não mudam.
+- Identidade: organizationId vem somente da sessão validada, nunca query/header/body. Mutações finais de Lead e LeadPipelineStage repetem tenant. Etapa é identificada por key dentro da organização; a mesma key pode existir em tenants diferentes.
+- Lotes: contrato integral preservado (IDs misturados/inexistentes/duplicados → 400, nenhuma escrita); mutação final por organizationId + id in ids. Import mantém sucesso/falhas/total por linha e allowlist de campos, ignorando organizationId/assignedToId/createdById/provider enviados pelo cliente.
+- Associações: responsável novo/reafirmado deve ser usuário ativo do tenant; null/omissão não exige reparar legado. LeadTag filtra os dois pais; connect/upsert e delete repetem escopo. Projeções opcionais de responsável/autor e coleções tarefas/conversas têm filtro próprio de organização, evitando revelar relações antigas indevidas sem migrá-las.
+- Compatibilidade de status: Lead.status é string sem FK. Códigos nativos/aliases históricos continuam; etapa customizada precisa ser local, ou status já usado em Lead do tenant. Texto novo não reconhecido → 400, ou falha da linha no import. Não cria etapa nem altera dados existentes; PUT sem status permite edição parcial. Bulk mantém seu enum antigo. Copiar um texto que já é status local não dá acesso ao objeto Stage de outro tenant. Valores órfãos já locais não são reparados nesta missão.
+- Frontend: layouts seguem o guard de Projects, com redirect login sem sessão e sem enforcement comercial. Componentes client, Sidebar, formulários e store não mudaram. Controle operacional dos dados permanece nas APIs e controle visual preexistente permanece no cliente.
+
+Escopo seguinte: Atendimento depende de revisão endpoint a endpoint de identidade operacional, isolamento provider, callback/webhook versus sessão, risco, rollback e ambiente próprio. Task/Agenda/OS/metas/relatórios/comentários/anexos continuam compartilhados com regras por recurso pendentes. Inventário real, política legada, cobertura integral, homologação independente e aprovação explícita são pré-requisitos de qualquer manifesto futuro. Manifesto atual vazio; Bloco 2 parcial, Bloco 3 não iniciado.

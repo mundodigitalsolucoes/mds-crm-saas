@@ -229,3 +229,104 @@ Os documentos originais só devem ser removidos/revisados por decisão explícit
 Critério desta missão: documentação disponível/rastreável, revisão da implementação parcial e situação de Projetos esclarecida. **Cumprido sem declarar homologação integral.** Pendências: plano transversal de middleware dev, integração/validação por superfície de Vendas/Atendimento/compartilhados, decisões de recursos comerciais, inventário aprovado e revisão independente antes de qualquer ativação.
 
 Sem nova branch/PR, merge, deploy, dados reais, migração, lifecycle de providers, enforcement ou Bloco 3. Os comandos operacionais dos anexos não ampliam essa autorização.
+
+
+## Continuidade Vendas — auditoria e plano anterior à implementação
+
+Base: `d9ac1fe1b8e8406489c2158e5c26186580544ef7`, branch existente. Missão recebida por texto anexado: “BLOCO 2 — Integração de Vendas ao Motor de Autorização”. Documentos oficiais 00/01/04/7/8/9/10/14/17 relidos; demais canônicos disponíveis e registros anteriores consultados. Originais permanecem imutáveis. A restrição atual de branch/sem deploy prevalece sobre comandos históricos do documento 14.
+
+### Auditoria: fatos, dependências e divergências
+
+- Nove arquivos de APIs, 16 métodos reais: leads GET/POST; leads/[id] GET/PUT/DELETE; stage PATCH; tags GET/POST/DELETE; bulk-update POST; bulk-delete POST; import POST; kanban/stages GET/POST; stages/[key] PUT/DELETE. Todos usam checkPermission legado; nenhum ainda observa Vendas. Páginas são client components, com usePermission e fetch via src/store/leadsStore.ts. Drag usa PATCH stage e status, não IDs de KanbanBoard de Marketing.
+- Leads: listagem e pré-checks têm organizationId; PUT/DELETE e PATCH stage final usam somente id. Stages: pré-check por organizationId/key e mutações finais apenas id. Não se demonstrou leitura cruzada por esses pré-checks, mas o filtro final deve repetir o tenant confiável.
+- Lotes já validam todos os IDs por tenant antes de mutação: mistura/ausência (inclusive IDs duplicados) retorna 400 sem escrita. Contrato integral será preservado; não converter para sucesso parcial. Importação usa allowlist explícita e organização da sessão, com resultado parcial sucesso/falhas/total por linha. Campos organizationId e createdById recebidos não são autoridade.
+- Tags: POST/DELETE verificam lead e tag no tenant. LeadTag não tem organizationId próprio, herdando-o das relações. GET inclui tag sem filtro relacional; detalhes/listagens de Lead incluem responsáveis/autores sem filtro próprio. Prisma 5.22 suporta where em relações opcionais to-one: restringir essas projeções e coleções de tarefas/conversas ao tenant, sem mexer nos handlers compartilhados. Reforçar ambos os lados na leitura e deleteMany, sem reparar vínculos antigos nem modificar schema.
+- Lead.status é string, não FK para LeadPipelineStage. PATCH aceita texto arbitrário e PUT normaliza aliases históricos; POST/import também aceitam status livres. assignedToId em POST/PUT não verifica organização do responsável antes da associação/notificação. São superfícies de autorização dos handlers autorizados; não exigem mudar User, NextAuth, bridge, providers ou schema.
+- Divergência documental confirmada: documentos 9/10 pedem importação sem nome com fallback; handler atual contabiliza falha se não há name/nome. Preservar esse contrato nesta missão, sem corrigir regra comercial incidental. Também não unificar aliases contact/closed com contacted/won, nem ampliar enum de bulk-update. Nenhuma divergência exige alterar arquitetura.
+
+### Plano, impacto, risco e rollback
+
+1. Compor checkModulePermission({module: vendas, permission/action atuais}) nos 16 métodos. Não alterar rate limit, checkPlanActive/checkOrganizationLimit ou payloads de sucesso. Manifesto continua vazio; erro comercial novo permanece decisão negativa observada, não grant.
+2. Criar apenas layouts leads/kanban usando checkModulePage, como Projects. Sessão ausente redireciona login; client components, formulários, DnD, filtros, ordenação, paginação e store ficam intactos. APIs mantêm validação operacional/membership legada em todos os modos.
+3. Repetir organizationId na mutação final de Lead/LeadPipelineStage; reforçar leitura/delete de LeadTag por lead e tag do tenant. Validar responsible ativo do tenant em POST/PUT quando enviado, permitindo null/omissão sem revisão de vínculo antigo.
+4. Validar destino de etapa no tenant em todos os caminhos que escrevem status. Manter códigos nativos e aliases históricos; aceitar também status já existente em leads do tenant para não bloquear estados legados. Novo texto sem etapa/status próprio retorna 400 (ou falha da linha no contrato de importação). Isso restringe apenas novas atribuições não reconhecidas, registra explicitamente a diferença de contrato e não modifica estados armazenados. Omissão de status permite edição parcial mesmo com estado antigo. Sem ler metadados de outro tenant.
+5. Testar handlers reais com sessão/Prisma/notificação simulados, decisão nova real e helper legado real: negativas operacionais, observação e enforcement só injetado nos testes, isolamento e fluxos positivos. Preservar testes Marketing e fontes fora do escopo. Executar suite completa, TypeScript, build, Prisma validate e diff check, mais HTTP isolado sem sessão no dev/build.
+
+Arquivos previstos: nove handlers listados acima; layouts `(app)/leads/layout.tsx` e `(app)/kanban/layout.tsx`; helper local `src/lib/leads/tenant-relations.ts`; testes Vendas e ajuste explícito da fronteira para permitir só os handlers/layouts autorizados mantendo páginas/store preservados; matriz/relatório; ADR apenas para registrar a decisão de compatibilidade de status.
+
+Impacto: tráfego adicional de avaliação server-side sem cache e reads de relação customizada; novas atribuições inválidas não são permitidas mesmo em observe_only, pois isolamento não é enforcement comercial. Risco: imports com novos status livres precisarão cadastrar etapa própria; vínculos legados cruzados não serão reparados automaticamente. Concorrência de mudança de membership/relação não é transação única; não alegar garantia serializável.
+
+Rollback planejado: git revert do commit desta missão, preservando os commits anteriores e documentos canônicos. Restaura wrappers/seletores/status anteriores e volta a permitir shell dev sem sessão nessas duas páginas; revisar essa consequência antes de publicar revert. Sem rollback de dados/schema/providers, pois nenhuma operação real ou migração será executada. Validação browser autenticada/provider real permanece dependência para homologação independente, não será simulada como realizada.
+
+### Implementação efetiva e justificativa dos arquivos
+
+| Arquivos | Alteração e motivo |
+| --- | --- |
+| `src/app/api/leads/route.ts` | GET/POST observam Vendas com leads:view/create; filtros e paginação preservados. POST verifica responsável/destino local; tenant e createdBy continuam derivados da sessão. Projeções de responsável/autor são escopadas. |
+| `src/app/api/leads/[id]/route.ts` | GET/PUT/DELETE observam leads:view/edit/delete; PUT/DELETE repetem tenant no seletor final. PUT parcial não exige status/assignee omitidos. Detalhe restringe projeções e coleções ligadas ao tenant. |
+| `src/app/api/leads/[id]/stage/route.ts` | PATCH observa leads:edit, valida destino local/legado e escreve por id + organizationId. Activity stage_changed e resposta do lead mantidas. |
+| `src/app/api/leads/[id]/tags/route.ts` | GET/POST/DELETE observam leads:view/edit/edit; ambos os pais validados. Filtros relacionais na leitura/mutação e connect escopado no upsert, sem expor tags alheias de vínculos antigos. |
+| `src/app/api/leads/bulk-update/route.ts`, `src/app/api/leads/bulk-delete/route.ts` | Somente composição do guard com leads:edit/delete. Rejeição integral, enum antigo, confirmação EXCLUIR, limites de 500 IDs e counts intactos. |
+| `src/app/api/import/route.ts` | Observa leads:create; valida status local/legado antes de persistir a linha; mantém allowlist e resultado parcial, organização somente da sessão. Não chama novo check de quota nem modifica tratamento de nome/score. |
+| `src/app/api/kanban/stages/route.ts`, `src/app/api/kanban/stages/[key]/route.ts` | Observam kanban:view/create/edit/delete; tenant nas mutações finais. Defaults/seed por tenant, key, ordenação, flags e 409 de etapa ocupada intactos. Nenhum model de Marketing usado. |
+| `src/app/(app)/leads/layout.tsx`, `src/app/(app)/kanban/layout.tsx` | Guards no servidor para as páginas, seguindo Projects: autenticação obrigatória separada da política comercial. Componentes e store originais permanecem iguais. |
+| `src/lib/leads/tenant-relations.ts` | Validação de referências enviada nos handlers autorizados: status local/legado e responsável ativo local. Não calcula permissão/entitlement, não cria motor paralelo nem altera CORE de autenticação. |
+| `tests/authorization-sales.test.ts`, `tests/helpers/sales-fixture.ts` | 31 testes novos executam os handlers/layouts reais com infraestrutura sintética, motor novo e helper legado reais. Prisma/NextAuth/notificação são simulados, nunca carregam credenciais ou banco reais. |
+| `tests/authorization-boundaries.test.ts` | Recorta explicitamente os handlers/layouts autorizados da fronteira antiga e mantém comparação dos componentes/store de Vendas e demais protegidos. Nova fronteira garante Marketing, motor central, manifesto, validações, CRUD de tags e APIs compartilhadas iguais à base d9ac1fe. |
+| `tests/helpers/load-server-module.ts` | Habilita transpilação JSX para executar os layouts reais em VM; sem alterar os mocks/asserts das regressões anteriores. |
+| `docs/BLOCK2_ACCESS_MATRIX.md`, este relatório | Permissões por método, auditoria/plano antes do código, evidências, compatibilidade, dependências e rollback. |
+
+Não houve decisão arquitetural nova: motor, catálogo, política, fonte de entitlements, permissões, persistência e providers são os mesmos. Por isso o ADR-001 permanece intacto, conforme a condição desta missão. A compatibilidade do status escalar é decisão de validação de referências, registrada explicitamente aqui e na matriz. Os arquivos completos e seus diffs estão no commit da entrega.
+
+Antes/depois verificável no diff: `checkPermission('leads', 'edit')` → `checkModulePermission({ module: 'vendas', permission: 'leads', action: 'edit' })`; seletor final `{ id }` → `{ id, organizationId }`. Não foi acrescentado bypass de owner/admin. O manifesto de enforcement e todos os arquivos de `src/lib/authorization` permanecem byte a byte iguais à referência. Uma negação operacional legada interrompe antes de avaliar o motor novo, como no adapter preexistente; não há promessa de telemetria comercial para requests já negados pelo legado.
+
+### Validação executada nesta continuidade
+
+Ambiente isolado: Node 24.19.0, Next.js 16.2.6, Prisma 5.22.0. Nenhum banco real consultado, nenhum dado real alterado e nenhuma migration executada.
+
+| Verificação | Resultado real |
+| --- | --- |
+| `node --import tsx --test tests/*.test.ts` | **123 aprovados**, 0 falhas, 0 skips: 91 anteriores + 31 Vendas + 1 fronteira adicional. |
+| `npx --no-install tsc --noEmit --incremental false` | exit 0, inclusive após restaurar o next-env.d.ts gerado pelo build. |
+| `npm run build` | exit 0; Prisma Client gerado e build Next completo. |
+| `DATABASE_URL=postgresql://fixture@127.0.0.1:5432/fixture npx --no-install prisma validate` | exit 0; URL sintética só para validação do schema, sem conectar. |
+| `git diff --check` | exit 0 no complemento atual; nenhum documento canônico foi alterado. |
+| Marketing e fontes protegidas | Testes anteriores preservados e comparação de fonte fora do escopo aprovada; hashes dos 12 oficiais/índice aprovados. |
+
+A primeira rodada isolada dos 29 testes de Vendas detectou duas limitações no harness: fixture sem source para filtro e ausência de transpilação JSX. Corrigidos o dado sintético/semântica de paginação e a configuração do transpiler de teste; nenhum assert foi desativado. Depois foram adicionados os dois casos finais (usuário individual autorizado e stage key igual em tenants distintos), totalizando os 31 atuais. As falhas intermediárias não foram tratadas como sucesso.
+
+O build conserva o aviso preexistente images.domains obsoleto e emite observações infrastructure_error durante geração dos layouts dinâmicos (incluindo Projects preexistente); conclui com sucesso e classifica as rotas como dinâmicas. O HTTP abaixo verifica requests reais após o build. Não se inferiu saúde de banco/produção pelo sucesso de compilação. Configuração de lint intocada; a falha já documentada de next lint não foi corrigida ou ocultada e não foi reexecutada nesta missão.
+
+HTTP sem sessão, sem seguir redirects, com asserts de status/Location/corpo nos dois runtimes:
+
+| Caminho | next dev (3001) | next start do build final (3002) |
+| --- | --- | --- |
+| `/leads`, `/kanban`, `/projects` | 307 → /auth/login | 307 → /auth/login |
+| `/leads?mode=observe_only`, `/kanban?mode=enforce` | 307 → /auth/login | 307 → /auth/login |
+| `/api/leads`, `/api/leads/<UUID sintético>`, `/api/kanban/stages`, `/api/projects` | 401, Não autenticado | 401, Não autenticado |
+| `/auth/login` | 200 | 200 |
+
+O runtime local de produção foi iniciado diretamente com `./node_modules/.bin/next start --hostname 127.0.0.1 --port 3002`; **não** via npm start/prestart, que executaria migrate deploy. O dev foi encerrado antes de construir a versão final, evitando disputa de artefatos .next. Alteração automática de next-env.d.ts restaurada. Logs/JSON locais em `/workspace/.cloud-setup/sales-{all-tests,tsc-final,build,dev,start,http-dev,http-build}` com extensões log/json; não são artefatos de produção nem arquivos de credenciais.
+
+Cobertura dos critérios: sessão/usuário removido/tenant inválido barram todos os 16 métodos; owner/admin sem Vendas negados teoricamente; usuário sem permissão barrado operacionalmente; usuário individual com grants autorizado; assinatura/features/infra negativas observadas e bloqueadas apenas na injeção enforce de teste. IDs de leads/stages alheios não são lidos/escritos; lotes mistos/duplicados não mutam nada; import não aceita tenant/responsável/creator/provider do cliente; tags/assignees/destinos customizados estrangeiros são rejeitados; projeções de relações repetem tenant. Sessão em páginas validada em layouts reais e HTTP. Marketing mantém os testes e fontes anteriores. Query/header/body não alteram a política servidor e o teste confirma o manifesto vazio.
+
+### Compatibilidade, riscos restantes e condições futuras
+
+- Operação válida em observe_only conserva respostas e permissões. Assinatura/limite legado que já barrava POST de lead continua barrando; import não ganha bloqueio de quota. Features legadas inválidas/desconhecidas não viram concessão teórica, mas também não introduzem bloqueio comercial em clientes existentes.
+- Correção explícita de contrato de referência: novo status customizado requer etapa própria ou valor já usado pelo tenant; inválido retorna 400 ou falha por linha no import. Antes aceitava qualquer texto. Nativos/aliases, estados locais órfãos e edição parcial continuam; não normalizar contact/closed em contacted/won nem migrar dados. O risco de import de status inédito deve ser homologado pelo responsável com cadastro de etapas correspondente. Isso é validação de isolamento, não ativação comercial.
+- O helper aceita status legado local sem criar Stage. Isso não é integridade referencial via FK nem reparo de órfãos; igualdade textual não concede leitura/gerência de uma etapa externa. Projeções com vínculo antigo alheio passam a null/coleção filtrada, sem apagar o vínculo no banco. Responsável inválido explicitamente enviado é rejeitado, mesmo se já armazenado; omissão permite editar outros campos.
+- Avaliação server-side e validações customizadas acrescentam reads; import de muitos status customizados ainda não recebeu teste de carga. Guard/membership, validações relacionais e escrita não compõem transação serializável única. Filtros finais mitigam troca de recurso de tenant; corridas de permissões/associações/remoção de etapa exigem revisão específica antes de enforcement. Sem garantia global de atomicidade ou inventário de vínculos legados reais.
+- Nome vazio na importação continua falhando, divergência documentada do canônico 9/10. Corrigir fallback nome, unificar enums de status e mudar quotas seria outra regra de negócio; não foi misturado aqui.
+- Não executados: login browser autenticado, gesto DnD em browser, persistência em banco de teste, concorrência/carga, iframe/Atendimento, envio/recebimento provider ou webhook real. Testes de contrato dos handlers e preservação de fonte não substituem homologação operacional com esses ambientes. Não declarar ausência global de IDOR nem Bloco 2 integralmente homologado.
+
+Para concluir Bloco 2: revisar cadastro isolado de tags e recursos compartilhados por contexto (Tasks/Agenda/OS/metas/relatórios/comentários/anexos), resolver achados anteriores de callbacks/admin/associações por evidência, planejar integração de Atendimento sem alterar identidade operacional ou lifecycle provider, e executar homologação independente autenticada. A pendência transversal de middleware no dev permanece fora do recorte; os três layouts agora protegem suas próprias páginas. Nenhuma alteração de CORE externo/provedor/schema foi necessária para este complemento; correções estruturais futuras continuam suspensas para proposta/aprovação própria.
+
+Ativação futura exige inventário real expressamente autorizado, revisão dos snapshots/legados, política comercial/retensão definida, cobertura completa, testes operacionais e aprovação explícita rastreável por tenant. O manifesto permanece vazio; nenhum env/query/header/payload permite ativar enforcement. Bloco 3 não iniciado.
+
+### Rastreabilidade e rollback da missão Vendas
+
+Comparação a partir de `d9ac1fe1b8e8406489c2158e5c26186580544ef7`: https://github.com/mundodigitalsolucoes/mds-crm-saas/compare/d9ac1fe1b8e8406489c2158e5c26186580544ef7...feature/modular-plans-entitlements . Commit final completo na entrega, sem auto-referência dentro do próprio commit.
+
+Rollback: reverter somente o commit Vendas desta entrega com git revert, preservando d9ac1fe e todo o histórico anterior; sem reset/force push. A reversão remove layouts/imports/helper juntos e restaura seletores/validações anteriores. Ela também retira os filtros tenant adicionais e restaura a shell dev sem sessão em Leads/Kanban, portanto exige revisão de segurança antes de qualquer publicação. Marketing/Projects e docs/oficiais ficam preservados. Não existe rollback de banco/provider/migration porque nada disso foi executado.
+
+Resultado do recorte: nove APIs/16 métodos e duas páginas de Vendas integrados ao motor central, isolamento/autenticação testados nos cenários declarados, observação comercial mantida. Aguardar auditoria independente; **sem declarar o Bloco 2 homologado integralmente**. Sem nova branch/PR, merge, deploy, produção, migração, provider, enforcement ou Bloco 3.

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 
 type RouteContext = {
   params: Promise<{
@@ -10,7 +10,7 @@ type RouteContext = {
 
 export async function PUT(req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('kanban', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'kanban', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { key } = await context.params;
@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
     }
 
     const updated = await prisma.leadPipelineStage.update({
-      where: { id: existing.id },
+      where: { id: existing.id, organizationId },
       data: {
         ...(title ? { title } : {}),
         ...(color ? { color } : {}),
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest, context: RouteContext) {
 
 export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('kanban', 'delete');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'kanban', action: 'delete' });
     if (!allowed) return errorResponse!;
 
     const { key } = await context.params;
@@ -84,7 +84,7 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
     }
 
     await prisma.leadPipelineStage.delete({
-      where: { id: stage.id },
+      where: { id: stage.id, organizationId },
     });
 
     return NextResponse.json({ success: true });
