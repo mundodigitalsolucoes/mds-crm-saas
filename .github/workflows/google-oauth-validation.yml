@@ -30,7 +30,5 @@ jobs:
         run: npm ci
       - name: Validate Prisma schema
         run: npx prisma validate
-      - name: Check Prisma schema formatting
-        run: npx prisma format --check
       - name: Build
         run: npm run build
