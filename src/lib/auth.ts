@@ -208,7 +208,9 @@ export const authOptions: NextAuthOptions = {
       const email = user.email?.trim().toLowerCase();
       if (!verified || !email) return false;
       const crmUser = await prisma.user.findUnique({ where: { email }, select: { deletedAt: true, organization: { select: { deletedAt: true } } } });
-      if (!crmUser || crmUser.deletedAt || crmUser.organization.deletedAt) return false;
+      if (!crmUser || crmUser.deletedAt || crmUser.organization.deletedAt) {
+        return '/auth/signup?google=continue';
+      }
       return true;
     },
   },
