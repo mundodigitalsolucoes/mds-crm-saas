@@ -1,7 +1,7 @@
 'use client';
 
-import { signIn } from 'next-auth/react';
-import { useMemo, useState, Suspense, type FormEvent, type CSSProperties } from 'react';
+import { signIn, getProviders } from 'next-auth/react';
+import { useMemo, useState, useEffect, Suspense, type FormEvent, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, CheckCircle2 } from 'lucide-react';
@@ -30,6 +30,8 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  useEffect(() => { void getProviders().then((providers) => setGoogleEnabled(Boolean(providers?.google))).catch(() => setGoogleEnabled(false)); }, []);
   const [localError, setLocalError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -110,11 +112,11 @@ function LoginForm() {
             Entrar
           </h1>
 
-          <button type="button" onClick={onGoogleLogin} disabled={googleLoading || loading}
+          {googleEnabled && <button type="button" onClick={onGoogleLogin} disabled={googleLoading || loading}
             className="w-full border rounded px-3 py-2 mb-4 font-medium text-sm hover:bg-gray-50 disabled:opacity-60">
             {googleLoading ? 'Conectando ao Google...' : 'Continuar com Google'}
-          </button>
-          <div className="text-center text-xs text-gray-500 mb-4">ou entre com email e senha</div>
+          </button>}
+          {googleEnabled && <div className="text-center text-xs text-gray-500 mb-4">ou entre com email e senha</div>}
           <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
             className="w-full border rounded px-3 py-2 mb-3 focus:outline-none focus:ring-2"
