@@ -2,7 +2,7 @@
 
 **Branch:** `feature/modular-plans-entitlements`  
 **Baseline:** `6ee318f0656e1b79d8a4b6c7df6e9b393ce53f05`  
-**Candidate:** `97b4fc272a76bc4c1085d46ba3ff2f869fb3d359` (before this report)
+**Initial candidate:** `97b4fc272a76bc4c1085d46ba3ff2f869fb3d359` (subsequent commits address signup conflicts and add regression guards)
 
 ## Evidence and root cause
 
@@ -27,7 +27,9 @@
 ## Validation status
 
 - GitHub comparison confirms four code files changed from baseline; no Prisma schema or provider implementation changed.
-- **Not executed:** automated tests, TypeScript compilation, Next.js build, Prisma checks, live login, real signup, staging integration or production requests.
+- **Source-level inspection:** eight focused invariants were checked against the fetched GitHub files and all passed (no reactivation path; existing-email guard; P2002 handling; no JWT fallback; DB admin lookup; HS256; shared provision guard; middleware fail-closed). This is not an application test run.
+- **Test file added:** `tests/security-c03-c04.test.cjs`, four Node built-in source-regression tests; **not executed in a Node repository checkout**. Run `node --test tests/security-c03-c04.test.cjs` in CI/local checkout.
+- **Not executed:** repository automated tests, TypeScript compilation, Next.js build, Prisma checks, live login, real signup, staging integration or production requests.
 - **Not homologated:** C03/C04 remain candidate fixes, not independently verified remediations.
 - **Deployment blocked** until tests and a dedicated secret configuration check. The user has stated `ADMIN_JWT_SECRET` exists; its length and validity were not checked, and its value must never be shared.
 - `package.json` includes a `prestart` Prisma migration command. Do **not** run application start against any real database during validation.
@@ -36,7 +38,7 @@
 
 - `SuperAdmin` has no active/deletedAt/role fields; only row presence and email match can be validated without a schema change.
 - Existing tokens are not individually revocable while the admin row remains present; secret rotation invalidates all sessions.
-- The public signup duplicate-email response can reveal account existence, as in the preexisting active-account behavior. Generic responses and concurrent duplicate error handling remain follow-up hardening items.
+- The public signup duplicate-email response can reveal account existence, as in the preexisting active-account behavior. Concurrent uniqueness conflicts are now handled with a generic 409 response; end-to-end verification is still pending.
 - Admin UI middleware checks a signed token but not live database authority; sensitive API routes must independently use the central verifier. Any future or overlooked admin API routes that rely solely on middleware require inventory.
 - C01/C02 webhook authentication findings remain open and are outside this scope.
 
