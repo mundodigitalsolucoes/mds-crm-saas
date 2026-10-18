@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
+import { isTenantLeadStatus } from '@/lib/leads/tenant-relations';
 
 type RouteContext = {
   params: Promise<{
@@ -10,7 +11,7 @@ type RouteContext = {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'edit');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'edit' });
     if (!allowed) return errorResponse!;
 
     const { id } = await context.params;
@@ -40,12 +41,16 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Lead não encontrado' }, { status: 404 });
     }
 
+    if (!await isTenantLeadStatus(organizationId, status)) {
+      return NextResponse.json({ error: 'Etapa inválida para esta organização' }, { status: 400 });
+    }
+
     const updated = await prisma.lead.update({
-      where: { id },
+      where: { id, organizationId },
       data: { status },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true } },
+        assignedTo: { where: { organizationId }, select: { id: true, name: true, email: true } },
+        createdBy: { where: { organizationId }, select: { id: true, name: true } },
       },
     });
 

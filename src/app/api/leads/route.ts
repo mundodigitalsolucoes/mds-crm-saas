@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { applyRateLimit, API_RATE_LIMIT } from '@/lib/rate-limit';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, leadCreateSchema } from '@/lib/validations';
 import { createNotification } from '@/lib/notify';
+import { isTenantLeadAssignee, isTenantLeadStatus } from '@/lib/leads/tenant-relations';
 
 export async function GET(req: NextRequest) {
   try {
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
@@ -86,8 +87,8 @@ export async function GET(req: NextRequest) {
       prisma.lead.findMany({
         where,
         include: {
-          assignedTo: { select: { id: true, name: true, email: true } },
-          createdBy: { select: { id: true, name: true } },
+          assignedTo: { where: { organizationId }, select: { id: true, name: true, email: true } },
+          createdBy: { where: { organizationId }, select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     const blocked = applyRateLimit(req, 'api', API_RATE_LIMIT);
     if (blocked) return blocked;
 
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'create');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'create' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
@@ -133,6 +134,13 @@ export async function POST(req: NextRequest) {
     if (!parsed.success) return parsed.response;
 
     const data = parsed.data;
+
+    if (!await isTenantLeadAssignee(organizationId, data.assignedToId)) {
+      return NextResponse.json({ error: 'Responsável inválido para esta organização' }, { status: 400 });
+    }
+    if (!await isTenantLeadStatus(organizationId, data.status)) {
+      return NextResponse.json({ error: 'Etapa inválida para esta organização' }, { status: 400 });
+    }
 
     const lead = await prisma.lead.create({
       data: {
@@ -164,8 +172,8 @@ export async function POST(req: NextRequest) {
         utmTerm: data.utmTerm ?? null,
       },
       include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true } },
+        assignedTo: { where: { organizationId }, select: { id: true, name: true, email: true } },
+        createdBy: { where: { organizationId }, select: { id: true, name: true } },
       },
     });
 

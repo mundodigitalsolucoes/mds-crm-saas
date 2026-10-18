@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 import { parseBody } from '@/lib/validations';
 
 const bulkDeleteSchema = z.object({
@@ -16,7 +16,7 @@ const bulkDeleteSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('leads', 'delete');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'leads', action: 'delete' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;

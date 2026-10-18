@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/checkPermission';
+import { checkModulePermission } from '@/lib/authorization/guards';
 
 const DEFAULT_STAGES = [
   { key: 'new', title: 'Novo', order: 0, color: 'blue', isDefault: true, isSystem: true },
@@ -40,7 +40,7 @@ async function ensureDefaultStages(organizationId: string) {
 
 export async function GET() {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('kanban', 'view');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'kanban', action: 'view' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
@@ -70,7 +70,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { allowed, session, errorResponse } = await checkPermission('kanban', 'create');
+    const { allowed, session, errorResponse } = await checkModulePermission({ module: 'vendas', permission: 'kanban', action: 'create' });
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
