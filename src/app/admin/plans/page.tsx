@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FEATURE_CATALOG, featuresOfKind, type FeatureKind } from '@/lib/entitlements/catalog';
 import { parseCommercialFeatures } from '@/lib/entitlements/features';
+import { createPlanEditorForm, planFeaturesNeedReview, submitPlanEditor } from '@/lib/plans/editor';
 import {
   CreditCard,
   Plus,
@@ -75,20 +76,8 @@ export default function PlansPage() {
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const [form, setForm] = useState({
-    name: '',
-    displayName: '',
-    description: '',
-    price: '0',
-    interval: 'month',
-    maxUsers: '2',
-    maxWhatsappInstances: '1',
-    maxLeads: '1000',
-    maxProjects: '20',
-    maxOs: '20',
-    features: [] as string[],
-    propagateToOrgs: true,
-  });
+  const [form, setForm] = useState(() => createPlanEditorForm());
+  const featuresNeedReview = planFeaturesNeedReview(editingPlan);
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -110,43 +99,13 @@ export default function PlansPage() {
 
   const openCreateModal = () => {
     setEditingPlan(null);
-    setForm({
-      name: '',
-      displayName: '',
-      description: '',
-      price: '0',
-      interval: 'month',
-      maxUsers: '2',
-      maxWhatsappInstances: '1',
-      maxLeads: '1000',
-      maxProjects: '20',
-      maxOs: '20',
-      features: [],
-      propagateToOrgs: true,
-    });
+    setForm(createPlanEditorForm());
     setShowModal(true);
   };
 
   const openEditModal = (plan: Plan) => {
-    if (parseCommercialFeatures(plan.features).status === 'invalid') {
-      alert('Features inválidas neste plano. Revise a configuração antes de editar para evitar perda de dados.');
-      return;
-    }
     setEditingPlan(plan);
-    setForm({
-      name: plan.name,
-      displayName: plan.displayName,
-      description: plan.description || '',
-      price: String(plan.price),
-      interval: plan.interval,
-      maxUsers: String(plan.maxUsers),
-      maxWhatsappInstances: String(plan.maxWhatsappInstances ?? 1),
-      maxLeads: String(plan.maxLeads ?? 1000),
-      maxProjects: String(plan.maxProjects ?? 20),
-      maxOs: String(plan.maxOs ?? 20),
-      features: parseFeatures(plan.features),
-      propagateToOrgs: true,
-    });
+    setForm(createPlanEditorForm(plan));
     setShowModal(true);
   };
 
@@ -176,39 +135,11 @@ export default function PlansPage() {
     setSaving(true);
 
     try {
-      const url = editingPlan ? `/api/admin/plans/${editingPlan.id}` : '/api/admin/plans';
-      const method = editingPlan ? 'PUT' : 'POST';
-
-      const features = [...form.features];
-
-      // Mantém compatibilidade: se o plano tiver pelo menos 1 WA, marca feature whatsapp
-      const waCount = Number(form.maxWhatsappInstances);
-      const hasWhatsappFeature = features.includes('whatsapp');
-
-      if (waCount !== 0 && !hasWhatsappFeature) features.push('whatsapp');
-      if (waCount === 0 && hasWhatsappFeature) {
-        const idx = features.indexOf('whatsapp');
-        features.splice(idx, 1);
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          displayName: form.displayName,
-          description: form.description,
-          price: form.price,
-          interval: form.interval,
-          maxUsers: form.maxUsers,
-          maxWhatsappInstances: form.maxWhatsappInstances,
-          maxLeads: form.maxLeads,
-          maxProjects: form.maxProjects,
-          maxOs: form.maxOs,
-          features: JSON.stringify(features),
-          propagateToOrgs: editingPlan ? form.propagateToOrgs : false,
-        }),
+      const res = await submitPlanEditor(form, editingPlan, {
+        confirm: (message) => confirm(message),
+        request: (url, options) => fetch(url, options),
       });
+      if (!res) return;
 
       if (!res.ok) {
         const data = await res.json();
@@ -370,9 +301,11 @@ export default function PlansPage() {
                       WhatsApp
                     </div>
                     <p className="text-white font-semibold">
-                      {plan.maxWhatsappInstances <= 0
+                      {plan.maxWhatsappInstances === -1
                         ? 'Ilimitado'
-                        : `${plan.maxWhatsappInstances} número(s)`}
+                        : plan.maxWhatsappInstances === 0
+                          ? 'Sem WhatsApp'
+                          : `${plan.maxWhatsappInstances} número(s)`}
                     </p>
                   </div>
                 </div>
@@ -487,6 +420,13 @@ export default function PlansPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {featuresNeedReview && (
+                <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+                  As features legadas deste plano precisam de revisão. Você pode editar preço, descrição e
+                  outros campos administrativos; o conteúdo original será preservado. Canais, features e
+                  propagação ficam indisponíveis até a configuração ser revisada.
+                </p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -575,7 +515,7 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-gray-700 p-4">
+              <fieldset disabled={featuresNeedReview} className="rounded-xl border border-gray-700 p-4 disabled:opacity-50">
                 <h3 className="text-white font-semibold mb-3">Canais</h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -617,9 +557,9 @@ export default function PlansPage() {
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div className="rounded-xl border border-gray-700 p-4">
+              <fieldset disabled={featuresNeedReview} className="rounded-xl border border-gray-700 p-4 disabled:opacity-50">
                 <h3 className="text-white font-semibold mb-3">Módulos</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {MODULE_FEATURES.map((feature) => (
@@ -637,9 +577,9 @@ export default function PlansPage() {
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div className="rounded-xl border border-gray-700 p-4">
+              <fieldset disabled={featuresNeedReview} className="rounded-xl border border-gray-700 p-4 disabled:opacity-50">
                 <h3 className="text-white font-semibold mb-3">Capacidades</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {CAPABILITY_FEATURES.map((feature) => (
@@ -657,9 +597,9 @@ export default function PlansPage() {
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
-              <div className="rounded-xl border border-gray-700 p-4">
+              <fieldset disabled={featuresNeedReview} className="rounded-xl border border-gray-700 p-4 disabled:opacity-50">
                 <h3 className="text-white font-semibold mb-3">Add-ons</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {ADDON_FEATURES.map((feature) => (
@@ -677,7 +617,7 @@ export default function PlansPage() {
                     </label>
                   ))}
                 </div>
-              </div>
+              </fieldset>
 
               <div className="rounded-xl border border-gray-700 p-4">
                 <h3 className="text-white font-semibold mb-3">Controles internos</h3>
@@ -733,6 +673,7 @@ export default function PlansPage() {
                 <label className="flex items-start gap-3 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 cursor-pointer">
                   <input
                     type="checkbox"
+                    disabled={featuresNeedReview}
                     checked={form.propagateToOrgs}
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, propagateToOrgs: e.target.checked }))
@@ -744,7 +685,9 @@ export default function PlansPage() {
                       Propagar mudanças para as organizações deste plano
                     </p>
                     <p className="text-xs text-blue-200/80 mt-1">
-                      Isso atualiza os limites reais das organizações que já usam este plano.
+                      Impacto estimado: {editingPlan._count.organizations} organização(ões), conforme a
+                      última listagem. Os limites e as features atuais serão substituídos pelos do plano.
+                      Uma confirmação adicional será solicitada ao salvar.
                     </p>
                   </div>
                 </label>

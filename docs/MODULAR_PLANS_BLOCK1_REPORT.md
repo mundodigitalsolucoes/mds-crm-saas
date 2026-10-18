@@ -1,5 +1,9 @@
 # Bloco 1 — Motor central de módulos e planos
 
+> As seções A–F registram a entrega original. O complemento auditado em
+> `89420b3f980db96ba13d6a900632ba4c7d21bad0` está registrado na seção G e
+> substitui as ressalvas originais sobre validação das APIs e edição de features inválidas.
+
 ## A. Auditoria, plano e decisões
 
 Branch obrigatória: `feature/modular-plans-entitlements`. Referência confirmada no remoto antes das alterações: `ca0db44ac988c34da8ee3ee5b7c2d16740fc2a1c`. O checkout inicial estava limpo, na branch local `work`; a branch exigida foi criada localmente a partir da branch remota existente, sem alterar `main`.
@@ -128,3 +132,79 @@ Disponíveis: catálogo, parser, snapshot comercial por organização, decisão 
 Antes de enforcement: fornecer documentos oficiais ausentes; inventariar/migrar features com autorização; definir marco explícito de ativação por organização; compor validação fresca de usuário/tenant/assinatura com permissões individuais; completar matriz de rotas/APIs e testes E2E. Limites por canal e lifecycle continuam reservados ao Bloco 3. Não derivar quantidade de conexões da mera presença de um canal/add-on.
 
 O Bloco 2 não foi iniciado.
+
+## G. Complemento do Bloco 1 — revisão independente
+
+### Auditoria e decisões
+
+Base remota confirmada: `89420b3f980db96ba13d6a900632ba4c7d21bad0`. A branch existente foi sincronizada por fast-forward, preservando o ADR acrescentado após a entrega original. Foram lidos a especificação, este relatório e `ADR-001-MODULAR-PLANS-GOVERNANCE.md` antes das alterações. Os 11 documentos adicionais continuam ausentes nos diretórios disponibilizados; seu conteúdo não foi presumido.
+
+O único consumidor encontrado das APIs `/api/admin/plans` e `/api/admin/plans/[id]` é `src/app/admin/plans/page.tsx`: lista com `_count.organizations`, salva o modal com payload completo, alterna status com PUT parcial e exclui com DELETE. POST/PUT já usam schemas compartilhados de `validations/admin.ts`. O default servidor de `propagateToOrgs` era false, mas os três estados de abertura do editor eram true, sem confirmação. O editor também bloqueava toda edição de plano malformado, inclusive preço/descrição.
+
+Decisões do complemento:
+
+1. **Validação em duas etapas.** O schema compartilhado rejeita formato malformado antes de escrever. POST permite identificadores conhecidos/disponíveis e mantém `[]` como default. PUT valida as features somente quando enviadas ou quando o snapshot será propagado; compara novos identificadores com a lista anterior válida usando o catálogo/parser existentes.
+2. **Compatibilidade sem descarte.** Desconhecidos e identificadores planejados previamente listados podem permanecer em um PUT, sem conceder direitos. Novos desconhecidos/indisponíveis são rejeitados. A string enviada é persistida sem reserialização, filtro ou normalização destrutiva; duplicatas continuam normalizadas apenas na leitura do motor. Enviar uma nova lista completa pode remover explicitamente um identificador antigo; o servidor não o reinsere.
+3. **Edição parcial independente.** Omitir features permite atualizar preço, descrição ou status mesmo com JSON antigo inválido. Enviar novamente JSON inválido retorna 400. Propagar uma configuração inválida é rejeitado antes de atualizar plano ou organizações; é possível corrigir explicitamente as features e propagar a lista corrigida na mesma chamada.
+4. **Propagação opt-in.** Formulários novos/reabertos começam com false. O checkbox informa estimativa carregada na listagem. Salvar com opt-in exige confirmação contendo nome, número estimado, substituição de features/limites e aviso de que a contagem pode mudar. Cancelar não envia requisição. O servidor continua exigindo booleano explícito true, nunca string truthy.
+5. **Legado malformado no editor.** O modal permite campos administrativos e mostra aviso; controles de canais/features e propagação ficam desabilitados. No envio, omite features e `maxWhatsappInstances`, preservando dados antigos e forçando propagação false. A correção semântica do JSON pode ser feita por PUT explícito autorizado após revisão; não há ferramenta de reparo automático neste complemento.
+6. **Autoridade comercial.** Os quatro handlers GET/POST/PUT/DELETE verificam `role === 'superadmin'` após o helper existente. Arquivos de autenticação/sessão e geração de tokens permanecem intactos. Token ausente ou papel distinto recebe 401 antes de acessar dados.
+
+### Arquivos alterados e justificativa
+
+| Arquivo | Alteração |
+| --- | --- |
+| `src/lib/validations/plan-features.ts` (novo) | Schemas semânticos reutilizam catálogo/parser; distinguem formato válido de novas features permitidas e preservação contextual de legados. |
+| `src/lib/validations/admin.ts` | POST passa a validar novas features; PUT valida formato quando o campo é fornecido, sem exigir features em atualização parcial. |
+| `src/app/api/admin/plans/route.ts` | Validação de criação pelo schema, HTTP 400 para JSON de requisição inválido e papel Super Admin explícito. GET mantém estimativa por nome de plano. |
+| `src/app/api/admin/plans/[id]/route.ts` | Validação contextual antes de qualquer escrita, proteção de snapshots a propagar, JSON inválido 400 e papel Super Admin explícito. A seleção pelo nome antigo na propagação permanece. |
+| `src/lib/plans/editor.ts` (novo) | Lógica real compartilhada pelo editor/testes: formulário com opt-in desligado, confirmação antes do request, preservação de legado e do limite escalar. |
+| `src/app/admin/plans/page.tsx` | Usa o helper, mostra estimativa/aviso, permite edição administrativa de legados e distingue os rótulos administrativos -1/0. |
+| `tests/admin-plans.test.ts` (novo) | Regressões dos handlers reais POST/PUT/GET/DELETE com autenticação e persistência simuladas, sem banco real. |
+| `tests/plan-editor.test.ts` (novo) | Fluxos reais do helper usado pela tela: abertura/reabertura, cancelamento, confirmação, envio parcial e preservação. |
+| `tests/legacy-whatsapp-limits.test.ts` (novo) | Coexistência dos contratos e caracterização do guard operacional atual sem alterá-lo. |
+| `tests/helpers/load-server-module.ts` (novo) | Transpila e executa os fontes reais em VM com imports de infraestrutura substituídos. Usa TypeScript já instalado; não carrega Prisma/autenticação reais. |
+| Este relatório e `docs/ADR-001-MODULAR-PLANS-GOVERNANCE.md` | Novas decisões, evidências, limites de compatibilidade, riscos e rollback. |
+
+Nenhuma dependência adicionada, nenhuma alteração no parser/resolvedor original, schema Prisma, migration, autenticação, provider, conexão, inbox, webhook ou limite operacional.
+
+### Limites: intenção administrativa versus comportamento atual
+
+| Camada | `-1` | `0` | Inteiro positivo |
+| --- | --- | --- | --- |
+| Campo legado `maxWhatsappInstances` em schemas/editor | Aceito e preservado como ilimitado | Aceito e preservado; intenção administrativa: nenhum WhatsApp | Quantidade máxima |
+| Guard operacional preexistente `checkLimits.ts` e listagem Evolution | Ilimitado | **Também interpretado como ilimitado**, por `<= 0` | Compara uso com máximo |
+| Contrato futuro `maxConnections` | Rejeitado | Zero conexões | Quantidade máxima |
+
+Essa divergência de zero foi confirmada no código e por teste do guard atual com adapter em memória. O cartão de planos passa a exibir a intenção administrativa (`0 = Sem WhatsApp`), **sem afirmar que o CORE já bloqueia zero**. Não houve conversão de -1 para zero, aplicação do schema futuro ao legado ou alteração operacional. A semântica real de zero e a representação futura de ilimitado precisam de decisão/migração própria antes do Bloco 3; este complemento não resolve esse risco.
+
+### Validação do complemento
+
+```bash
+node --import tsx --test tests/*.test.ts
+npx --no-install tsc --noEmit --incremental false
+npm run build
+npm run lint
+git diff --check
+```
+
+Resultado final: 51 testes aprovados (14 originais, 26 de API, 8 de editor, 3 de limites), nenhuma falha/skip; TypeScript e build aprovados. O build gerou alteração local em `next-env.d.ts`, descartada por ser saída automática fora do escopo. Os testes de API executam os handlers reais com dependências simuladas, inclusive a comparação contextual do PUT. Nenhuma requisição de mutação foi enviada a servidor real e nenhum plano/tenant foi modificado no banco.
+
+Lint continua falhando com exit 1: `next lint` não existe no Next 16. **Proposta isolada, não aplicada:** substituir o script por `eslint .` e adicionar `eslint.config.mjs` em formato flat usando `eslint-config-next/core-web-vitals` e `eslint-config-next/typescript`, com ignores de `.next`, `out`, `build` e `next-env.d.ts`. É preciso levantar a baseline das regras e migrar exceções em tarefa de tooling separada; apenas trocar o comando, sem configuração, não resolve. Não foram desativadas regras para produzir aprovação artificial.
+
+Revisão independente do diff backend não identificou regressão concreta de severidade P0/P1/P2. Sem testes browser E2E ou teste de carga/concorrência/banco real. A confirmação foi testada no helper efetivamente usado pela UI, com ordem `confirm` → `request` e zero requests em cancelamento.
+
+### Riscos, rollback e próximos passos
+
+- A estimativa usa a última contagem da listagem, não é bloqueio transacional nem garantia de quantidade exata. Outro cliente autenticado continua podendo fazer PUT explicitamente propagante; a confirmação é a proteção da UI, não um novo protocolo de autorização.
+- Atualização do plano e `organization.updateMany` continuam não transacionais (preexistente). Uma falha da segunda operação pode deixar propagação incompleta; nenhuma transação, migração ou reparo de dados reais foi executado.
+- Renomear sem propagar deixa organizações no nome anterior (preexistente). O sistema usa string de nome, não uma FK; requer revisão antes de renomear planos em uso.
+- A propagação existente copia features, usuários, leads, projetos, OS e WhatsApps; não foi ampliada para `maxGoals` ou outros campos. O fluxo separado `syncPlanLimits` permanece intacto.
+- Features antigas inválidas continuam armazenadas quando omitidas. A migração/inventário autorizado continua necessário; o complemento impede novos payloads malformados e cópia massiva deles, sem habilitar enforcement.
+- Identificadores legados aceitos na gravação continuam sem direitos quando desconhecidos/planejados; `observe_only` permanece obrigatório. A implementação dos módulos futuros não foi antecipada.
+
+Rollback: `git revert <SHA-do-complemento>` em branch de trabalho, sem reset/force-push. Restaura schemas/handlers/editor anteriores e remove apenas os helpers/testes do complemento; mantém o motor original e o ADR original. Nenhuma reversão de schema, banco ou provider é necessária. Esse revert restaura também os defaults antigos de propagação e a ausência da validação backend, portanto precisa de revisão antes de qualquer publicação.
+
+Commit final e comparação imutável ficam na entrega. Comparação do complemento: https://github.com/mundodigitalsolucoes/mds-crm-saas/compare/89420b3f980db96ba13d6a900632ba4c7d21bad0...feature/modular-plans-entitlements
+
+`main` não foi alterada; nenhuma branch ou PR novo, merge commit, deploy, escrita em produção ou alteração no Coolify foi realizada. O complemento encerra aqui para homologação independente. Pendências do Bloco 2 continuam as da seção F e do ADR: documentos canônicos, inventário aprovado, marco de enforcement, composição de autorização e matriz de APIs/rotas. **Bloco 2 não iniciado.**

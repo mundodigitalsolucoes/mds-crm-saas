@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { parseBody, adminPlanUpdateSchema } from '@/lib/validations';
+import { planFeatureChangeSchema } from '@/lib/validations/plan-features';
 
 // PUT - Atualizar plano
 export async function PUT(
@@ -11,14 +12,19 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await verifyAdminToken();
-  if (!admin) {
+  if (admin?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
   const { id } = await params;
 
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+    }
 
     const parsed = parseBody(adminPlanUpdateSchema, body);
     if (!parsed.success) return parsed.response;
@@ -27,6 +33,14 @@ export async function PUT(
     const currentPlan = await prisma.plan.findUnique({ where: { id } });
     if (!currentPlan) {
       return NextResponse.json({ error: 'Plano não encontrado' }, { status: 404 });
+    }
+
+    // Validate only an explicit feature edit or a snapshot about to be propagated.
+    // A price/description edit alone preserves even malformed legacy features.
+    const featuresToValidate = data.features ?? (data.propagateToOrgs ? currentPlan.features : undefined);
+    if (featuresToValidate !== undefined) {
+      const featureChange = parseBody(planFeatureChangeSchema(currentPlan.features), { features: featuresToValidate });
+      if (!featureChange.success) return featureChange.response;
     }
 
     const { propagateToOrgs, ...updateData } = data;
@@ -78,7 +92,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const admin = await verifyAdminToken();
-  if (!admin) {
+  if (admin?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
