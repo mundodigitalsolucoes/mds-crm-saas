@@ -1,7 +1,7 @@
 # ADR-001 — Planos modulares, compatibilidade e governança de alterações
 
 **Data:** 2026-10-18  
-**Estado:** decisão arquitetural aprovada; Bloco 1 e complemento implementados; complemento aguarda homologação independente.
+**Estado:** decisões registradas; Bloco 1 e complemento implementados; preparação parcial do Bloco 2 em observação, sem autorização de ativação ampla e com áreas suspensas por documentação ausente.
 
 **Base auditada:** Bloco 1 em `175dcb8efd3256637c3f32d00580bb7118300b3c`; complemento a partir de `89420b3f980db96ba13d6a900632ba4c7d21bad0`.
 
@@ -87,3 +87,14 @@ A metodologia oficial exige **Auditoria → Plano → Implementação → Valida
 - Riscos preexistentes preservados: rename sem propagação deixa organizações no nome antigo; propagação não transacional; semântica operacional `<= 0`; ausência de inventário e documentação canônica. Nenhum guard comercial novo foi ligado.
 - Rollback: reverter o commit do complemento sem alterar dados, schema ou providers. O revert restaura os defaults/validação anteriores e exige revisão própria antes de publicação.
 - Arquivos, comandos, resultados e comparações: seção G de `MODULAR_PLANS_BLOCK1_REPORT.md`. Nenhuma branch/PR novo, merge commit, deploy ou Bloco 2.
+
+## 11. Preparação autorizada do Bloco 2
+
+A missão posterior, baseada em `f93c3435fff316a548255993d749ef545c9c7670`, autoriza preparação do Bloco 2, sem enforcement ou Bloco 3. Os registros anteriores são históricos; esta autorização não libera merge/deploy.
+
+- Nova camada reutiliza o resolvedor do Bloco 1 e defaults operacionais existentes, com identidade/vínculo/estado lidos no servidor. Owner/admin não ignoram entitlement na decisão teórica; Super Admin tem contrato administrativo separado e não impersona tenant.
+- Modo efetivo depende de manifesto servidor revisado, que permanece vazio. Observe_only preserva a autorização legada e registra decisões negativas/erros, sem convertê-los em grants do motor novo. Enforce existe apenas preparado e testado por injeção.
+- Integração inicial: APIs e renderização servidor de Marketing/Projetos, com tenant também nas mutações finais. Demais superfícies e exceções estão em `BLOCK2_ACCESS_MATRIX.md`.
+- A ausência dos 12 documentos indicados na missão impede alterações seguras no CORE/providers e classificação definitiva de compartilhados; essas áreas ficam suspensas. Os achados concretos não são declarados resolvidos.
+- Inventário real não executado; script read-only e fixtures entregues. Não há migração, correção ou propagação automática de organizações.
+- Evidências, riscos, rollback, 87 testes aprovados e limites de homologação estão em `BLOCK2_AUTHORIZATION_REPORT.md`. Cobertura parcial não autoriza ativação ampla nem início do Bloco 3.
