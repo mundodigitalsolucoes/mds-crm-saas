@@ -1,6 +1,7 @@
 // src/app/api/auth/signup/route.ts
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { parseBody, signupSchema } from '@/lib/validations'
 import { provisionChatwootForOrg } from '@/lib/integrations/chatwoot-provision'
@@ -50,23 +51,7 @@ export async function POST(request: Request) {
 
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        organizationId: true,
-        deletedAt: true,
-        organization: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            deletedAt: true,
-            planStatus: true,
-          },
-        },
-      },
+      select: { id: true },
     })
 
     // Public signup must never reactivate or change an existing identity or tenant.
@@ -171,6 +156,11 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
+    // Concurrent registrations are ultimately serialized by the unique email constraint.
+    // Never expose an internal error or attempt to reuse the existing identity.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Não foi possível concluir o cadastro com estes dados' }, { status: 409 })
+    }
     console.error('Erro ao criar conta:', error)
     return NextResponse.json(
       { error: 'Erro ao criar conta. Tente novamente.' },
