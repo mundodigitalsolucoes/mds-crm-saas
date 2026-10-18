@@ -1,0 +1,35 @@
+name: C03-C04 Security Regression
+
+on:
+  push:
+    branches:
+      - feature/modular-plans-entitlements
+    paths:
+      - 'tests/security-c03-c04.test.cjs'
+      - 'src/app/api/auth/signup/route.ts'
+      - 'src/lib/admin-auth.ts'
+      - 'src/app/api/admin/orgs/**/provision-chatwoot/route.ts'
+      - 'middleware.ts'
+      - 'package.json'
+      - '.github/workflows/security-c03-c04.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-regression:
+    name: Source-level C03/C04 guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run source security regression tests
+        run: npm run test:security
