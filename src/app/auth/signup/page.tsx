@@ -3,10 +3,10 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { signIn, getProviders } from 'next-auth/react'
 import { Building2, Mail, User, Lock, ArrowRight } from 'lucide-react'
 
 export default function SignupPage() {
@@ -22,6 +22,8 @@ export default function SignupPage() {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
+    const [googleEnabled, setGoogleEnabled] = useState(false)
+    useEffect(() => { void getProviders().then((providers) => setGoogleEnabled(Boolean(providers?.google))).catch(() => setGoogleEnabled(false)) }, [])
 
     const handleGoogleSignup = async () => {
         setError('')
@@ -230,11 +232,11 @@ export default function SignupPage() {
                             </label>
                         </div>
 
-                        <button type="button" onClick={handleGoogleSignup} disabled={googleLoading || loading}
+                        {googleEnabled && <button type="button" onClick={handleGoogleSignup} disabled={googleLoading || loading}
                             className="w-full border border-gray-300 hover:bg-gray-50 py-3 rounded-lg font-semibold disabled:opacity-50">
                             {googleLoading ? 'Conectando ao Google...' : 'Continuar com Google — sem criar senha'}
-                        </button>
-                        <p className="text-center text-xs text-gray-500">ou cadastre-se com email e senha</p>
+                        </button>}
+                        {googleEnabled && <p className="text-center text-xs text-gray-500">ou cadastre-se com email e senha</p>}
                         <button
                             type="submit"
                             disabled={loading}
