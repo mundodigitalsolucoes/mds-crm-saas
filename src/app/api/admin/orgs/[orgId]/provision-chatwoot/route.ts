@@ -17,26 +17,9 @@
 // Com force=true sobrescreve um ConnectedAccount já existente.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
+import { verifyAdminToken } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import { provisionChatwootForOrg } from '@/lib/integrations/chatwoot-provision'
-
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET || 'super-admin-secret-key',
-)
-
-// ─── Auth Super Admin ────────────────────────────────────────────────────────
-
-async function verifySuperAdmin(req: NextRequest): Promise<boolean> {
-  const token = req.cookies.get('admin-token')?.value
-  if (!token) return false
-  try {
-    await jwtVerify(token, ADMIN_JWT_SECRET)
-    return true
-  } catch {
-    return false
-  }
-}
 
 // ─── POST /api/admin/orgs/[orgId]/provision-chatwoot ────────────────────────
 
@@ -44,7 +27,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ orgId: string }> },
 ) {
-  if (!(await verifySuperAdmin(req))) {
+  if (!(await verifyAdminToken())) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
@@ -125,7 +108,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ orgId: string }> },
 ) {
-  if (!(await verifySuperAdmin(req))) {
+  if (!(await verifyAdminToken())) {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
