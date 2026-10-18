@@ -1,5 +1,7 @@
 # Bloco 2 — autorização: auditoria, plano e execução
 
+> Atualização documental e correção pontual a partir de `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`: os 12 documentos estão disponíveis e a investigação/correção de `/projects` está na seção final. Os registros anteriores de documentos ausentes e HTTP 200 são históricos, superados pelos resultados dessa revisão; o Bloco 2 continua parcial.
+
 Base: `f93c3435fff316a548255993d749ef545c9c7670`, branch existente `feature/modular-plans-entitlements`. Checkout limpo e referência remota conferidos antes de qualquer alteração. Especificação, relatório do Bloco 1 e ADR-001 foram lidos. Não foi criado outro sistema de entitlements.
 
 ## Documentação indisponível e áreas suspensas
@@ -112,3 +114,118 @@ Branch existente mantida. Commits organizados em motor/diagnóstico e integraç�
 Rollback: reverter primeiro o commit de integração e depois o de motor/diagnóstico, sem reset/force-push e após revisão. A ordem remove imports antes de remover as funções. Nenhum rollback de schema, organização, provider ou plano é necessário; a reversão da integração também retira o tenant adicional no seletor final de mutação de Projetos, restaurando o pré-check anterior. Mudanças posteriores devem ser preservadas.
 
 Sem branch ou PR novo, merge commit, deploy, alteração no Coolify, migração, atualização de planos/organizações reais, ativação de enforcement ou Bloco 3. A entrega encerra o trabalho independente possível; **as áreas afetadas pela falta documental ficam suspensas**, aguardando documentação e revisão específica, não improvisação.
+
+## Revisão oficial — documentação e continuidade controlada
+
+### 1. Auditoria documental e integridade
+
+Recebido do responsável: `MDS-CRM-12-documentos-oficiais-Codex.zip`, 34.162 bytes, SHA-256 `7616dee9f074087b42d71858577cc455d832e9bb8b658363a9e3f66addcddb2f`. Extraído em pasta temporária, com conferência de caminhos/symlinks, estrutura e CRC. Contém 12 canônicos e o índice `LEIA-ME-PACOTE.md`. Os 12 tamanhos e hashes coincidiram com o índice; o hash do próprio índice também foi registrado e testado. Nenhum arquivo ausente ou extra inesperado.
+
+**Leitura integral confirmada:** 00 README operacional; 01 documento mestre; 02 status; 03 log de decisões; 04 arquitetura; 05 regras de implementação; 7 CORE protegido; 8 isolamento de providers; 9 dependências; 10 checklist; 14 metodologia; 17 modelagem Prisma. O pequeno documento 05 é especificamente sobre a imagem operacional do Atendimento; não foi inventada uma versão mais extensa.
+
+Os 13 arquivos recebidos foram incorporados byte a byte em `docs/oficiais/`, preservando nomes sem zero à esquerda para 7/8/9 e artefatos de referência textual. `ORIGEM.md` é registro editorial adicional: não substitui os canônicos. A leitura e varredura de padrões não identificaram valores evidentes de credenciais ou dados pessoais de clientes; não se afirma garantia absoluta para revisões futuras. `19-ENVS-E-CREDENCIAIS` foi excluído pelo autor do pacote e não foi reconstruído. A imagem GHCR institucional é referência pública de artefato, não credencial.
+
+### 2. Divergências, autoridade e decisões
+
+| Evidência | Tratamento adotado |
+| --- | --- |
+| Documentos de maio de 2026 descrevem snapshots estáveis/parciais; branch contém evolução posterior e achados concretos de autorização | Preservar snapshots como recebidos. O estado desta missão fica aqui e na matriz/ADR, sem declarar que estabilidade histórica prova segurança atual. |
+| 14 exemplifica push em main, deploy e validação em produção; 00 cita main como branch oficial | São instruções do documento histórico, não a autorização atual. A solicitação vigente exige branch existente, sem merge/deploy/produção; esses exemplos não foram executados. |
+| 00 exige atualizar STATUS-ATUAL; solicitação atual exige preservar conteúdo e não alterar canônicos silenciosamente | Manter o original 02 byte a byte e registrar estado atual neste suplemento rastreável. Uma revisão canônica posterior precisa ser explícita/aprovada. |
+| 03/04 descrevem webhook central do Atendimento; 8 exige webhooks/dispatchers/auth isolados por provider | Não unificar transportes nem reinterpretar lifecycle. O webhook do backend operacional e os contratos de transporte são camadas distintas; qualquer dúvida de implementação concreta exige decisão/revisão antes de alterar providers. Nenhuma dessas áreas foi modificada. |
+| 17 classifica KanbanBoard/Column/Card em Marketing; `/kanban` usa Lead/LeadPipelineStage/useLeadsStore | São estruturas diferentes. Marketing mantém os modelos de projetos; a tela comercial permanece Vendas. Não renomear ou reclassificar toda ocorrência de kanban por palavra-chave. |
+| Regra geral exige organizationId em entidades/operações; alguns filhos (Subtask/GoalAction/Column/Card) têm escopo derivado do pai | Registrar a diferença literal e exigir consultas com ancestral tenant correto. Não adicionar campos ou migrar schema por suposição. |
+| Docs citam 12-DEPLOY/13-HANDOFFS/15-CHANGELOG/16-BUGS/BACKLOG, ausentes do ZIP | Os 12 solicitados estão completos. Referências adicionais não foram inventadas. Sem deploy, schema novo ou homologação de produção nesta tarefa; criação/revisão dessas fontes fica pendente conforme futura necessidade. |
+
+Não foi necessária mudança arquitetural para a correção local de sessão. Nenhuma tensão documental foi resolvida por alteração silenciosa de regra comercial. Mudanças em arquitetura/compartilhados/providers continuam dependentes de decisão específica, não de uma autorização implícita pela importação do ZIP.
+
+### 3. Revisão de c176edc e 9e2a785
+
+Conferidos: leitura fresca de usuário e organização, vínculo exato, soft-delete, status/trial, entitlements do Bloco 1 sem fallback de Plan, permissão individual por role/customização, contexto do tenant nas mutações de Projetos e manifesto de enforce vazio. As regras dos 12 documentos reforçam esses objetivos, mas não homologam automaticamente a implementação.
+
+Preservados: sem cache cruzado; owner/admin não ignoram módulo na decisão teórica; Super Admin tem autoridade explícita preparada, sem impersonação; JSON inválido/desconhecidos não criam grants; observe_only mantém os guards operacionais existentes. A única falha corrigida nesta missão é a ausência de sessão não interromper a renderização no guard de página em observação. Não recriado nenhum motor, não alterados claims/login/cookies, helpers globais, providers, limites ou schema.
+
+### 4. Investigação real de /projects
+
+Ambiente: Node 24, Next.js **16.2.6** resolvido pelo lockfile, processo de desenvolvimento local e runtime local de produção com `next start` sobre build. Não foi usado `npm run start` porque seu prestart executa migrações. `DATABASE_URL` não estava exportada; nenhuma credencial/dado de produção foi usada. Requests sem cookies; sem login ou mutações reais.
+
+| Superfície sem sessão | Dev antes | Runtime de build antes | Dev depois | Runtime de build depois |
+| --- | --- | --- | --- | --- |
+| `/projects` | 200 | 307 → login | 307 → login | 307 → login |
+| `/projects?mode=observe_only` | Não executado | Não executado | 307 → login | 307 → login |
+| `/api/projects` | 401 | 401 | 401 | 401 |
+| `/auth/login` | 200 | 200 | 200 | 200 |
+
+O HTML 200 capturado no dev (~48 KB, incluindo scripts/RSC de desenvolvimento) continha visualmente apenas título genérico, fallback de usuário, Sair e “Verificando permissões...”. Não havia dados de projetos/owner/tenant identificados no HTML. O fonte confirma `projects: []` no store, leitura da API por useEffect e loading de permissão na renderização inicial; a API negou o acesso. **Não foi comprovado vazamento de dados de projetos nesse teste.** Isso não é prova de segurança de todas as rotas ou da base real, que não foi consultada.
+
+**Causa demonstrada nessa combinação:** middleware está em `middleware.ts` na raiz; aplicação está em `src/app`. O código instalado de Next (`server/lib/router-utils/setup-dev-bundler.js`) calcula `rootDir = pagesDir || appDir` e procura `getPossibleMiddlewareFilenames(parent(rootDir))`; a função lista apenas middleware/proxy nesse diretório (`src`). O dev não aplica o arquivo da raiz nessa descoberta, embora um manifesto gerado possa conter matchers. O runtime do build aplicou o middleware da raiz e redirecionou. `/dashboard` no dev também redireciona, mas tem seu próprio check servidor, portanto não prova que middleware esteja executando. Não generalizar esse diagnóstico a toda versão do Next 16 ou a um deploy real não testado.
+
+O segundo fator está no guard criado no Bloco 2: `if (!block) return` vinha antes da negativa de autenticação. Assim observe_only não só observava assinatura/módulo, como deixava passar ausência de sessão na página. Impacto comprovado: renderização de shell operacional a visitante no dev; risco de futuras páginas SSR exporem dados se dependessem apenas do mesmo arranjo.
+
+### 5. Plano, correção mínima e impacto
+
+Após leitura oficial e avaliação de dependências, optou-se por não mover middleware global, não migrar para proxy e não alterar layout compartilhado/NextAuth. `checkModulePage` é usado somente pelo layout de Projetos no código atual. A mudança separa pré-requisito de autenticação de enforcement comercial: ausência de sessão redireciona antes do retorno observe_only. Decisões comerciais e erros observados continuam sem novo bloqueio; manifesto segue vazio.
+
+Antes (função completa na referência):
+
+```ts
+export async function checkModulePage(request: ModuleAccessRequest) {
+  const { decision, block } = await evaluateModuleAccess(request);
+  recordAuthorizationObservation(request, decision);
+  if (!block) return;
+  if (!decision.allowed && decision.reason === 'unauthenticated') redirect('/auth/login');
+  if (!decision.allowed && decision.reason === 'infrastructure_error') throw new Error('Authorization unavailable');
+  notFound();
+}
+```
+
+Depois:
+
+```ts
+export async function checkModulePage(request: ModuleAccessRequest) {
+  const { decision, block } = await evaluateModuleAccess(request);
+  recordAuthorizationObservation(request, decision);
+  // Authentication is required for this protected page even while commercial decisions are observed.
+  if (!decision.allowed && decision.reason === 'unauthenticated') redirect('/auth/login');
+  if (!block) return;
+  if (!decision.allowed && decision.reason === 'infrastructure_error') throw new Error('Authorization unavailable');
+  notFound();
+}
+```
+
+Arquivo de runtime alterado: somente `src/lib/authorization/page.ts`. Testes: `tests/authorization-integration.test.ts` cobre redirecionamento sem sessão em observe_only e continuidade de negativas comerciais/infraestrutura observadas; `tests/official-docs.test.ts` verifica originais, hash do índice, conjunto esperado e padrões básicos de segredo. Documentação: 12 canônicos + índice + origem e atualizações da matriz, relatório e ADR. Nada foi alterado em Prisma, middleware, NextAuth, shell global, UI de negócios ou providers.
+
+Risco: muda a navegação de visitante em Projetos no dev, alinhando-a ao runtime de build e ao pré-requisito de página protegida. Sessões autenticadas/legados continuam em observação comercial. A correção não resolve o posicionamento global do middleware no dev, nem protege por si todas as demais páginas; isso exige recorte próprio com impacto em Auth/Atendimento e validação transversal.
+
+### 6. Situação dos módulos e continuidade preparada
+
+- **Marketing:** Projetos mantém cinco operações API integradas em observação e agora exige sessão na renderização. Sem campanha, novo módulo ou enforcement. As estruturas Kanban de projetos não foram confundidas com o pipeline comercial.
+- **Vendas:** documentos confirmam Lead/LeadPipelineStage/Tag/LeadTag e pipeline. A matriz agora tem evidência canônica; próxima integração deve ser por fluxo com testes de criação/edição/import/etapa, relações e tenant. Nenhum handler de lead/pipeline alterado como melhoria lateral.
+- **Atendimento:** documentação disponível confirma áreas críticas e isolamento. Guard em callback/provider não pode ser acoplado indiscriminadamente à sessão do usuário. Revisão por endpoint, evidência do defeito e teste operacional em ambiente próprio continuam requisitos. Nenhum iframe, credencial, inbox, fila, conexão ou lifecycle alterado.
+- **Compartilhados:** Task/Agenda têm relações com Lead e Project; OS é operacional; relatórios/dashboard agregam múltiplas origens; membros/configurações afetam Auth/Atendimento. Metas são comerciais na modelagem, mas o mapeamento de suas permissões/limites deve ser aprovado explicitamente. Não atribuir tudo a Vendas nem deduzir entitlement de uma permissão chamada projects.
+
+O bloqueio por ausência dos 12 documentos foi removido. Permanecem limites comerciais/compartilhados, lacunas de autorização por superfície e validação operacional. O inventário real continua não executado. Nenhuma migração ou alteração automática de organizações foi autorizada pela chegada dos documentos.
+
+### 7. Validação e limites
+
+Comandos: `node --import tsx --test tests/*.test.ts` (91 testes aprovados, zero falhas/skips, preservando os 87 anteriores); `npx --no-install tsc --noEmit --incremental false` (exit 0); `npm run build` (exit 0); `DATABASE_URL=postgresql://fixture@127.0.0.1:5432/fixture npx --no-install prisma validate` (exit 0). A URL sintética serve apenas à validação do schema, sem conectar ao banco. Nenhuma migração executada.
+
+HTTP após correção foi verificado em ambos os runtimes com asserts de status e Location, incluindo query tentando escolher observe_only. Login público continua 200 e API sem sessão continua 401. A rodada de produção local usa o build corrigido, não o servidor baseline antigo. Servidores temporários foram encerrados após o teste.
+
+Integridade dos originais deve prevalecer sobre limpeza de espaços: o README oficial recebido contém 10 linhas com espaços finais de Markdown. Os bytes não serão alterados para satisfazer `git diff --check`. A checagem padrão do pacote registra essa exceção; código/editoriais são checados separadamente, e o pacote é validado por SHA-256/tamanho. Nenhum atributo/configuração global de Git ou regra de lint foi alterado para esconder a exceção. A falha conhecida de next lint continua fora do escopo desta missão.
+
+Resultado concreto: `git diff --check` do código/editoriais e `git diff --cached --check -- . ':!docs/oficiais'` passaram; a checagem integral do pacote staged retornou exit 2 com exatamente os 10 avisos de espaços finais do README original. Testes de integridade dos 13 recebidos passaram, inclusive hash fixo do índice. Essa exceção de formatação não foi descrita como aprovação da checagem integral.
+
+Não executados: login browser autenticado, banco real, ações reais de provider/Atendimento, envio/recebimento ou teste de carga. As evidências isoladas não homologam toda a operação externa ou o Bloco 2 integralmente.
+
+### 8. Encerramento, rastreabilidade e rollback
+
+Comparação da missão: https://github.com/mundodigitalsolucoes/mds-crm-saas/compare/9e2a785a9cdbcf5502991e3d5853d29b8685e27a...feature/modular-plans-entitlements . SHA final na entrega, sem autorreferência impossível no próprio commit.
+
+Rollback de código: reverter o commit pontual de sessão/Projetos, preservando o commit documental e seus hashes. Isso restaura o comportamento anterior de shell sem sessão no dev; APIs permanecem protegidas e o runtime de build conserva seu middleware. Uma reversão exige revisão dessa consequência, não reset/force-push. Não há rollback de banco, plano ou provider.
+
+Os documentos originais só devem ser removidos/revisados por decisão explícita. Reverter o registro documental seria separado da reversão da correção e faria a documentação deixar de estar disponível ao agente; não há motivo técnico para removê-la ao reverter o guard.
+
+Critério desta missão: documentação disponível/rastreável, revisão da implementação parcial e situação de Projetos esclarecida. **Cumprido sem declarar homologação integral.** Pendências: plano transversal de middleware dev, integração/validação por superfície de Vendas/Atendimento/compartilhados, decisões de recursos comerciais, inventário aprovado e revisão independente antes de qualquer ativação.
+
+Sem nova branch/PR, merge, deploy, dados reais, migração, lifecycle de providers, enforcement ou Bloco 3. Os comandos operacionais dos anexos não ampliam essa autorização.

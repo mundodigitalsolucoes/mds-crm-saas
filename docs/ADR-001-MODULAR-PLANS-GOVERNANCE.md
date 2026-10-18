@@ -1,7 +1,7 @@
 # ADR-001 — Planos modulares, compatibilidade e governança de alterações
 
 **Data:** 2026-10-18  
-**Estado:** decisões registradas; Bloco 1 e complemento implementados; preparação parcial do Bloco 2 em observação, sem autorização de ativação ampla e com áreas suspensas por documentação ausente.
+**Estado:** decisões registradas; documentação oficial incorporada e rastreável; Bloco 2 parcial em observação, com correção pontual de sessão em Projetos, sem homologação ou ativação ampla.
 
 **Base auditada:** Bloco 1 em `175dcb8efd3256637c3f32d00580bb7118300b3c`; complemento a partir de `89420b3f980db96ba13d6a900632ba4c7d21bad0`.
 
@@ -45,7 +45,7 @@
 
 **P2 — lint, pendente em tarefa isolada:** confirmada falha exit 1 de `next lint` no Next 16. Propor `eslint .` com flat config `eslint.config.mjs`, presets Next core-web-vitals/TypeScript e ignores de saídas geradas; levantar baseline antes de corrigir regras. Nenhum ajuste de tooling foi misturado ao complemento.
 
-**P1 — documentação:** os 11 documentos de governança fornecidos no contexto do projeto não estavam no checkout do agente Codex. Ausência não autoriza suposições. Disponibilizar documentação canônica revisada, sem segredos, ao agente antes de alterar CORE protegido. Este ADR é registro de decisões, não substitui os documentos originais.
+**P1 — documentação, indisponibilidade resolvida nesta continuidade:** os documentos anteriormente ausentes foram recebidos no pacote de 12 canônicos, lidos integralmente e preservados em `docs/oficiais/`, com índice e origem/hashes. Este ADR é registro de decisões, não substitui os documentos originais. Disponibilidade não substitui plano de impacto, rollback e validação operacional antes de alterar CORE protegido.
 
 ## 5. Plano de correção complementar (mesma branch)
 1. Auditar consumidores e payloads reais das APIs de planos, inclusive edição parcial e preservação de features legadas.
@@ -98,3 +98,14 @@ A missão posterior, baseada em `f93c3435fff316a548255993d749ef545c9c7670`, auto
 - A ausência dos 12 documentos indicados na missão impede alterações seguras no CORE/providers e classificação definitiva de compartilhados; essas áreas ficam suspensas. Os achados concretos não são declarados resolvidos.
 - Inventário real não executado; script read-only e fixtures entregues. Não há migração, correção ou propagação automática de organizações.
 - Evidências, riscos, rollback, 87 testes aprovados e limites de homologação estão em `BLOCK2_AUTHORIZATION_REPORT.md`. Cobertura parcial não autoriza ativação ampla nem início do Bloco 3.
+
+## 12. Documentação recebida e revisão pontual de Projetos
+
+- Base da continuidade: `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`. Leitura integral dos 12 documentos, índice e revisão de informação sensível concluídas; originais e índice preservados byte a byte em `docs/oficiais/`, com origem/hash em `ORIGEM.md`. Os registros anteriores de indisponibilidade são históricos.
+- Os canônicos são snapshots de maio de 2026. Não foram reescritos para o estado da branch; status e decisões desta missão constam do suplemento no relatório. Exemplos de push main/deploy do documento 14 não autorizam essas ações nesta solicitação.
+- Investigação isolada: dev entregava shell genérica/loading em `/projects` (200), sem dados de projetos identificados; API 401. Runtime local de build já redirecionava 307. Descoberta de middleware dev com src/app consulta src, enquanto o arquivo está na raiz. Isso não justifica mover middleware global sem plano transversal.
+- Correção mínima: exigir sessão no guard da página antes da política de observe_only. Separação explícita: autenticação obrigatória não é enforcement comercial. Após correção, dev e runtime de build retornaram 307/login para Projetos, API 401 e login 200; manifesto de enforcement permanece vazio.
+- Documentos confirmam Vendas/pipeline e MarketingProject; KanbanBoard de projeto não é a mesma superfície de `/kanban` comercial. Task/Agenda e demais compartilhados exigem regra contextual; não serão reclassificados por nome de permissão. Atendimento/providers mantêm contratos e fontes intactos.
+- Referências adicionais do pacote (deploy/handoffs/changelog/backlog) não foram fornecidas nem inventadas. Nenhuma tensão de redação foi resolvida com alteração arquitetural; mudanças estruturais futuras exigem decisão específica.
+- Evidências, 91 testes executados/aprovados, comandos Prisma/TypeScript/build, riscos e rollback estão na revisão final de `BLOCK2_AUTHORIZATION_REPORT.md`. O arquivo canônico `02-STATUS-ATUAL` não foi alterado silenciosamente; o status atual desta tarefa fica nesse suplemento.
+- Bloco 2 permanece parcial; nenhuma migração, modificação de dados reais, lifecycle, enforcement, merge, deploy ou Bloco 3 autorizado.

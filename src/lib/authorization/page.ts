@@ -6,8 +6,9 @@ import type { ModuleAccessRequest } from './authorize';
 export async function checkModulePage(request: ModuleAccessRequest) {
   const { decision, block } = await evaluateModuleAccess(request);
   recordAuthorizationObservation(request, decision);
-  if (!block) return;
+  // Authentication is required for this protected page even while commercial decisions are observed.
   if (!decision.allowed && decision.reason === 'unauthenticated') redirect('/auth/login');
+  if (!block) return;
   if (!decision.allowed && decision.reason === 'infrastructure_error') throw new Error('Authorization unavailable');
   notFound();
 }
