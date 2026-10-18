@@ -1,11 +1,11 @@
 # Bloco 2 — Matriz de acesso e inventário de superfícies
 
-Base auditada: `f93c3435fff316a548255993d749ef545c9c7670`. Esta matriz é inventário de código, não homologação de segurança de todas as rotas. Nenhuma consulta de produção foi executada.
+Base da matriz original: `f93c3435fff316a548255993d749ef545c9c7670`. Revisão documental e HTTP atual: `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`, com os 12 canônicos recebidos em `docs/oficiais/` e origem preservada em `ORIGEM.md`. Esta matriz é inventário de código, não homologação de segurança de todas as rotas. Nenhuma consulta de produção foi executada.
 
 ## Decisões e limites de cobertura
 
 - Marketing: `MarketingProject` possui tabela própria e APIs/página de projetos. Integração server-side aditiva somente em `/projects`, `/api/projects` e `/api/projects/[id]`, inicialmente observe_only.
-- Vendas: leads, tags de leads, importação e estágios de pipeline são mapeáveis por código. Alterações no pipeline aguardam documentos de CORE indispensáveis; não modificar handlers/Sidebar como atalho.
+- Vendas: leads, tags de leads, importação e estágios de pipeline são mapeáveis por código. Documentos oficiais confirmam que o pipeline é CORE crítico; sua integração continua dependente de plano por fluxo e testes operacionais, sem modificar handlers/Sidebar nesta correção.
 - Tarefas, agenda, OS, metas, comentários e anexos têm relações/uso compartilhados. A permissão `projects` em algumas entidades não prova que todos os seus dados sejam exclusivamente Marketing. O bloco não amplia a classificação por suposição.
 - Atendimento e providers têm permissões operacionais distintas de `integrations`; callbacks/webhooks não devem receber guards de sessão de usuário indiscriminadamente. Nenhum lifecycle, inbox ou provider será alterado.
 - Dashboard, usuários, notificações, billing, branding, ajuda e relatórios são plataforma/compartilhados; exigem decisão por recurso antes de enforcement comercial. Branding por tenant ainda requer revisão de governança.
@@ -43,36 +43,36 @@ Cobertura de descoberta: 116 arquivos route.ts. Colunas de guard/scope são evid
 | `/api/admin/users` | GET | Administração explícita | Admin JWT; não é bypass de tenant | Legado; planos regressão preservada |
 | `/api/agenda/[id]` | GET, PUT, DELETE | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/agenda` | GET, POST | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
-| `/api/atendimento/agentes` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/agentes/sync` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/email/google/authorize` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/email` | GET, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/providers` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/whatsapp-cloud/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/canais/whatsapp-cloud/delete` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/equipes/[teamId]/members` | GET, POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/equipes/[teamId]` | DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/equipes` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/inboxes/[inboxId]/members` | GET, POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/inboxes` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/accounts` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/callback` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/connect` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/create-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/debug-business-pages` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/debug-pages` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/debug-token` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/exchange-token` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/select-account` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/subscribe-page` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/sync-account` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/instagram/webhook` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/session-diagnostics` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/widget/agents` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/widget/provision` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/atendimento/widget` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
+| `/api/atendimento/agentes` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/agentes/sync` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/email/google/authorize` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/email` | GET, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/providers` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/whatsapp-cloud/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/canais/whatsapp-cloud/delete` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/equipes/[teamId]/members` | GET, POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/equipes/[teamId]` | DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/equipes` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/inboxes/[inboxId]/members` | GET, POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/inboxes` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/accounts` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/callback` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/connect` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/create-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/debug-business-pages` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/debug-pages` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/debug-token` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/exchange-token` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/select-account` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/subscribe-page` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/sync-account` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/instagram/webhook` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/session-diagnostics` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/widget/agents` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/widget/provision` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/atendimento/widget` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/attachments/[id]` | DELETE | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/attachments` | GET, POST | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/auth/[...nextauth]` | GET, POST | Autenticação/conta | NextAuth ou fluxo público próprio | CORE protegido; sem alteração |
@@ -90,29 +90,29 @@ Cobertura de descoberta: 116 arquivos route.ts. Colunas de guard/scope são evid
 | `/api/goals/[id]` | GET, PATCH, DELETE | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/goals` | GET, POST | Compartilhado/a classificar | Permissão existente + contexto do recurso | Não atribuir automaticamente a Vendas |
 | `/api/import` | POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
-| `/api/integrations/chatwoot/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/credentials` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/team-members` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/teams/[teamId]` | DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/chatwoot/teams` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/delete` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/finalize` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/instances` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/qrcode` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/reconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/setup-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/evolution/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp/create-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp-cloud/setup` | POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp-cloud/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
-| `/api/integrations/whatsapp-cloud/validate` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | Suspenso: documentação CORE/provider ausente |
+| `/api/integrations/chatwoot/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/credentials` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/team-members` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/teams/[teamId]` | DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/chatwoot/teams` | GET, POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/delete` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/finalize` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/instances` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/qrcode` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/reconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/setup-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/evolution/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp/connect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp/create-inbox` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp/disconnect` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp-cloud/setup` | POST, DELETE | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp-cloud/status` | GET | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
+| `/api/integrations/whatsapp-cloud/validate` | POST | Atendimento/providers | Permissões existentes; callbacks exigem revisão própria | CORE/provider: revisão específica e validação operacional pendentes |
 | `/api/kanban/stages/[key]` | PUT, DELETE | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
 | `/api/kanban/stages` | GET, POST | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
 | `/api/leads/[id]` | GET, PUT, DELETE | Vendas | leads/kanban conforme ação | Mapeado; pipeline preservado, integração pendente revisão CORE |
@@ -151,12 +151,12 @@ Cobertura de descoberta: 116 arquivos route.ts. Colunas de guard/scope são evid
 
 A shell `(app)/layout.tsx` carrega branding com sessão, mas não é guard granular. Middleware declara proteção de parte das páginas usando JWT; não cobre todas as APIs e a execução precisa de homologação. Layout de administração é client-side e depende das proteções servidor/API existentes. Não tratar menu oculto como autorização.
 
-Ressalva de execução: embora o middleware declare os matchers, GET sem sessão para `/projects` no servidor dev retornou **200**, com decisão `unauthenticated` registrada em observe_only. Não presumir bloqueio efetivo desse frontend nem extrapolar para produção. A proteção de renderização deve ser homologada após revisão do middleware/CORE.
+Revisão HTTP com documentação oficial: o 200 histórico foi reproduzido apenas no dev e continha shell genérica/loading, sem projetos no HTML capturado; o build local já redirecionava (307). A descoberta de middleware no dev com `src/app` consulta `src/middleware`, enquanto o arquivo atual está na raiz. Sem mover esse arquivo global, o guard servidor de Projetos agora exige sessão antes da política comercial. Resultado final sem sessão: página 307, API 401, login 200 em dev e build local. Observe_only continua aplicável às decisões comerciais, não à ausência de identidade.
 
 | Página | Classificação | Integração/pendência |
 | --- | --- | --- |
 | `/agenda` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
-| `/atendimento` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
+| `/atendimento` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
 | `/dashboard` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/follow-ups` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/goals` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
@@ -165,19 +165,19 @@ Ressalva de execução: embora o middleware declare os matchers, GET sem sessão
 | `/kanban` | Vendas | Mapeado, pipeline preservado |
 | `/leads` | Vendas | Mapeado, pipeline preservado |
 | `/os` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
-| `/projects` | Marketing | Novo layout servidor observe_only |
+| `/projects` | Marketing | Sessão exigida no servidor; decisões comerciais observe_only |
 | `/reports` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/settings/account` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
-| `/settings/atendimento/automacoes` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/canais/cloud-api` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/canais` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/canais/provider-lab` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/equipes` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/instagram` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/relatorios` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/respostas` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
-| `/settings/atendimento/widget` | Atendimento/providers | Alteração suspensa sem documentação indispensável |
+| `/settings/atendimento/automacoes` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/canais/cloud-api` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/canais` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/canais/provider-lab` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/equipes` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/instagram` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/relatorios` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/respostas` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
+| `/settings/atendimento/widget` | Atendimento/providers | Documentação recebida; alteração exige revisão operacional específica |
 | `/settings/billing` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/settings/branding` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
 | `/settings/integrations` | Plataforma/compartilhado | Classificação e regra por recurso pendentes |
@@ -208,7 +208,7 @@ Ressalva de execução: embora o middleware declare os matchers, GET sem sessão
 - `api/tasks/route.ts`: relações projectId/leadId/assignedToId e contagens de entidades exigem revisão multitenant contextual; coluna organizationId isoladamente não impede associação cruzada por FK simples.
 - Projetos: GET e pré-checks por id já filtram organizationId; PUT/DELETE usam id sozinho depois do pré-check. Neste bloco a mutação final também será condicionada ao tenant, sem alterar campos de negócio.
 
-Nenhuma das lacunas suspensas é declarada corrigida. A documentação canônica de CORE/providers e regras compartilhadas é requisito para integrar essas áreas; a cobertura parcial impede ativação segura mesmo se a nova função isolada passar nos testes.
+Nenhuma das lacunas suspensas é declarada corrigida. A documentação canônica agora está disponível; regras contextuais, revisão específica e validação operacional são requisitos para integrar essas áreas; a cobertura parcial impede ativação segura mesmo se a nova função isolada passar nos testes.
 
 ## Matriz explícita de defaults por role
 
@@ -230,3 +230,21 @@ V=view, C=create, E=edit, D=delete; —=nenhuma ação. Permissões customizadas
 | `atendimento` | VCED | VCED | VCED | V |
 
 Rota pública fora de `/api`: `/widget/loader.js` (`src/app/widget/loader.js/route.ts`), GET de script público. Preservada; não recebe guard de sessão. O inventário cobre 116 arquivos em `/api` e esse endpoint público adicional.
+
+## Confronto com os 12 documentos oficiais recebidos
+
+Leitura integral concluída; nomes, origem e SHA-256 em `oficiais/ORIGEM.md` e no índice recebido. O pacote não é atualizado silenciosamente para o estado atual do código. Os bloqueios abaixo passaram de ausência de documento para dependências concretas de decisão/validação.
+
+| Domínio/recurso | Evidência oficial + código | Continuidade segura nesta missão | Dependência restante |
+| --- | --- | --- | --- |
+| Atendimento | 01/04/7/8/9: iframe/backend operacional, 1 número/1 inbox, providers separados | Auditar contratos e preservar os fontes; nenhuma alteração de iframe, credenciais, dispatcher ou lifecycle | Revisão por endpoint e ambiente externo de teste homologável; autorização não deve substituir callbacks/webhooks por sessão de usuário |
+| Vendas | 01/03/9/17: Lead, LeadPipelineStage, Tag/LeadTag e pipeline comercial; `/kanban` importa useLeadsStore | Mapeamento confirmado de leads/import/tags/estágios; plano de integração com testes por fluxo | PIPELINE é CORE alto; faltam execução operacional isolada e aprovação do recorte antes de inserir guards em todos os handlers |
+| Marketing | 17: MarketingProject e estruturas KanbanBoard/Column/Card de execução | Manter integração existente de Projetos e corrigir somente a ausência de sessão na página | Não confundir esses modelos com a tela comercial `/kanban`; não ativar enforcement ou criar campanhas |
+| Tasks/Subtasks e Agenda | 9/17 + Prisma: relações com lead e projeto; filhos herdam escopo do pai | Documentar como compartilhados/contextuais | Aprovar regra por entidade/relacionamento e testar criação/edição/filtros antes de guards comerciais |
+| OS/ServiceOrder | 17: execução operacional, vínculo opcional a projeto | Manter classificação operacional, sem atribuição automática a Vendas | Decisão de acesso compartilhado/por vínculo e testes de regressão |
+| Metas | 17: metas comerciais (Goal/GoalAction) | Registrar domínio comercial confirmado, sem supor que a permissão operacional projects equivale ao entitlement marketing | Aprovar mapeamento de permissão/entitlement e limites legados; não reclassificar em código silenciosamente |
+| Dashboard/Relatórios/Notificações/Membros/Configurações | 9: múltiplas dependências e Auth/Users como alto impacto | Plataforma/compartilhados; regras atuais preservadas | Composição de autorização por origem de dado, sessão e contexto; nenhum guard global indiscriminado |
+
+As regras gerais de isolamento não tornam obrigatório adicionar organizationId a cada model filho: no schema atual Subtask/GoalAction/Column/Card dependem de entidades pai. Toda operação deve demonstrar escopo pelo ancestral correto; qualquer alteração estrutural de persistência exige decisão própria, conforme 17. Nenhuma FK ou model foi alterado aqui.
+
+A indisponibilidade documental original foi resolvida. Isso não homologa integrações externas, elimina as lacunas de IDOR já listadas ou autoriza migração/enforcement. A matriz não amplia a cobertura de código além de Projetos nesta missão.

@@ -142,6 +142,28 @@ test('server page guard observes without changing rendering, and supports future
   await assert.rejects(page.checkModulePage({ module: 'marketing', permission: 'projects', action: 'view' }), /not-found/);
 });
 
+test('server page guard requires a session even in observe_only, without enabling commercial enforcement', async () => {
+  const page = loadServerModule<{ checkModulePage: (request: ModuleAccessRequest) => Promise<void> }>(
+    new URL('../src/lib/authorization/page.ts', import.meta.url), {
+      './server': { evaluateModuleAccess: async () => authorizationEffect({ allowed: false, reason: 'unauthenticated', status: 401 }, 'observe_only') },
+      './guards': { recordAuthorizationObservation: () => {} },
+      'next/navigation': { redirect: (path: string) => { throw new Error('redirect:' + path); }, notFound: () => assert.fail('Unauthenticated must go to login') },
+    });
+  await assert.rejects(page.checkModulePage({ module: 'marketing', permission: 'projects', action: 'view' }), /redirect:\/auth\/login/);
+});
+
+test('authenticated legacy commercial and infrastructure denials remain observed without a new page block', async () => {
+  for (const reason of ['module_not_contracted', 'inactive_subscription', 'insufficient_permission', 'infrastructure_error'] as const) {
+    const page = loadServerModule<{ checkModulePage: (request: ModuleAccessRequest) => Promise<void> }>(
+      new URL('../src/lib/authorization/page.ts', import.meta.url), {
+        './server': { evaluateModuleAccess: async () => authorizationEffect({ allowed: false, reason, status: reason === 'infrastructure_error' ? 503 : 403 }, 'observe_only') },
+        './guards': { recordAuthorizationObservation: () => {} },
+        'next/navigation': { redirect: () => assert.fail('No commercial enforcement'), notFound: () => assert.fail('No commercial enforcement') },
+      });
+    await page.checkModulePage({ module: 'marketing', permission: 'projects', action: 'view' });
+  }
+});
+
 test('enforced guard cannot apply a successful authorization from another user/tenant to the legacy operation', async () => {
   const guards = loadServerModule<{ checkModulePermission: (request: ModuleAccessRequest) => Promise<{ allowed: boolean; errorResponse: Response }> }>(
     new URL('../src/lib/authorization/guards.ts', import.meta.url), {
