@@ -97,6 +97,10 @@ export async function POST(request: Request) {
       (existingUser.deletedAt !== null || existingUser.organization.deletedAt !== null)
 
     if (canReactivate) {
+      return NextResponse.json({ error: 'Conta anteriormente desativada. Entre em contato com o suporte para reativação.' }, { status: 409 })
+    }
+
+    if (false) {
       result = await prisma.$transaction(async (tx) => {
         const organization = await tx.organization.update({
           where: { id: existingUser.organizationId },
