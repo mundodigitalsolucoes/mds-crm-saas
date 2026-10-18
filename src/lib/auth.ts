@@ -5,6 +5,7 @@
 
 import { NextAuthOptions, Session } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
@@ -28,6 +29,9 @@ type SessionWithFlags = Session & {
 
 export const authOptions: NextAuthOptions = {
   providers: [
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [GoogleProvider({ clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET })]
+      : []),
     CredentialsProvider({
       name: 'credentials',
       credentials: {
@@ -85,8 +89,27 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account }) {
+      if (user && account?.provider === 'google') {
+        const email = user.email?.trim().toLowerCase();
+        const crmUser = email ? await prisma.user.findUnique({
+          where: { email }, select: {
+            id: true, organizationId: true, role: true, permissions: true, deletedAt: true,
+            organization: { select: { plan: true, planStatus: true, trialEndsAt: true, deletedAt: true } },
+          },
+        }) : null;
+        if (!crmUser || crmUser.deletedAt || crmUser.organization.deletedAt) {
+          token.banned = true;
+          return token;
+        }
+        token.id = crmUser.id;
+        token.organizationId = crmUser.organizationId;
+        token.role = crmUser.role;
+        token.permissions = crmUser.permissions;
+        token.plan = crmUser.organization.plan;
+        token.planStatus = crmUser.organization.planStatus;
+        token.trialEndsAt = crmUser.organization.trialEndsAt?.toISOString() || null;
+      } else if (user) {
         const authUser = user as AuthorizedUserPayload;
 
         token.id = authUser.id;
@@ -179,7 +202,13 @@ export const authOptions: NextAuthOptions = {
 
       return `${baseUrl}/dashboard`;
     },
-    async signIn() {
+    async signIn({ user, account, profile }) {
+      if (account?.provider !== 'google') return true;
+      const verified = (profile as { email_verified?: boolean } | undefined)?.email_verified === true;
+      const email = user.email?.trim().toLowerCase();
+      if (!verified || !email) return false;
+      const crmUser = await prisma.user.findUnique({ where: { email }, select: { deletedAt: true, organization: { select: { deletedAt: true } } } });
+      if (!crmUser || crmUser.deletedAt || crmUser.organization.deletedAt) return false;
       return true;
     },
   },
