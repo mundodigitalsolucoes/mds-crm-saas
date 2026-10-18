@@ -6,9 +6,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { jwtVerify } from 'jose';
 
-const ADMIN_JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET || 'super-admin-secret-key'
-);
+function getAdminJwtSecret() {
+  const secret = process.env.ADMIN_JWT_SECRET;
+  if (!secret || secret.trim().length < 32 || secret === 'super-admin-secret-key') return null;
+  return new TextEncoder().encode(secret);
+}
 
 const PLAN_EXEMPT_ROUTES = [
   '/settings',
@@ -57,7 +59,13 @@ export default async function middleware(req: NextRequest) {
     }
 
     try {
-      await jwtVerify(adminToken, ADMIN_JWT_SECRET);
+      const secret = getAdminJwtSecret();
+      if (!secret) throw new Error('Admin signing secret not configured');
+      const { payload } = await jwtVerify(adminToken, secret, { algorithms: ['HS256'] });
+      if (payload.role !== 'superadmin' || typeof payload.id !== 'string' || !payload.id) {
+        throw new Error('Invalid admin identity');
+      }
+      // Middleware is only a preliminary filter; API authorization rechecks the DB.
       return NextResponse.next();
     } catch {
       const response = NextResponse.redirect(new URL('/admin/login', req.url));
