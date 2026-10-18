@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { FEATURE_CATALOG, featuresOfKind, type FeatureKind } from '@/lib/entitlements/catalog';
+import { parseCommercialFeatures } from '@/lib/entitlements/features';
 import {
   CreditCard,
   Plus,
@@ -36,36 +38,21 @@ interface Plan {
   };
 }
 
-const CHANNEL_FEATURES = [
-  { key: 'site_widget', label: 'Widget do Site' },
-  { key: 'instagram_channel', label: 'Instagram' },
-  { key: 'email_channel', label: 'E-mail' },
-  { key: 'google_business_channel', label: 'Google Business' },
-];
-
-const MODULE_FEATURES = [
-  { key: 'atendimento', label: 'Atendimento' },
-  { key: 'vendas', label: 'Vendas' },
-  { key: 'marketing', label: 'Marketing' },
-  { key: 'integrations', label: 'Integrações' },
-  { key: 'ai_assistant', label: 'Assistente IA' },
-  { key: 'advanced_reports', label: 'Relatórios Avançados' },
-];
-
-const ADDON_FEATURES = [
-  { key: 'extra_whatsapp_addon', label: 'Número extra de WhatsApp' },
-  { key: 'extra_user_addon', label: 'Usuário extra' },
-  { key: 'extra_ai_addon', label: 'Créditos extras de IA' },
-  { key: 'priority_support', label: 'Suporte prioritário' },
-  { key: 'white_label', label: 'White Label' },
-];
+// One commercial catalog; WhatsApp retains its existing numeric control below.
+function commercialOptions(kind: FeatureKind) {
+  return featuresOfKind(kind)
+    .filter((id) => FEATURE_CATALOG[id].availability === 'available')
+    .map((key) => ({ key, label: FEATURE_CATALOG[key].label }));
+}
+const CHANNEL_FEATURES = commercialOptions('channel').filter((item) => item.key !== 'whatsapp');
+const MODULE_FEATURES = commercialOptions('module');
+const CAPABILITY_FEATURES = commercialOptions('capability');
+const ADDON_FEATURES = commercialOptions('addon');
 
 function parseFeatures(features: string): string[] {
-  try {
-    return JSON.parse(features);
-  } catch {
-    return [];
-  }
+  const parsed = parseCommercialFeatures(features);
+  // Preserve unknown identifiers when an existing plan is edited by an older UI.
+  return [...parsed.features, ...parsed.unknown];
 }
 
 function formatPrice(price: number, interval: string) {
@@ -141,6 +128,10 @@ export default function PlansPage() {
   };
 
   const openEditModal = (plan: Plan) => {
+    if (parseCommercialFeatures(plan.features).status === 'invalid') {
+      alert('Features inválidas neste plano. Revise a configuração antes de editar para evitar perda de dados.');
+      return;
+    }
     setEditingPlan(plan);
     setForm({
       name: plan.name,
@@ -303,6 +294,7 @@ export default function PlansPage() {
             const features = parseFeatures(plan.features);
             const channelLabels = CHANNEL_FEATURES.filter((item) => features.includes(item.key)).map((item) => item.label);
             const moduleLabels = MODULE_FEATURES.filter((item) => features.includes(item.key)).map((item) => item.label);
+            const capabilityLabels = CAPABILITY_FEATURES.filter((item) => features.includes(item.key)).map((item) => item.label);
             const addonLabels = ADDON_FEATURES.filter((item) => features.includes(item.key)).map((item) => item.label);
 
             return (
@@ -408,6 +400,18 @@ export default function PlansPage() {
                       {moduleLabels.length > 0
                         ? moduleLabels.map((label) => <span key={label}>{featurePill(label)}</span>)
                         : <span className="text-xs text-gray-500">Nenhum módulo extra</span>}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-500 mb-2">
+                      <Sparkles size={14} />
+                      Capacidades
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {capabilityLabels.length > 0
+                        ? capabilityLabels.map((label) => <span key={label}>{featurePill(label)}</span>)
+                        : <span className="text-xs text-gray-500">Sem capacidades opcionais</span>}
                     </div>
                   </div>
 
@@ -619,6 +623,26 @@ export default function PlansPage() {
                 <h3 className="text-white font-semibold mb-3">Módulos</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {MODULE_FEATURES.map((feature) => (
+                    <label
+                      key={feature.key}
+                      className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-700/40 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.features.includes(feature.key)}
+                        onChange={() => toggleFeature(feature.key)}
+                        className="rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-300">{feature.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-700 p-4">
+                <h3 className="text-white font-semibold mb-3">Capacidades</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {CAPABILITY_FEATURES.map((feature) => (
                     <label
                       key={feature.key}
                       className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-gray-700/40 transition-colors"
