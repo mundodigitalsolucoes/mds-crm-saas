@@ -1,0 +1,50 @@
+name: C03-C04 Build Validation
+
+on:
+  push:
+    branches:
+      - feature/modular-plans-entitlements
+    paths:
+      - 'src/**'
+      - 'prisma/**'
+      - 'middleware.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'next.config.*'
+      - '.github/workflows/security-c03-c04-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Prisma, TypeScript and Next.js build (no deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://mds_ci:mds_ci@127.0.0.1:5432/mds_ci
+      NEXTAUTH_SECRET: ci-only-not-a-production-secret-0123456789
+      ADMIN_JWT_SECRET: ci-only-admin-jwt-secret-01234567890123456789
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout candidate commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Validate Prisma schema (no database connection)
+        run: npx prisma validate
+      - name: Generate Prisma client (local only)
+        run: npx prisma generate
+      - name: Check TypeScript
+        run: npx tsc --noEmit
+      - name: Build Next.js without starting server
+        run: npx next build
