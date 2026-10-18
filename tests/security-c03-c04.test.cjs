@@ -35,3 +35,20 @@ test('C03: Chatwoot manual provisioning uses shared verifier', () => {
   assert.match(route, /verifyAdminToken\(\)/);
   assert.doesNotMatch(route, /jwtVerify\(/);
 });
+
+test('C04: existing identities rejected before password hashing and side effects', () => {
+  const signup = source('src/app/api/auth/signup/route.ts');
+  const guard = signup.indexOf('if (existingUser)');
+  assert.ok(guard > -1);
+  assert.ok(guard < signup.indexOf('bcrypt.hash('));
+  assert.ok(guard < signup.indexOf('prisma.$transaction('));
+  assert.ok(guard < signup.indexOf('provisionChatwootForOrg({'));
+});
+
+test('C03: admin login and status use centralized JWT functions', () => {
+  const route = source('src/app/api/admin/auth/route.ts');
+  assert.match(route, /generateAdminToken\(/);
+  assert.match(route, /verifyAdminToken\(/);
+  assert.match(route, /setAdminCookie\(/);
+  assert.match(route, /clearAdminCookie\(/);
+});
