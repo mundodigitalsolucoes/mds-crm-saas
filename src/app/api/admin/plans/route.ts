@@ -8,7 +8,7 @@ import { parseBody, adminPlanCreateSchema } from '@/lib/validations';
 // GET - Listar todos os planos
 export async function GET() {
   const admin = await verifyAdminToken();
-  if (!admin) {
+  if (admin?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
@@ -41,12 +41,17 @@ export async function GET() {
 // POST - Criar novo plano
 export async function POST(req: NextRequest) {
   const admin = await verifyAdminToken();
-  if (!admin) {
+  if (admin?.role !== 'superadmin') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
   }
 
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
+    }
 
     const parsed = parseBody(adminPlanCreateSchema, body);
     if (!parsed.success) return parsed.response;

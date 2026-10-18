@@ -1,8 +1,10 @@
 # ADR-001 — Planos modulares, compatibilidade e governança de alterações
 
 **Data:** 2026-10-18  
-**Estado:** decisão arquitetural aprovada; Bloco 1 implementado com ressalvas; correções complementares pendentes.  
-**Base auditada:** commit `175dcb8efd3256637c3f32d00580bb7118300b3c`.  
+**Estado:** decisão arquitetural aprovada; Bloco 1 e complemento implementados; complemento aguarda homologação independente.
+
+**Base auditada:** Bloco 1 em `175dcb8efd3256637c3f32d00580bb7118300b3c`; complemento a partir de `89420b3f980db96ba13d6a900632ba4c7d21bad0`.
+
 **Escopo:** MDS CRM SaaS multi-tenant; piloto White-Label Ótica São Paulo.
 
 ## 1. Decisões oficiais
@@ -28,19 +30,20 @@
 ## 3. Contratos de canais e providers
 - O contrato futuro `ChannelEntitlementContract` usa quantidades inteiras >= 0; zero significa nenhuma conexão.
 - O campo legado `maxWhatsappInstances` aceita -1 = ilimitado, 0 = nenhum, >0 = quantidade. **Não converter -1 em 0 nem aplicar diretamente o schema futuro.**
+- Essa é a intenção administrativa. A auditoria complementar confirmou divergência preexistente: `checkLimits.ts` e a listagem Evolution usam `<= 0` como ilimitado, inclusive zero. O complemento documenta/testa essa realidade sem alterar guards/providers. Não assumir que zero bloqueia conexões no CORE atual.
 - Uma futura migração deve definir explicitamente representação de ilimitado, conversão de valores legados e limites por canal, com testes e rollback.
 - `whatsapp` como feature comercial não identifica provider nem representa uma conexão real.
 - Regra operacional oficial: **1 número = 1 inbox = 1 canal operacional**. Evolution API e Meta Cloud API mantêm autenticação, webhooks, lifecycle, sessão, fila, onboarding e dispatcher isolados.
 - Não modificar Chatwoot/Atendimento nem provisionamento no Bloco 1.
 
-## 4. Pendências confirmadas na auditoria independente
-**P1 — validação no backend:** `src/lib/validations/admin.ts` aceita `features` como string de até 5000 caracteres, sem validação semântica. Validar novos payloads no POST/PUT dos planos usando parser/catalog, sem impedir atualização de campos não relacionados em planos legados com features inválidas. Não descartar identificadores desconhecidos de listas legadas válidas silenciosamente.
+## 4. Pendências da auditoria independente e situação após o complemento
+**P1 — validação no backend, corrigida no complemento:** POST/PUT reutilizam parser/catálogo em `validations/plan-features.ts`. Formatos inválidos retornam 400; novos identificadores desconhecidos/indisponíveis são rejeitados. PUT contextual preserva identificadores legados válidos, inclusive planejados previamente listados, sem direitos operacionais e sem reserializar a string enviada. Omitir features permite edição parcial de preço/descrição/status mesmo com dados antigos inválidos. Uma lista substituta explícita pode remover identificadores; eles não são descartados silenciosamente pelo servidor.
 
-**P1 — propagação em massa:** `src/app/admin/plans/page.tsx` inicializa `propagateToOrgs: true` ao criar/editar; `PUT /api/admin/plans/[id]` faz `updateMany` nas organizações com o nome antigo do plano. Mudar padrão da interface para **false**, pedir confirmação explícita com impacto estimado antes de propagação e manter proteção no servidor. Não executar alterações de dados reais neste lote.
+**P1 — propagação em massa, corrigida no complemento:** editor usa **false** em toda abertura; opt-in exige confirmação com nome, estimativa da última contagem e aviso de substituição de features/limites. Cancelar não envia request. O servidor mantém booleano explícito e papel Super Admin; valida o snapshot efetivo antes de qualquer escrita, impedindo propagação de features malformadas. A validação aceita reparo explícito seguido de propagação na mesma chamada. Nenhuma alteração de dados reais foi executada. A contagem continua estimada e plano/updateMany não são transacionais.
 
-**P1 — limites de WhatsApp:** documentar e testar coexistência de `maxWhatsappInstances=-1` com contrato futuro não negativo; não fazer migração nem enforcement no Bloco 1.
+**P1 — limites de WhatsApp, documentados/testados no complemento:** -1/0/positivo são preservados pelo schema/editor legado; schema futuro continua rejeitando negativos. Testes caracterizam também a divergência operacional de zero acima. Sem migração, conversão ou enforcement no Bloco 1.
 
-**P2 — lint:** script `next lint` é incompatível com Next.js 16. Planejar ajuste de tooling isolado, sem ampliar escopo de autorização.
+**P2 — lint, pendente em tarefa isolada:** confirmada falha exit 1 de `next lint` no Next 16. Propor `eslint .` com flat config `eslint.config.mjs`, presets Next core-web-vitals/TypeScript e ignores de saídas geradas; levantar baseline antes de corrigir regras. Nenhum ajuste de tooling foi misturado ao complemento.
 
 **P1 — documentação:** os 11 documentos de governança fornecidos no contexto do projeto não estavam no checkout do agente Codex. Ausência não autoriza suposições. Disponibilizar documentação canônica revisada, sem segredos, ao agente antes de alterar CORE protegido. Este ADR é registro de decisões, não substitui os documentos originais.
 
@@ -67,7 +70,7 @@ A metodologia oficial exige **Auditoria → Plano → Implementação → Valida
 - Relatório de implementação: `docs/MODULAR_PLANS_BLOCK1_REPORT.md`.
 - Commit Bloco 1: `175dcb8efd3256637c3f32d00580bb7118300b3c`.
 - Registro de pendências e decisões: este ADR.
-- Próximo marco: complemento do Bloco 1; Bloco 2 **não autorizado** até nova revisão.
+- Próximo marco: homologação independente do SHA do complemento; Bloco 2 **não autorizado** até nova revisão.
 
 ## 9. Não decidido
 - Limites concretos do piloto Ótica São Paulo.
@@ -75,3 +78,12 @@ A metodologia oficial exige **Auditoria → Plano → Implementação → Valida
 - Representação persistida futura de canais e de quantidade ilimitada.
 - Política de retenção/visibilidade de dados de módulos desativados.
 - Matriz completa de rotas e APIs por módulo.
+
+## 10. Evidência do complemento e limites de escopo
+
+- 51 testes aprovados: 14 originais, 26 de handlers de API, 8 de editor e 3 de compatibilidade de limites. API/banco/autenticação simulados, sem operação de escrita real. TypeScript e build passaram; lint mantém falha preexistente documentada.
+- O editor de legado malformado permite campos administrativos, desabilita features/canais/propagação e omite features/WhatsApps no payload. Não há correção automática nem descarte do JSON antigo.
+- GET/POST/PUT/DELETE de planos exigem `role === 'superadmin'`; autenticação, sessão e tokens existentes não foram alterados.
+- Riscos preexistentes preservados: rename sem propagação deixa organizações no nome antigo; propagação não transacional; semântica operacional `<= 0`; ausência de inventário e documentação canônica. Nenhum guard comercial novo foi ligado.
+- Rollback: reverter o commit do complemento sem alterar dados, schema ou providers. O revert restaura os defaults/validação anteriores e exige revisão própria antes de publicação.
+- Arquivos, comandos, resultados e comparações: seção G de `MODULAR_PLANS_BLOCK1_REPORT.md`. Nenhuma branch/PR novo, merge commit, deploy ou Bloco 2.

@@ -1,6 +1,7 @@
 // src/lib/validations/admin.ts
 // Schemas Zod para APIs do SuperAdmin — MDS CRM
 import { z } from 'zod';
+import { planFeaturesWriteSchema, serializedPlanFeaturesSchema } from './plan-features';
 
 // ============================================
 // HELPERS
@@ -126,7 +127,7 @@ export const adminPlanCreateSchema = z.object({
   maxProjects: z.coerce.number().int().min(-1).optional().default(10),
   maxOs: z.coerce.number().int().min(-1).optional().default(20),
   maxWhatsappInstances: z.coerce.number().int().min(-1).optional().default(1),
-  features: z.string().max(5000).optional().default('[]'),
+  features: planFeaturesWriteSchema().optional().default('[]'),
 });
 
 export type AdminPlanCreateInput = z.infer<typeof adminPlanCreateSchema>;
@@ -156,7 +157,9 @@ export const adminPlanUpdateSchema = z.object({
   maxProjects: z.coerce.number().int().min(-1).optional(),
   maxOs: z.coerce.number().int().min(-1).optional(),
   maxWhatsappInstances: z.coerce.number().int().min(-1).optional(),
-  features: z.string().max(5000).optional(),
+  // Contextual validation against the current plan is done by the PUT handler.
+  // Omitted features must not prevent a partial edit of a malformed legacy plan.
+  features: serializedPlanFeaturesSchema.optional(),
   isActive: z.boolean().optional(),
   // Se true, propaga os novos limites para TODAS as orgs que usam este plano
   propagateToOrgs: z.boolean().optional().default(false),
