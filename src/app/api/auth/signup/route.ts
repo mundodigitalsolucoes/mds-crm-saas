@@ -42,8 +42,6 @@ export async function POST(request: Request) {
         ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
         : null
 
-    const hashedPassword = await bcrypt.hash(data.password, 10)
-
     const forwarded = request.headers.get('x-forwarded-for')
     const consentIp = forwarded
       ? forwarded.split(',')[0].trim()
@@ -59,6 +57,9 @@ export async function POST(request: Request) {
     if (existingUser) {
       return NextResponse.json({ error: 'Este email já está em uso' }, { status: 400 })
     }
+
+    // Avoid hashing an unaccepted password and keep new-account behavior unchanged.
+    const hashedPassword = await bcrypt.hash(data.password, 10)
 
     let result: {
       organization: {
