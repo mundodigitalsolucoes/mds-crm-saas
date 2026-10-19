@@ -112,3 +112,9 @@ test('Instagram webhook ignores outbound echo events before Chatwoot writes', ()
   assert.match(route, /senderId === instagramBusinessId/)
   assert.ok(route.indexOf('event?.message?.is_echo === true') < route.indexOf('await createChatwootContact({'))
 })
+
+test('Instagram webhook rejects payloads larger than 1 MiB before JSON parsing', () => {
+  assert.match(route, /Buffer\.byteLength\(rawBody, 'utf8'\) > 1024 \* 1024/)
+  assert.match(route, /status: 413/)
+  assert.ok(route.indexOf("Buffer.byteLength(rawBody, 'utf8')") < route.indexOf('JSON.parse(rawBody)'))
+})
