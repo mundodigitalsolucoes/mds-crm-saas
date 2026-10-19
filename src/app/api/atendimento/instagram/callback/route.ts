@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { timingSafeEqual } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { checkPermission } from '@/lib/checkPermission'
 import { verifyInstagramState } from '@/lib/atendimento/instagram-oauth-state'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
@@ -138,6 +139,15 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user || session.user.id !== state.userId || session.user.organizationId !== state.organizationId) {
     return redirectToInstagramSettings('error', 'Sessão inválida ou diferente da que iniciou a conexão.')
+  }
+
+  // Revalidate current operational permission and tenant status before exchanging
+  // the authorization code. A session may outlive a revoked integration grant.
+  const permission = await checkPermission('integrations', 'edit')
+  if (!permission.allowed ||
+      permission.session?.user.id !== state.userId ||
+      permission.session?.user.organizationId !== state.organizationId) {
+    return redirectToInstagramSettings('error', 'Permissão de integração revogada ou sessão inválida.')
   }
 
   const organization = await prisma.organization.findUnique({
