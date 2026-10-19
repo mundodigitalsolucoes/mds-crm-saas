@@ -44,7 +44,11 @@ export async function POST(request: Request) {
 
     // Busca o usuário
     const user = await prisma.user.findFirst({
-      where: { email: resetToken.email },
+      where: {
+        email: resetToken.email,
+        deletedAt: null,
+        organization: { deletedAt: null },
+      },
     });
 
     if (!user) {
