@@ -27,3 +27,11 @@
 ## Próxima ação
 
 Inventariar camada de entitlements existente na branch, identificar pontos de consumo e matriz de mapeamento oficial; só então propor patch mínimo e testes. Não implementar bloqueio de Marketing no piloto sem evidência da configuração contratual e autorização de alteração de dados.
+
+## Complemento: motor de autorização comercial (auditoria 2026-10-18)
+
+A camada `src/lib/authorization/authorize.ts` ja valida usuario ativo, tenant, assinatura, modulo contratado e permissao do papel, inclusive `owner`. O resolver comercial exige features explicitas e nao concede modulos automaticamente pelo nome do plano. O helper legado `checkPermission` continua permitindo owner apos conferir o vinculo; `guards.ts` preserva essa autorizacao em `observe_only`.
+
+O manifesto `APPROVED_ENFORCEMENTS` de `policy.ts` continua vazio. Nao existe bloqueio comercial ativo. Os testes existentes (`tests/authorization.test.ts`, `authorization-integration.test.ts`, `authorization-sales.test.ts`, `authorization-boundaries.test.ts`) cobrem casos sinteticos, inclusive negativas de owner e isolamento de recursos; nao equivalem a homologacao no WordPress ou no tenant real (o CRM e Next.js).
+
+A matriz `docs/BLOCK2_ACCESS_MATRIX.md` documenta projetos de Marketing e leads/pipeline de Vendas em observe_only. Falta comprovar cobertura integral antes de ativar enforcement. O middleware bloqueia `past_due` imediatamente nas rotas que intercepta, ainda divergente da futura politica comercial de dez dias. Sem alteracao de providers, dados reais ou enforcement nesta etapa.
