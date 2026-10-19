@@ -66,12 +66,10 @@ export async function GET() {
       maxAge: 600,
     })
     return response
-  } catch (error: any) {
+  } catch {
     return NextResponse.json(
       {
-        error:
-          error?.message ||
-          'Não foi possível iniciar a conexão com o Instagram.',
+        error: 'Não foi possível iniciar a conexão com o Instagram.',
       },
       { status: 500 }
     )
