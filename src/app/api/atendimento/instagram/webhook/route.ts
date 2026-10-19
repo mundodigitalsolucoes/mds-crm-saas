@@ -221,7 +221,8 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      if (!chatwootAccount?.accessTokenEnc) continue
+      // Never dispatch to a provider connection explicitly disabled by the tenant.
+      if (!chatwootAccount?.isActive || !chatwootAccount.accessTokenEnc) continue
 
       const chatwootData = parseChatwootAccountData(chatwootAccount.data)
       const accountId = toPositiveInt(chatwootData?.chatwootAccountId)
