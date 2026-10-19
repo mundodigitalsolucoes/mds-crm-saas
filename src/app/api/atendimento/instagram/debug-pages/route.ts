@@ -98,7 +98,7 @@ export async function GET() {
       {
         success: false,
         error: 'Erro ao buscar páginas na Meta.',
-        details: data.error?.message || data,
+
       },
       { status: 500 }
     )
