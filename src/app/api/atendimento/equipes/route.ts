@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { parseBody } from '@/lib/validations'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   createChatwootTeam,
   getChatwootCredentials,
@@ -24,10 +24,7 @@ function errorMessage(error: unknown): string {
 }
 
 export async function GET() {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'view'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
   if (!allowed) return errorResponse!
 
@@ -78,10 +75,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'create'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'create' })
 
   if (!allowed) return errorResponse!
 
