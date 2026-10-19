@@ -55,3 +55,11 @@ Revert the four candidate code commits individually in reverse order (do not rol
 ## Governance
 
 No merge, deploy, migration, provider lifecycle change, commercial enforcement or production data mutation is authorized. A separate independent review is required before claiming C03/C04 resolved.
+
+## CI evidence — 2026-10-18
+
+- **Source regression:** GitHub Actions C03-C04 Security Regression #1 and #2 showed successful completion in the GitHub Actions UI (user-supplied screenshot). Six source-level tests were included by run #2; these are structural guards, not live auth tests.
+- **Build validation:** [GitHub Actions run #39178620953](https://github.com/mundodigitalsolucoes/mds-crm-saas/actions/runs/39178620953), commit `972e4a65d17ed197113be82c6cdc7fce6abf48ae`, status **Success**, 47s. Workflow defines `npm ci --ignore-scripts`, `prisma validate`, `prisma generate`, `tsc --noEmit`, and `next build`, with dummy environment values and no database migration or deployment.
+- GitHub run detail displayed an advisory warning that `actions/checkout@v4` and `actions/setup-node@v4` target deprecated Node.js 20 for the action runtime, and a notice about the upcoming `ubuntu-latest` image migration. These did not fail the run.
+- **Scope note:** the build result is for commit `972e4a6`, not an authenticated staging environment or live login. Subsequent commit `d05cb1a` modifies only the source-regression test file; no separate build result was observed for that commit. The source-regression workflow has its own successful run per screenshot.
+- **Still pending:** functional staging tests of admin login/logout, deleted SuperAdmin, existing/deleted user signup, password recovery, invitation, and provider provisioning authorization. No production deployment or merge authorized.
