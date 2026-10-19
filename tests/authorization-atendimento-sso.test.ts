@@ -15,10 +15,7 @@ test('Atendimento SSO retains provider and tenant validation invariants', () => 
   for (const invariant of [
     'organization.deletedAt', 'account.organizationId !== organizationId',
     'orgChatwootAccountId !== connectedAccountId', 'getChatwootSsoUrl(',
-    'getChatwootCredentials',
   ]) {
-    // getChatwootCredentials is a legacy provider helper and may not be present in this handler.
-    if (invariant === 'getChatwootCredentials') continue;
     assert.ok(source.includes(invariant), `missing invariant: ${invariant}`);
   }
 });
