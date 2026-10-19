@@ -12,4 +12,6 @@ test('Instagram webhook requires configured Meta secret and timing-safe HMAC ove
   assert.match(route, /timingSafeEqual\(received, expected\)/)
   assert.ok(route.indexOf('timingSafeEqual(received, expected)') < route.indexOf('JSON.parse(rawBody)'))
   assert.ok(!route.includes('raw: JSON.stringify(body)'))
+  assert.ok(!route.includes('senderId,\\n          conversationId'))
+  assert.ok(!route.includes("console.error('Erro webhook Instagram:', error)"))
 })
