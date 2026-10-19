@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       : '')
 
   const meAccounts = await graphGet(
-    'me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username}',
+    'me/accounts?fields=id,name,instagram_business_account{id,name,username}',
     accessToken
   )
 
@@ -108,12 +108,12 @@ export async function GET(req: NextRequest) {
       const businessId = business.id
 
       const ownedPages = await graphGet(
-        `${businessId}/owned_pages?fields=id,name,access_token,instagram_business_account{id,name,username}`,
+        `${businessId}/owned_pages?fields=id,name,instagram_business_account{id,name,username}`,
         accessToken
       )
 
       const clientPages = await graphGet(
-        `${businessId}/client_pages?fields=id,name,access_token,instagram_business_account{id,name,username}`,
+        `${businessId}/client_pages?fields=id,name,instagram_business_account{id,name,username}`,
         accessToken
       )
 
@@ -128,12 +128,28 @@ export async function GET(req: NextRequest) {
     })
   )
 
+  const safeResult = (result: { ok: boolean; status: number; data: any }) => ({
+    ok: result.ok,
+    status: result.status,
+    pages: Array.isArray(result.data?.data)
+      ? result.data.data.map((page: any) => ({
+          id: String(page.id || ''),
+          name: String(page.name || ''),
+          instagramBusinessId: String(page.instagram_business_account?.id || ''),
+        }))
+      : [],
+  })
+
   return NextResponse.json({
     success: true,
     hint:
       'Compare meAccounts com ownedPages/clientPages. Se BM retornar mais páginas, o sync precisa usar Business Manager, não só /me/accounts.',
-    meAccounts,
-    businesses,
-    businessPages,
+    meAccounts: safeResult(meAccounts),
+    businesses: safeResult(businesses),
+    businessPages: businessPages.map((entry) => ({
+      business: entry.business,
+      ownedPages: safeResult(entry.ownedPages),
+      clientPages: safeResult(entry.clientPages),
+    })),
   })
 }
