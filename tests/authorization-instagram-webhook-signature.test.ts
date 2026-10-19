@@ -78,3 +78,13 @@ test('Instagram settings response reflects persisted verified state', () => {
   assert.match(source, /const savedConfig = resolveInstagramConfigFromSettings\(nextSettings\)/)
   assert.match(source, /config: savedConfig/)
 })
+
+test('Instagram selection and sync require a page token before marking connected', () => {
+  for (const name of ['select-account', 'sync-account']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${name}/route.ts`, 'utf8')
+    assert.match(source, /\.access_token\?\.trim\(\)/)
+    assert.match(source, /encryptToken\(.*\.access_token\)/)
+  }
+  const inbox = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(inbox, /currentInstagram\.facebookPageAccessTokenEncrypted/)
+})
