@@ -7,13 +7,15 @@ import { parsePermissions, hasPermission } from '../src/lib/permissions';
 test('provider lifecycle and legacy operational guards remain unchanged from the original authorization baseline', () => {
   const diff = execFileSync('git', ['diff', 'f93c3435fff316a548255993d749ef545c9c7670', '--',
     'src/app/(app)/atendimento', 'src/app/(app)/settings/atendimento', 'src/app/api/atendimento',
-    'src/app/api/integrations', 'src/app/api/webhooks', 'src/lib/integrations', 'src/lib/atendimento',
+    'src/app/api/integrations', ':(exclude)src/app/api/integrations/chatwoot/credentials/route.ts',
+    'src/app/api/webhooks', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma'], { encoding: 'utf8' });
   // C03/C04 intentionally changed auth, middleware and dependency metadata after this historical baseline.
-  // Their dedicated security suite checks those changes; this boundary guards providers and legacy operations.
+  // The Chatwoot credentials guard is separately tested by authorization-atendimento-sso.test.ts.
+  // All other integration and provider files remain protected by this historical diff.
   assert.equal(diff, '');
 });
 
