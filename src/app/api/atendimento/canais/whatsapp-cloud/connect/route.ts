@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { checkPlanActive, checkWhatsappInstanceLimit } from '@/lib/checkLimits'
 import { prisma } from '@/lib/prisma'
 import { sanitizeWhatsappLabel } from '@/lib/atendimento/orchestration/channel-lifecycle'
@@ -19,6 +20,7 @@ export async function POST(req: NextRequest) {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'whatsapp')
   const userId = session!.user.id
 
   const planCheck = await checkPlanActive(organizationId)
