@@ -3,7 +3,7 @@
 // Não altera provider, roteamento ou engine nativa.
 
 import { NextResponse } from 'next/server'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   getChatwootCredentials,
   listChatwootInboxes,
@@ -12,10 +12,7 @@ import {
 } from '@/lib/chatwoot'
 
 export async function GET() {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'view'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
   if (!allowed) return errorResponse!
 
