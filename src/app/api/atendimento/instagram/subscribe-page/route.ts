@@ -128,7 +128,7 @@ export async function POST() {
     return NextResponse.json(
       {
         error: 'Erro ao assinar a Página Facebook no app da Meta.',
-        details: data,
+
       },
       { status: response.status }
     )
