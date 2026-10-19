@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false }, { status: 401 })
   }
 
-  let payload: unknown
+  let payload: Parameters<typeof processWhatsAppCloudWebhook>[0] | null
   try { payload = JSON.parse(rawBody) } catch { payload = null }
 
   if (!payload) {
