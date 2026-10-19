@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
@@ -141,6 +142,7 @@ export async function POST() {
   }
 
   const organizationId = perm.session.user.organizationId
+  await observeChannelEntitlement(organizationId, 'instagram_channel')
 
   const [organization, chatwootAccount] = await Promise.all([
     prisma.organization.findUnique({
