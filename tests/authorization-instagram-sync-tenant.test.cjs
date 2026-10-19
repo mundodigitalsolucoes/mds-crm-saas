@@ -28,3 +28,16 @@ test('Instagram selection scopes active tenant and prevents stale writes', () =>
   assert.match(selection, /settings: organization\.settings/)
   assert.match(selection, /saved\.count !== 1/)
 })
+
+const inbox = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+
+test('Instagram inbox provisioning guards active tenant and both settings write paths', () => {
+  assert.match(inbox, /checkPermission\('integrations', 'edit'\)/)
+  assert.match(inbox, /perm\.session\.user\.organizationId/)
+  assert.match(inbox, /prisma\.organization\.findFirst\(/)
+  assert.match(inbox, /where: \{ id: organizationId, deletedAt: null \}/)
+  assert.equal((inbox.match(/prisma\.organization\.updateMany\(/g) || []).length, 2)
+  assert.equal((inbox.match(/settings: organization\.settings/g) || []).length, 2)
+  assert.doesNotMatch(inbox, /prisma\.organization\.update\(/)
+  assert.match(inbox, /saved\.count !== 1/)
+})
