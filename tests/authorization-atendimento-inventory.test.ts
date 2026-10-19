@@ -32,8 +32,11 @@ test('inventory every Atendimento API handler and explicitly classify provider c
   for (const path of callbackRoutes) {
     assert.ok(results.some((row) => row.path === path && row.classification === 'provider_callback'));
   }
-  assert.ok(results.some((row) => row.path === 'equipes/route.ts' && row.legacy && !row.commercial));
+  assert.ok(results.some((row) => row.path === 'equipes/route.ts' && row.commercial && !row.legacy));
   assert.ok(results.some((row) => row.path === 'canais/email/route.ts' && row.legacy && !row.commercial));
+  for (const path of ['inboxes/route.ts', 'agentes/route.ts', 'agentes/sync/route.ts']) {
+    assert.ok(results.some((row) => row.path === path && row.commercial && !row.legacy), `commercial guard missing: ${path}`);
+  }
   // Report gaps without granting access or requiring all providers to use a human session.
   console.info('BLOCK2_ATENDIMENTO_ROUTE_INVENTORY', JSON.stringify(results));
 });
