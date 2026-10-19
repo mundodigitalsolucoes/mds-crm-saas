@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       : '')
 
   // Diagnostic paths must never contain untrusted Graph API path segments.
-  if (requestedBusinessId && !/^\\d{1,32}$/.test(requestedBusinessId)) {
+  if (requestedBusinessId && !/^\d{1,32}$/.test(requestedBusinessId)) {
     return NextResponse.json(
       { error: 'Business ID inválido.' },
       { status: 400 }
