@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 import { chatwootApi, getChatwootCredentials } from '@/lib/chatwoot'
 
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'whatsapp')
   const rawBody = await req.json().catch(() => null)
   const parsed = bodySchema.safeParse(rawBody)
 
