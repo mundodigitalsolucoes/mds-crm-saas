@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   getChatwootCredentials,
   listChatwootAgents,
@@ -15,10 +15,7 @@ function normalizeEmail(email: string | null | undefined): string {
 }
 
 export async function GET() {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'view'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
   if (!allowed) return errorResponse!
 
