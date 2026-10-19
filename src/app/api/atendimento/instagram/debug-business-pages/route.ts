@@ -84,6 +84,14 @@ export async function GET(req: NextRequest) {
       ? currentInstagram.metaBusinessId
       : '')
 
+  // Diagnostic paths must never contain untrusted Graph API path segments.
+  if (requestedBusinessId && !/^\\d{1,32}$/.test(requestedBusinessId)) {
+    return NextResponse.json(
+      { error: 'Business ID inválido.' },
+      { status: 400 }
+    )
+  }
+
   const meAccounts = await graphGet(
     'me/accounts?fields=id,name,instagram_business_account{id,name,username}',
     accessToken
