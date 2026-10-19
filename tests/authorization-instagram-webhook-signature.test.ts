@@ -29,3 +29,15 @@ test('Instagram account selection does not expose raw Meta provider errors', () 
   assert.doesNotMatch(selectAccount, /details:\s*data\.error\?\.message\s*\|\|\s*data/)
   assert.match(selectAccount, /Erro ao validar conta selecionada na Meta/)
 })
+
+test('Instagram diagnostic routes never return raw Meta errors or access tokens', () => {
+  for (const name of ['debug-token', 'debug-pages', 'subscribe-page']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${name}/route.ts`, 'utf8')
+    assert.doesNotMatch(source, /details:\s*(?:data\.error\?\.message\s*\|\|\s*)?data\s*[,}]/)
+  }
+  const business = readFileSync('src/app/api/atendimento/instagram/debug-business-pages/route.ts', 'utf8')
+  assert.doesNotMatch(business, /id,name,access_token/)
+  assert.match(business, /meAccounts: safeResult\(meAccounts\)/)
+  assert.match(business, /ownedPages: safeResult\(entry\.ownedPages\)/)
+  assert.match(business, /clientPages: safeResult\(entry\.clientPages\)/)
+})
