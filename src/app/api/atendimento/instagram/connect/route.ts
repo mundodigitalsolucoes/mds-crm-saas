@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 
 const META_OAUTH_BASE_URL = 'https://www.facebook.com/v20.0/dialog/oauth'
 
@@ -20,6 +21,7 @@ export async function GET() {
   )
 
   if (!allowed) return errorResponse!
+  await observeChannelEntitlement(session!.user.organizationId, 'instagram_channel')
 
   try {
     const appId = getRequiredEnv('META_INSTAGRAM_APP_ID')
