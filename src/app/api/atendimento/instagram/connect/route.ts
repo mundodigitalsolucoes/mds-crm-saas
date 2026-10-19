@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
 import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
+import { signInstagramState } from '@/lib/atendimento/instagram-oauth-state'
 
 const META_OAUTH_BASE_URL = 'https://www.facebook.com/v20.0/dialog/oauth'
 
@@ -29,13 +30,10 @@ export async function GET() {
 
     const redirectUri = `${appUrl}/api/atendimento/instagram/callback`
 
-    const state = Buffer.from(
-      JSON.stringify({
-        organizationId: session!.user.organizationId,
-        userId: session!.user.id,
-        source: 'mds_crm_instagram',
-      })
-    ).toString('base64url')
+    const state = signInstagramState({
+      organizationId: session!.user.organizationId,
+      userId: session!.user.id,
+    })
 
     const params = new URLSearchParams({
       client_id: appId,
