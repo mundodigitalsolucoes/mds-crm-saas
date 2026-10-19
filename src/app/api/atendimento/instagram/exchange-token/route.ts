@@ -25,6 +25,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Confirm the authenticated tenant is active before exchanging a Meta code.
+    const organization = await prisma.organization.findFirst({
+      where: { id: trustedOrganizationId, deletedAt: null },
+      select: { settings: true },
+    })
+    if (!organization) {
+      return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 })
+    }
+
     const appId = process.env.META_INSTAGRAM_APP_ID
     const appSecret = process.env.META_INSTAGRAM_APP_SECRET
 
@@ -64,11 +73,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const organization = await prisma.organization.findUnique({
-      where: { id: trustedOrganizationId },
-      select: { settings: true },
-    })
-
     const parsedSettings = organization?.settings
       ? JSON.parse(organization.settings)
       : {}
@@ -86,12 +90,20 @@ export async function POST(req: NextRequest) {
       },
     }
 
-    await prisma.organization.update({
-      where: { id: trustedOrganizationId },
+    // Do not overwrite a concurrent settings update or resurrect a deleted tenant.
+    const saved = await prisma.organization.updateMany({
+      where: {
+        id: trustedOrganizationId,
+        deletedAt: null,
+        settings: organization.settings,
+      },
       data: {
         settings: JSON.stringify(nextSettings),
       },
     })
+    if (saved.count !== 1) {
+      return NextResponse.json({ error: 'Configuração alterada; tente novamente' }, { status: 409 })
+    }
 
     return NextResponse.json({
       success: true,
