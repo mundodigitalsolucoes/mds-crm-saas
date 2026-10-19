@@ -99,7 +99,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'Erro ao buscar contas autorizadas na Meta.',
-        details: data.error?.message || data,
+
       },
       { status: 500 }
     )
