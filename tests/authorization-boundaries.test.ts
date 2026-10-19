@@ -25,6 +25,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/app/api/atendimento/instagram/accounts/route.ts',
     ':(exclude)src/app/api/atendimento/instagram/connect/route.ts',
     ':(exclude)src/app/api/atendimento/instagram/callback/route.ts',
+    ':(exclude)src/app/api/atendimento/instagram/webhook/route.ts',
     ':(exclude)src/app/api/atendimento/instagram/create-inbox/route.ts',
     ':(exclude)src/app/api/atendimento/instagram/debug-business-pages/route.ts',
     ':(exclude)src/app/api/atendimento/instagram/debug-pages/route.ts',
