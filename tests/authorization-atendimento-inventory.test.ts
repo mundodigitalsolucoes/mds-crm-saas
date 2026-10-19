@@ -34,7 +34,11 @@ test('inventory every Atendimento API handler and explicitly classify provider c
   }
   assert.ok(results.some((row) => row.path === 'equipes/route.ts' && row.commercial && !row.legacy));
   assert.ok(results.some((row) => row.path === 'canais/email/route.ts' && row.legacy && !row.commercial));
-  for (const path of ['inboxes/route.ts', 'agentes/route.ts', 'agentes/sync/route.ts']) {
+  for (const path of [
+    'inboxes/route.ts', 'agentes/route.ts', 'agentes/sync/route.ts',
+    'equipes/[teamId]/route.ts', 'equipes/[teamId]/members/route.ts',
+    'inboxes/[inboxId]/members/route.ts',
+  ]) {
     assert.ok(results.some((row) => row.path === path && row.commercial && !row.legacy), `commercial guard missing: ${path}`);
   }
   // Report gaps without granting access or requiring all providers to use a human session.
