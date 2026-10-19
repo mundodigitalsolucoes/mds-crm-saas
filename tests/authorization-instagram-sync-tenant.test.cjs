@@ -93,3 +93,10 @@ test('Instagram page subscription never returns unfiltered Meta response data', 
   assert.doesNotMatch(source, /const data = await response\.json\(/)
   assert.match(source, /if \(!response\.ok\)/)
 })
+
+test('Instagram inbox errors do not forward raw Chatwoot provider details', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /error: error\.code/)
+  assert.match(source, /message: error\.message/)
+  assert.doesNotMatch(source, /detail: error\.detail/)
+})
