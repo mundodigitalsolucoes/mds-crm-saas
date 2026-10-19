@@ -15,3 +15,11 @@ test('Instagram webhook requires configured Meta secret and timing-safe HMAC ove
   assert.ok(!route.includes('senderId,\\n          conversationId'))
   assert.ok(!route.includes("console.error('Erro webhook Instagram:', error)"))
 })
+
+test('Instagram webhook rejects ambiguous tenant mapping and inactive connections', () => {
+  assert.match(route, /organizations\.filter\(/)
+  assert.match(route, /instagram\.instagramBusinessId === instagramBusinessId/)
+  assert.match(route, /instagram\.enabled === true && instagram\.status === 'connected'/)
+  assert.match(route, /if \(matches\.length !== 1\) return null/)
+  assert.match(route, /organizationId: organization\.id/)
+})
