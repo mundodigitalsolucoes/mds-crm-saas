@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma'
 import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
 
 const META_GRAPH_VERSION = 'v20.0'
-const TARGET_FACEBOOK_PAGE_ID = '109568358707186'
 
 type MetaPage = {
   id: string
@@ -108,14 +107,24 @@ export async function POST() {
   }
 
   const pages = data.data ?? []
+  const targetFacebookPageId = typeof currentInstagram.facebookPageId === 'string'
+    ? currentInstagram.facebookPageId.trim()
+    : ''
 
-  const targetPage = pages.find((page) => page.id === TARGET_FACEBOOK_PAGE_ID)
+  if (!targetFacebookPageId) {
+    return NextResponse.json(
+      { error: 'Selecione uma Página Facebook antes de sincronizar.' },
+      { status: 400 }
+    )
+  }
+
+  const targetPage = pages.find((page) => page.id === targetFacebookPageId)
 
   if (!targetPage) {
     return NextResponse.json(
       {
-        error: 'Página Mundo Digital não encontrada no token Meta atual.',
-        expectedFacebookPageId: TARGET_FACEBOOK_PAGE_ID,
+        error: 'Página selecionada não encontrada no token Meta atual.',
+        expectedFacebookPageId: targetFacebookPageId,
         pages: pages.map((page) => ({
           id: page.id,
           name: page.name || '',
@@ -132,7 +141,7 @@ export async function POST() {
     return NextResponse.json(
       {
         error:
-          'Página Mundo Digital encontrada, mas sem Instagram Business vinculado.',
+          'Página selecionada encontrada, mas sem Instagram Business vinculado.',
         facebookPage: {
           id: targetPage.id,
           name: targetPage.name || '',
