@@ -77,3 +77,13 @@ test('C04: both password recovery endpoints reject deleted users and tenants', (
     assert.match(route, /organization:\s*\{\s*deletedAt:\s*null\s*\}/);
   }
 });
+
+test('C04: password reset claims the token once and rechecks active tenant inside transaction', () => {
+  const reset = source('src/app/api/auth/reset-password/route.ts');
+  assert.match(reset, /prisma\.\$transaction\(async \(tx\) =>/);
+  assert.match(reset, /tx\.passwordResetToken\.updateMany/);
+  assert.match(reset, /used:\s*false,\s*expiresAt:\s*\{\s*gt:/);
+  assert.match(reset, /claim\.count !== 1/);
+  assert.match(reset, /tx\.user\.updateMany/);
+  assert.match(reset, /updated\.count !== 1/);
+});
