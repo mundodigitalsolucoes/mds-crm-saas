@@ -1,0 +1,47 @@
+name: Block 2 PostgreSQL Concurrency Proof
+
+on:
+  push:
+    branches:
+      - feature/modular-plans-entitlements
+    paths:
+      - 'src/app/api/auth/forgot-password/route.ts'
+      - 'tests/block2-reset-postgres-integration.test.cjs'
+      - '.github/workflows/block2-postgres-concurrency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-concurrency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: block2
+          POSTGRES_PASSWORD: block2_ci_only
+          POSTGRES_DB: block2_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U block2 -d block2_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Verify concurrent reset token rotation on disposable database
+        run: node --test tests/block2-reset-postgres-integration.test.cjs
