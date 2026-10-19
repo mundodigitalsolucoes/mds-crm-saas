@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
 const route = readFileSync('src/app/api/atendimento/instagram/webhook/route.ts', 'utf8')
+const selectAccount = readFileSync('src/app/api/atendimento/instagram/select-account/route.ts', 'utf8')
 
 test('Instagram webhook requires configured Meta secret and timing-safe HMAC over raw body before dispatch', () => {
   assert.match(route, /process\.env\.META_INSTAGRAM_APP_SECRET/)
@@ -22,4 +23,9 @@ test('Instagram webhook rejects ambiguous tenant mapping and inactive connection
   assert.match(route, /instagram\.enabled === true && instagram\.status === 'connected'/)
   assert.match(route, /if \(matches\.length !== 1\) return null/)
   assert.match(route, /organizationId: organization\.id/)
+})
+
+test('Instagram account selection does not expose raw Meta provider errors', () => {
+  assert.doesNotMatch(selectAccount, /details:\s*data\.error\?\.message\s*\|\|\s*data/)
+  assert.match(selectAccount, /Erro ao validar conta selecionada na Meta/)
 })
