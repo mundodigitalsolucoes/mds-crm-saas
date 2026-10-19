@@ -87,3 +87,11 @@ test('C04: password reset claims the token once and rechecks active tenant insid
   assert.match(reset, /tx\.user\.updateMany/);
   assert.match(reset, /updated\.count !== 1/);
 });
+
+test('C04: issuing a new reset token invalidates old links in the same transaction', () => {
+  const forgot = source('src/app/api/auth/forgot-password/route.ts');
+  assert.match(forgot, /prisma\.\$transaction\(async \(tx\) =>/);
+  assert.match(forgot, /tx\.passwordResetToken\.updateMany/);
+  assert.match(forgot, /tx\.passwordResetToken\.create/);
+  assert.doesNotMatch(forgot, /await prisma\.passwordResetToken\.updateMany/);
+});
