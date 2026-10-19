@@ -88,3 +88,11 @@ test('Instagram selection and sync require a page token before marking connected
   const inbox = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
   assert.match(inbox, /currentInstagram\.facebookPageAccessTokenEncrypted/)
 })
+
+test('Instagram OAuth callback does not reflect untrusted Meta errors in redirect', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/callback/route.ts', 'utf8')
+  assert.doesNotMatch(source, /errorDescription\s*\|\|/)
+  assert.doesNotMatch(source, /data\.error\?\.message\s*\|\|/)
+  assert.doesNotMatch(source, /error\?\.message\s*\|\|/)
+  assert.match(source, /Não foi possível concluir a conexão com a Meta/)
+})
