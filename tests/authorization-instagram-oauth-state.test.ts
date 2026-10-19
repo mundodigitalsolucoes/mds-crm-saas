@@ -56,3 +56,11 @@ test('Instagram OAuth callback revalidates live integration permission before to
   assert.match(callback, /permission\.session\?\.user\.organizationId !== state\.organizationId/);
   assert.ok(callback.indexOf("checkPermission('integrations', 'edit')") < callback.indexOf('const token = await exchangeCodeForToken(code)'));
 });
+
+test('Instagram OAuth callback does not overwrite concurrent tenant settings', () => {
+  assert.match(callback, /prisma\.organization\.updateMany\(/);
+  assert.match(callback, /settings:\s*organization\.settings/);
+  assert.match(callback, /deletedAt:\s*null/);
+  assert.match(callback, /saved\.count !== 1/);
+  assert.doesNotMatch(callback, /prisma\.organization\.update\(/);
+});
