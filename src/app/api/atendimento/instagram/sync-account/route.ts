@@ -151,6 +151,13 @@ export async function POST() {
     )
   }
 
+  if (!targetPage.access_token?.trim()) {
+    return NextResponse.json(
+      { error: 'Token da Página Facebook não disponível. Reautorize a conta na Meta.' },
+      { status: 409 }
+    )
+  }
+
   const instagram = targetPage.instagram_business_account
   const now = new Date().toISOString()
 
@@ -163,9 +170,7 @@ export async function POST() {
       status: 'connected',
       facebookPageId: targetPage.id,
       facebookPageName: targetPage.name || '',
-      facebookPageAccessTokenEncrypted: targetPage.access_token
-        ? encryptToken(targetPage.access_token)
-        : '',
+      facebookPageAccessTokenEncrypted: encryptToken(targetPage.access_token),
       instagramBusinessId: instagram.id,
       instagramAccountName: instagram.name || targetPage.name || '',
       instagramHandle: instagram.username ? `@${instagram.username}` : '',
