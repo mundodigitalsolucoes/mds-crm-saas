@@ -7,6 +7,7 @@ type InstagramState = {
   userId: string
   source: 'mds_crm_instagram'
   issuedAt: number
+  nonce: string
 }
 
 function secret() {
@@ -15,7 +16,7 @@ function secret() {
   return value
 }
 
-export function signInstagramState(input: Pick<InstagramState, 'organizationId' | 'userId'>): string {
+export function signInstagramState(input: Pick<InstagramState, 'organizationId' | 'userId' | 'nonce'>): string {
   const payload: InstagramState = { ...input, source: 'mds_crm_instagram', issuedAt: Date.now() }
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url')
   const signature = createHmac('sha256', secret()).update(encoded).digest('base64url')
@@ -36,6 +37,7 @@ export function verifyInstagramState(raw: string | null): InstagramState | null 
     if (value.source !== 'mds_crm_instagram' ||
         typeof value.organizationId !== 'string' || !value.organizationId ||
         typeof value.userId !== 'string' || !value.userId ||
+        typeof value.nonce !== 'string' || !/^[a-f0-9]{64}$/.test(value.nonce) ||
         typeof value.issuedAt !== 'number' || !Number.isFinite(value.issuedAt) ||
         value.issuedAt > Date.now() + 30_000 ||
         Date.now() - value.issuedAt > MAX_AGE_MS) return null
