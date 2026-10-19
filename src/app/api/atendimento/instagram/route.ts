@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 
 const instagramStatusSchema = z.enum([
@@ -161,6 +162,7 @@ export async function GET() {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'instagram_channel')
 
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
@@ -208,6 +210,7 @@ export async function POST(req: NextRequest) {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'instagram_channel')
   const body = await req.json().catch(() => ({}))
 
   const parsed = instagramConfigSchema.safeParse({
