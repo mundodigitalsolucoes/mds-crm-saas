@@ -68,6 +68,7 @@ async function chatwootRequest<T>(params: {
 
 async function findOrganizationByInstagramBusinessId(instagramBusinessId: string) {
   const organizations = await prisma.organization.findMany({
+    where: { deletedAt: null },
     select: {
       id: true,
       settings: true,
