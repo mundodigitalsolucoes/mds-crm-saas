@@ -264,6 +264,10 @@ export async function POST(req: NextRequest) {
     atendimentoInstagram: {
       ...currentInstagram,
       ...parsed.data,
+      // Meta-verified identity and connection status cannot be asserted by a settings POST.
+      facebookPageId: currentInstagram.facebookPageId ?? '',
+      instagramBusinessId: currentInstagram.instagramBusinessId ?? '',
+      status: currentInstagram.status ?? 'draft',
       updatedAt: new Date().toISOString(),
     },
   }
