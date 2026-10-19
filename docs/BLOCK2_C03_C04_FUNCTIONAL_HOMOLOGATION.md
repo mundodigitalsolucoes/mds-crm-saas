@@ -43,3 +43,11 @@
 ## Situação atual
 
 **Plano preparado, homologação funcional NÃO executada.** Os testes estáticos e o build aprovados não substituem os cenários autenticados acima. C01/C02 permanecem fora de escopo.
+
+## Additional read-only auth review
+
+- `src/lib/auth.ts`: Credentials authorize returns null for soft-deleted users or organizations. Its JWT callback refreshes these flags, but on DB exceptions preserves current token; investigate fail-closed behavior in a separate authorized security scope.
+- `src/app/api/auth/forgot-password/route.ts`: user lookup filters by email only; it may issue and email reset tokens for soft-deleted users or tenants.
+- `src/app/api/auth/reset-password/route.ts`: token validation and user lookup do not check `user.deletedAt` or `organization.deletedAt`. This can change a deleted user's password hash; it does not by itself demonstrate successful login.
+- **Decision pending:** define whether deleted users/tenants may recover credentials, and implement a fail-closed policy consistently in both recovery endpoints, including tokens issued before deletion. Do not silently change this business behavior without approval.
+- Added two source-regression tests for existing login deletion guard and separation of recovery from signup; these tests do **not** prove recovery is safe.
