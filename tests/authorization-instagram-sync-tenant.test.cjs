@@ -41,3 +41,16 @@ test('Instagram inbox provisioning guards active tenant and both settings write 
   assert.doesNotMatch(inbox, /prisma\.organization\.update\(/)
   assert.match(inbox, /saved\.count !== 1/)
 })
+
+const subscription = readFileSync('src/app/api/atendimento/instagram/subscribe-page/route.ts', 'utf8')
+
+test('Instagram page subscription guards active tenant and stale settings', () => {
+  assert.match(subscription, /checkPermission\(\s*'integrations',\s*'edit'\s*\)/)
+  assert.match(subscription, /session!\.user\.organizationId/)
+  assert.match(subscription, /prisma\.organization\.findFirst\(/)
+  assert.match(subscription, /where: \{ id: organizationId, deletedAt: null \}/)
+  assert.match(subscription, /prisma\.organization\.updateMany\(/)
+  assert.match(subscription, /settings: organization\.settings/)
+  assert.match(subscription, /saved\.count !== 1/)
+  assert.doesNotMatch(subscription, /prisma\.organization\.update\(/)
+})
