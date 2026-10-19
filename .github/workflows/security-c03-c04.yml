@@ -6,6 +6,7 @@ on:
       - feature/modular-plans-entitlements
     paths:
       - 'tests/security-c03-c04.test.cjs'
+      - 'tests/security-c03-c04-postgres.test.cjs'
       - 'src/app/api/auth/signup/route.ts'
       - 'src/app/api/auth/forgot-password/route.ts'
       - 'src/app/api/auth/reset-password/route.ts'
@@ -35,3 +36,40 @@ jobs:
           node-version: '22'
       - name: Run source security regression tests
         run: npm run test:security
+
+  postgres-integration:
+    name: Prisma advisory lock on disposable PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: block2_ci
+          POSTGRES_PASSWORD: block2_ci
+          POSTGRES_DB: block2_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U block2_ci -d block2_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://block2_ci:block2_ci@localhost:5432/block2_ci?schema=public
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Generate Prisma client locally
+        run: npx prisma generate
+      - name: Execute actual advisory lock SQL through Prisma
+        run: node --test tests/security-c03-c04-postgres.test.cjs
