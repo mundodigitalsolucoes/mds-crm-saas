@@ -51,3 +51,16 @@
 - `src/app/api/auth/reset-password/route.ts`: token validation and user lookup do not check `user.deletedAt` or `organization.deletedAt`. This can change a deleted user's password hash; it does not by itself demonstrate successful login.
 - **Decision pending:** define whether deleted users/tenants may recover credentials, and implement a fail-closed policy consistently in both recovery endpoints, including tokens issued before deletion. Do not silently change this business behavior without approval.
 - Added two source-regression tests for existing login deletion guard and separation of recovery from signup; these tests do **not** prove recovery is safe.
+
+## CI evidence update — 2026-10-19
+
+- [C03-C04 Security Regression workflow](https://github.com/mundodigitalsolucoes/mds-crm-saas/actions/workflows/security-c03-c04.yml): run #4, commit `9718fed`, **success**, 7s. Includes the added source-level guard for password recovery endpoints.
+- [C03-C04 Build Validation workflow](https://github.com/mundodigitalsolucoes/mds-crm-saas/actions/workflows/security-c03-c04-build.yml): run #3, commit `08206ab`, **success**, 1m11s. Includes both password-recovery route changes.
+- These statuses were verified in the GitHub Actions workflow listings. Authenticated end-to-end tests remain outstanding.
+
+## Pre-commercial pilot clarification
+
+- The user confirmed there are **no paying subscribers yet**; only the operator uses the CRM.
+- The ten-day delinquency policy is a **future commercialization requirement**, not an instruction to suspend the current pilot or activate billing.
+- Do not assume any existing `Organization` is exempt solely because it is the only one or belongs to a particular email. An explicit internal-account classification must be designed and approved before billing enforcement.
+- Prioritize C03/C04 functional staging tests and the remaining C01/C02 security audit. Do not modify provider lifecycle, plan enforcement, Coolify, production data or subscription statuses.
