@@ -28,7 +28,9 @@ test('Meta token exchange never trusts organizationId supplied in request body',
   const source = readFileSync('src/app/api/atendimento/instagram/exchange-token/route.ts', 'utf8');
   assert.ok(source.includes("checkPermission('integrations', 'edit')"));
   assert.ok(source.includes('organizationId !== trustedOrganizationId'));
-  assert.ok(source.includes('where: { id: trustedOrganizationId }'));
+  assert.ok(source.includes('where: { id: trustedOrganizationId, deletedAt: null }'));
+  assert.ok(source.includes('settings: organization.settings'));
+  assert.ok(source.includes('saved.count !== 1'));
   assert.doesNotMatch(source, /\{ error: 'Erro interno', details: error \}/);
 });
 
