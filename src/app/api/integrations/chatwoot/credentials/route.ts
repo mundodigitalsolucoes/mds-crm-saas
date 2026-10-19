@@ -1,6 +1,6 @@
 // src/app/api/integrations/chatwoot/credentials/route.ts
 import { NextResponse } from 'next/server'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import { prisma } from '@/lib/prisma'
 
 type ChatwootAccountData = {
@@ -106,7 +106,7 @@ async function getChatwootSsoUrl(baseUrl: string, chatwootUserId: number) {
 }
 
 export async function GET() {
-  const perm = await checkPermission('atendimento', 'view')
+  const perm = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
   if (!perm.allowed || !perm.session) {
     return (
