@@ -86,3 +86,10 @@ test('Business Manager diagnostics validate user-supplied Graph path segments', 
   assert.match(source, /\^\\d\{1,32\}\$/)
   assert.match(source, /Business ID inválido/)
 })
+
+test('Instagram page subscription never returns unfiltered Meta response data', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/subscribe-page/route.ts', 'utf8')
+  assert.doesNotMatch(source, /meta:\s*data\s*[,}]/)
+  assert.doesNotMatch(source, /const data = await response\.json\(/)
+  assert.match(source, /if \(!response\.ok\)/)
+})
