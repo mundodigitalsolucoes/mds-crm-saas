@@ -208,7 +208,9 @@ export async function POST() {
         typeof currentInstagram.facebookPageId !== 'string' ||
         !currentInstagram.facebookPageId.trim() ||
         typeof currentInstagram.metaAccessTokenEncrypted !== 'string' ||
-        !currentInstagram.metaAccessTokenEncrypted.trim()) {
+        !currentInstagram.metaAccessTokenEncrypted.trim() ||
+        typeof currentInstagram.facebookPageAccessTokenEncrypted !== 'string' ||
+        !currentInstagram.facebookPageAccessTokenEncrypted.trim()) {
       throw new InstagramInboxError(
         'Selecione e valide a conta Instagram pela Meta antes de criar a inbox.',
         409,
