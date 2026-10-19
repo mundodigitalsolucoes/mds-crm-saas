@@ -18,3 +18,54 @@ test('Prisma decodes the per-email transaction advisory lock projection', async 
     await prisma.$disconnect()
   }
 })
+
+test('same-email advisory locks serialize concurrent Prisma transactions', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const prisma = new PrismaClient()
+  const email = 'block2-concurrent-lock@example.invalid'
+  let signalLocked
+  const locked = new Promise((resolve) => { signalLocked = resolve })
+  let releaseFirst
+  const release = new Promise((resolve) => { releaseFirst = resolve })
+  let secondAcquired = false
+
+  try {
+    const first = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock(hashtextextended(${email}, 0))`
+      signalLocked()
+      await release
+    }, { timeout: 10000 })
+
+    await locked
+    const second = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock(hashtextextended(${email}, 0))`
+      secondAcquired = true
+    }, { timeout: 10000 })
+
+    // Observe the second connection waiting on the same PostgreSQL advisory
+    // lock rather than relying only on an elapsed-time assertion.
+    const { Client } = require('pg')
+    const observer = new Client({ connectionString: process.env.DATABASE_URL })
+    await observer.connect()
+    try {
+      let waiting = false
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const result = await observer.query(
+          "SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock' AND wait_event = 'advisory') AS waiting"
+        )
+        if (result.rows[0].waiting) { waiting = true; break }
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      assert.equal(waiting, true, 'second transaction should wait on the first advisory lock')
+      assert.equal(secondAcquired, false)
+    } finally {
+      releaseFirst()
+      await observer.end()
+    }
+    await Promise.all([first, second])
+    assert.equal(secondAcquired, true)
+  } finally {
+    releaseFirst()
+    await prisma.$disconnect()
+  }
+})
