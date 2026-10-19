@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: 'Erro ao validar conta selecionada na Meta.',
-        details: data.error?.message || data,
+        // Never return raw Meta responses or provider details to the browser.
       },
       { status: 500 }
     )
