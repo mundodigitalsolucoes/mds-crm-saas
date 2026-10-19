@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     await prisma.$transaction(async (tx) => {
       // PostgreSQL transaction-scoped lock serializes token rotation per email,
       // including concurrent requests handled by different application instances.
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${data.email}, 0))`;
+      await tx.$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock(hashtextextended(${data.email}, 0))`;
       await tx.passwordResetToken.updateMany({
         where: { email: data.email, used: false },
         data: { used: true },
