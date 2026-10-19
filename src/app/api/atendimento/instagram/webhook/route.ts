@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
@@ -173,15 +174,22 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const appSecret = process.env.META_INSTAGRAM_APP_SECRET
+    if (!appSecret) return NextResponse.json({ error: 'Webhook indisponível.' }, { status: 503 })
 
-    // 🔥 LOG CRÍTICO
-    console.log('[Instagram Webhook] RECEBIDO:', {
-      time: new Date().toISOString(),
-      object: body?.object,
-      entries: Array.isArray(body?.entry) ? body.entry.length : 0,
-      raw: JSON.stringify(body).slice(0, 2000),
-    })
+    const signature = req.headers.get('x-hub-signature-256')
+    if (!signature || !/^sha256=[a-f0-9]{64}$/.test(signature)) {
+      return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
+    }
+
+    const rawBody = await req.text()
+    const expected = createHmac('sha256', appSecret).update(rawBody).digest()
+    const received = Buffer.from(signature.slice(7), 'hex')
+    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+      return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
+    }
+
+    const body = JSON.parse(rawBody)
 
     if (body?.event) {
       return NextResponse.json({ ok: true })
