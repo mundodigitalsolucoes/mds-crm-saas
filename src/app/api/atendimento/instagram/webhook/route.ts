@@ -183,19 +183,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
     }
 
-    const rawBody = await req.text()
-    const expected = createHmac('sha256', appSecret).update(rawBody).digest()
+    // Enforce the limit while streaming, rather than buffering an unbounded
+    // request with req.text(). HMAC must cover the exact original bytes.
+    const MAX_WEBHOOK_BYTES = 1024 * 1024
+    const reader = req.body?.getReader()
+    if (!reader) {
+      return NextResponse.json({ error: 'Payload ausente.' }, { status: 400 })
+    }
+
+    const chunks: Uint8Array[] = []
+    let totalBytes = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      totalBytes += value.byteLength
+      if (totalBytes > MAX_WEBHOOK_BYTES) {
+        await reader.cancel().catch(() => {})
+        return NextResponse.json({ error: 'Payload excede o limite.' }, { status: 413 })
+      }
+      chunks.push(value)
+    }
+
+    const rawBytes = Buffer.concat(chunks, totalBytes)
+    const expected = createHmac('sha256', appSecret).update(rawBytes).digest()
     const received = Buffer.from(signature.slice(7), 'hex')
     if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
       return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
     }
 
-    // Reject oversized payloads before parsing or making provider calls.
-    // The Meta signature has already been verified over the original body.
-    if (Buffer.byteLength(rawBody, 'utf8') > 1024 * 1024) {
-      return NextResponse.json({ error: 'Payload excede o limite.' }, { status: 413 })
-    }
-
+    const rawBody = rawBytes.toString('utf8')
     const body = JSON.parse(rawBody)
 
     if (body?.event) {
