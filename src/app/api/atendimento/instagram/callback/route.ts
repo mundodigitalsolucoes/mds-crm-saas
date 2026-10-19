@@ -88,9 +88,7 @@ async function exchangeCodeForToken(code: string) {
   const data = (await response.json()) as MetaTokenResponse
 
   if (!response.ok || !data.access_token) {
-    throw new Error(
-      data.error?.message || 'A Meta não retornou access_token válido.'
-    )
+    throw new Error('A Meta não retornou um token válido.')
   }
 
   return {
@@ -105,13 +103,12 @@ export async function GET(req: NextRequest) {
 
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const errorDescription = searchParams.get('error_description')
   const rawState = searchParams.get('state')
 
   if (error) {
     return redirectToInstagramSettings(
       'error',
-      errorDescription || 'Conexão com Instagram cancelada ou recusada.'
+      'Conexão com Instagram cancelada ou recusada.'
     )
   }
 
@@ -202,10 +199,10 @@ export async function GET(req: NextRequest) {
       'success',
       'Token da Meta recebido com sucesso. Próximo passo: buscar página e conta Instagram.'
     )
-  } catch (error: any) {
+  } catch {
     return redirectToInstagramSettings(
       'error',
-      error?.message || 'Erro ao trocar código da Meta por token.'
+      'Não foi possível concluir a conexão com a Meta.'
     )
   }
 }
