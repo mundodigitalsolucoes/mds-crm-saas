@@ -34,8 +34,8 @@ export async function POST() {
   const organizationId = session!.user.organizationId
   await observeChannelEntitlement(organizationId, 'instagram_channel')
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       settings: true,
     },
@@ -156,12 +156,16 @@ export async function POST() {
     },
   }
 
-  await prisma.organization.update({
-    where: { id: organizationId },
-    data: {
-      settings: JSON.stringify(nextSettings),
-    },
+  const saved = await prisma.organization.updateMany({
+    where: { id: organizationId, deletedAt: null, settings: organization.settings },
+    data: { settings: JSON.stringify(nextSettings) },
   })
+  if (saved.count !== 1) {
+    return NextResponse.json(
+      { error: 'Configuração alterada durante a assinatura. Verifique o estado na Meta antes de tentar novamente.' },
+      { status: 409 }
+    )
+  }
 
   return NextResponse.json({
     success: true,
