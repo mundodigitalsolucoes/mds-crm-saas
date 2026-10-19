@@ -4,7 +4,7 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   chatwootPlatformApi,
   getChatwootCredentials,
@@ -73,7 +73,7 @@ async function getSafeUser(params: {
 
 export async function GET() {
   try {
-    const perm = await checkPermission('atendimento', 'view')
+    const perm = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
     if (!perm.allowed || !perm.session) {
       return (
