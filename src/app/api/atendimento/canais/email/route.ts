@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import {
   deleteEmailChannel,
   listEmailChannels,
@@ -30,6 +31,7 @@ export async function GET() {
     'view'
   )
   if (!allowed) return errorResponse!
+  await observeChannelEntitlement(session!.user.organizationId, 'email_channel')
 
   try {
     const channels = await listEmailChannels(session!.user.organizationId)
@@ -53,6 +55,7 @@ export async function DELETE(req: NextRequest) {
     'delete'
   )
   if (!allowed) return errorResponse!
+  await observeChannelEntitlement(session!.user.organizationId, 'email_channel')
 
   const rawBody = await req.json().catch(() => null)
   const parsed = deleteSchema.safeParse(rawBody)
