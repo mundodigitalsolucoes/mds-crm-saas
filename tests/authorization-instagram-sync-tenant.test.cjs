@@ -68,3 +68,14 @@ test('Instagram settings GET and POST use active tenant; POST prevents stale set
   assert.match(instagramSettings, /saved\.count !== 1/)
   assert.doesNotMatch(instagramSettings, /prisma\.organization\.update\(/)
 })
+
+test('Instagram account and diagnostic reads reject deleted tenants before provider calls', () => {
+  for (const route of ['accounts', 'debug-token', 'debug-pages', 'debug-business-pages']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${route}/route.ts`, 'utf8')
+    assert.match(source, /checkPermission\(\s*'integrations',\s*'view'\s*\)/, route)
+    assert.match(source, /session!\.user\.organizationId/, route)
+    assert.match(source, /prisma\.organization\.findFirst\(/, route)
+    assert.match(source, /where: \{ id: organizationId, deletedAt: null \}/, route)
+    assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/, route)
+  }
+})
