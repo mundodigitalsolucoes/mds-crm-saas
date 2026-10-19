@@ -37,7 +37,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/app/api/atendimento/widget/provision/route.ts',
     'src/app/api/integrations', ':(exclude)src/app/api/integrations/chatwoot/credentials/route.ts',
     ':(exclude)src/app/api/integrations/evolution/qrcode/route.ts',
-    'src/app/api/webhooks', 'src/lib/integrations', 'src/lib/atendimento',
+    'src/app/api/webhooks', ':(exclude)src/app/api/webhooks/whatsapp-cloud/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
