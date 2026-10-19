@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
@@ -42,6 +43,7 @@ export async function GET() {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'instagram_channel')
 
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
