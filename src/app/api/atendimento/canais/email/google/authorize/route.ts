@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { checkPlanActive } from '@/lib/checkLimits'
 import { getGoogleEmailAuthorizationUrl } from '@/lib/atendimento/providers/email'
 
@@ -9,6 +10,7 @@ export async function POST() {
     'edit'
   )
   if (!allowed) return errorResponse!
+  await observeChannelEntitlement(session!.user.organizationId, 'email_channel')
 
   const planCheck = await checkPlanActive(session!.user.organizationId)
   if (!planCheck.active) return planCheck.errorResponse!
