@@ -61,16 +61,31 @@ export async function POST(request: Request) {
     // Atualiza a senha e marca o token como usado
     const hashedPassword = await bcrypt.hash(data.password, 12);
 
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: hashedPassword },
-      }),
-      prisma.passwordResetToken.update({
-        where: { id: resetToken.id },
+    const consumed = await prisma.$transaction(async (tx) => {
+      const claim = await tx.passwordResetToken.updateMany({
+        where: { id: resetToken.id, used: false, expiresAt: { gt: new Date() } },
         data: { used: true },
-      }),
-    ]);
+      });
+      if (claim.count !== 1) return false;
+
+      const updated = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          deletedAt: null,
+          organization: { deletedAt: null },
+        },
+        data: { passwordHash: hashedPassword },
+      });
+      if (updated.count !== 1) throw new Error('RESET_USER_UNAVAILABLE');
+      return true;
+    });
+
+    if (!consumed) {
+      return NextResponse.json(
+        { error: 'Este link já foi utilizado ou expirou. Solicite um novo.' },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       message: 'Senha redefinida com sucesso!',
