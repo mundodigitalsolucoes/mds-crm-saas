@@ -10,6 +10,7 @@ on:
       - 'src/lib/permissions.ts'
       - 'src/lib/checkPermission.ts'
       - 'src/app/api/integrations/chatwoot/credentials/**'
+      - 'src/app/api/atendimento/**'
       - 'src/app/api/projects/**'
       - 'src/app/api/leads/**'
       - 'src/app/api/kanban/**'
@@ -49,4 +50,4 @@ jobs:
       - name: Generate Prisma client locally
         run: npx prisma generate
       - name: Run Block 2 regression tests
-        run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts tests/authorization-atendimento-sso.test.ts
+        run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts tests/authorization-atendimento-sso.test.ts tests/authorization-atendimento-inventory.test.ts
