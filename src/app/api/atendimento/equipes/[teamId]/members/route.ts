@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { parseBody } from '@/lib/validations'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   addChatwootTeamMembers,
   getChatwootCredentials,
@@ -32,10 +32,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'view'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'view' })
 
   if (!allowed) return errorResponse!
 
@@ -84,10 +81,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'edit'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'edit' })
 
   if (!allowed) return errorResponse!
 
@@ -160,10 +154,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'edit'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'edit' })
 
   if (!allowed) return errorResponse!
 
