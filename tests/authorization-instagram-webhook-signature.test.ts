@@ -56,3 +56,11 @@ test('Instagram accounts, sync and token exchange do not expose raw Meta errors'
     assert.doesNotMatch(source, /details:\s*tokenData/)
   }
 })
+
+test('Instagram sync uses only the tenant-selected Facebook page', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/sync-account/route.ts', 'utf8')
+  assert.doesNotMatch(source, /TARGET_FACEBOOK_PAGE_ID/)
+  assert.match(source, /currentInstagram\.facebookPageId/)
+  assert.match(source, /if \(!targetFacebookPageId\)/)
+  assert.match(source, /page\.id === targetFacebookPageId/)
+})
