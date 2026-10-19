@@ -49,3 +49,10 @@ test('Instagram OAuth signed state rejects tampering, expiry and future timestam
     else process.env.NEXTAUTH_SECRET = previous;
   }
 });
+
+test('Instagram OAuth callback revalidates live integration permission before token exchange', () => {
+  assert.match(callback, /checkPermission\('integrations', 'edit'\)/);
+  assert.match(callback, /!permission\.allowed/);
+  assert.match(callback, /permission\.session\?\.user\.organizationId !== state\.organizationId/);
+  assert.ok(callback.indexOf("checkPermission('integrations', 'edit')") < callback.indexOf('const token = await exchangeCodeForToken(code)'));
+});
