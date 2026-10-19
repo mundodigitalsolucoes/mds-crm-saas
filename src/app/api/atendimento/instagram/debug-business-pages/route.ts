@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
 
   const organizationId = session!.user.organizationId
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: { settings: true },
   })
 
