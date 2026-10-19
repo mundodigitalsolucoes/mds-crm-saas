@@ -79,3 +79,10 @@ test('Instagram account and diagnostic reads reject deleted tenants before provi
     assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/, route)
   }
 })
+
+test('Business Manager diagnostics validate user-supplied Graph path segments', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/debug-business-pages/route.ts', 'utf8')
+  assert.match(source, /searchParams\.get\('businessId'\)/)
+  assert.match(source, /\^\\d\{1,32\}\$/)
+  assert.match(source, /Business ID inválido/)
+})
