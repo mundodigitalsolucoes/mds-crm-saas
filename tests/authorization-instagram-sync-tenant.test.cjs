@@ -4,8 +4,8 @@ const { readFileSync } = require('node:fs')
 const source = readFileSync('src/app/api/atendimento/instagram/sync-account/route.ts', 'utf8')
 
 test('Instagram sync uses session tenant and rejects deleted organizations', () => {
-  assert.match(source, /checkPermission\('integrations', 'edit'\)/)
-  assert.match(source, /session\.user\.organizationId|perm\.session\.user\.organizationId/)
+  assert.match(source, /checkPermission\(\s*'integrations',\s*'edit'\s*\)/)
+  assert.match(source, /session!\.user\.organizationId|perm\.session\.user\.organizationId/)
   assert.match(source, /prisma\.organization\.findFirst\(/)
   assert.match(source, /where: \{ id: organizationId, deletedAt: null \}/)
 })
