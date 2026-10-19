@@ -30,12 +30,15 @@ test('Instagram OAuth signed state rejects tampering, expiry and future timestam
     const signed = signInstagramState({ organizationId: 'org-a', userId: 'user-a', nonce: 'a'.repeat(64) });
     assert.equal(verifyInstagramState(signed)?.organizationId, 'org-a');
     assert.equal(verifyInstagramState(signed)?.userId, 'user-a');
+    assert.equal(verifyInstagramState(signed)?.nonce, 'a'.repeat(64));
     const [payload, signature] = signed.split('.');
     const altered = Buffer.from(JSON.stringify({ organizationId: 'org-b', userId: 'user-a', nonce: 'a'.repeat(64), source: 'mds_crm_instagram', issuedAt: start })).toString('base64url');
     assert.equal(verifyInstagramState(`${altered}.${signature}`), null);
     const badSignature = `${signature![0] === 'A' ? 'B' : 'A'}${signature!.slice(1)}`;
     assert.equal(verifyInstagramState(`${payload}.${badSignature}`), null);
     assert.equal(verifyInstagramState(payload), null);
+    const otherNonce = signInstagramState({ organizationId: 'org-a', userId: 'user-a', nonce: 'b'.repeat(64) });
+    assert.notEqual(verifyInstagramState(otherNonce)?.nonce, verifyInstagramState(signed)?.nonce);
     Date.now = () => start + 10 * 60 * 1000 + 1;
     assert.equal(verifyInstagramState(signed), null);
     Date.now = () => start - 31_000;
