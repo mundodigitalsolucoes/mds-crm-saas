@@ -70,20 +70,20 @@ async function findOrganizationByInstagramBusinessId(instagramBusinessId: string
   const organizations = await prisma.organization.findMany({
     select: {
       id: true,
-      name: true,
       settings: true,
-      chatwootAccountId: true,
       chatwootUrl: true,
     },
   })
 
-  return organizations.find((organization) => {
+  const matches = organizations.filter((organization) => {
     const instagram = readInstagramSettings(organization.settings)
-    return (
-      typeof instagram.instagramBusinessId === 'string' &&
-      instagram.instagramBusinessId === instagramBusinessId
-    )
+    return instagram.instagramBusinessId === instagramBusinessId &&
+      instagram.enabled === true && instagram.status === 'connected'
   })
+
+  // An ambiguous external identifier must never select an arbitrary tenant.
+  if (matches.length !== 1) return null
+  return matches[0]
 }
 
 async function createChatwootContact(params: {
