@@ -12,6 +12,9 @@ test('Instagram OAuth state is signed, time-limited, and verified before token e
   assert.match(connect, /signInstagramState\(/);
   assert.match(callback, /verifyInstagramState\(rawState\)/);
   assert.match(callback, /session\.user\.id !== state\.userId/);
+  assert.match(connect, /response\.cookies\.set\('mds_instagram_oauth_nonce'/);
+  assert.match(callback, /timingSafeEqual\(receivedNonce, expectedNonce\)/);
+  assert.match(callback, /maxAge: 0/);
   assert.match(callback, /session\.user\.organizationId !== state\.organizationId/);
   assert.ok(callback.indexOf('session.user.organizationId !== state.organizationId') < callback.indexOf('exchangeCodeForToken(code)'));
 });
@@ -24,11 +27,11 @@ test('Instagram OAuth signed state rejects tampering, expiry and future timestam
     process.env.NEXTAUTH_SECRET = 'isolated-authorization-test-secret';
     const start = 1_800_000_000_000;
     Date.now = () => start;
-    const signed = signInstagramState({ organizationId: 'org-a', userId: 'user-a' });
+    const signed = signInstagramState({ organizationId: 'org-a', userId: 'user-a', nonce: 'a'.repeat(64) });
     assert.equal(verifyInstagramState(signed)?.organizationId, 'org-a');
     assert.equal(verifyInstagramState(signed)?.userId, 'user-a');
     const [payload, signature] = signed.split('.');
-    const altered = Buffer.from(JSON.stringify({ organizationId: 'org-b', userId: 'user-a', source: 'mds_crm_instagram', issuedAt: start })).toString('base64url');
+    const altered = Buffer.from(JSON.stringify({ organizationId: 'org-b', userId: 'user-a', nonce: 'a'.repeat(64), source: 'mds_crm_instagram', issuedAt: start })).toString('base64url');
     assert.equal(verifyInstagramState(`${altered}.${signature}`), null);
     const badSignature = `${signature![0] === 'A' ? 'B' : 'A'}${signature!.slice(1)}`;
     assert.equal(verifyInstagramState(`${payload}.${badSignature}`), null);
