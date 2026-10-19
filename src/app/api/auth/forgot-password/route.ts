@@ -32,25 +32,20 @@ export async function POST(request: Request) {
       });
     }
 
-    // Invalida tokens anteriores do mesmo email
-    await prisma.passwordResetToken.updateMany({
-      where: {
-        email: data.email,
-        used: false,
-      },
-      data: { used: true },
-    });
-
-    // Gera token seguro
+    // Gera token seguro; invalidacao e criacao ocorrem na mesma transacao.
     const token = randomBytes(32).toString('hex');
-
-    // Cria o token no banco (expira em 1 hora)
-    await prisma.passwordResetToken.create({
-      data: {
-        token,
-        email: data.email,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.passwordResetToken.updateMany({
+        where: { email: data.email, used: false },
+        data: { used: true },
+      });
+      await tx.passwordResetToken.create({
+        data: {
+          token,
+          email: data.email,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        },
+      });
     });
 
     // Monta o link de recuperação
