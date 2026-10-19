@@ -101,7 +101,7 @@ export async function POST() {
     return NextResponse.json(
       {
         error: 'Erro ao buscar páginas na Meta.',
-        details: data.error?.message || data,
+
       },
       { status: 500 }
     )
