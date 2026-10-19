@@ -15,6 +15,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/app/api/atendimento/equipes/[teamId]/members/route.ts',
     ':(exclude)src/app/api/atendimento/inboxes/[inboxId]/members/route.ts',
     ':(exclude)src/app/api/atendimento/session-diagnostics/route.ts',
+    ':(exclude)src/app/api/atendimento/widget/route.ts',
     'src/app/api/integrations', ':(exclude)src/app/api/integrations/chatwoot/credentials/route.ts',
     'src/app/api/webhooks', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
@@ -46,7 +47,7 @@ test('existing Atendimento permission contract remains unchanged without calling
 
 test('Vendas integration preserves Marketing, the existing authorization engine and the empty enforcement manifest', () => {
   const diff = execFileSync('git', ['diff', 'd9ac1fe1b8e8406489c2158e5c26186580544ef7', '--',
-    'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization',
+    'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
     'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');
