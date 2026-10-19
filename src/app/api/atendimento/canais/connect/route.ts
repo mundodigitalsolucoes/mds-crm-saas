@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { checkPlanActive, checkWhatsappInstanceLimit } from '@/lib/checkLimits'
 import { prisma } from '@/lib/prisma'
 import {
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
   const EVO_KEY = process.env.EVOLUTION_API_KEY ?? ''
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'whatsapp')
   const userId = session!.user.id
 
   const organization = await prisma.organization.findUnique({
