@@ -101,3 +101,8 @@ test('Instagram webhook excludes deleted tenants before resolving external busin
   assert.match(route, /prisma\.organization\.findMany\(\{\s*where:\s*\{\s*deletedAt:\s*null\s*\}/)
   assert.match(route, /if \(matches\.length !== 1\) return null/)
 });
+
+test('Instagram webhook refuses disabled Chatwoot connections', () => {
+  assert.match(route, /if \(!chatwootAccount\?\.isActive \|\| !chatwootAccount\.accessTokenEnc\) continue/)
+  assert.ok(route.indexOf('!chatwootAccount?.isActive') < route.indexOf('decryptToken(chatwootAccount.accessTokenEnc)'))
+})
