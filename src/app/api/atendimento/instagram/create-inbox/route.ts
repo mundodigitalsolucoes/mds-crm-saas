@@ -88,24 +88,10 @@ async function chatwootRequest<T>(params: {
     : null
 
   if (!response.ok) {
-    const detail =
-      (json &&
-      typeof json === 'object' &&
-      ('error' in json || 'message' in json)
-        ? String(
-            (json as { error?: string; message?: string }).error ||
-              (json as { message?: string }).message ||
-              ''
-          )
-        : '') ||
-      text ||
-      `chatwoot_http_${response.status}`
-
     throw new InstagramInboxError(
       'Falha ao criar inbox API do Instagram no Atendimento.',
-      response.status,
-      'CHATWOOT_INSTAGRAM_INBOX_REQUEST_FAILED',
-      detail
+      502,
+      'CHATWOOT_INSTAGRAM_INBOX_REQUEST_FAILED'
     )
   }
 
