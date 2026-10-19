@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   const organizationId = session!.user.organizationId
   await observeChannelEntitlement(organizationId, 'instagram_channel')
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       settings: true,
     },
@@ -177,12 +177,18 @@ export async function POST(req: NextRequest) {
     },
   }
 
-  await prisma.organization.update({
-    where: { id: organizationId },
+  const saved = await prisma.organization.updateMany({
+    where: { id: organizationId, deletedAt: null, settings: organization.settings },
     data: {
       settings: JSON.stringify(nextSettings),
     },
   })
+  if (saved.count !== 1) {
+    return NextResponse.json(
+      { error: 'Configuração alterada durante a seleção. Tente novamente.' },
+      { status: 409 }
+    )
+  }
 
   return NextResponse.json({
     success: true,
