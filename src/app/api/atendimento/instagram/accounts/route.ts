@@ -45,8 +45,8 @@ export async function GET() {
   const organizationId = session!.user.organizationId
   await observeChannelEntitlement(organizationId, 'instagram_channel')
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       settings: true,
     },
