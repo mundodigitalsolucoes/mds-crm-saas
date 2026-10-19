@@ -100,3 +100,11 @@ test('Instagram inbox errors do not forward raw Chatwoot provider details', () =
   assert.match(source, /message: error\.message/)
   assert.doesNotMatch(source, /detail: error\.detail/)
 })
+
+test('Instagram inbox provider errors are normalized without raw provider body persistence', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.doesNotMatch(source, /const detail =/)
+  assert.doesNotMatch(source, /chatwoot_http_\$\{response\.status\}/)
+  assert.match(source, /'CHATWOOT_INSTAGRAM_INBOX_REQUEST_FAILED'/)
+  assert.match(source, /'Falha ao criar inbox API do Instagram no Atendimento\.',\s*502/)
+})
