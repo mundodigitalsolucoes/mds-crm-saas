@@ -277,17 +277,13 @@ export async function POST(req: NextRequest) {
           content: messageText,
         })
 
-        console.log('[Instagram → Atendimento OK]', {
-          org: organization.id,
-          senderId,
-          conversationId,
-        })
+        console.info('[Instagram → Atendimento] Mensagem encaminhada com sucesso')
       }
     }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Erro webhook Instagram:', error)
+    console.error('Erro webhook Instagram:', error instanceof Error ? error.name : 'unknown_error')
 
     return NextResponse.json(
       { error: 'WEBHOOK_FAILED' },
