@@ -110,7 +110,7 @@ export async function GET() {
       {
         success: false,
         error: 'Erro ao consultar debug_token.',
-        details: data.error?.message || data,
+
       },
       { status: 500 }
     )
