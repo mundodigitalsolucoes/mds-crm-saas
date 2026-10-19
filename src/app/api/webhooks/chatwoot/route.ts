@@ -1,6 +1,7 @@
 // src/app/api/webhooks/chatwoot/route.ts
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import {
   processChatwootEvent,
 } from '@/lib/atendimento/orchestration/chatwoot-events'
@@ -54,7 +55,7 @@ function logChatwootWebhookDebug(payload: ChatwootWebhookPayload) {
 function validateSecret(req: NextRequest): boolean {
   if (!WEBHOOK_SECRET) {
     console.warn('[Chatwoot Webhook] CHATWOOT_WEBHOOK_SECRET não configurado.')
-    return true
+    return false
   }
 
   const querySecret = req.nextUrl.searchParams.get('secret')
@@ -65,10 +66,12 @@ function validateSecret(req: NextRequest): boolean {
     req.headers.get('x-webhook-secret') ??
     req.headers.get('authorization')?.replace('Bearer ', '')
 
-  return (
-    querySecret === WEBHOOK_SECRET ||
-    headerSecret === WEBHOOK_SECRET
-  )
+  return [querySecret, headerSecret].some((candidate) => {
+    if (!candidate) return false
+    const actual = Buffer.from(candidate)
+    const expected = Buffer.from(WEBHOOK_SECRET)
+    return actual.length === expected.length && timingSafeEqual(actual, expected)
+  })
 }
 
 export async function POST(req: NextRequest) {
