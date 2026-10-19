@@ -20,6 +20,7 @@ on:
       - 'src/app/(app)/leads/**'
       - 'src/app/(app)/kanban/**'
       - 'tests/authorization*.test.ts'
+      - 'scripts/block2-route-inventory.mjs'
       - 'tests/entitlements.test.ts'
       - '.github/workflows/block2-authorization-tests.yml'
   workflow_dispatch:
@@ -51,5 +52,7 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Generate Prisma client locally
         run: npx prisma generate
+      - name: Validate read-only route inventory
+        run: node scripts/block2-route-inventory.mjs > /tmp/block2-route-inventory.json && node -e "const a=require('/tmp/block2-route-inventory.json'); if(a.summary.routeFiles<100 || a.summary.methodRows<a.summary.routeFiles) process.exit(1); console.log(JSON.stringify(a.summary))"
       - name: Run Block 2 regression tests
         run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts tests/authorization-atendimento-sso.test.ts tests/authorization-atendimento-inventory.test.ts tests/authorization-atendimento-shared-integrations.test.ts tests/authorization-channel-access.test.ts tests/authorization-channel-observation.test.ts tests/authorization-channel-route-coverage.test.ts tests/authorization-atendimento-page-coverage.test.ts tests/authorization-shared-resources-inventory.test.ts tests/authorization-evolution-qrcode-tenant.test.ts tests/authorization-evolution-lifecycle-tenant.test.ts tests/authorization-whatsapp-webhook-signature.test.ts tests/authorization-chatwoot-webhook-secret.test.ts tests/authorization-instagram-oauth-state.test.ts tests/authorization-instagram-webhook-signature.test.ts
