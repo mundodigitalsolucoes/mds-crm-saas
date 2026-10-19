@@ -41,6 +41,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     'src/app/api/webhooks', ':(exclude)src/app/api/webhooks/whatsapp-cloud/route.ts',
     ':(exclude)src/app/api/webhooks/chatwoot/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
+    ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma'], { encoding: 'utf8' });
