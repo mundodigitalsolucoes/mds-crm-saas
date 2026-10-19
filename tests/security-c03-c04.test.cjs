@@ -103,5 +103,5 @@ test('C04: concurrent reset issuance is serialized per email by PostgreSQL trans
   const issue = forgot.indexOf('tx.passwordResetToken.create(');
   assert.ok(lock > forgot.indexOf('prisma.$transaction(async (tx) =>'));
   assert.ok(lock < invalidate && invalidate < issue);
-  assert.match(forgot, /tx\.\$queryRaw`SELECT pg_advisory_xact_lock\(hashtextextended\(\$\{data\.email\}, 0\)\)`/);
+  assert.match(forgot, /tx\.\$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock\(hashtextextended\(\$\{data\.email\}, 0\)\)`/);
 });
