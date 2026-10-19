@@ -122,8 +122,6 @@ export async function POST() {
     }
   )
 
-  const data = await response.json().catch(() => ({}))
-
   if (!response.ok) {
     return NextResponse.json(
       {
@@ -178,6 +176,5 @@ export async function POST() {
       'message_reads',
       'message_reactions',
     ],
-    meta: data,
   })
 }
