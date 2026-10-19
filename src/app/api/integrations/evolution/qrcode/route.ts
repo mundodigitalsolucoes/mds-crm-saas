@@ -1,6 +1,7 @@
 // src/app/api/integrations/evolution/qrcode/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { checkPermission } from '@/lib/checkPermission'
+import { prisma } from '@/lib/prisma'
 import {
   getInstanceState,
   getQRCode,
@@ -26,7 +27,7 @@ function normalizePendingState(state: EvolutionConnectionState) {
 }
 
 export async function GET(req: NextRequest) {
-  const { allowed, errorResponse } = await checkPermission('integrations', 'view')
+  const { allowed, session, errorResponse } = await checkPermission('integrations', 'view')
   if (!allowed) return errorResponse!
 
   const instanceName = req.nextUrl.searchParams.get('instance')
@@ -34,6 +35,21 @@ export async function GET(req: NextRequest) {
 
   if (!instanceName) {
     return noStoreJson({ error: 'instance obrigatório.' }, { status: 400 })
+  }
+
+  // Never query the provider using an unscoped instance name from the request.
+  const ownedInstance = await prisma.whatsappInstance.findFirst({
+    where: { organizationId: session!.user.organizationId, instanceName, isActive: true },
+    select: { id: true, metadata: true },
+  })
+  if (!ownedInstance) {
+    return noStoreJson({ error: 'Instância não encontrada.' }, { status: 404 })
+  }
+  // Cloud API instances have no Evolution QR code, even if a name happens to match.
+  let provider: unknown
+  try { provider = ownedInstance.metadata ? JSON.parse(ownedInstance.metadata)?.provider : undefined } catch { provider = undefined }
+  if (provider === 'whatsapp_cloud') {
+    return noStoreJson({ error: 'Instância não encontrada.' }, { status: 404 })
   }
 
   if (mode === 'status') {
