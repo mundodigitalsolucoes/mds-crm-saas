@@ -7,6 +7,10 @@ import { parsePermissions, hasPermission } from '../src/lib/permissions';
 test('provider lifecycle and legacy operational guards remain unchanged from the original authorization baseline', () => {
   const diff = execFileSync('git', ['diff', 'f93c3435fff316a548255993d749ef545c9c7670', '--',
     'src/app/(app)/atendimento', 'src/app/(app)/settings/atendimento', 'src/app/api/atendimento',
+    ':(exclude)src/app/api/atendimento/equipes/route.ts',
+    ':(exclude)src/app/api/atendimento/inboxes/route.ts',
+    ':(exclude)src/app/api/atendimento/agentes/route.ts',
+    ':(exclude)src/app/api/atendimento/agentes/sync/route.ts',
     'src/app/api/integrations', ':(exclude)src/app/api/integrations/chatwoot/credentials/route.ts',
     'src/app/api/webhooks', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
@@ -15,6 +19,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     'prisma'], { encoding: 'utf8' });
   // C03/C04 intentionally changed auth, middleware and dependency metadata after this historical baseline.
   // The Chatwoot credentials guard is separately tested by authorization-atendimento-sso.test.ts.
+  // The four Atendimento endpoints above only switch to the observe-only commercial guard.
   // All other integration and provider files remain protected by this historical diff.
   assert.equal(diff, '');
 });
