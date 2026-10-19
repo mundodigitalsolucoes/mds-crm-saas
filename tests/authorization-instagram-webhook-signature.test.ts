@@ -106,3 +106,9 @@ test('Instagram webhook refuses disabled Chatwoot connections', () => {
   assert.match(route, /if \(!chatwootAccount\?\.isActive \|\| !chatwootAccount\.accessTokenEnc\) continue/)
   assert.ok(route.indexOf('!chatwootAccount?.isActive') < route.indexOf('decryptToken(chatwootAccount.accessTokenEnc)'))
 })
+
+test('Instagram webhook ignores outbound echo events before Chatwoot writes', () => {
+  assert.match(route, /event\?\.message\?\.is_echo === true/)
+  assert.match(route, /senderId === instagramBusinessId/)
+  assert.ok(route.indexOf('event?.message?.is_echo === true') < route.indexOf('await createChatwootContact({'))
+})
