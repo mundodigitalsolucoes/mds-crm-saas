@@ -37,7 +37,7 @@ test('inventory every Atendimento API handler and explicitly classify provider c
   for (const path of [
     'inboxes/route.ts', 'agentes/route.ts', 'agentes/sync/route.ts',
     'equipes/[teamId]/route.ts', 'equipes/[teamId]/members/route.ts',
-    'inboxes/[inboxId]/members/route.ts',
+    'inboxes/[inboxId]/members/route.ts', 'session-diagnostics/route.ts',
   ]) {
     assert.ok(results.some((row) => row.path === path && row.commercial && !row.legacy), `commercial guard missing: ${path}`);
   }
