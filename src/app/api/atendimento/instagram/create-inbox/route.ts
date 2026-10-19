@@ -145,8 +145,8 @@ export async function POST() {
   await observeChannelEntitlement(organizationId, 'instagram_channel')
 
   const [organization, chatwootAccount] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: organizationId },
+    prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -368,19 +368,24 @@ export async function POST() {
       },
     }
 
-    const updatedOrganization = await prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        settings: JSON.stringify(nextSettings),
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        plan: true,
-        updatedAt: true,
-      },
+    // Never overwrite a concurrent settings change or write to a deleted tenant.
+    const saved = await prisma.organization.updateMany({
+      where: { id: organizationId, deletedAt: null, settings: organization.settings },
+      data: { settings: JSON.stringify(nextSettings) },
     })
+    if (saved.count !== 1) {
+      return NextResponse.json(
+        { error: 'Configuração alterada durante o provisionamento. Verifique a inbox antes de tentar novamente.' },
+        { status: 409 }
+      )
+    }
+    const updatedOrganization = await prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true, name: true, slug: true, plan: true, updatedAt: true },
+    })
+    if (!updatedOrganization) {
+      return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
+    }
 
     return NextResponse.json({
       success: true,
@@ -412,8 +417,9 @@ export async function POST() {
 
     const nowIso = new Date().toISOString()
 
-    await prisma.organization.update({
-      where: { id: organizationId },
+    // Error reporting must not overwrite a successful or newer configuration.
+    await prisma.organization.updateMany({
+      where: { id: organizationId, deletedAt: null, settings: organization.settings },
       data: {
         settings: JSON.stringify({
           ...parsedSettings,
