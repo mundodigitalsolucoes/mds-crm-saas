@@ -41,3 +41,18 @@ test('Instagram diagnostic routes never return raw Meta errors or access tokens'
   assert.match(business, /ownedPages: safeResult\(entry\.ownedPages\)/)
   assert.match(business, /clientPages: safeResult\(entry\.clientPages\)/)
 })
+
+test('Instagram settings cannot assert verified Meta identity or connected status', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/route.ts', 'utf8')
+  assert.match(source, /facebookPageId: currentInstagram\.facebookPageId/)
+  assert.match(source, /instagramBusinessId: currentInstagram\.instagramBusinessId/)
+  assert.match(source, /status: currentInstagram\.status/)
+})
+
+test('Instagram accounts, sync and token exchange do not expose raw Meta errors', () => {
+  for (const name of ['accounts', 'sync-account', 'exchange-token']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${name}/route.ts`, 'utf8')
+    assert.doesNotMatch(source, /details:\s*(?:data\.error\?\.message\s*\|\|\s*)?data\s*[,}]/)
+    assert.doesNotMatch(source, /details:\s*tokenData/)
+  }
+})
