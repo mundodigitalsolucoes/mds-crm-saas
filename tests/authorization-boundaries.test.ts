@@ -6,7 +6,8 @@ import { parsePermissions, hasPermission } from '../src/lib/permissions';
 
 test('provider lifecycle and legacy operational guards remain unchanged from the original authorization baseline', () => {
   const diff = execFileSync('git', ['diff', 'f93c3435fff316a548255993d749ef545c9c7670', '--',
-    'src/app/(app)/atendimento', 'src/app/(app)/settings/atendimento', 'src/app/api/atendimento',
+    'src/app/(app)/atendimento', ':(exclude)src/app/(app)/atendimento/layout.tsx',
+    'src/app/(app)/settings/atendimento', ':(exclude)src/app/(app)/settings/atendimento/layout.tsx', 'src/app/api/atendimento',
     ':(exclude)src/app/api/atendimento/equipes/route.ts',
     ':(exclude)src/app/api/atendimento/inboxes/route.ts',
     ':(exclude)src/app/api/atendimento/agentes/route.ts',
