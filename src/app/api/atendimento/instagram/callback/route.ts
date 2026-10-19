@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { verifyInstagramState } from '@/lib/atendimento/instagram-oauth-state'
@@ -51,7 +52,15 @@ function redirectToInstagramSettings(
   url.searchParams.set('instagramCallback', status)
   url.searchParams.set('message', message)
 
-  return NextResponse.redirect(url)
+  const response = NextResponse.redirect(url)
+  response.cookies.set('mds_instagram_oauth_nonce', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/atendimento/instagram/callback',
+    maxAge: 0,
+  })
+  return response
 }
 
 async function exchangeCodeForToken(code: string) {
@@ -120,6 +129,13 @@ export async function GET(req: NextRequest) {
       'error',
       'State inválido na conexão com a Meta.'
     )
+  }
+
+  const nonceCookie = req.cookies.get('mds_instagram_oauth_nonce')?.value
+  const expectedNonce = Buffer.from(state.nonce)
+  const receivedNonce = Buffer.from(nonceCookie ?? '')
+  if (receivedNonce.length !== expectedNonce.length || !timingSafeEqual(receivedNonce, expectedNonce)) {
+    return redirectToInstagramSettings('error', 'Conexão expirada ou iniciada em outro navegador.')
   }
 
   const session = await getServerSession(authOptions)
