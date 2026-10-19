@@ -439,7 +439,6 @@ export async function POST() {
         {
           error: error.code,
           message: error.message,
-          detail: error.detail || null,
         },
         { status: error.status }
       )
