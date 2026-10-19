@@ -54,3 +54,17 @@ test('Instagram page subscription guards active tenant and stale settings', () =
   assert.match(subscription, /saved\.count !== 1/)
   assert.doesNotMatch(subscription, /prisma\.organization\.update\(/)
 })
+
+const instagramSettings = readFileSync('src/app/api/atendimento/instagram/route.ts', 'utf8')
+
+test('Instagram settings GET and POST use active tenant; POST prevents stale settings writes', () => {
+  assert.match(instagramSettings, /checkPermission\(\s*'integrations',\s*'view'\s*\)/)
+  assert.match(instagramSettings, /checkPermission\(\s*'integrations',\s*'edit'\s*\)/)
+  assert.match(instagramSettings, /session!\.user\.organizationId/)
+  assert.ok((instagramSettings.match(/prisma\.organization\.findFirst\(/g) || []).length >= 2)
+  assert.match(instagramSettings, /where: \{ id: organizationId, deletedAt: null \}/)
+  assert.match(instagramSettings, /prisma\.organization\.updateMany\(/)
+  assert.match(instagramSettings, /settings: organization\.settings/)
+  assert.match(instagramSettings, /saved\.count !== 1/)
+  assert.doesNotMatch(instagramSettings, /prisma\.organization\.update\(/)
+})
