@@ -239,10 +239,14 @@ export async function POST(req: NextRequest) {
       const messaging = Array.isArray(entry?.messaging) ? entry.messaging : []
 
       for (const event of messaging) {
+        // Meta may deliver echoes of our own outbound messages. They must not
+        // be re-imported as inbound messages in Chatwoot.
+        if (event?.message?.is_echo === true) continue
+
         const senderId = String(event?.sender?.id || '')
         const messageText = String(event?.message?.text || '').trim()
 
-        if (!senderId || !messageText) continue
+        if (!senderId || !messageText || senderId === instagramBusinessId) continue
 
         const contact = await createChatwootContact({
           apiBaseUrl,
