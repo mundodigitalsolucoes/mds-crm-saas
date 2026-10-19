@@ -1,13 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 
 export async function POST(req: NextRequest) {
+  const { allowed, session, errorResponse } = await checkPermission('integrations', 'edit')
+  if (!allowed) return errorResponse!
+  const trustedOrganizationId = session!.user.organizationId
+  await observeChannelEntitlement(trustedOrganizationId, 'instagram_channel')
+
   try {
     const body = await req.json()
 
-    const { organizationId, code } = body
+    const { organizationId, code } = body ?? {}
 
-    if (!organizationId || !code) {
+    if (organizationId !== trustedOrganizationId) {
+      return NextResponse.json({ error: 'Organização inválida' }, { status: 403 })
+    }
+
+    if (!organizationId || typeof code !== 'string' || !code.trim()) {
       return NextResponse.json(
         { error: 'organizationId e code são obrigatórios' },
         { status: 400 }
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
     }
 
     const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
+      where: { id: trustedOrganizationId },
       select: { settings: true },
     })
 
@@ -76,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     await prisma.organization.update({
-      where: { id: organizationId },
+      where: { id: trustedOrganizationId },
       data: {
         settings: JSON.stringify(nextSettings),
       },
@@ -88,7 +99,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     return NextResponse.json(
-      { error: 'Erro interno', details: error },
+      { error: 'Erro interno' },
       { status: 500 }
     )
   }
