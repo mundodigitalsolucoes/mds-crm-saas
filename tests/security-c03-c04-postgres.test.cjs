@@ -69,3 +69,32 @@ test('same-email advisory locks serialize concurrent Prisma transactions', async
     await prisma.$disconnect()
   }
 })
+
+test('different-email advisory locks do not block each other', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const prisma = new PrismaClient()
+  let signalLocked
+  const locked = new Promise((resolve) => { signalLocked = resolve })
+  let releaseFirst
+  const release = new Promise((resolve) => { releaseFirst = resolve })
+  try {
+    const first = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock(hashtextextended(${'block2-lock-a@example.invalid'}, 0))`
+      signalLocked()
+      await release
+    }, { timeout: 10000 })
+    await locked
+    // The second transaction should acquire a different email lock while
+    // the first transaction remains open.
+    const second = prisma.$transaction(async (tx) => {
+      return tx.$queryRaw`SELECT 1 AS acquired FROM pg_advisory_xact_lock(hashtextextended(${'block2-lock-b@example.invalid'}, 0))`
+    }, { timeout: 5000 })
+    const rows = await second
+    assert.equal(rows[0].acquired, 1)
+    releaseFirst()
+    await first
+  } finally {
+    releaseFirst()
+    await prisma.$disconnect()
+  }
+})
