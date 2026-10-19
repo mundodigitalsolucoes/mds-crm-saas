@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { verifyInstagramState } from '@/lib/atendimento/instagram-oauth-state'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
 
 const META_GRAPH_VERSION = 'v20.0'
-
-const callbackStateSchema = z.object({
-  organizationId: z.string().uuid(),
-  userId: z.string().min(1),
-  source: z.literal('mds_crm_instagram'),
-})
 
 type MetaTokenResponse = {
   access_token?: string
@@ -28,22 +24,6 @@ function safeJsonParse<T>(value: string | null | undefined): T | null {
 
   try {
     return JSON.parse(value) as T
-  } catch {
-    return null
-  }
-}
-
-function decodeState(rawState: string | null) {
-  if (!rawState) return null
-
-  try {
-    const decoded = Buffer.from(rawState, 'base64url').toString('utf-8')
-    const parsed = JSON.parse(decoded)
-    const result = callbackStateSchema.safeParse(parsed)
-
-    if (!result.success) return null
-
-    return result.data
   } catch {
     return null
   }
@@ -133,13 +113,18 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const state = decodeState(rawState)
+  const state = verifyInstagramState(rawState)
 
   if (!state) {
     return redirectToInstagramSettings(
       'error',
       'State inválido na conexão com a Meta.'
     )
+  }
+
+  const session = await getServerSession(authOptions)
+  if (!session?.user || session.user.id !== state.userId || session.user.organizationId !== state.organizationId) {
+    return redirectToInstagramSettings('error', 'Sessão inválida ou diferente da que iniciou a conexão.')
   }
 
   const organization = await prisma.organization.findUnique({
