@@ -64,3 +64,17 @@ test('Instagram sync uses only the tenant-selected Facebook page', () => {
   assert.match(source, /if \(!targetFacebookPageId\)/)
   assert.match(source, /page\.id === targetFacebookPageId/)
 })
+
+test('Instagram inbox requires verified Meta connection before provisioning', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /currentInstagram\.status !== 'connected'/)
+  assert.match(source, /currentInstagram\.facebookPageId/)
+  assert.match(source, /currentInstagram\.metaAccessTokenEncrypted/)
+  assert.match(source, /INSTAGRAM_META_CONNECTION_REQUIRED/)
+})
+
+test('Instagram settings response reflects persisted verified state', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/route.ts', 'utf8')
+  assert.match(source, /const savedConfig = resolveInstagramConfigFromSettings\(nextSettings\)/)
+  assert.match(source, /config: savedConfig/)
+})
