@@ -66,3 +66,14 @@ test('C04: password recovery remains separate from public signup', () => {
   assert.match(forgot, /passwordResetToken\.create/);
   assert.match(reset, /passwordResetToken\.findUnique/);
 });
+
+test('C04: both password recovery endpoints reject deleted users and tenants', () => {
+  for (const path of [
+    'src/app/api/auth/forgot-password/route.ts',
+    'src/app/api/auth/reset-password/route.ts',
+  ]) {
+    const route = source(path);
+    assert.match(route, /deletedAt:\s*null/);
+    assert.match(route, /organization:\s*\{\s*deletedAt:\s*null\s*\}/);
+  }
+});
