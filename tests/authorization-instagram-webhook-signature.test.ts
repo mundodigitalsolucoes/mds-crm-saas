@@ -96,3 +96,8 @@ test('Instagram OAuth callback does not reflect untrusted Meta errors in redirec
   assert.doesNotMatch(source, /error\?\.message\s*\|\|/)
   assert.match(source, /Não foi possível concluir a conexão com a Meta/)
 })
+
+test('Instagram webhook excludes deleted tenants before resolving external business identifiers', () => {
+  assert.match(route, /prisma\.organization\.findMany\(\{\s*where:\s*\{\s*deletedAt:\s*null\s*\}/)
+  assert.match(route, /if \(matches\.length !== 1\) return null/)
+});
