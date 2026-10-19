@@ -21,6 +21,7 @@ on:
       - 'src/app/(app)/kanban/**'
       - 'tests/authorization*.test.ts'
       - 'tests/authorization-instagram-exchange-tenant.test.cjs'
+      - 'tests/authorization-instagram-sync-tenant.test.cjs'
       - 'scripts/block2-route-inventory.mjs'
       - 'tests/entitlements.test.ts'
       - '.github/workflows/block2-authorization-tests.yml'
@@ -60,3 +61,5 @@ jobs:
 
       - name: Verify legacy Instagram exchange tenant guards
         run: node --test tests/authorization-instagram-exchange-tenant.test.cjs
+      - name: Verify Instagram sync tenant guards
+        run: node --test tests/authorization-instagram-sync-tenant.test.cjs
