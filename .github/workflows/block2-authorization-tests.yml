@@ -1,0 +1,51 @@
+name: Block 2 Authorization Regression
+
+on:
+  push:
+    branches:
+      - feature/modular-plans-entitlements
+    paths:
+      - 'src/lib/authorization/**'
+      - 'src/lib/entitlements/**'
+      - 'src/lib/permissions.ts'
+      - 'src/lib/checkPermission.ts'
+      - 'src/app/api/projects/**'
+      - 'src/app/api/leads/**'
+      - 'src/app/api/kanban/**'
+      - 'src/app/(app)/projects/**'
+      - 'src/app/(app)/leads/**'
+      - 'src/app/(app)/kanban/**'
+      - 'tests/authorization*.test.ts'
+      - 'tests/entitlements.test.ts'
+      - '.github/workflows/block2-authorization-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authorization:
+    name: Authorization, entitlements and tenant isolation (fixtures only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://mds_ci:mds_ci@127.0.0.1:5432/mds_ci
+      NEXTAUTH_SECRET: ci-only-not-a-production-secret-0123456789
+      ADMIN_JWT_SECRET: ci-only-admin-jwt-secret-01234567890123456789
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Generate Prisma client locally
+        run: npx prisma generate
+      - name: Run Block 2 regression tests
+        run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts
