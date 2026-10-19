@@ -3,7 +3,7 @@
 // Não altera fila, roteamento, provider ou engine nativa.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { checkPermission } from '@/lib/checkPermission'
+import { checkModulePermission } from '@/lib/authorization/guards'
 import {
   deleteChatwootTeam,
   getChatwootCredentials,
@@ -41,10 +41,7 @@ export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ teamId: string }> }
 ) {
-  const { allowed, session, errorResponse } = await checkPermission(
-    'atendimento',
-    'delete'
-  )
+  const { allowed, session, errorResponse } = await checkModulePermission({ module: 'atendimento', permission: 'atendimento', action: 'delete' })
 
   if (!allowed) return errorResponse!
 
