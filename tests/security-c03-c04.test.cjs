@@ -52,3 +52,17 @@ test('C03: admin login and status use centralized JWT functions', () => {
   assert.match(route, /setAdminCookie\(/);
   assert.match(route, /clearAdminCookie\(/);
 });
+
+test('C04: ordinary login rejects deleted users and organizations', () => {
+  const auth = source('src/lib/auth.ts');
+  assert.match(auth, /if \(!user \|\| user\.deletedAt \|\| user\.organization\.deletedAt\) return null/);
+});
+
+test('C04: password recovery remains separate from public signup', () => {
+  const signup = source('src/app/api/auth/signup/route.ts');
+  const forgot = source('src/app/api/auth/forgot-password/route.ts');
+  const reset = source('src/app/api/auth/reset-password/route.ts');
+  assert.doesNotMatch(signup, /passwordResetToken|sendPasswordResetEmail/);
+  assert.match(forgot, /passwordResetToken\.create/);
+  assert.match(reset, /passwordResetToken\.findUnique/);
+});
