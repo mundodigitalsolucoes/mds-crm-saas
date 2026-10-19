@@ -286,6 +286,8 @@ export async function POST(req: NextRequest) {
     },
   })
 
+  const savedConfig = resolveInstagramConfigFromSettings(nextSettings)
+
   return NextResponse.json({
     success: true,
     orgScope: {
@@ -294,7 +296,7 @@ export async function POST(req: NextRequest) {
       slug: updated.slug,
       plan: updated.plan,
     },
-    config: parsed.data,
+    config: savedConfig,
     savedAt: updated.updatedAt.toISOString(),
   })
 }
