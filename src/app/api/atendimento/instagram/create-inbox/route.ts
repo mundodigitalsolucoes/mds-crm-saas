@@ -203,6 +203,19 @@ export async function POST() {
         ? currentInstagram.instagramHandle.trim()
         : ''
 
+    // Provisioning an inbox must not turn an unverified manual configuration into a connected Meta account.
+    if (currentInstagram.status !== 'connected' ||
+        typeof currentInstagram.facebookPageId !== 'string' ||
+        !currentInstagram.facebookPageId.trim() ||
+        typeof currentInstagram.metaAccessTokenEncrypted !== 'string' ||
+        !currentInstagram.metaAccessTokenEncrypted.trim()) {
+      throw new InstagramInboxError(
+        'Selecione e valide a conta Instagram pela Meta antes de criar a inbox.',
+        409,
+        'INSTAGRAM_META_CONNECTION_REQUIRED'
+      )
+    }
+
     if (!instagramBusinessId) {
       throw new InstagramInboxError(
         'Instagram Business ID não encontrado. Selecione a conta Instagram antes de criar a inbox.',
