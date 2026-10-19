@@ -190,6 +190,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Assinatura inválida.' }, { status: 401 })
     }
 
+    // Reject oversized payloads before parsing or making provider calls.
+    // The Meta signature has already been verified over the original body.
+    if (Buffer.byteLength(rawBody, 'utf8') > 1024 * 1024) {
+      return NextResponse.json({ error: 'Payload excede o limite.' }, { status: 413 })
+    }
+
     const body = JSON.parse(rawBody)
 
     if (body?.event) {
