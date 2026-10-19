@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { processWhatsAppCloudWebhook } from '@/lib/atendimento/providers/whatsapp-cloud-inbound'
 
 export const dynamic = 'force-dynamic'
@@ -38,7 +39,23 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const payload = await req.json().catch(() => null)
+  const secret = process.env.WHATSAPP_CLOUD_APP_SECRET
+  if (!secret) return NextResponse.json({ success: false }, { status: 503 })
+
+  const signature = req.headers.get('x-hub-signature-256')
+  if (!signature || !/^sha256=[a-f0-9]{64}$/i.test(signature)) {
+    return NextResponse.json({ success: false }, { status: 401 })
+  }
+
+  const rawBody = await req.text()
+  const expected = createHmac('sha256', secret).update(rawBody).digest()
+  const received = Buffer.from(signature.slice(7), 'hex')
+  if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+    return NextResponse.json({ success: false }, { status: 401 })
+  }
+
+  let payload: unknown
+  try { payload = JSON.parse(rawBody) } catch { payload = null }
 
   if (!payload) {
     return NextResponse.json({ success: false }, { status: 400 })
