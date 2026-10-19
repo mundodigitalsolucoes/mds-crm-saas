@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     if (!tokenResponse.ok) {
       return NextResponse.json(
-        { error: 'Erro ao trocar token', details: tokenData },
+        { error: 'Erro ao trocar token' },
         { status: 500 }
       )
     }
