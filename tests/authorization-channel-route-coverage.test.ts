@@ -18,7 +18,7 @@ test('all reviewed human-facing channel APIs keep operational authorization and 
       assert.match(source, /checkPermission\s*\(/, `missing operational guard: ${route}`);
       assert.ok(source.includes(`observeChannelEntitlement(`), `missing observation: ${route}`);
       assert.ok(source.includes(`'${channel}'`), `wrong channel: ${route}`);
-      assert.ok(source.indexOf('checkPermission(') < source.indexOf('observeChannelEntitlement('),
+      assert.ok(source.search(/checkPermission\s*\(/) < source.indexOf('observeChannelEntitlement('),
         `observation must follow operational guard: ${route}`);
     }
   }
