@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { checkPermission } from '@/lib/checkPermission'
+import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 
 const hexColorSchema = z.string().trim().regex(/^#([0-9A-Fa-f]{6})$/, 'Cor inválida.')
@@ -335,6 +336,7 @@ export async function GET() {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'site_widget')
 
   const organization = await prisma.organization.findUnique({
     where: { id: organizationId },
@@ -382,6 +384,7 @@ export async function POST(req: NextRequest) {
   if (!allowed) return errorResponse!
 
   const organizationId = session!.user.organizationId
+  await observeChannelEntitlement(organizationId, 'site_widget')
 
   const body = await req.json().catch(() => ({}))
   const parsed = widgetConfigSchema.safeParse({
