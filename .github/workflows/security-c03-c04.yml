@@ -7,6 +7,8 @@ on:
     paths:
       - 'tests/security-c03-c04.test.cjs'
       - 'src/app/api/auth/signup/route.ts'
+      - 'src/app/api/auth/forgot-password/route.ts'
+      - 'src/app/api/auth/reset-password/route.ts'
       - 'src/lib/admin-auth.ts'
       - 'src/app/api/admin/orgs/**/provision-chatwoot/route.ts'
       - 'middleware.ts'
