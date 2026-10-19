@@ -15,3 +15,30 @@ test('Instagram OAuth state is signed, time-limited, and verified before token e
   assert.match(callback, /session\.user\.organizationId !== state\.organizationId/);
   assert.ok(callback.indexOf('session.user.organizationId !== state.organizationId') < callback.indexOf('exchangeCodeForToken(code)'));
 });
+
+test('Instagram OAuth signed state rejects tampering, expiry and future timestamps', async () => {
+  const { signInstagramState, verifyInstagramState } = await import('../src/lib/atendimento/instagram-oauth-state');
+  const previous = process.env.NEXTAUTH_SECRET;
+  const realNow = Date.now;
+  try {
+    process.env.NEXTAUTH_SECRET = 'isolated-authorization-test-secret';
+    const start = 1_800_000_000_000;
+    Date.now = () => start;
+    const signed = signInstagramState({ organizationId: 'org-a', userId: 'user-a' });
+    assert.equal(verifyInstagramState(signed)?.organizationId, 'org-a');
+    assert.equal(verifyInstagramState(signed)?.userId, 'user-a');
+    const [payload, signature] = signed.split('.');
+    const altered = Buffer.from(JSON.stringify({ organizationId: 'org-b', userId: 'user-a', source: 'mds_crm_instagram', issuedAt: start })).toString('base64url');
+    assert.equal(verifyInstagramState(`${altered}.${signature}`), null);
+    assert.equal(verifyInstagramState(`${payload}.${signature!.slice(0, -1)}A`), null);
+    assert.equal(verifyInstagramState(payload), null);
+    Date.now = () => start + 10 * 60 * 1000 + 1;
+    assert.equal(verifyInstagramState(signed), null);
+    Date.now = () => start - 31_000;
+    assert.equal(verifyInstagramState(signed), null);
+  } finally {
+    Date.now = realNow;
+    if (previous === undefined) delete process.env.NEXTAUTH_SECRET;
+    else process.env.NEXTAUTH_SECRET = previous;
+  }
+});
