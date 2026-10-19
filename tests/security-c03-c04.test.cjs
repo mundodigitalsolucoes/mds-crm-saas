@@ -95,3 +95,13 @@ test('C04: issuing a new reset token invalidates old links in the same transacti
   assert.match(forgot, /tx\.passwordResetToken\.create/);
   assert.doesNotMatch(forgot, /await prisma\.passwordResetToken\.updateMany/);
 });
+
+test('C04: concurrent reset issuance is serialized per email by PostgreSQL transaction lock', () => {
+  const forgot = source('src/app/api/auth/forgot-password/route.ts');
+  const lock = forgot.indexOf('pg_advisory_xact_lock(hashtextextended(');
+  const invalidate = forgot.indexOf('tx.passwordResetToken.updateMany(');
+  const issue = forgot.indexOf('tx.passwordResetToken.create(');
+  assert.ok(lock > forgot.indexOf('prisma.$transaction(async (tx) =>'));
+  assert.ok(lock < invalidate && invalidate < issue);
+  assert.match(forgot, /tx\.\$queryRaw`SELECT pg_advisory_xact_lock\(hashtextextended\(\$\{data\.email\}, 0\)\)`/);
+});
