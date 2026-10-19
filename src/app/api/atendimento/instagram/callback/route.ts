@@ -198,12 +198,21 @@ export async function GET(req: NextRequest) {
       },
     }
 
-    await prisma.organization.update({
-      where: { id: state.organizationId },
+    // Avoid overwriting settings changed by another request after our read.
+    // A concurrent update must be retried through a fresh OAuth flow.
+    const saved = await prisma.organization.updateMany({
+      where: {
+        id: state.organizationId,
+        settings: organization.settings,
+        deletedAt: null,
+      },
       data: {
         settings: JSON.stringify(nextSettings),
       },
     })
+    if (saved.count !== 1) {
+      throw new Error('INSTAGRAM_SETTINGS_CONCURRENT_UPDATE')
+    }
 
     return redirectToInstagramSettings(
       'success',
