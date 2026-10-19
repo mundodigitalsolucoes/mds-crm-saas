@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomBytes } from 'node:crypto'
 import { checkPermission } from '@/lib/checkPermission'
 import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { signInstagramState } from '@/lib/atendimento/instagram-oauth-state'
@@ -30,7 +31,9 @@ export async function GET() {
 
     const redirectUri = `${appUrl}/api/atendimento/instagram/callback`
 
+    const nonce = randomBytes(32).toString('hex')
     const state = signInstagramState({
+      nonce,
       organizationId: session!.user.organizationId,
       userId: session!.user.id,
     })
@@ -50,11 +53,19 @@ export async function GET() {
       ].join(','),
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       redirectUrl: `${META_OAUTH_BASE_URL}?${params.toString()}`,
       redirectUri,
     })
+    response.cookies.set('mds_instagram_oauth_nonce', nonce, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/api/atendimento/instagram/callback',
+      maxAge: 600,
+    })
+    return response
   } catch (error: any) {
     return NextResponse.json(
       {
