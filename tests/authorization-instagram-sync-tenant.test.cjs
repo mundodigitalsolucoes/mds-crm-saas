@@ -215,3 +215,13 @@ test('Instagram Meta selection, sync and subscription reject unresolved inbox re
     assert.match(source.slice(guard, write), /status: 409/)
   }
 })
+
+test('Instagram OAuth callback and token exchange cannot overwrite unresolved inbox reservation', () => {
+  for (const route of ['callback', 'exchange-token']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${route}/route.ts`, 'utf8')
+    const guard = source.indexOf("['pending', 'reconciliation_required'].includes(String(currentInstagram.inboxProvisionStatus))")
+    const write = source.indexOf('prisma.organization.updateMany(')
+    assert.ok(guard > 0 && write > guard, `${route} must reject unresolved inbox state before settings write`)
+    assert.match(source.slice(guard, write), /Provisionamento da inbox pendente de reconciliação/)
+  }
+})
