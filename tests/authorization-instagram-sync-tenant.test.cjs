@@ -114,3 +114,9 @@ test('Instagram inbox errors do not retain provider details', () => {
   assert.equal(source.includes('this.detail ='), false)
   assert.equal(source.includes('detail?: string'), false)
 })
+
+test('Instagram inbox identifiers reject unsafe integers', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /Number\.isSafeInteger\(num\)/)
+  assert.equal(source.includes('Number.isInteger(num)'), false)
+})
