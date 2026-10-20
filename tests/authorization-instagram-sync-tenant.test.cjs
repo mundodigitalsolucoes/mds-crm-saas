@@ -248,3 +248,11 @@ test('Widget provision and agent-link completion/error paths preserve concurrent
     assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, 2)
   }
 })
+
+test('Widget remote operations reject soft-deleted tenants before Chatwoot calls', () => {
+  for (const route of ['provision', 'agents']) {
+    const source = readFileSync(`src/app/api/atendimento/widget/${route}/route.ts`, 'utf8')
+    assert.match(source, /prisma\.organization\.findFirst\(\{\s*where: \{ id: organizationId, deletedAt: null \}/)
+    assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/)
+  }
+})
