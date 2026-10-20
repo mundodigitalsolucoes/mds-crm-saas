@@ -284,3 +284,12 @@ test('Widget first inbox POST requires CAS reservation and fail-closed recovery'
   assert.match(source, /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
   assert.match(source, /provisionStatus: params.runtime.provisionStatus === 'reconciliation_required'/)
 })
+
+test('Widget settings and agent routes block unresolved Widget inbox reservations', () => {
+  for (const route of ['src/app/api/atendimento/widget/route.ts', 'src/app/api/atendimento/widget/agents/route.ts']) {
+    const source = readFileSync(route, 'utf8')
+    assert.match(source, /\['pending', 'reconciliation_required'\]\.includes/)
+    assert.match(source, /Inbox do Widget pendente de reconciliação/)
+    assert.match(source, /status: 409/)
+  }
+})
