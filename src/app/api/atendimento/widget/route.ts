@@ -428,6 +428,11 @@ export async function POST(req: NextRequest) {
   const parsedSettings =
     safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
 
+  const widgetRuntime = parsedSettings.atendimentoWidgetRuntime as Record<string, unknown> | undefined
+  if (['pending', 'reconciliation_required'].includes(String(widgetRuntime?.provisionStatus))) {
+    return NextResponse.json({ error: 'Inbox do Widget pendente de reconciliação.' }, { status: 409 })
+  }
+
   const nextSettings = {
     ...parsedSettings,
     atendimentoWidget: {
