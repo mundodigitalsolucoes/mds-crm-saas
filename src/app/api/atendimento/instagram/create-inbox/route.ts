@@ -298,6 +298,16 @@ export async function POST() {
       )
     }
 
+    // An existing inbox must never be patched through a different Chatwoot account.
+    if (existingInboxId && currentInstagram.chatwootAccountId != null &&
+        toPositiveInt(currentInstagram.chatwootAccountId) !== connectedAccountId) {
+      throw new InstagramInboxError(
+        'A inbox existente pertence a outra conta do Atendimento. Reconcilie a integração antes de continuar.',
+        409,
+        'CHATWOOT_INBOX_ACCOUNT_MISMATCH'
+      )
+    }
+
     let inboxResponse: ChatwootInboxResponse
     let action: 'created' | 'updated'
 
