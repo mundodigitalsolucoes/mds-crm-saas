@@ -497,7 +497,7 @@ async function persistRuntimeError(params: {
       ...params.parsedSettings,
       atendimentoWidgetRuntime: {
         ...params.runtime,
-        provisionStatus: 'error',
+        provisionStatus: params.runtime.provisionStatus === 'reconciliation_required' ? 'reconciliation_required' : 'error',
         lastError: params.message,
         lastSyncAt: new Date().toISOString(),
       },
@@ -564,8 +564,13 @@ export async function POST() {
 
   const config = resolveWidgetConfig(parsedSettings, organization.name)
   const runtime = resolveWidgetRuntime(parsedSettings)
+  let expectedSettings = organization.settings
+  let remoteCreateAttempted = false
 
   try {
+    if (['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))) {
+      throw new WidgetProvisionError('Inbox do Widget pendente de reconciliação. Verifique o Chatwoot antes de tentar novamente.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+    }
     validateProvisionConfig(config)
 
     if (!chatwootAccount?.isActive) {
@@ -653,6 +658,26 @@ export async function POST() {
         throw error
       }
     } else {
+      // Reserve the exact organization settings snapshot before any remote POST.
+      // Concurrent requests cannot both create an inbox for the same tenant.
+      const pendingSettings = JSON.stringify({
+        ...parsedSettings,
+        atendimentoWidgetRuntime: {
+          ...runtime,
+          provisionStatus: 'pending',
+          lastError: null,
+          lastSyncAt: new Date().toISOString(),
+        },
+      })
+      const reservation = await prisma.organization.updateMany({
+        where: { id: organizationId, deletedAt: null, settings: organization.settings },
+        data: { settings: pendingSettings },
+      })
+      if (reservation.count !== 1) {
+        throw new WidgetProvisionError('Configuração alterada durante a reserva da inbox.', 409, 'WIDGET_INBOX_RESERVATION_CONFLICT')
+      }
+      expectedSettings = pendingSettings
+      remoteCreateAttempted = true
       inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
         url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
         apiToken,
@@ -713,7 +738,7 @@ export async function POST() {
     }
 
     const saved = await prisma.organization.updateMany({
-      where: { id: organizationId, deletedAt: null, settings: organization.settings },
+      where: { id: organizationId, deletedAt: null, settings: expectedSettings },
       data: { settings: JSON.stringify(nextSettings) },
     })
     if (saved.count !== 1) {
@@ -763,9 +788,11 @@ export async function POST() {
 
     await persistRuntimeError({
       organizationId,
-      expectedSettings: organization.settings,
+      expectedSettings,
       parsedSettings,
-      runtime,
+      runtime: remoteCreateAttempted || ['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))
+        ? { ...runtime, provisionStatus: 'reconciliation_required' }
+        : runtime,
       message,
     })
 
