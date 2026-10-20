@@ -127,3 +127,13 @@ test('Instagram inbox identifiers do not accept coercion or alternate numeric sy
   assert.equal(source.includes(String.raw`/^[1-9]\d*$/`), true)
   assert.equal(source.includes('Number.isSafeInteger(num)'), true)
 })
+
+test('Malformed stored Instagram inbox references cannot trigger blind Chatwoot creation', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  const guard = source.indexOf("'CHATWOOT_INBOX_ID_INVALID'")
+  const create = source.indexOf("method: 'POST'", guard)
+  assert.ok(guard > 0)
+  assert.ok(create > guard)
+  assert.match(source, /rawExistingInboxId !== undefined/)
+  assert.match(source, /!existingInboxId/)
+})
