@@ -177,6 +177,14 @@ export async function GET(req: NextRequest) {
         ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
         : {}
 
+    // Never replace the settings snapshot owned by unresolved inbox provisioning.
+    if (['pending', 'reconciliation_required'].includes(String(currentInstagram.inboxProvisionStatus))) {
+      return redirectToInstagramSettings(
+        'error',
+        'Provisionamento da inbox pendente de reconciliação.'
+      )
+    }
+
     const now = new Date().toISOString()
 
     const nextSettings = {
