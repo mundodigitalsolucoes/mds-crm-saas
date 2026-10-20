@@ -166,7 +166,7 @@ async function chatwootRequest<T>(params: {
 
 async function persistRuntimeError(params: {
   organizationId: string
-  expectedSettings: string | null
+  expectedSettings: string
   parsedSettings: Record<string, unknown>
   runtime: WidgetRuntimeData
   message: string
