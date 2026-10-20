@@ -323,6 +323,11 @@ export async function POST() {
       )
     }
 
+    const operation = await prisma.widgetInboxOperation.findUnique({ where: { organizationId } })
+    if (operation && (operation.inboxId !== inboxId || operation.accountId !== connectedAccountId || operation.connectedAccountId !== chatwootAccount.id || operation.baseUrl !== apiBaseUrl)) {
+      throw new WidgetAgentsError('Inbox pendente de reconciliação com a operação durável.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+    }
+
     const existingAgents = await chatwootRequest<InboxAgentsResponse>({
       url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inbox_members/${inboxId}`,
       apiToken,

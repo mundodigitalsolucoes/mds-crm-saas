@@ -46,10 +46,12 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     'src/lib/checkLimits.ts',
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
+    ':(exclude)src/lib/atendimento/widget-inbox-store.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma', ':(exclude)prisma/schema.prisma',
-    ':(exclude)prisma/migrations/20261020230000_instagram_security_storage/migration.sql'], { encoding: 'utf8' });
+    ':(exclude)prisma/migrations/20261020230000_instagram_security_storage/migration.sql',
+    ':(exclude)prisma/migrations/20261020234500_widget_durable_operation/migration.sql'], { encoding: 'utf8' });
   // C03/C04 intentionally changed auth, middleware and dependency metadata after this historical baseline.
   // The Chatwoot credentials guard is separately tested by authorization-atendimento-sso.test.ts.
   // The four Atendimento endpoints above only switch to the observe-only commercial guard.
@@ -80,7 +82,10 @@ test('approved local G4 storage is additive and preserves every existing Prisma 
   // for local migration review/testing. All existing model tokens remain pinned.
   const existing = schema
     .replace(/^\/\/ Isolated security storage[^\n]*\n/gm, '')
+    .replace(/^\/\/ One durable creation identity[^\n]*\n/gm, '')
     .replace(/model Instagram(?:OAuthState|WebhookReceipt) \{[^}]*\}/g, '')
+    .replace(/model WidgetInboxOperation \{[^}]*\}/g, '')
+    .replace(/^\s*widgetInboxOperation\s+WidgetInboxOperation\?\s*$/gm, '')
     .replace(/^\s*instagramOAuthStates\s+InstagramOAuthState\[\]\s*$/gm, '')
     .replace(/^\s*instagramWebhookReceipts\s+InstagramWebhookReceipt\[\]\s*$/gm, '');
   const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();

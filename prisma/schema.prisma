@@ -117,6 +117,7 @@ model Organization {
 
   instagramOAuthStates      InstagramOAuthState[]
   instagramWebhookReceipts  InstagramWebhookReceipt[]
+  widgetInboxOperation      WidgetInboxOperation?
 
   @@map("organizations")
 }
@@ -1217,4 +1218,20 @@ model InstagramWebhookReceipt {
   @@unique([organizationId, eventHash])
   @@index([status, createdAt])
   @@map("instagram_webhook_receipts")
+}
+
+// One durable creation identity per tenant, independent of mutable settings.
+model WidgetInboxOperation {
+  organizationId     String       @id @map("organization_id")
+  operationId        String       @unique @default(uuid()) @map("operation_id")
+  connectedAccountId String       @map("connected_account_id")
+  accountId          Int          @map("account_id")
+  baseUrl            String       @map("base_url")
+  inboxId            Int?         @map("inbox_id")
+  status             String       @default("reserved")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("widget_inbox_operations")
 }
