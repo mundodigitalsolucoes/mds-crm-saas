@@ -487,6 +487,7 @@ async function chatwootRequest<T>(params: {
 
 async function persistRuntimeError(params: {
   organizationId: string
+  expectedSettings: string | null
   parsedSettings: Record<string, unknown>
   runtime: WidgetRuntimeData
   message: string
@@ -502,11 +503,9 @@ async function persistRuntimeError(params: {
       },
     }
 
-    await prisma.organization.update({
-      where: { id: params.organizationId },
-      data: {
-        settings: JSON.stringify(nextSettings),
-      },
+    await prisma.organization.updateMany({
+      where: { id: params.organizationId, deletedAt: null, settings: params.expectedSettings },
+      data: { settings: JSON.stringify(nextSettings) },
     })
   } catch {
     // noop
@@ -714,19 +713,24 @@ export async function POST() {
       },
     }
 
-    const updatedOrganization = await prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        settings: JSON.stringify(nextSettings),
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        plan: true,
-        updatedAt: true,
-      },
+    const saved = await prisma.organization.updateMany({
+      where: { id: organizationId, deletedAt: null, settings: organization.settings },
+      data: { settings: JSON.stringify(nextSettings) },
     })
+    if (saved.count !== 1) {
+      throw new WidgetProvisionError(
+        'Configuração alterada durante a operação. Verifique o Atendimento antes de tentar novamente.',
+        409,
+        'WIDGET_SETTINGS_CONFLICT'
+      )
+    }
+    const updatedOrganization = await prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true, name: true, slug: true, plan: true, updatedAt: true },
+    })
+    if (!updatedOrganization) {
+      throw new WidgetProvisionError('Organização não encontrada.', 404, 'WIDGET_ORGANIZATION_NOT_FOUND')
+    }
 
     return NextResponse.json({
       success: true,
@@ -760,6 +764,7 @@ export async function POST() {
 
     await persistRuntimeError({
       organizationId,
+      expectedSettings: organization.settings,
       parsedSettings,
       runtime,
       message,
