@@ -87,6 +87,14 @@ export async function POST(req: NextRequest) {
       ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
       : {}
 
+  // Do not mutate the snapshot reserved for an unresolved Chatwoot inbox POST.
+  if (['pending', 'reconciliation_required'].includes(String(currentInstagram.inboxProvisionStatus))) {
+  return NextResponse.json(
+  { error: 'Provisionamento da inbox pendente de reconciliação.' },
+  { status: 409 }
+  )
+  }
+
   const encryptedToken = currentInstagram.metaAccessTokenEncrypted
 
   if (typeof encryptedToken !== 'string' || !encryptedToken) {
