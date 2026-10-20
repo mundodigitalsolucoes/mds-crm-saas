@@ -346,6 +346,16 @@ export async function POST() {
       )
     }
 
+    // A PATCH response must refer to the exact inbox requested; never persist
+    // a different remote identifier as the tenant's existing inbox.
+    if (existingInboxId && inboxId !== existingInboxId) {
+      throw new InstagramInboxError(
+        'Resposta do Atendimento inconsistente com a inbox solicitada.',
+        502,
+        'CHATWOOT_INBOX_RESPONSE_MISMATCH'
+      )
+    }
+
     const channelId = toPositiveInt(inboxResponse.channel_id)
     const nowIso = new Date().toISOString()
 
