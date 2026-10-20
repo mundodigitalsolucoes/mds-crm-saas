@@ -526,8 +526,8 @@ export async function POST() {
   await observeChannelEntitlement(organizationId, 'site_widget')
 
   const [organization, chatwootAccount] = await Promise.all([
-    prisma.organization.findUnique({
-      where: { id: organizationId },
+    prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
       select: {
         id: true,
         name: true,
