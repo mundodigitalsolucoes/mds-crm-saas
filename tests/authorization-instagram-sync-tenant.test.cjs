@@ -249,7 +249,9 @@ test('Widget provision and agent-link completion/error paths preserve concurrent
       assert.match(source, /expectedSettings = pendingSettings/)
       assert.match(source, /\n      expectedSettings,\n/)
     } else {
-      assert.match(source, /settings: expectedSettings/)
+      // Agent linking has no pre-POST reservation: completion and error use
+      // the original snapshot, unlike provisioning's mutable reservation.
+      assert.match(source, /expectedSettings: organization\.settings/)
     }
     assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, route === 'provision' ? 3 : 2)
   }

@@ -1,0 +1,13 @@
+# Widget — evidência local e correção de exposição de erros
+
+Base: `cb1884e413203baa123ca94dfb0a4c4635b6502a`, branch candidata do Bloco 02. Sem homologação, merge, deploy ou publicação.
+
+Auditoria: os handlers `widget/provision` e `widget/agents` incluíam o corpo bruto de erros Chatwoot em `detail`, devolvido ao cliente. Esses corpos podem conter credenciais ou dados internos. A correção substitui o detalhe por `chatwoot_http_<status>`, mantendo status HTTP, códigos de erro e mensagens locais. Não altera helpers globais, providers, CAS, schema, políticas comerciais ou payloads de sucesso.
+
+Validação: `BLOCK2_TEST_DATABASE_URL` apontando explicitamente para PostgreSQL descartável loopback, `node --test tests/block2-widget-postgres.test.cjs`. Os handlers reais são compilados e executados com Prisma/banco real; autenticação e rede Chatwoot são mocks, sem chamadas externas. Sete cenários passaram: negativa de permissão, duas contas de tenants distintos com nomes iguais, concorrência pré-POST, timeout e bloqueio de retry, 404 sem criação substituta, saneamento de erro JSON/texto nos dois handlers, conflito de conclusão de agentes preservando settings concorrentes. Fixtures são removidas ao final.
+
+Uma asserção de segurança foi executada e **falhou como TODO explícito**: sucesso remoto seguido de substituição externa dos settings perde a reserva; o retry envia dois POSTs em vez de um. O resultado da suíte é 7 PASS e 1 TODO com falha reproduzida, **não oito aprovações**. Essa pendência continua crítica e transversal a G3/G6. Reconciliação remota por identidade durável e desenho de persistência aprovado continuam necessários; não adotar inbox por nome nem limpar pending por idade.
+
+O teste textual preexistente de CAS em `authorization-instagram-sync-tenant.test.cjs` tinha uma expectativa incorreta: agentes usam `organization.settings` tanto na conclusão como no erro; provisionamento usa snapshot mutável após reserva. A expectativa de agentes foi corrigida sem remover a exigência de CAS. O teste de handler com banco comprova que a gravação concorrente é preservada.
+
+Impacto/rollback: correção restrita ao conteúdo público do detalhe de erro nos dois handlers Widget. Reversão local por `git revert` do commit correspondente, sem mudar schema ou dados. Não usar reversão para publicar novamente corpos brutos. Atendimento iframe, credenciais globais Chatwoot e webhooks operacionais não foram alterados. Validação contra uma instalação Chatwoot real isolada e revisão independente permanecem pendentes. `observe_only` e `APPROVED_ENFORCEMENTS=[]` preservados.

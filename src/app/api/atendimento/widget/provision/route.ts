@@ -455,24 +455,11 @@ async function chatwootRequest<T>(params: {
     : null
 
   if (!response.ok) {
-    const detail =
-      (json &&
-      typeof json === 'object' &&
-      ('error' in json || 'message' in json)
-        ? String(
-            (json as { error?: string; message?: string }).error ||
-              (json as { error?: string; message?: string }).message ||
-              ''
-          )
-        : '') ||
-      text ||
-      `chatwoot_http_${response.status}`
-
     throw new WidgetProvisionError(
       'Falha ao ativar o canal do site no Atendimento.',
       response.status,
       'CHATWOOT_INBOX_REQUEST_FAILED',
-      detail
+      `chatwoot_http_${response.status}`
     )
   }
 
