@@ -284,7 +284,19 @@ export async function POST() {
 
     const webhookUrl = `${publicBaseUrl}/api/atendimento/instagram/webhook`
 
-    const existingInboxId = toPositiveInt(currentInstagram.chatwootInboxId)
+    const rawExistingInboxId = currentInstagram.chatwootInboxId
+    const existingInboxId = toPositiveInt(rawExistingInboxId)
+
+    // A malformed stored reference is not evidence that no remote inbox exists.
+    // Refuse a blind POST; an operator must reconcile the existing Chatwoot inbox.
+    if (rawExistingInboxId !== undefined && rawExistingInboxId !== null &&
+        rawExistingInboxId !== '' && !existingInboxId) {
+      throw new InstagramInboxError(
+        'Referência da inbox inválida. Verifique a inbox no Atendimento antes de criar outra.',
+        409,
+        'CHATWOOT_INBOX_ID_INVALID'
+      )
+    }
 
     let inboxResponse: ChatwootInboxResponse
     let action: 'created' | 'updated'
