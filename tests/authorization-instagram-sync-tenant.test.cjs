@@ -244,7 +244,13 @@ test('Widget provision and agent-link completion/error paths preserve concurrent
     assert.match(source, /settings: organization\.settings/)
     assert.match(source, /saved\.count !== 1/)
     assert.match(source, /WIDGET_SETTINGS_CONFLICT/)
-    assert.match(source, /expectedSettings: organization\.settings/)
+    if (route === 'provision') {
+      assert.match(source, /let expectedSettings = organization\.settings/)
+      assert.match(source, /expectedSettings = pendingSettings/)
+      assert.match(source, /\n      expectedSettings,\n/)
+    } else {
+      assert.match(source, /expectedSettings: organization\.settings/)
+    }
     assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, route === 'provision' ? 3 : 2)
   }
 })
@@ -267,7 +273,7 @@ test('Widget missing Chatwoot inbox cannot trigger blind replacement POST', () =
   const source = readFileSync('src/app/api/atendimento/widget/provision/route.ts', 'utf8')
   const existing = source.indexOf('if (existingInboxId) {')
   const missing = source.indexOf('error instanceof WidgetProvisionError && error.status === 404', existing)
-  const create = source.indexOf('} else {\n      inboxResponse = await chatwootRequest', existing)
+  const create = source.indexOf('} else {\n      // Reserve the exact organization settings snapshot', existing)
   assert.ok(existing > 0 && missing > existing && create > missing)
   assert.match(source.slice(missing, create), /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
   assert.doesNotMatch(source.slice(missing, create), /method: 'POST'/)
