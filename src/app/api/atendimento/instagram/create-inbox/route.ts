@@ -171,6 +171,8 @@ export async function POST() {
 
   const currentInstagram = readInstagramSettings(parsedSettings)
   let remoteCreateAttempted = false
+  let expectedSettings = organization.settings
+  let reservedSettings: Record<string, unknown> | null = null
 
   try {
     const inboxName =
@@ -323,7 +325,7 @@ export async function POST() {
 
     // A previous remote POST may have succeeded even when its response or local
     // persistence failed. Never issue another POST until reconciled.
-    if (!existingInboxId && currentInstagram.inboxProvisionStatus === 'reconciliation_required') {
+    if (!existingInboxId && ['reconciliation_required', 'pending'].includes(String(currentInstagram.inboxProvisionStatus))) {
       throw new InstagramInboxError(
         'Provisionamento anterior sem confirmação. Reconcilie a inbox no Atendimento antes de tentar novamente.',
         409,
@@ -346,6 +348,32 @@ export async function POST() {
 
       action = 'updated'
     } else {
+      // Atomically reserve this tenant's inbox operation BEFORE calling Chatwoot.
+      // A crash leaves 'pending' and requires reconciliation, never a blind retry.
+      const pendingAt = new Date().toISOString()
+      reservedSettings = {
+        ...parsedSettings,
+        atendimentoInstagram: {
+          ...currentInstagram,
+          inboxProvisionStatus: 'pending',
+          lastInboxError: null,
+          lastInboxSyncAt: pendingAt,
+          updatedAt: pendingAt,
+        },
+      }
+      const pendingJson = JSON.stringify(reservedSettings)
+      const reservation = await prisma.organization.updateMany({
+        where: { id: organizationId, deletedAt: null, settings: organization.settings },
+        data: { settings: pendingJson },
+      })
+      if (reservation.count !== 1) {
+        throw new InstagramInboxError(
+          'Provisionamento alterado por outra operação. Atualize o estado antes de tentar novamente.',
+          409,
+          'CHATWOOT_INBOX_RESERVATION_CONFLICT'
+        )
+      }
+      expectedSettings = pendingJson
       remoteCreateAttempted = true
       inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
         url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
@@ -392,7 +420,7 @@ export async function POST() {
     const nowIso = new Date().toISOString()
 
     const nextSettings = {
-      ...parsedSettings,
+      ...(reservedSettings ?? parsedSettings),
       atendimentoInstagram: {
         ...currentInstagram,
         enabled: true,
@@ -419,7 +447,7 @@ export async function POST() {
 
     // Never overwrite a concurrent settings change or write to a deleted tenant.
     const saved = await prisma.organization.updateMany({
-      where: { id: organizationId, deletedAt: null, settings: organization.settings },
+      where: { id: organizationId, deletedAt: null, settings: expectedSettings },
       data: { settings: JSON.stringify(nextSettings) },
     })
     if (saved.count !== 1) {
@@ -471,10 +499,10 @@ export async function POST() {
 
     // Error reporting must not overwrite a successful or newer configuration.
     await prisma.organization.updateMany({
-      where: { id: organizationId, deletedAt: null, settings: organization.settings },
+      where: { id: organizationId, deletedAt: null, settings: expectedSettings },
       data: {
         settings: JSON.stringify({
-          ...parsedSettings,
+          ...(reservedSettings ?? parsedSettings),
           atendimentoInstagram: {
             ...currentInstagram,
             inboxProvisionStatus:
