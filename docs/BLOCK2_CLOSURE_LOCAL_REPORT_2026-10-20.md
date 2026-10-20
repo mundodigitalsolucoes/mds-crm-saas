@@ -72,3 +72,79 @@ O core operacional de Atendimento/iframe, credenciais globais Chatwoot, adapters
 Evidências: `/workspace/mds-crm-onboarding-evidence/candidate/`. Incluem logs de testes e build/typecheck, JSON de lint/auditoria, inventários originais e por método, TAP da falha conhecida e barreira bloqueante, reprodução de papel antigo e Asaas antes das correções, smoke HTTP, migrations e instalação repetida. Os testes com providers usam mocks explicitamente e não demonstram compatibilidade com uma instalação real.
 
 Bloqueios para a próxima etapa: corrigir/reconciliar o Widget sem duplicação; revisar integralmente G2 e cenários restantes G1/G3; definir operação/retensão/reconciliação dos recibos G4; tratar lint/dependências e credenciais históricas; confirmar CI no SHA final; obter revisão independente e aceite formal. Não ativar enforce, não usar produção e não promover o candidato enquanto esses bloqueios estiverem abertos.
+
+---
+
+## Adendo — correção dos bloqueadores de homologação, 20/10/2026
+
+Este adendo atualiza os resultados acima sem apagar a evidência histórica. **Decisão atual: NÃO HOMOLOGADO; nenhum gate aprovado formalmente.** Branch `audit/block2-closure`, mesmo checkout isolado. Os cinco commits originais de 617cfd3 a d541622 permanecem ancestrais, sem reescrita. Nenhum merge, push, deploy, publicação ou acesso a banco de produção foi realizado.
+
+### Correções e comparação
+
+| Item | Antes (d541622) | Resultado desta rodada |
+| --- | --- | --- |
+| Widget, perda da reserva | Dois POSTs; TODO de segurança executado e falhando | Operação persistente independente dos settings; recuperação por ID com GET/PATCH; 16 testes funcionais PASS, zero TODO, incluindo a asserção original |
+| Auditoria npm | 49 dependências, 2 críticas | 17 dependências, **zero críticas**, 14 altas, 2 moderadas, 1 baixa |
+| Versões efetivas do lock | next 16.2.6; next-auth 4.24.14 | next **16.3.8**; next-auth **4.24.15**, somente essas duas dependências diretas selecionadas |
+| Lint global | 218 erros / 77 avisos | **182 erros / 77 avisos**, retorno 1; 36 erros corrigidos, nenhum diagnóstico novo |
+| Identidade removida em auth/me | HTTP 200 reproduzido | Seis rotas pessoais usam associação ativa de checkAuth; 54 combinações negativas e 18 legítimas passaram em dois testes agrupados |
+| Inventário de autorização | 177 métodos com sinais heurísticos | Todos os 177 métodos classificados por contrato/guard/exceção, 116 arquivos e 50 páginas/layouts; isso não prova todos os ramos nem substitui revisão independente |
+| Suite Node/PostgreSQL | 89 PASS e 1 TODO falhando | **101 PASS**, zero falha/skip/TODO |
+| Suite TypeScript | 171 PASS | **171 PASS**, zero falha/skip/TODO |
+| Aceite equivalente ao workflow | Bloqueado pelo TODO | Barreira específica de TODO passou; CI remoto do novo SHA continua não executado |
+
+Widget: a tabela aditiva WidgetInboxOperation vincula tenant, ConnectedAccount, conta/URL e identidade remota. Ela é reservada antes de enviar, e o ID remoto é salvo antes do CAS final. Foram auditados 27 pontos de escrita de Organization em 16 arquivos. Substituição do JSON não autoriza novo POST. Timeout/crash sem ID deixa pending/remote_unknown e exige reconciliação operacional; não existe adoção por nome, desbloqueio por idade ou criação substituta após 404. Testes reais de handler e PostgreSQL cobrem concorrência, conflitos CAS antes/depois do despacho, nova conexão de banco, PATCH existente, soft delete em momentos distintos, erro saneado e isolamento. Provider e transporte de autenticação nesses testes são simulados; Chatwoot real ainda não foi homologado. Detalhes e limites: [reconciliação durável](BLOCK2_WIDGET_DURABLE_RECONCILIATION_2026-10-20.md).
+
+Dependências: os dois alertas críticos eram de Next e NextAuth diretos; a cadeia peer Next → NextAuth também propaga severidade. Versões corrigidas, ranges, GHSA, impacto condicionado à configuração e integridade constam em [dependências críticas](BLOCK2_CRITICAL_DEPENDENCIES_2026-10-20.md). Não foi explorado RCE. O teste isolado com o pacote oficial anterior reproduziu URIError para Bearer malformado; a versão corrigida retorna null. A aplicação usa CredentialsProvider, não EmailProvider; o aviso crítico de normalização de e-mail não foi descrito como fluxo local explorável. Next 16.3.8 cobre os ranges críticos e demais avisos do pacote sem escolher automaticamente a versão mais nova. Mudanças transitivas/plataforma no lock decorrem dessa seleção, não de audit fix global. As 17 dependências remanescentes continuam dívida explícita.
+
+Lint: todos os 295 diagnósticos iniciais foram comparados por âncora de código com cb1884e e d541622; já estavam no candidato anterior aos cinco commits. Origem é classificação textual, não certificação semântica. Relevância para segurança é eixo separado: 53 diagnósticos iniciais em APIs/helpers sensíveis, dos quais restam 44 para revisão, sem presumir 44 vulnerabilidades. Foram corrigidos os erros do incremento e os bloqueadores diretamente alterados: tipos NextAuth/Instagram/notificações, const de signup, nomes locais de module, testes ESM mantendo asserções e carregamento inicial do Widget com cancelamento. As demais 259 mensagens (182 erros, 77 avisos) são preexistentes; nenhuma regra foi desativada. Detalhes: [G2 e lint](BLOCK2_G2_LINT_REVIEW_2026-10-20.md); classificação individual em lint-classification.json.
+
+### Comandos executados e evidência final
+
+Diretório externo de evidências: `/workspace/mds-crm-onboarding-evidence/blockers/`. Somente variáveis locais carregadas; BLOCK2_TEST_DATABASE_URL aponta ao mesmo PostgreSQL descartável. Logs não contêm valores de credenciais. Resultados intermediários falhos foram preservados, e os arquivos com sufixo final ou followup identificam as verificações conclusivas.
+
+| Comando/verificação | Resultado e artefato |
+| --- | --- |
+| HEAD HTTPS da raiz de binaries.prisma.sh | TLS/conectividade responderam; raiz retorna 404, não é endpoint de engine (prisma-connectivity.log) |
+| `curl --head --fail` do checksum oficial da engine Prisma fixada | HTTP 200, status 0; prisma-engine-connectivity.log |
+| `npm install --save-exact next@16.3.8 next-auth@4.24.15` | PASS; dependency-install.log, metadados oficiais e dependency-changes.json |
+| `npm ci --cache /workspace/.npm-cache` | PASS, lock reproduzido, 502 pacotes, validação TLS/integridade preservada; npm-ci.log e setup-repeat-final.log |
+| `bash .cache/install-cloud.sh` atualizado e repetido | PASS, Prisma Client 5.22.0 gerado e diff de schema vazio; setup-repeat-final.log |
+| `npx prisma validate` | PASS; prisma-validate.log |
+| `npx prisma migrate status` | Retorno 1 esperado: somente as duas migrations históricas MDS de dados continuam pendentes; migrate-status.log |
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs` | 101 PASS; node-tests-final.tap; barreira de zero TODO em todo-gate-final.log |
+| `npx tsx --test tests/*.test.ts` | 171 PASS; tsx-tests-final.log |
+| `node --import tsx --test tests/block2-personal-routes-postgres.test.mjs` após ajuste de tipo | 2 PASS (72 combinações); personal-routes-followup.tap |
+| `npm run lint -- --output-file .../lint-after.json --format json` | Retorno 1: 182 erros e 77 avisos; lint-after.json e classificação por diagnóstico |
+| ESLint nos 25 arquivos JS/TS existentes alterados desde d541622 | PASS; changed-files-lint.log; configuração/regras intactas |
+| `npm run build` após ajustes finais | PASS, Next 16.3.8; build-final.log |
+| `npx tsc --noEmit` após o build | PASS; typecheck-final.log; alteração gerada de next-env.d.ts restaurada |
+| Reinício via `NEXTAUTH_URL` local + `npx next start --hostname 127.0.0.1 --port 3100` | Build atualizado servindo; server.log; sem usar prestart/npm start |
+| `node .cache/bloco02-smoke.cjs` | **22 PASS**, login real sem HTTP 500, tenants/IDOR/permissões/assignee e agenda concorrente; http-smoke.log e http-smoke-results.json |
+| Consulta final de limpeza PostgreSQL | Zero organizações, OAuth states, webhook receipts e Widget operations de teste restantes |
+| Auditoria dos caminhos adicionados e boundary protegido | Nenhum .env/helper local/chave privada novo; .env.local e .cache ignorados; core e política comercial intactos desde d541622; git-boundary-final.json |
+
+O smoke repetido demonstra uma única reserva de agenda para oito solicitações, sete 409 e um 201. A autenticação passou no build atualizado com sessões reais por HTTP. Isso não certifica todos os browsers ou integração de e-mail real. Os nove testes G4 com banco real continuam incluídos nos 101: consumo único de state concorrente entre oito consumidores, callback real com Meta chamado uma vez, tenant/usuário/expiração, indisponibilidade do store, assinatura inválida, ausência de identidade, envio concorrente, replay após nova instância de cliente, resultado incerto e ID igual em tenants distintos. Nenhum teste de código-fonte foi usado isoladamente para declarar a correção do Widget ou persistência G4.
+
+### Gates após as correções
+
+| Gate | Evidência atual | Situação restante |
+| --- | --- | --- |
+| G1 | Login HTTP real, testes de admin, reset, sessão, tokens e concorrência; regressão Bearer malformado corrigida | Validação local positiva; **não aprovado**. Revisão independente, browser/middleware e e-mail real pendentes |
+| G2 | Revisão por método concluída no inventário; seis rotas pessoais corrigidas e matriz PostgreSQL positiva | **Não aprovado**. Verificação independente de ramos/ações indiretas, contratos públicos e exceções de produto pendente |
+| G3 | Correção durável do Widget, 16 testes funcionais, isolamento entre tenants e bindings | **Não aprovado**. Chatwoot/Evolution e demais providers reais isolados, reconciliação operacional de resultado sem ID e revisão de referências legadas pendentes |
+| G4 | Nove testes funcionais de persistência, assinatura, replay e concorrência no PostgreSQL local; 101 testes gerais positivos | **Não aprovado**. Validação Meta real e processo operacional de pending/remote_unknown, retenção/limpeza e revisão independente pendentes |
+| G5 | observe_only preservado; APPROVED_ENFORCEMENTS vazio; suites de boundary/compatibilidade positivas | **Não aprovado formalmente**. Nenhum enforcement comercial foi autorizado ou ativado |
+| G6 | Instalação repetível, schema local coerente, typecheck/build/smoke/suites positivos, relatório atualizado | **Bloqueado** pelo lint global, 17 dependências sinalizadas, ausência de CI remoto no novo SHA/revisão independente/providers reais e aceite de rollout/rollback |
+
+Persistência: cinco migrations selecionadas estão aplicadas localmente, incluindo a nova `20261020234500_widget_durable_operation`. As duas de dados MDS continuam pendentes e não foram marcadas como aplicadas. Nenhuma migration histórica foi editada. A reconciliação extra de schema feita no onboarding continua exclusiva deste banco descartável; não converte o histórico em plano de produção.
+
+Git/segredos: não foram adicionadas credenciais nem arquivos de configuração local. `.env.backup` já estava rastreado antes desta rodada: permanece risco anterior, exigindo revisão/rotação segura se contiver material real. Valores não foram expostos nem utilizados. O aviso Next sobre images.domains legado permanece registrado no startup; configuração de imagens/restrição de destinos exige revisão antes do rollout, fora desta correção pontual.
+
+### Commits e reversão para revisão
+
+Incrementos locais preservando os cinco originais: `c772fbb` (identidade durável Widget), `23f158e` (dependências críticas), `8ed774c` (G2 e lint). O commit que contém este adendo conclui os dois ajustes focados de lint e a documentação; seu SHA deve ser lido com `git log -1`, evitando referência circular dentro do próprio commit.
+
+Rollback proposto, não executado: suspender provisionamento e fluxos afetados antes de reverter incrementos; preservar IDs, operações e recibos duráveis, inclusive estados incertos; não apagar tabelas nem permitir replay para destravar. Reverter as dependências restaura ranges vulneráveis, e reverter G2 volta a aceitar identidades removidas: qualquer recuo exige restrição dessas superfícies e revisão de segurança. Antes de futuro rollout, identificar versão/artefato anterior, destino, backup e restauração, ensaiar em ambiente isolado e submeter o plano ao responsável. A migration aditiva pode permanecer durante recuo de código. Não há autorização para executar rollback ou migrations em produção.
+
+O rascunho reutilizável de onboarding foi atualizado com a quinta migration, comandos de teste ESM e estado final; salvar rascunho não publica nem aplica configuração. Os commits permanecem locais e não tiveram restauração em nova tarefa certificada. Como todos os gates ainda não passaram, não foi preparada publicação nem inventada URL de destino. Não é solicitada aprovação de deploy nesta etapa.
