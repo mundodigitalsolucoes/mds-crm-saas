@@ -108,3 +108,9 @@ test('Instagram inbox provider errors are normalized without raw provider body p
   assert.match(source, /'CHATWOOT_INSTAGRAM_INBOX_REQUEST_FAILED'/)
   assert.match(source, /'Falha ao criar inbox API do Instagram no Atendimento\.',\s*502/)
 })
+
+test('Instagram inbox errors do not retain provider details', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.equal(source.includes('this.detail ='), false)
+  assert.equal(source.includes('detail?: string'), false)
+})
