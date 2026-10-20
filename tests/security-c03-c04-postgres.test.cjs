@@ -182,3 +182,39 @@ test('Remote inbox success followed by stale local completion cannot overwrite c
     await db.end()
   }
 })
+
+
+test('Concurrent Widget reservation dispatches at most one simulated remote inbox POST', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const { Client } = require('pg')
+  const setup = new Client({ connectionString: process.env.DATABASE_URL })
+  const a = new Client({ connectionString: process.env.DATABASE_URL })
+  const b = new Client({ connectionString: process.env.DATABASE_URL })
+  await Promise.all([setup.connect(), a.connect(), b.connect()])
+  let remotePosts = 0
+  try {
+    // Disposable table is shared by both independent PostgreSQL connections.
+    await setup.query('CREATE TABLE block2_widget_remote_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
+    await setup.query("INSERT INTO block2_widget_remote_probe VALUES ('tenant-a', NULL, 'initial'), ('tenant-b', NULL, 'initial')")
+    const provision = async (db) => {
+      const reserved = await db.query(
+        "UPDATE block2_widget_remote_probe SET settings = 'pending' WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'initial'"
+      )
+      if (reserved.rowCount !== 1) return { status: 409, remoteCalled: false }
+      remotePosts += 1
+      return { status: 200, remoteCalled: true }
+    }
+    const results = await Promise.all([provision(a), provision(b)])
+    assert.equal(results.filter((result) => result.remoteCalled).length, 1)
+    assert.equal(results.filter((result) => result.status === 409).length, 1)
+    assert.equal(remotePosts, 1)
+    const saved = await setup.query('SELECT tenant_id, settings FROM block2_widget_remote_probe ORDER BY tenant_id')
+    assert.deepEqual(saved.rows, [
+      { tenant_id: 'tenant-a', settings: 'pending' },
+      { tenant_id: 'tenant-b', settings: 'initial' },
+    ])
+  } finally {
+    await setup.query('DROP TABLE IF EXISTS block2_widget_remote_probe')
+    await Promise.all([setup.end(), a.end(), b.end()])
+  }
+})
