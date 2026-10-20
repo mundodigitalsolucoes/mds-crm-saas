@@ -149,3 +149,36 @@ test('Inbox reservation CAS cannot mutate another tenant or a deleted tenant', a
     await db.end()
   }
 })
+
+test('Remote inbox success followed by stale local completion cannot overwrite concurrent tenant changes', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const { Client } = require('pg')
+  const db = new Client({ connectionString: process.env.DATABASE_URL })
+  await db.connect()
+  try {
+    await db.query('CREATE TABLE block2_inbox_completion_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
+    await db.query("INSERT INTO block2_inbox_completion_probe VALUES ('tenant-a', NULL, 'initial'), ('tenant-b', NULL, 'initial')")
+    const reserve = await db.query(
+      "UPDATE block2_inbox_completion_probe SET settings = 'pending' WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'initial'"
+    )
+    assert.equal(reserve.rowCount, 1)
+    // Model a concurrent settings writer after a successful remote Chatwoot POST.
+    await db.query("UPDATE block2_inbox_completion_probe SET settings = 'newer-settings' WHERE tenant_id = 'tenant-a'")
+    const completion = await db.query(
+      "UPDATE block2_inbox_completion_probe SET settings = 'created-inbox' WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'pending'"
+    )
+    assert.equal(completion.rowCount, 0)
+    const staleError = await db.query(
+      "UPDATE block2_inbox_completion_probe SET settings = 'reconciliation_required' WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'pending'"
+    )
+    assert.equal(staleError.rowCount, 0)
+    const rows = await db.query('SELECT tenant_id, settings FROM block2_inbox_completion_probe ORDER BY tenant_id')
+    assert.deepEqual(rows.rows, [
+      { tenant_id: 'tenant-a', settings: 'newer-settings' },
+      { tenant_id: 'tenant-b', settings: 'initial' },
+    ])
+  } finally {
+    await db.query('DROP TABLE IF EXISTS block2_inbox_completion_probe')
+    await db.end()
+  }
+})
