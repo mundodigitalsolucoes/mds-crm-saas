@@ -173,3 +173,12 @@ test('Uncertain Chatwoot inbox creation requires reconciliation before another P
   const post = source.indexOf("method: 'POST'", createBranch)
   assert.ok(guard >= 0 && createBranch > guard && post > createBranch)
 })
+
+test('Malformed organization Chatwoot account references cannot bypass account isolation', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /organization\.chatwootAccountId !== null/)
+  assert.match(source, /organization\.chatwootAccountId !== undefined/)
+  assert.match(source, /!organizationAccountId/)
+  assert.match(source, /CHATWOOT_ORGANIZATION_ACCOUNT_ID_INVALID/)
+  assert.ok(source.indexOf('CHATWOOT_ORGANIZATION_ACCOUNT_ID_INVALID') < source.indexOf('CHATWOOT_ACCOUNT_MISMATCH'))
+})
