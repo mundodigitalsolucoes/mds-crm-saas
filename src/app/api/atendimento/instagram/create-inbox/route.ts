@@ -170,6 +170,7 @@ export async function POST() {
     safeJsonParse<Record<string, unknown>>(organization.settings) ?? {}
 
   const currentInstagram = readInstagramSettings(parsedSettings)
+  let remoteCreateAttempted = false
 
   try {
     const inboxName =
@@ -308,6 +309,16 @@ export async function POST() {
       )
     }
 
+    // A previous remote POST may have succeeded even when its response or local
+    // persistence failed. Never issue another POST until reconciled.
+    if (!existingInboxId && currentInstagram.inboxProvisionStatus === 'reconciliation_required') {
+      throw new InstagramInboxError(
+        'Provisionamento anterior sem confirmação. Reconcilie a inbox no Atendimento antes de tentar novamente.',
+        409,
+        'CHATWOOT_INBOX_RECONCILIATION_REQUIRED'
+      )
+    }
+
     let inboxResponse: ChatwootInboxResponse
     let action: 'created' | 'updated'
 
@@ -323,6 +334,7 @@ export async function POST() {
 
       action = 'updated'
     } else {
+      remoteCreateAttempted = true
       inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
         url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
         apiToken,
@@ -450,7 +462,7 @@ export async function POST() {
           ...parsedSettings,
           atendimentoInstagram: {
             ...currentInstagram,
-            inboxProvisionStatus: 'error',
+            inboxProvisionStatus: remoteCreateAttempted ? 'reconciliation_required' : 'error',
             lastInboxError: message,
             lastInboxSyncAt: nowIso,
             updatedAt: nowIso,
