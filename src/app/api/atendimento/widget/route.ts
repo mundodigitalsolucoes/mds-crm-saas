@@ -338,8 +338,8 @@ export async function GET() {
   const organizationId = session!.user.organizationId
   await observeChannelEntitlement(organizationId, 'site_widget')
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       id: true,
       name: true,
@@ -407,8 +407,8 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const organization = await prisma.organization.findUnique({
-    where: { id: organizationId },
+  const organization = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       id: true,
       name: true,
