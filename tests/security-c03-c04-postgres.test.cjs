@@ -109,9 +109,7 @@ test('PostgreSQL CAS permits only one concurrent inbox reservation per tenant', 
   try {
     // Disposable table models the same tenant + deletedAt + settings equality
     // predicate used by organization.updateMany; no application migration.
-    await setup.query('CREATE TEMP TABLE block2_cas_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text) ON COMMIT PRESERVE ROWS')
-    // TEMP tables are connection-local; use a transaction-scoped shared test table
-    // in the disposable CI database for the competing connections.
+    // A shared disposable table allows two independent PostgreSQL connections to race.
     await setup.query('CREATE TABLE block2_inbox_cas_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
     await setup.query("INSERT INTO block2_inbox_cas_probe VALUES ('tenant-a', NULL, 'original')")
     const sql = "UPDATE block2_inbox_cas_probe SET settings = $1 WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'original'"
