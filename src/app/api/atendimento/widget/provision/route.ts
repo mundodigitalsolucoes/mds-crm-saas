@@ -642,16 +642,15 @@ export async function POST() {
         action = 'updated'
       } catch (error) {
         if (error instanceof WidgetProvisionError && error.status === 404) {
-          inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
-            url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
-            apiToken,
-            method: 'POST',
-            body: buildCreatePayload(config),
-          })
-          action = 'created'
-        } else {
-          throw error
+          // The stored inbox may have been deleted or the Chatwoot binding may have changed.
+          // Never create a replacement blindly: reconcile the remote account first.
+          throw new WidgetProvisionError(
+            'Inbox registrada não encontrada no Atendimento. Verifique a conta e reconcilie antes de criar outra.',
+            409,
+            'WIDGET_INBOX_RECONCILIATION_REQUIRED'
+          )
         }
+        throw error
       }
     } else {
       inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
