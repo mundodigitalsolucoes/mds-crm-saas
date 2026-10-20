@@ -262,3 +262,13 @@ test('Widget settings GET and POST require active tenants', () => {
   assert.equal((source.match(/prisma\.organization\.findFirst\(\{\s*where: \{ id: organizationId, deletedAt: null \}/g) ?? []).length, 3)
   assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/)
 })
+
+test('Widget missing Chatwoot inbox cannot trigger blind replacement POST', () => {
+  const source = readFileSync('src/app/api/atendimento/widget/provision/route.ts', 'utf8')
+  const existing = source.indexOf('if (existingInboxId) {')
+  const missing = source.indexOf('error instanceof WidgetProvisionError && error.status === 404', existing)
+  const create = source.indexOf('} else {\n      inboxResponse = await chatwootRequest', existing)
+  assert.ok(existing > 0 && missing > existing && create > missing)
+  assert.match(source.slice(missing, create), /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
+  assert.doesNotMatch(source.slice(missing, create), /method: 'POST'/)
+})
