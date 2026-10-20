@@ -238,14 +238,14 @@ test('Widget settings save cannot overwrite an Instagram inbox reservation', () 
 test('Widget provision and agent-link completion/error paths preserve concurrent tenant settings', () => {
   for (const route of ['provision', 'agents']) {
     const source = readFileSync(`src/app/api/atendimento/widget/${route}/route.ts`, 'utf8')
-    assert.equal((source.match(/prisma\.organization\.updateMany\(/g) ?? []).length, 2, `${route} must CAS both writes`)
+    assert.equal((source.match(/prisma\.organization\.updateMany\(/g) ?? []).length, route === 'provision' ? 3 : 2, `${route} must CAS every write`)
     assert.doesNotMatch(source, /prisma\.organization\.update\(/)
     assert.match(source, /settings: params\.expectedSettings/)
     assert.match(source, /settings: organization\.settings/)
     assert.match(source, /saved\.count !== 1/)
     assert.match(source, /WIDGET_SETTINGS_CONFLICT/)
     assert.match(source, /expectedSettings: organization\.settings/)
-    assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, 2)
+    assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, route === 'provision' ? 3 : 2)
   }
 })
 
@@ -271,4 +271,16 @@ test('Widget missing Chatwoot inbox cannot trigger blind replacement POST', () =
   assert.ok(existing > 0 && missing > existing && create > missing)
   assert.match(source.slice(missing, create), /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
   assert.doesNotMatch(source.slice(missing, create), /method: 'POST'/)
+})
+
+test('Widget first inbox POST requires CAS reservation and fail-closed recovery', () => {
+  const source = readFileSync('src/app/api/atendimento/widget/provision/route.ts', 'utf8')
+  const reserve = source.indexOf('const reservation = await prisma.organization.updateMany(')
+  const create = source.indexOf("method: 'POST',", reserve)
+  assert.ok(reserve > 0 && create > reserve)
+  assert.match(source.slice(reserve, create), /reservation.count !== 1/)
+  assert.match(source, /expectedSettings = pendingSettings/)
+  assert.match(source, /remoteCreateAttempted = true/)
+  assert.match(source, /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
+  assert.match(source, /provisionStatus: params.runtime.provisionStatus === 'reconciliation_required'/)
 })
