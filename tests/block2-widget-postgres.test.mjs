@@ -200,3 +200,40 @@ test('Widget: organization removed after reservation but before dispatch sends n
   assert.ok((await handler(org.id, async () => { calls++; return json({ id: 1190 }) }, 'provision', true, client)()).status >= 400)
   assert.equal(calls, 0)
 })
+
+test('Widget: reservation loser cannot overwrite the creator snapshot before dispatch', { timeout: 10_000 }, async () => {
+  const org = await fixture(120)
+  let paused = false, posts = 0, release, announce
+  const gate = new Promise(resolve => { release = resolve })
+  const ready = new Promise(resolve => { announce = resolve })
+  const client = new Proxy(prisma, { get(target, key) {
+    if (key !== 'organization') return Reflect.get(target, key)
+    return new Proxy(target.organization, { get(delegate, method) {
+      if (method !== 'updateMany') return Reflect.get(delegate, method)
+      return async args => {
+        if (!paused && args.where.id === org.id) {
+          paused = true
+          announce()
+          await gate
+        }
+        return delegate.updateMany(args)
+      }
+    } })
+  } })
+  const remote = async (_, options) => { if (options.method === 'POST') posts++; return json({ id: 1200, channel_id: 1201 }) }
+  const creator = handler(org.id, remote, 'provision', true, client)()
+  await ready
+  let snapshotUnchanged = false
+  try {
+    const loser = await handler(org.id, remote)()
+    assert.equal(loser.status, 409)
+    snapshotUnchanged = (await prisma.organization.findUnique({ where: { id: org.id } })).settings === org.settings
+  } finally {
+    release()
+  }
+  const winner = await creator
+  assert.equal(snapshotUnchanged, true, 'loser must not invalidate the creator CAS')
+  assert.equal(winner.status, 200)
+  assert.equal(posts, 1)
+  assert.equal((await settings(org.id)).atendimentoWidgetRuntime.chatwootInboxId, 1200)
+})

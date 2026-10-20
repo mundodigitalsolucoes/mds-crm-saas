@@ -815,15 +815,22 @@ export async function POST() {
         ? error.message
         : 'Erro inesperado ao ativar o widget do Atendimento.'
 
-    await persistRuntimeError({
-      organizationId,
-      expectedSettings,
-      parsedSettings,
-      runtime: remoteCreateAttempted || ['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))
-        ? { ...runtime, provisionStatus: 'reconciliation_required' }
-        : runtime,
-      message,
-    })
+    // A reconciliation response without ownership must not invalidate the
+    // snapshot of the request that owns the durable creation reservation.
+    const shouldPersistError = ownsReservation ||
+      !(error instanceof WidgetProvisionError) ||
+      error.code !== 'WIDGET_INBOX_RECONCILIATION_REQUIRED'
+    if (shouldPersistError) {
+      await persistRuntimeError({
+        organizationId,
+        expectedSettings,
+        parsedSettings,
+        runtime: remoteCreateAttempted || ['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))
+          ? { ...runtime, provisionStatus: 'reconciliation_required' }
+          : runtime,
+        message,
+      })
+    }
 
     if (error instanceof WidgetProvisionError) {
       return NextResponse.json(
