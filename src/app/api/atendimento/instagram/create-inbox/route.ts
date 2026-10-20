@@ -41,6 +41,8 @@ function normalizeBaseUrl(url?: string | null) {
 }
 
 function toPositiveInt(value: unknown): number | null {
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  if (typeof value === 'string' && !/^[1-9]\\d*$/.test(value)) return null
   const num = Number(value)
   if (!Number.isSafeInteger(num) || num <= 0) return null
   return num
