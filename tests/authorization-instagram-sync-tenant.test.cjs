@@ -120,3 +120,10 @@ test('Instagram inbox identifiers reject unsafe integers', () => {
   assert.match(source, /Number\.isSafeInteger\(num\)/)
   assert.equal(source.includes('Number.isInteger(num)'), false)
 })
+
+test('Instagram inbox identifiers do not accept coercion or alternate numeric syntax', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.equal(source.includes("typeof value !== 'number' && typeof value !== 'string'"), true)
+  assert.equal(source.includes(String.raw`/^[1-9]\d*$/`), true)
+  assert.equal(source.includes('Number.isSafeInteger(num)'), true)
+})
