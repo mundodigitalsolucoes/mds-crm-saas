@@ -247,3 +247,39 @@ test('Widget reconciliation state rejects subsequent creation after ambiguous re
     await db.end()
   }
 })
+
+
+test('Widget stale error CAS can lose reconciliation marker if a writer replaces reserved settings', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const { Client } = require('pg')
+  const db = new Client({ connectionString: process.env.DATABASE_URL })
+  await db.connect()
+  try {
+    // Reproduces the current route's equality-predicate semantics, not its HTTP handler.
+    await db.query('CREATE TABLE block2_widget_lost_reservation_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
+    await db.query("INSERT INTO block2_widget_lost_reservation_probe VALUES ('tenant-a', NULL, 'initial'), ('tenant-b', NULL, 'initial')")
+    const cas = (next, previous) => db.query(
+      "UPDATE block2_widget_lost_reservation_probe SET settings = $1 WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = $2",
+      [next, previous]
+    )
+    assert.equal((await cas('pending', 'initial')).rowCount, 1)
+    // Assume the provider completed its POST and returned an inbox identifier.
+    // A writer that does not preserve the pending marker supersedes the snapshot.
+    assert.equal((await cas('replaced-without-marker', 'pending')).rowCount, 1)
+    assert.equal((await cas('inbox-created', 'pending')).rowCount, 0)
+    assert.equal((await cas('reconciliation_required', 'pending')).rowCount, 0)
+    const afterFailure = await db.query("SELECT settings FROM block2_widget_lost_reservation_probe WHERE tenant_id = 'tenant-a'")
+    assert.equal(afterFailure.rows[0].settings, 'replaced-without-marker')
+    // A fresh request using this unguarded state could win its own CAS,
+    // which is why successful CAS alone does not guarantee durable reconciliation.
+    assert.equal((await cas('pending-again', 'replaced-without-marker')).rowCount, 1)
+    const rows = await db.query('SELECT tenant_id, settings FROM block2_widget_lost_reservation_probe ORDER BY tenant_id')
+    assert.deepEqual(rows.rows, [
+      { tenant_id: 'tenant-a', settings: 'pending-again' },
+      { tenant_id: 'tenant-b', settings: 'initial' },
+    ])
+  } finally {
+    await db.query('DROP TABLE IF EXISTS block2_widget_lost_reservation_probe')
+    await db.end()
+  }
+})
