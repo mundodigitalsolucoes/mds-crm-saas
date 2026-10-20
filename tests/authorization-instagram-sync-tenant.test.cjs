@@ -234,3 +234,17 @@ test('Widget settings save cannot overwrite an Instagram inbox reservation', () 
   assert.match(source.slice(write), /saved\.count !== 1/)
   assert.doesNotMatch(source.slice(write), /prisma\.organization\.update\(/)
 })
+
+test('Widget provision and agent-link completion/error paths preserve concurrent tenant settings', () => {
+  for (const route of ['provision', 'agents']) {
+    const source = readFileSync(`src/app/api/atendimento/widget/${route}/route.ts`, 'utf8')
+    assert.equal((source.match(/prisma\.organization\.updateMany\(/g) ?? []).length, 2, `${route} must CAS both writes`)
+    assert.doesNotMatch(source, /prisma\.organization\.update\(/)
+    assert.match(source, /settings: params\.expectedSettings/)
+    assert.match(source, /settings: organization\.settings/)
+    assert.match(source, /saved\.count !== 1/)
+    assert.match(source, /WIDGET_SETTINGS_CONFLICT/)
+    assert.match(source, /expectedSettings: organization\.settings/)
+    assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, 2)
+  }
+})
