@@ -205,3 +205,13 @@ test('Instagram settings edits cannot invalidate pending or unresolved inbox res
   assert.ok(pending > 0 && unresolved > pending && write > unresolved)
   assert.match(settings.slice(pending, write), /status: 409/)
 })
+
+test('Instagram Meta selection, sync and subscription reject unresolved inbox reservation', () => {
+  for (const route of ['select-account', 'sync-account', 'subscribe-page']) {
+    const source = readFileSync(`src/app/api/atendimento/instagram/${route}/route.ts`, 'utf8')
+    const guard = source.indexOf("['pending', 'reconciliation_required'].includes(String(currentInstagram.inboxProvisionStatus))")
+    const write = source.indexOf('prisma.organization.updateMany(')
+    assert.ok(guard > 0 && write > guard, `${route} must guard before persisting settings`)
+    assert.match(source.slice(guard, write), /status: 409/)
+  }
+})
