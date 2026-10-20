@@ -259,6 +259,16 @@ export async function POST(req: NextRequest) {
       ? (parsedSettings.atendimentoInstagram as Record<string, unknown>)
       : {}
 
+  // A pending remote inbox creation owns this settings snapshot.
+  // Do not change it while Chatwoot may have created an inbox that is not yet persisted.
+  if (currentInstagram.inboxProvisionStatus === 'pending' ||
+      currentInstagram.inboxProvisionStatus === 'reconciliation_required') {
+    return NextResponse.json(
+      { error: 'Provisionamento da inbox pendente de reconciliação. Não altere as configurações antes de verificar o Atendimento.' },
+      { status: 409 }
+    )
+  }
+
   const nextSettings = {
     ...parsedSettings,
     atendimentoInstagram: {
