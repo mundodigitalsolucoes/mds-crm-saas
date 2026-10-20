@@ -250,6 +250,18 @@ export async function POST() {
 
     const organizationAccountId = toPositiveInt(organization.chatwootAccountId)
 
+    // A malformed persisted account reference must not silently bypass the
+    // cross-account check. Require explicit reconciliation instead.
+    if (organization.chatwootAccountId !== null &&
+        organization.chatwootAccountId !== undefined &&
+        !organizationAccountId) {
+      throw new InstagramInboxError(
+        'Identificador da conta do Atendimento inválido na organização.',
+        409,
+        'CHATWOOT_ORGANIZATION_ACCOUNT_ID_INVALID'
+      )
+    }
+
     if (organizationAccountId && organizationAccountId !== connectedAccountId) {
       throw new InstagramInboxError(
         'Conta do Atendimento inconsistente entre organização e integração.',
