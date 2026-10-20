@@ -436,11 +436,20 @@ export async function POST(req: NextRequest) {
     },
   }
 
-  const updated = await prisma.organization.update({
-    where: { id: organizationId },
-    data: {
-      settings: JSON.stringify(nextSettings),
-    },
+  // Compare the full settings snapshot: a Widget save must not erase
+  // an Instagram inbox reservation or any newer tenant configuration.
+  const saved = await prisma.organization.updateMany({
+    where: { id: organizationId, deletedAt: null, settings: organization.settings },
+    data: { settings: JSON.stringify(nextSettings) },
+  })
+  if (saved.count !== 1) {
+    return NextResponse.json(
+      { error: 'Configuração alterada por outra operação. Recarregue e tente novamente.' },
+      { status: 409 }
+    )
+  }
+  const updated = await prisma.organization.findFirst({
+    where: { id: organizationId, deletedAt: null },
     select: {
       id: true,
       name: true,
@@ -449,6 +458,9 @@ export async function POST(req: NextRequest) {
       updatedAt: true,
     },
   })
+  if (!updated) {
+    return NextResponse.json({ error: 'Organização não encontrada.' }, { status: 404 })
+  }
 
   return NextResponse.json({
     success: true,
