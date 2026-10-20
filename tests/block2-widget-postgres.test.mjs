@@ -1,13 +1,11 @@
-// Real Widget handlers + disposable PostgreSQL; all provider/auth boundaries mocked.
-// BLOCK2_TEST_DATABASE_URL must explicitly name a loopback disposable database.
-const { test, before, after } = require('node:test')
-const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
-const { runInNewContext } = require('node:vm')
-const ts = require('typescript')
-const { PrismaClient } = require('@prisma/client')
-const { NextResponse } = require('next/server')
-const { randomUUID } = require('node:crypto')
+// Actual Widget handlers + disposable PostgreSQL; provider/auth boundaries mocked.
+import { test, before, after } from 'node:test'
+import assert from 'node:assert/strict'
+import { PrismaClient } from '@prisma/client'
+import { NextResponse } from 'next/server.js'
+import { randomUUID } from 'node:crypto'
+import * as zod from 'zod'
+import { loadHandler } from './helpers/load-disposable-handler.mjs'
 let prisma
 const organizations = []
 const calls = []
@@ -32,17 +30,14 @@ async function fixture(accountId, runtime = {}) {
 }
 function handler(orgId, remote, route = 'provision', allowed = true) {
   const filename = `src/app/api/atendimento/widget/${route}/route.ts`
-  const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText
-  const module = { exports: {} }
   const imports = {
-    'next/server': { NextResponse }, zod: require('zod'),
+    'next/server': { NextResponse }, zod,
     '@/lib/prisma': { prisma },
     '@/lib/checkPermission': { checkPermission: async () => ({ allowed, session: allowed ? { user: { organizationId: orgId } } : null, errorResponse: allowed ? null : NextResponse.json({ error: 'denied' }, { status: 403 }) }) },
     '@/lib/authorization/channel-observation': { observeChannelEntitlement: async () => undefined },
     '@/lib/integrations/crypto': { decryptToken: () => 'fixture-provider-token' },
   }
-  runInNewContext(compiled, { module, exports: module.exports, console, URL, URLSearchParams, process: { env: {} }, AbortSignal, fetch: async (url, options) => { calls.push({ orgId, url, method: options.method }); return remote(url, options) }, require: (id) => { assert.ok(Object.hasOwn(imports, id), `unexpected import ${id}`); return imports[id] } }, { filename })
-  return module.exports.POST
+  return loadHandler(filename, imports, { fetch: async (url, options) => { calls.push({ orgId, url, method: options.method }); return remote(url, options) } }).POST
 }
 const json = (value, status = 200) => new Response(JSON.stringify(value), { status })
 async function settings(id) { return JSON.parse((await prisma.organization.findUnique({ where: { id } })).settings) }

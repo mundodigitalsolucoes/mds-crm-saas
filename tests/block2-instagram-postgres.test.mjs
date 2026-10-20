@@ -1,9 +1,9 @@
-const { test, before, after } = require('node:test')
-const assert = require('node:assert/strict')
-const { randomBytes, randomUUID, createHmac } = require('node:crypto')
-const { PrismaClient } = require('@prisma/client')
-const { NextRequest, NextResponse } = require('next/server')
-const { disposableDatabaseUrl, loadHandler } = require('./helpers/load-disposable-handler.cjs')
+import { test, before, after } from 'node:test'
+import assert from 'node:assert/strict'
+import { randomBytes, randomUUID, createHmac } from 'node:crypto'
+import { PrismaClient } from '@prisma/client'
+import { NextRequest, NextResponse } from 'next/server.js'
+import { disposableDatabaseUrl, loadHandler } from './helpers/load-disposable-handler.mjs'
 let prisma, store, signer
 const orgs = []
 const appSecret = 'isolated-instagram-app-secret'

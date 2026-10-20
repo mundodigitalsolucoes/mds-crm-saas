@@ -8,7 +8,7 @@
     "build": "prisma generate && next build",
     "prestart": "prisma migrate deploy",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "test:security": "node --test tests/security-c03-c04.test.cjs",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",

@@ -41,8 +41,9 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     'src/app/api/integrations', ':(exclude)src/app/api/integrations/chatwoot/credentials/route.ts',
     ':(exclude)src/app/api/integrations/evolution/qrcode/route.ts',
     'src/app/api/webhooks', ':(exclude)src/app/api/webhooks/whatsapp-cloud/route.ts',
-    ':(exclude)src/app/api/webhooks/chatwoot/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
-    'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
+    ':(exclude)src/app/api/webhooks/chatwoot/route.ts',
+    ':(exclude)src/app/api/webhooks/asaas/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
+    'src/lib/checkLimits.ts',
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
@@ -54,6 +55,22 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
   // The four Atendimento endpoints above only switch to the observe-only commercial guard.
   // All other integration and provider files remain protected by this historical diff.
   assert.equal(diff, '');
+});
+
+test('legacy permission guard only refreshes the role from verified database membership', () => {
+  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:src/lib/checkPermission.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/lib/checkPermission.ts', 'utf8');
+  const addition = '  // Downstream role checks must use current membership, never a stale JWT role.\n  session.user.role = dbUser.role;\n';
+  assert.ok(current.includes(addition));
+  assert.equal(current.replace(addition, '').trimEnd(), baseline.trimEnd());
+});
+
+test('Asaas authentication fix does not change any commercial event processing', () => {
+  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:src/app/api/webhooks/asaas/route.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/app/api/webhooks/asaas/route.ts', 'utf8');
+  const processing = '    const body = await req.json()';
+  assert.ok(current.includes(processing));
+  assert.equal(current.slice(current.indexOf(processing)).trimEnd(), baseline.slice(baseline.indexOf(processing)).trimEnd());
 });
 
 test('approved local G4 storage is additive and preserves every existing Prisma model', () => {

@@ -1,4 +1,4 @@
-name: Block 2 PostgreSQL Concurrency Proof
+name: Block 2 PostgreSQL Handler and Concurrency Proof
 
 on:
   push:
@@ -6,6 +6,15 @@ on:
       - feature/modular-plans-entitlements
     paths:
       - 'src/app/api/auth/forgot-password/route.ts'
+      - 'src/app/api/auth/**'
+      - 'src/app/api/atendimento/instagram/**'
+      - 'src/app/api/atendimento/widget/**'
+      - 'src/app/api/webhooks/asaas/route.ts'
+      - 'src/lib/checkPermission.ts'
+      - 'src/lib/atendimento/instagram-security-store.ts'
+      - 'prisma/schema.prisma'
+      - 'tests/*.test.mjs'
+      - 'tests/helpers/load-disposable-handler.mjs'
       - 'tests/block2-reset-postgres-integration.test.cjs'
       - '.github/workflows/block2-postgres-concurrency.yml'
   workflow_dispatch:
@@ -33,6 +42,7 @@ jobs:
           --health-retries 10
     env:
       BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
+      DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
     steps:
       - uses: actions/checkout@v4
         with:
@@ -45,3 +55,12 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Verify concurrent reset token rotation on disposable database
         run: node --test tests/block2-reset-postgres-integration.test.cjs
+      - name: Generate client and prepare only the disposable CI schema
+        run: npx prisma generate && npx prisma db push --skip-generate
+      - name: Verify actual handlers with PostgreSQL and provider mocks
+        shell: bash
+        run: |
+          set -o pipefail
+          node --import tsx --test --test-reporter=tap tests/*.test.mjs | tee /tmp/block2-handlers.tap
+      - name: Block acceptance while executable security TODO assertions remain
+        run: node -e "const fs=require('fs'); const tap=fs.readFileSync('/tmp/block2-handlers.tap','utf8'); if (/^# todo [1-9][0-9]*$/m.test(tap)) { console.error('Unresolved security acceptance assertions; closure remains blocked'); process.exit(1); }"
