@@ -411,9 +411,12 @@ export async function POST() {
       data: { settings: JSON.stringify(nextSettings) },
     })
     if (saved.count !== 1) {
-      return NextResponse.json(
-        { error: 'Configuração alterada durante o provisionamento. Verifique a inbox antes de tentar novamente.' },
-        { status: 409 }
+      // The remote operation may have succeeded. The concurrent writer owns the
+      // current settings; do not overwrite it with a stale reconciliation flag.
+      throw new InstagramInboxError(
+        'Configuração alterada durante o provisionamento. Verifique a inbox antes de tentar novamente.',
+        409,
+        'CHATWOOT_INBOX_SETTINGS_CONFLICT'
       )
     }
     const updatedOrganization = await prisma.organization.findFirst({
