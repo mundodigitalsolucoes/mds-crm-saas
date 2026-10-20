@@ -182,3 +182,15 @@ test('Malformed organization Chatwoot account references cannot bypass account i
   assert.match(source, /CHATWOOT_ORGANIZATION_ACCOUNT_ID_INVALID/)
   assert.ok(source.indexOf('CHATWOOT_ORGANIZATION_ACCOUNT_ID_INVALID') < source.indexOf('CHATWOOT_ACCOUNT_MISMATCH'))
 })
+
+test('Instagram inbox POST requires atomic tenant reservation and fail-closed pending state', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  const reservation = source.indexOf('const reservation = await prisma.organization.updateMany(')
+  const post = source.indexOf("method: 'POST'", source.indexOf('remoteCreateAttempted = true'))
+  assert.ok(reservation > 0 && post > reservation)
+  assert.match(source, /inboxProvisionStatus: 'pending'/)
+  assert.match(source, /\['reconciliation_required', 'pending'\]\.includes/)
+  assert.match(source, /CHATWOOT_INBOX_RESERVATION_CONFLICT/)
+  assert.match(source, /expectedSettings = pendingJson/)
+  assert.match(source, /settings: expectedSettings/)
+})
