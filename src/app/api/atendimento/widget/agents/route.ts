@@ -256,6 +256,10 @@ export async function POST() {
 
   const runtime = resolveWidgetRuntime(parsedSettings)
 
+  if (['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))) {
+    return NextResponse.json({ error: 'Inbox do Widget pendente de reconciliação.' }, { status: 409 })
+  }
+
   try {
     if (!chatwootAccount?.isActive) {
       throw new WidgetAgentsError(
