@@ -465,7 +465,10 @@ export async function POST() {
           ...parsedSettings,
           atendimentoInstagram: {
             ...currentInstagram,
-            inboxProvisionStatus: remoteCreateAttempted ? 'reconciliation_required' : 'error',
+            inboxProvisionStatus:
+              remoteCreateAttempted || currentInstagram.inboxProvisionStatus === 'reconciliation_required'
+                ? 'reconciliation_required'
+                : 'error',
             lastInboxError: message,
             lastInboxSyncAt: nowIso,
             updatedAt: nowIso,
