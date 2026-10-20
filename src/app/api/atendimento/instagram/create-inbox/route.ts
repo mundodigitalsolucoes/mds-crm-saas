@@ -42,7 +42,7 @@ function normalizeBaseUrl(url?: string | null) {
 
 function toPositiveInt(value: unknown): number | null {
   const num = Number(value)
-  if (!Number.isInteger(num) || num <= 0) return null
+  if (!Number.isSafeInteger(num) || num <= 0) return null
   return num
 }
 
