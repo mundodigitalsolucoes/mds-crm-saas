@@ -167,7 +167,7 @@ test('Uncertain Chatwoot inbox creation requires reconciliation before another P
   assert.match(source, /remoteCreateAttempted = true/)
   assert.match(source, /currentInstagram\.inboxProvisionStatus === 'reconciliation_required'/)
   assert.match(source, /CHATWOOT_INBOX_RECONCILIATION_REQUIRED/)
-  assert.match(source, /remoteCreateAttempted \? 'reconciliation_required' : 'error'/)
+  assert.match(source, /remoteCreateAttempted \|\| currentInstagram\.inboxProvisionStatus === 'reconciliation_required'/)
   const guard = source.indexOf('CHATWOOT_INBOX_RECONCILIATION_REQUIRED')
   const createBranch = source.indexOf('remoteCreateAttempted = true', guard)
   const post = source.indexOf("method: 'POST'", createBranch)
