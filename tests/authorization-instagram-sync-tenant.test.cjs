@@ -225,3 +225,12 @@ test('Instagram OAuth callback and token exchange cannot overwrite unresolved in
     assert.match(source.slice(guard, write), /Provisionamento da inbox pendente de reconciliação/)
   }
 })
+
+test('Widget settings save cannot overwrite an Instagram inbox reservation', () => {
+  const source = readFileSync('src/app/api/atendimento/widget/route.ts', 'utf8')
+  const write = source.indexOf('const saved = await prisma.organization.updateMany(')
+  assert.ok(write > 0)
+  assert.match(source.slice(write), /deletedAt: null, settings: organization\.settings/)
+  assert.match(source.slice(write), /saved\.count !== 1/)
+  assert.doesNotMatch(source.slice(write), /prisma\.organization\.update\(/)
+})
