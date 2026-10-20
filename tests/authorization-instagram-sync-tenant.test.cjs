@@ -160,3 +160,13 @@ test('Malformed Chatwoot channel identifiers cannot be silently persisted', () =
   assert.match(source, /CHATWOOT_CHANNEL_ID_INVALID/)
   assert.ok(source.indexOf('CHATWOOT_CHANNEL_ID_INVALID') < source.indexOf('const nextSettings ='))
 })
+
+test('Uncertain Chatwoot inbox creation requires reconciliation before another POST', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /let remoteCreateAttempted = false/)
+  assert.match(source, /remoteCreateAttempted = true/)
+  assert.match(source, /currentInstagram\.inboxProvisionStatus === 'reconciliation_required'/)
+  assert.match(source, /CHATWOOT_INBOX_RECONCILIATION_REQUIRED/)
+  assert.match(source, /remoteCreateAttempted \? 'reconciliation_required' : 'error'/)
+  assert.ok(source.indexOf('CHATWOOT_INBOX_RECONCILIATION_REQUIRED') < source.indexOf("method: 'POST'"))
+})
