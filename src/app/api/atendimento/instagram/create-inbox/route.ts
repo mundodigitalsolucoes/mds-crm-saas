@@ -356,7 +356,15 @@ export async function POST() {
       )
     }
 
-    const channelId = toPositiveInt(inboxResponse.channel_id)
+    const rawChannelId = inboxResponse.channel_id
+    const channelId = toPositiveInt(rawChannelId)
+    if (rawChannelId !== undefined && rawChannelId !== null && !channelId) {
+      throw new InstagramInboxError(
+        'Resposta do Atendimento com identificador de canal inválido.',
+        502,
+        'CHATWOOT_CHANNEL_ID_INVALID'
+      )
+    }
     const nowIso = new Date().toISOString()
 
     const nextSettings = {
