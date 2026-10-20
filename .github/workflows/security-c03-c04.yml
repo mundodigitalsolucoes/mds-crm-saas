@@ -5,8 +5,8 @@ on:
     branches:
       - feature/modular-plans-entitlements
     paths:
-      - 'tests/security-c03-c04.test.cjs'
-      - 'tests/security-c03-c04-postgres.test.cjs'
+      - 'tests/security-c03-c04.test.mjs'
+      - 'tests/security-c03-c04-postgres.test.mjs'
       - 'src/app/api/auth/signup/route.ts'
       - 'src/app/api/auth/forgot-password/route.ts'
       - 'src/app/api/auth/reset-password/route.ts'
@@ -72,4 +72,4 @@ jobs:
       - name: Generate Prisma client locally
         run: npx prisma generate
       - name: Execute actual advisory lock SQL through Prisma
-        run: node --test tests/security-c03-c04-postgres.test.cjs
+        run: node --test tests/security-c03-c04-postgres.test.mjs

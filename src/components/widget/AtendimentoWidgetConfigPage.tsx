@@ -316,8 +316,7 @@ export default function AtendimentoWidgetConfigPage() {
     useState<LinkPrincipalAgentResponse | null>(null)
 
   const loadConfig = useCallback(async () => {
-    setLoading(true)
-
+    // Initial loading is already true; save/provision actions own their progress.
     try {
       const { data } = await axios.get<WidgetConfigResponse>(
         '/api/atendimento/widget'

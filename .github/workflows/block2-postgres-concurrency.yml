@@ -12,10 +12,13 @@ on:
       - 'src/app/api/webhooks/asaas/route.ts'
       - 'src/lib/checkPermission.ts'
       - 'src/lib/atendimento/instagram-security-store.ts'
+      - 'src/lib/atendimento/widget-inbox-store.ts'
+      - 'src/app/api/notifications/**'
+      - 'src/app/api/usage/**'
       - 'prisma/schema.prisma'
       - 'tests/*.test.mjs'
       - 'tests/helpers/load-disposable-handler.mjs'
-      - 'tests/block2-reset-postgres-integration.test.cjs'
+      - 'tests/block2-reset-postgres-integration.test.mjs'
       - '.github/workflows/block2-postgres-concurrency.yml'
   workflow_dispatch:
 
@@ -54,7 +57,7 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Verify concurrent reset token rotation on disposable database
-        run: node --test tests/block2-reset-postgres-integration.test.cjs
+        run: node --test tests/block2-reset-postgres-integration.test.mjs
       - name: Generate client and prepare only the disposable CI schema
         run: npx prisma generate && npx prisma db push --skip-generate
       - name: Verify actual handlers with PostgreSQL and provider mocks

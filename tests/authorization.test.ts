@@ -105,8 +105,8 @@ test('authorization: expired/missing trial deadline denies; valid future trial i
 
 test('authorization: future modules remain unavailable, even if explicitly listed', async () => {
   const record = user(); record.organization!.features = '["financeiro","agentes_ia"]';
-  for (const module of ['financeiro', 'agentes_ia'] as const) {
-    assert.equal((await evaluate(record)({ ...request, module })).reason, 'module_unavailable');
+  for (const moduleKey of ['financeiro', 'agentes_ia'] as const) {
+    assert.equal((await evaluate(record)({ ...request, module: moduleKey })).reason, 'module_unavailable');
   }
 });
 

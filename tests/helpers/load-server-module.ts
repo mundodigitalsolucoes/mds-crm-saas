@@ -14,11 +14,11 @@ export function loadServerModule<T>(sourceUrl: URL, imports: Record<string, unkn
     fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   });
-  const module = { exports: {} };
+  const runtimeModule = { exports: {} };
   const require = createRequire(sourceUrl);
   runInNewContext(compiled.outputText, {
-    module, exports: module.exports, console, URL, URLSearchParams,
+    module: runtimeModule, exports: runtimeModule.exports, console, URL, URLSearchParams,
     require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id] : require(id),
   }, { filename });
-  return module.exports as T;
+  return runtimeModule.exports as T;
 }

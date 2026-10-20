@@ -9,7 +9,7 @@
     "prestart": "prisma migrate deploy",
     "start": "next start",
     "lint": "eslint .",
-    "test:security": "node --test tests/security-c03-c04.test.cjs",
+    "test:security": "node --test tests/security-c03-c04.test.mjs",
     "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",

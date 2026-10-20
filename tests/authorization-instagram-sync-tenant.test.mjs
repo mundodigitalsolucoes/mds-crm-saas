@@ -1,6 +1,6 @@
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 const source = readFileSync('src/app/api/atendimento/instagram/sync-account/route.ts', 'utf8')
 
 test('Instagram sync uses session tenant and rejects deleted organizations', () => {

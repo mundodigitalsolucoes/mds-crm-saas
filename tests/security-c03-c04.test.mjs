@@ -1,10 +1,12 @@
-// Static regression guardrails for C03/C04; run with: node --test tests/security-c03-c04.test.cjs
+import { fileURLToPath } from 'node:url'
+const fixtureDirectory = fileURLToPath(new URL('.', import.meta.url))
+// Static regression guardrails for C03/C04; run with: node --test tests/security-c03-c04.test.mjs
 // These tests verify source-level invariants only; they do not replace runtime integration tests.
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { readFileSync } = require('node:fs');
-const { join } = require('node:path');
-const source = (path) => readFileSync(join(__dirname, '..', path), 'utf8');
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+const source = (path) => readFileSync(join(fixtureDirectory, '..', path), 'utf8');
 
 test('C04: public signup never reactivates or changes existing users', () => {
   const signup = source('src/app/api/auth/signup/route.ts');

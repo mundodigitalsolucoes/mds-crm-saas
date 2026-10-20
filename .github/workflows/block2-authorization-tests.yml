@@ -20,8 +20,8 @@ on:
       - 'src/app/(app)/leads/**'
       - 'src/app/(app)/kanban/**'
       - 'tests/authorization*.test.ts'
-      - 'tests/authorization-instagram-exchange-tenant.test.cjs'
-      - 'tests/authorization-instagram-sync-tenant.test.cjs'
+      - 'tests/authorization-instagram-exchange-tenant.test.mjs'
+      - 'tests/authorization-instagram-sync-tenant.test.mjs'
       - 'scripts/block2-route-inventory.mjs'
       - 'tests/entitlements.test.ts'
       - '.github/workflows/block2-authorization-tests.yml'
@@ -60,6 +60,6 @@ jobs:
         run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts tests/authorization-atendimento-sso.test.ts tests/authorization-atendimento-inventory.test.ts tests/authorization-atendimento-shared-integrations.test.ts tests/authorization-channel-access.test.ts tests/authorization-channel-observation.test.ts tests/authorization-channel-route-coverage.test.ts tests/authorization-atendimento-page-coverage.test.ts tests/authorization-shared-resources-inventory.test.ts tests/authorization-evolution-qrcode-tenant.test.ts tests/authorization-evolution-lifecycle-tenant.test.ts tests/authorization-whatsapp-webhook-signature.test.ts tests/authorization-chatwoot-webhook-secret.test.ts tests/authorization-instagram-oauth-state.test.ts tests/authorization-instagram-webhook-signature.test.ts
 
       - name: Verify legacy Instagram exchange tenant guards
-        run: node --test tests/authorization-instagram-exchange-tenant.test.cjs
+        run: node --test tests/authorization-instagram-exchange-tenant.test.mjs
       - name: Verify Instagram sync tenant guards
-        run: node --test tests/authorization-instagram-sync-tenant.test.cjs
+        run: node --test tests/authorization-instagram-sync-tenant.test.mjs

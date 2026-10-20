@@ -1,8 +1,8 @@
 // PostgreSQL integration proof for concurrent reset-token rotation.
 // Uses only an isolated CI database; never point DATABASE_URL at production.
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { Pool } = require('pg');
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { Pool } from 'pg'
 
 test('same-email concurrent issuance leaves exactly one valid reset token', async () => {
   const url = process.env.BLOCK2_TEST_DATABASE_URL;

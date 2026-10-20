@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
 
 const META_GRAPH_VERSION = 'v20.0'
+type GraphEntity = { id: string; name?: string; instagram_business_account?: { id?: string } }
+type GraphPayload = { data?: GraphEntity[] }
 
 function safeJsonParse<T>(value: string | null | undefined): T | null {
   if (!value) return null
@@ -25,7 +27,7 @@ async function graphGet(path: string, accessToken: string) {
     { method: 'GET', cache: 'no-store' }
   )
 
-  const data = await response.json().catch(() => ({}))
+  const data: GraphPayload = await response.json().catch(() => ({}))
 
   return {
     ok: response.ok,
@@ -112,7 +114,7 @@ export async function GET(req: NextRequest) {
     : []
 
   const businessPages = await Promise.all(
-    businessList.map(async (business: any) => {
+    businessList.map(async (business: GraphEntity) => {
       const businessId = business.id
 
       const ownedPages = await graphGet(
@@ -136,11 +138,11 @@ export async function GET(req: NextRequest) {
     })
   )
 
-  const safeResult = (result: { ok: boolean; status: number; data: any }) => ({
+  const safeResult = (result: { ok: boolean; status: number; data: GraphPayload }) => ({
     ok: result.ok,
     status: result.status,
     pages: Array.isArray(result.data?.data)
-      ? result.data.data.map((page: any) => ({
+      ? result.data.data.map((page: GraphEntity) => ({
           id: String(page.id || ''),
           name: String(page.name || ''),
           instagramBusinessId: String(page.instagram_business_account?.id || ''),

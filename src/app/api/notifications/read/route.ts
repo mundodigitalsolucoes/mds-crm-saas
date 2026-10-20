@@ -2,17 +2,15 @@
 // Marcar notificações como lidas — usa session sem permissão de módulo (recurso pessoal do usuário)
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkAuth } from '@/lib/checkPermission';
 import { parseBody, notificationMarkReadSchema } from '@/lib/validations';
 
 // POST /api/notifications/read
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    }
+    const authentication = await checkAuth();
+    if (!authentication.authenticated || !authentication.session) return authentication.errorResponse!;
+    const session = authentication.session;
 
     const body = await request.json();
 
