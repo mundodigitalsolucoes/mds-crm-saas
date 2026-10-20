@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
+import { claimInstagramMessage, finishInstagramMessage, instagramMessageHash } from '@/lib/atendimento/instagram-security-store'
 
 type ChatwootAccountData = {
   chatwootAccountId?: number | string
@@ -270,40 +271,65 @@ export async function POST(req: NextRequest) {
 
         if (!senderId || !messageText || senderId === instagramBusinessId) continue
 
-        const contact = await createChatwootContact({
-          apiBaseUrl,
-          accountId,
-          apiToken,
-          inboxId,
-          senderId,
-          senderName: `Instagram ${senderId}`,
-        })
+        const messageId = event?.message?.mid
+        if (typeof messageId !== 'string' || !messageId || messageId.length > 1024) {
+          return NextResponse.json({ error: 'INSTAGRAM_MESSAGE_ID_REQUIRED' }, { status: 400 })
+        }
+        const receipt = {
+          organizationId: organization.id,
+          eventHash: instagramMessageHash(instagramBusinessId, senderId, messageId),
+          chatwootAccountId: accountId,
+          chatwootInboxId: inboxId,
+        }
+        const claim = await claimInstagramMessage(receipt)
+        if (claim === 'completed') continue
+        if (claim === 'unresolved') {
+          return NextResponse.json({ error: 'INSTAGRAM_DELIVERY_RECONCILIATION_REQUIRED' }, { status: 503 })
+        }
 
-        const contactId =
-          toPositiveInt(contact?.payload?.contact?.id) ||
-          toPositiveInt(contact?.id)
+        try {
+          const contact = await createChatwootContact({
+            apiBaseUrl,
+            accountId,
+            apiToken,
+            inboxId,
+            senderId,
+            senderName: `Instagram ${senderId}`,
+          })
 
-        if (!contactId) continue
+          const contactId =
+            toPositiveInt(contact?.payload?.contact?.id) ||
+            toPositiveInt(contact?.id)
 
-        const conversation = await createChatwootConversation({
-          apiBaseUrl,
-          accountId,
-          apiToken,
-          inboxId,
-          contactId,
-          sourceId: `instagram:${senderId}`,
-        })
+          if (!contactId) throw new Error('INSTAGRAM_CONTACT_ID_MISSING')
 
-        const conversationId = toPositiveInt(conversation.id)
-        if (!conversationId) continue
+          const conversation = await createChatwootConversation({
+            apiBaseUrl,
+            accountId,
+            apiToken,
+            inboxId,
+            contactId,
+            sourceId: `instagram:${senderId}`,
+          })
 
-        await createChatwootMessage({
-          apiBaseUrl,
-          accountId,
-          apiToken,
-          conversationId,
-          content: messageText,
-        })
+          const conversationId = toPositiveInt(conversation.id)
+          if (!conversationId) throw new Error('INSTAGRAM_CONVERSATION_ID_MISSING')
+
+          await createChatwootMessage({
+            apiBaseUrl,
+            accountId,
+            apiToken,
+            conversationId,
+            content: messageText,
+          })
+
+          await finishInstagramMessage(receipt, 'completed')
+        } catch {
+          // A provider timeout or failed local completion has an uncertain
+          // remote result. Retain the receipt; never blindly dispatch again.
+          await finishInstagramMessage(receipt, 'remote_unknown').catch(() => {})
+          throw new Error('INSTAGRAM_DELIVERY_UNRESOLVED')
+        }
 
         console.info('[Instagram → Atendimento] Mensagem encaminhada com sucesso')
       }

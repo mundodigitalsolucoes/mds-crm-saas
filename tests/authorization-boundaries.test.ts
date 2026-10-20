@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { loadServerModule } from './helpers/load-server-module';
 import { parsePermissions, hasPermission } from '../src/lib/permissions';
 
@@ -43,14 +44,30 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/app/api/webhooks/chatwoot/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
     'src/lib/checkPermission.ts', 'src/lib/checkLimits.ts',
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
+    ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
-    'prisma'], { encoding: 'utf8' });
+    'prisma', ':(exclude)prisma/schema.prisma',
+    ':(exclude)prisma/migrations/20261020230000_instagram_security_storage/migration.sql'], { encoding: 'utf8' });
   // C03/C04 intentionally changed auth, middleware and dependency metadata after this historical baseline.
   // The Chatwoot credentials guard is separately tested by authorization-atendimento-sso.test.ts.
   // The four Atendimento endpoints above only switch to the observe-only commercial guard.
   // All other integration and provider files remain protected by this historical diff.
   assert.equal(diff, '');
+});
+
+test('approved local G4 storage is additive and preserves every existing Prisma model', () => {
+  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:prisma/schema.prisma'], { encoding: 'utf8' });
+  const schema = readFileSync('prisma/schema.prisma', 'utf8');
+  // The user approved only these two security models and their inverse relations
+  // for local migration review/testing. All existing model tokens remain pinned.
+  const existing = schema
+    .replace(/^\/\/ Isolated security storage[^\n]*\n/gm, '')
+    .replace(/model Instagram(?:OAuthState|WebhookReceipt) \{[^}]*\}/g, '')
+    .replace(/^\s*instagramOAuthStates\s+InstagramOAuthState\[\]\s*$/gm, '')
+    .replace(/^\s*instagramWebhookReceipts\s+InstagramWebhookReceipt\[\]\s*$/gm, '');
+  const normalize = (text: string) => text.replace(/\s+/g, ' ').trim();
+  assert.equal(normalize(existing), normalize(baseline));
 });
 
 test('existing Atendimento permission contract remains unchanged without calling providers', async () => {
