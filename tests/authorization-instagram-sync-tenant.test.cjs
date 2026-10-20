@@ -196,3 +196,12 @@ test('Instagram inbox POST requires atomic tenant reservation and fail-closed pe
   assert.match(source, /expectedSettings = pendingJson/)
   assert.match(source, /settings: expectedSettings/)
 })
+
+test('Instagram settings edits cannot invalidate pending or unresolved inbox reservation', () => {
+  const settings = readFileSync('src/app/api/atendimento/instagram/route.ts', 'utf8')
+  const pending = settings.indexOf("currentInstagram.inboxProvisionStatus === 'pending'")
+  const unresolved = settings.indexOf("currentInstagram.inboxProvisionStatus === 'reconciliation_required'")
+  const write = settings.indexOf('const saved = await prisma.organization.updateMany(')
+  assert.ok(pending > 0 && unresolved > pending && write > unresolved)
+  assert.match(settings.slice(pending, write), /status: 409/)
+})
