@@ -256,3 +256,9 @@ test('Widget remote operations reject soft-deleted tenants before Chatwoot calls
     assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/)
   }
 })
+
+test('Widget settings GET and POST require active tenants', () => {
+  const source = readFileSync('src/app/api/atendimento/widget/route.ts', 'utf8')
+  assert.equal((source.match(/prisma\.organization\.findFirst\(\{\s*where: \{ id: organizationId, deletedAt: null \}/g) ?? []).length, 3)
+  assert.doesNotMatch(source, /prisma\.organization\.findUnique\(/)
+})
