@@ -153,3 +153,10 @@ test('Instagram inbox PATCH response must match the stored inbox identifier', ()
   assert.match(source, /CHATWOOT_INBOX_RESPONSE_MISMATCH/)
   assert.ok(source.indexOf('CHATWOOT_INBOX_RESPONSE_MISMATCH') < source.indexOf('const nextSettings ='))
 })
+
+test('Malformed Chatwoot channel identifiers cannot be silently persisted', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /rawChannelId !== undefined && rawChannelId !== null && !channelId/)
+  assert.match(source, /CHATWOOT_CHANNEL_ID_INVALID/)
+  assert.ok(source.indexOf('CHATWOOT_CHANNEL_ID_INVALID') < source.indexOf('const nextSettings ='))
+})
