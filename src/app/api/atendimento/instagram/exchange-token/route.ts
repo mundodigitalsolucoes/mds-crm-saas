@@ -79,6 +79,14 @@ export async function POST(req: NextRequest) {
 
     const currentInstagram = parsedSettings.atendimentoInstagram || {}
 
+    // Never replace the settings snapshot owned by unresolved inbox provisioning.
+    if (['pending', 'reconciliation_required'].includes(String(currentInstagram.inboxProvisionStatus))) {
+      return NextResponse.json(
+        { error: 'Provisionamento da inbox pendente de reconciliação.' },
+        { status: 409 }
+      )
+    }
+
     const nextSettings = {
       ...parsedSettings,
       atendimentoInstagram: {
