@@ -273,9 +273,10 @@ test('Widget missing Chatwoot inbox cannot trigger blind replacement POST', () =
   const source = readFileSync('src/app/api/atendimento/widget/provision/route.ts', 'utf8')
   const existing = source.indexOf('if (existingInboxId) {')
   const missing = source.indexOf('error instanceof WidgetProvisionError && error.status === 404', existing)
-  const create = source.indexOf('} else {\n          // Reserve the exact organization settings snapshot', existing)
+  const create = source.indexOf('// Reserve the exact organization settings snapshot', missing)
   assert.ok(existing > 0 && missing > existing && create > missing)
   assert.match(source.slice(missing, create), /WIDGET_INBOX_RECONCILIATION_REQUIRED/)
+  assert.match(source.slice(missing, create), /}\s*else\s*\{/)
   assert.doesNotMatch(source.slice(missing, create), /method: 'POST'/)
 })
 
