@@ -137,3 +137,12 @@ test('Malformed stored Instagram inbox references cannot trigger blind Chatwoot 
   assert.match(source, /rawExistingInboxId !== undefined/)
   assert.match(source, /!existingInboxId/)
 })
+
+test('Existing Instagram inbox cannot be updated under a different Chatwoot account', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  const mismatch = source.indexOf("'CHATWOOT_INBOX_ACCOUNT_MISMATCH'")
+  const patch = source.indexOf("method: 'PATCH'", mismatch)
+  assert.ok(mismatch > 0)
+  assert.ok(patch > mismatch)
+  assert.match(source, /toPositiveInt\(currentInstagram\.chatwootAccountId\) !== connectedAccountId/)
+})
