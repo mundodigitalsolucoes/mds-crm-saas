@@ -189,7 +189,7 @@ test('Instagram inbox POST requires atomic tenant reservation and fail-closed pe
   const post = source.indexOf("method: 'POST'", source.indexOf('remoteCreateAttempted = true'))
   assert.ok(reservation > 0 && post > reservation)
   assert.match(source, /inboxProvisionStatus: 'pending'/)
-  assert.match(source, /\['reconciliation_required', 'pending'\]\.includes/)
+  assert.equal((source.match(/\['reconciliation_required', 'pending'\]\.includes/g) ?? []).length, 2)
   assert.match(source, /CHATWOOT_INBOX_RESERVATION_CONFLICT/)
   assert.match(source, /expectedSettings = pendingJson/)
   assert.match(source, /settings: expectedSettings/)
