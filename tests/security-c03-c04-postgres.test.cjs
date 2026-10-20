@@ -125,3 +125,27 @@ test('PostgreSQL CAS permits only one concurrent inbox reservation per tenant', 
     await Promise.all([setup.end(), first.end(), second.end()])
   }
 })
+
+test('Inbox reservation CAS cannot mutate another tenant or a deleted tenant', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const { Client } = require('pg')
+  const db = new Client({ connectionString: process.env.DATABASE_URL })
+  await db.connect()
+  try {
+    await db.query('CREATE TABLE block2_inbox_tenant_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
+    await db.query("INSERT INTO block2_inbox_tenant_probe VALUES ('tenant-a', NULL, 'original'), ('tenant-b', NULL, 'original'), ('tenant-deleted', NOW(), 'original')")
+    const update = "UPDATE block2_inbox_tenant_probe SET settings = 'pending' WHERE tenant_id = $1 AND deleted_at IS NULL AND settings = 'original'"
+    assert.equal((await db.query(update, ['tenant-a'])).rowCount, 1)
+    assert.equal((await db.query(update, ['tenant-a'])).rowCount, 0)
+    assert.equal((await db.query(update, ['tenant-deleted'])).rowCount, 0)
+    const rows = await db.query('SELECT tenant_id, settings FROM block2_inbox_tenant_probe ORDER BY tenant_id')
+    assert.deepEqual(rows.rows, [
+      { tenant_id: 'tenant-a', settings: 'pending' },
+      { tenant_id: 'tenant-b', settings: 'original' },
+      { tenant_id: 'tenant-deleted', settings: 'original' },
+    ])
+  } finally {
+    await db.query('DROP TABLE IF EXISTS block2_inbox_tenant_probe')
+    await db.end()
+  }
+})
