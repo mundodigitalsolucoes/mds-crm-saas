@@ -6,7 +6,7 @@ import { loadServerModule } from './helpers/load-server-module';
 import { parsePermissions, hasPermission } from '../src/lib/permissions';
 
 test('provider lifecycle and legacy operational guards remain unchanged from the original authorization baseline', () => {
-  const diff = execFileSync('git', ['diff', 'f93c3435fff316a548255993d749ef545c9c7670', '--',
+  const diff = execFileSync('git', ['diff', '7face2f24b7e171aa897abf72bea8f429692b2cf', '--',
     'src/app/(app)/atendimento', ':(exclude)src/app/(app)/atendimento/layout.tsx',
     'src/app/(app)/settings/atendimento', ':(exclude)src/app/(app)/settings/atendimento/layout.tsx', 'src/app/api/atendimento',
     ':(exclude)src/app/api/atendimento/equipes/route.ts',
@@ -60,7 +60,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
 });
 
 test('legacy permission guard only refreshes the role from verified database membership', () => {
-  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:src/lib/checkPermission.ts'], { encoding: 'utf8' });
+  const baseline = execFileSync('git', ['show', '7face2f24b7e171aa897abf72bea8f429692b2cf:src/lib/checkPermission.ts'], { encoding: 'utf8' });
   const current = readFileSync('src/lib/checkPermission.ts', 'utf8');
   const addition = '  // Downstream role checks must use current membership, never a stale JWT role.\n  session.user.role = dbUser.role;\n';
   assert.ok(current.includes(addition));
@@ -68,7 +68,7 @@ test('legacy permission guard only refreshes the role from verified database mem
 });
 
 test('Asaas authentication fix does not change any commercial event processing', () => {
-  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:src/app/api/webhooks/asaas/route.ts'], { encoding: 'utf8' });
+  const baseline = execFileSync('git', ['show', '7face2f24b7e171aa897abf72bea8f429692b2cf:src/app/api/webhooks/asaas/route.ts'], { encoding: 'utf8' });
   const current = readFileSync('src/app/api/webhooks/asaas/route.ts', 'utf8');
   const processing = '    const body = await req.json()';
   assert.ok(current.includes(processing));
@@ -76,7 +76,7 @@ test('Asaas authentication fix does not change any commercial event processing',
 });
 
 test('approved local G4 storage is additive and preserves every existing Prisma model', () => {
-  const baseline = execFileSync('git', ['show', 'f93c3435fff316a548255993d749ef545c9c7670:prisma/schema.prisma'], { encoding: 'utf8' });
+  const baseline = execFileSync('git', ['show', '7face2f24b7e171aa897abf72bea8f429692b2cf:prisma/schema.prisma'], { encoding: 'utf8' });
   const schema = readFileSync('prisma/schema.prisma', 'utf8');
   // The user approved only these two security models and their inverse relations
   // for local migration review/testing. All existing model tokens remain pinned.
@@ -109,7 +109,7 @@ test('existing Atendimento permission contract remains unchanged without calling
 
 
 test('Vendas integration preserves Marketing, the existing authorization engine and the empty enforcement manifest', () => {
-  const diff = execFileSync('git', ['diff', 'd9ac1fe1b8e8406489c2158e5c26186580544ef7', '--',
+  const diff = execFileSync('git', ['diff', '98663c6d4a5c0b1a661f90966d6edc81a386a523', '--',
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
     'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });

@@ -35,3 +35,9 @@ yarn-error.log*
 # Uploads
 public/uploads/
 tsconfig.tsbuildinfo
+
+# Sanitized candidate: keep local secrets and backup artifacts out of Git
+.env*
+!.env.example
+*.backup
+build.log
