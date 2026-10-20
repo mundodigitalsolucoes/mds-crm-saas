@@ -146,3 +146,10 @@ test('Existing Instagram inbox cannot be updated under a different Chatwoot acco
   assert.ok(patch > mismatch)
   assert.match(source, /toPositiveInt\(currentInstagram\.chatwootAccountId\) !== connectedAccountId/)
 })
+
+test('Instagram inbox PATCH response must match the stored inbox identifier', () => {
+  const source = readFileSync('src/app/api/atendimento/instagram/create-inbox/route.ts', 'utf8')
+  assert.match(source, /existingInboxId && inboxId !== existingInboxId/)
+  assert.match(source, /CHATWOOT_INBOX_RESPONSE_MISMATCH/)
+  assert.ok(source.indexOf('CHATWOOT_INBOX_RESPONSE_MISMATCH') < source.indexOf('const nextSettings ='))
+})
