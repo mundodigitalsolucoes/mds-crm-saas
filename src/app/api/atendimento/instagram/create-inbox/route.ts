@@ -506,7 +506,7 @@ export async function POST() {
           atendimentoInstagram: {
             ...currentInstagram,
             inboxProvisionStatus:
-              remoteCreateAttempted || currentInstagram.inboxProvisionStatus === 'reconciliation_required'
+              remoteCreateAttempted || ['reconciliation_required', 'pending'].includes(String(currentInstagram.inboxProvisionStatus))
                 ? 'reconciliation_required'
                 : 'error',
             lastInboxError: message,
