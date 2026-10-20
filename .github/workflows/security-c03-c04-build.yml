@@ -1,6 +1,9 @@
 name: C03-C04 Build Validation
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
   push:
     branches:
       - feature/modular-plans-entitlements

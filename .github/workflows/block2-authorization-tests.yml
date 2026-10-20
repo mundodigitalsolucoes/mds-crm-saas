@@ -1,6 +1,9 @@
 name: Block 2 Authorization Regression
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
   push:
     branches:
       - feature/modular-plans-entitlements

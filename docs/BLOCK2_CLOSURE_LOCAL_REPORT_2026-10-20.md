@@ -148,3 +148,78 @@ Incrementos locais preservando os cinco originais: `c772fbb` (identidade duráve
 Rollback proposto, não executado: suspender provisionamento e fluxos afetados antes de reverter incrementos; preservar IDs, operações e recibos duráveis, inclusive estados incertos; não apagar tabelas nem permitir replay para destravar. Reverter as dependências restaura ranges vulneráveis, e reverter G2 volta a aceitar identidades removidas: qualquer recuo exige restrição dessas superfícies e revisão de segurança. Antes de futuro rollout, identificar versão/artefato anterior, destino, backup e restauração, ensaiar em ambiente isolado e submeter o plano ao responsável. A migration aditiva pode permanecer durante recuo de código. Não há autorização para executar rollback ou migrations em produção.
 
 O rascunho reutilizável de onboarding foi atualizado com a quinta migration, comandos de teste ESM e estado final; salvar rascunho não publica nem aplica configuração. Os commits permanecem locais e não tiveram restauração em nova tarefa certificada. Como todos os gates ainda não passaram, não foi preparada publicação nem inventada URL de destino. Não é solicitada aprovação de deploy nesta etapa.
+
+---
+
+## Adendo — preparação da revisão independente, 20/10/2026
+
+**Candidato funcional reavaliado:** `3f4ef1bfeb60a104e4e17e116462d24f301a3050`, branch `audit/block2-closure`. Os nove commits acumulados foram revisados e preservados. O novo incremento desta rodada contém somente preparação de eventos CI de PR, documentação e evidência sanitizada; não muda lógica da aplicação, dependências, schema ou migrations. Seu HEAD é o commit que contém este adendo (`git log -1`), sem referência circular no próprio conteúdo. **Nenhum gate aprovado; push/PR bloqueados pela verificação histórica de segredos.**
+
+### Escopo dos nove commits
+
+| Commit | Escopo revisado e vínculo com o Bloco 02 |
+| --- | --- |
+| 617cfd3 | Saneamento de erro Chatwoot e testes PostgreSQL do Widget; G3 |
+| 48c4190 | Nonce OAuth de uso único e recibos de webhook Instagram, modelos/migration aditivos e testes; G4 |
+| d7ddde3 | Tipos não nulos do CAS Widget, sem mudar regra de negócio; G3/G6 |
+| fdbdb5c | Papel atual do banco, webhook Asaas fail-closed, ESLint compatível, testes e evidências G1–G4 |
+| d541622 | Relatório consolidado e bloqueios G1–G6 |
+| c772fbb | Operação durável Widget independente de settings, vínculos de provider, migration aditiva e testes; G3 |
+| 23f158e | Atualização pontual Next/NextAuth e regressão do Bearer malformado; G1/G6 |
+| 8ed774c | Associação ativa em seis rotas pessoais, tipos/lint e testes ESM com asserções preservadas; G2/G6 |
+| 3f4ef1b | Fechamento de dois erros focados de lint e relatório de resultados; G6 |
+
+Revisão dos patches: 52 arquivos no incremento dos nove, sem feature comercial adicional ou refatoração global. As duas migrations adicionam somente tabelas/índices/FKs de storage de segurança. Históricas não foram editadas. A alteração de checkPermission é o endurecimento documentado do papel atual no banco, já autorizado e testado; não é ativação de enforcement. Demais políticas/core protegido não foram ampliados. Exceções do teste de boundary admitem apenas novos modelos/relações/helpers autorizados. Helpers, fixtures e credenciais CI são técnicos/fictícios; não foi usado banco de produção.
+
+### Verificação do histórico e bloqueio de envio
+
+`git ls-remote origin refs/heads/audit/block2-closure refs/heads/feature/modular-plans-entitlements` confirmou base **cb1884e413203baa123ca94dfb0a4c4635b6502a** e ausência da ref audit remota. Nenhuma divergência detectada; verificar de novo antes de qualquer futuro push. API GitHub autenticada acessível nesta rodada (o CONNECT403 anterior é histórico, não bloqueio atual). Nenhuma ref foi enviada/modificada no GitHub.
+
+**Não é possível confirmar o item “ausência de credenciais, .env e temporários no histórico”.** `.env.backup`, introduzido em dfdf0a5 antes dos nove commits, contém DATABASE_URL com senha, NEXTAUTH_SECRET, TOKENS_SECRET e META_APP_SECRET não-placeholder. Validade externa não foi testada; tratar como candidatos sensíveis até confirmação de revogação/rotação pelo responsável. Campos de API Chatwoot/Gemini desse arquivo são placeholders em português e não foram contados como vazamentos comprovados. `.env.example` é template, não arquivo local adicionado pelo incremento.
+
+Varredura de 1.576 blobs alcançáveis: correspondências dos quatro candidatos acima apenas no blob antigo de .env.backup; zero novas correspondências desses valores e zero novos padrões de chave privada/token GitHub/Google/AWS nos objetos dos nove commits. Nenhum caminho .env, dump, chave, log ou helper temporário foi adicionado pelos nove. Isso é scanner heurístico + comparação exata, não prova universal de ausência de segredos/PII/dados de produção. No histórico anterior também há build.log e src/app/(app)/leads/page.tsx.backup; não atribuir sua inclusão aos nove. Não foi identificado dump de produção novo; a ausência absoluta de dados de produção no histórico não foi certificada. Nomes/blobs e metadados, sem valores, constam de history-audit.json/env-history-metadata.json fora do Git.
+
+O primeiro push foi interrompido preventivamente por falha dessa condição de segurança, não por divergência remota ou rejeição de aprovação automática. Não se removeu arquivo histórico nem se reescreveram commits: exclusão no HEAD não limpa ancestrais. Saneamento real exige decisão separada, coordenação de refs/colaboradores e rotação quando aplicável; não é autorizado implicitamente pela solicitação de PR. Plano e texto da PR estão em [preparação da PR Draft](BLOCK2_DRAFT_PR_REVIEW_REQUEST_2026-10-20.md).
+
+### Verificações repetidas, sem produção
+
+Evidências atuais: `/workspace/mds-crm-onboarding-evidence/independent/`. O HEAD funcional acima é o alvo dos testes; as mudanças posteriores são documentação/evidência e gatilhos CI, com YAML validado e regressão de segurança repetida. Node local é 24; workflows usam 22, ainda não executados neste SHA. Não confundir equivalência de comandos com CI GitHub aprovada.
+
+| Verificação | Resultado real |
+| --- | --- |
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs`, DB local explícito | **101 PASS**, zero fail/skip/TODO; node-tests.tap |
+| `npx tsx --test tests/*.test.ts` | **171 PASS**, zero fail/skip/TODO; tsx-tests.log |
+| `npm run build` | PASS; build.log |
+| `npx tsc --noEmit` após o build, alteração gerada next-env.d.ts restaurada | PASS; typecheck.log |
+| `npx prisma validate` e migrate diff schema local `--exit-code` | PASS, diff vazio; prisma-validate.log/prisma-diff.log; nenhuma migration executada nesta rodada |
+| Reinício do build por `npx next start` sem prestart; smoke HTTP real | **22 PASS**, incluindo login, tenants, IDOR, restrição de papel, rate limit e agenda concorrente; http-smoke-results.json |
+| `npm run lint -- --output-file .../lint.json --format json` | Retorno1, **182 erros/77 avisos**; zero diagnósticos novos por âncora de código contra cb1884e |
+| Auditoria atual `npm audit --json` | Retorno1, **46 pacotes: 0 críticos,40 altos,3 moderados,3 baixos**; npm-audit.json |
+| Auditoria da base, mesmo momento, lock isolado fora do checkout (`--package-lock-only --ignore-scripts`) | Retorno1, **49 pacotes: 2 críticos,37 altos,8 moderados,2 baixos**; npm-audit-base-current.json |
+| YAML dos quatro workflows e permissões | PASS; pull_request somente contra feature/modular-plans-entitlements, contents:read, sem pull_request_target, jobs de teste existentes preservados |
+| `npm run test:security` após preparar gatilhos | **12 PASS**; security-workflow-followup.log; não substitui suites funcionais |
+| Boundary/inventário de autorização após preparar gatilhos | PASS; boundary-followup.log; controles protegidos preservados |
+| Limpeza final PostgreSQL | Zero organizations/OAuth states/receipts/Widget operations; database-cleanup.log |
+
+O resultado atual **46 substitui o agregado17 anterior para esta execução**;17 permanece evidência histórica. O lock não foi alterado nesta rodada. A agregação npm inclui metavulnerabilidades propagadas; não foi presumida publicação de29 advisories novos. Comparação pareada atual: nenhum pacote sinalizado novo e nenhuma URL de advisory direto nova; nanoid/sharp/uuid deixaram a lista. Os 17 pacotes históricos têm versões idênticas às da base. Next/NextAuth/PostCSS alterados anteriormente mantêm riscos herdados, já existentes. Não se afirmou que todo aviso restante é inalcançável ou que ausência de pacote novo prove ausência de regressão funcional.
+
+A [classificação de riscos](BLOCK2_INDEPENDENT_RISK_REGISTER_2026-10-20.md) detalha os182 erros e77 avisos por regra, os17 pacotes históricos por versão/cadeia/impacto, e o agregado atual. [Registro sanitizado por diagnóstico e pacote](evidence/BLOCK2_INDEPENDENT_RISKS_2026-10-20.json) permite revisão sem depender de helpers ignorados. Todos259 diagnósticos restantes já têm âncora no candidato original;44 estão em fronteiras sensíveis, prioridade de revisão, não44 vulnerabilidades comprovadas. Nenhuma atualização em massa ou exceção de lint foi feita.
+
+### GitHub Actions e revisão independente
+
+Consulta real à API: C03-C04 Security Regression da **base cb1884e** terminou success, run [39364369568](https://github.com/mundodigitalsolucoes/mds-crm-saas/actions/runs/39364369568). Runs anteriores de outros SHAs incluem falhas; não foram atribuídas ao HEAD atual. A branch audit retornou **zero runs**. Não houve workflow_dispatch, porque a branch/commit não foi enviado. Não existe aprovação CI do HEAD local.
+
+Os quatro workflows existentes antes desta rodada só disparavam em push da branch feature ou manualmente. Foram preparados eventos pull_request contra a base, sem segredos reais, escrita de conteúdo ou jobs de deploy. Abrir Draft PR futuramente deverá permitir os jobs de autorização, handlers/PostgreSQL, C03-C04 e build, sujeito às políticas/ativação do GitHub. Nada foi disparado agora nem descrito como verde.
+
+**Pedido formal de revisão ainda não enviado.** A API de colaboradores retornou somente mundodigitalsolucoes, a própria conta autenticada, e não há CODEOWNERS rastreado. Nenhuma pessoa distinta foi identificada para solicitar review, e não se tentou autoaprovação. O texto com escopo G1–G6 e prioridades está pronto no documento de PR; é necessário indicar reviewer/time independente com acesso após tratar o bloqueio histórico. Não foram criados issue, e-mail ou mensagem externa alternativos.
+
+| Gate | Atualização nesta rodada | Estado |
+| --- | --- | --- |
+| G1 | Suites de autenticação/tokens e login HTTP repetidos positivos | Sem aprovação formal; browser/e-mail e revisão independente pendentes |
+| G2 | Patches dos guards e classificação de métodos/riscos revisados; regressões positivas | Sem aprovação formal; revisão independente de caminhos indiretos/exceções pendente |
+| G3 | 16 casos Widget funcionais incluídos na suite positiva, isolamento e vínculos preservados | Sem aprovação; providers reais e procedimento de resultado remoto incerto pendentes |
+| G4 | Nove casos funcionais PostgreSQL de state/assinatura/replay repetidos positivos | Sem aprovação; Meta real, retenção/reconciliação operacional e revisão independente pendentes |
+| G5 | Sem alteração de observe_only ou APPROVED_ENFORCEMENTS vazio | Sem aprovação formal; nenhum enforcement ativado |
+| G6 | Revisão dos nove, build/typecheck/testes e pacote de revisão local concluídos | **Bloqueado** por histórico sensível/artefatos antigos, lint global,46 pacotes sinalizados, ausência de CI deste SHA e reviewer independente |
+
+Não houve merge, push, deploy, publicação ou migrations em produção; nem alteração de serviços/credenciais reais. Para prosseguir no GitHub, o responsável deve decidir tratamento de `.env.backup` histórico e confirmar rotação/revogação quando aplicável, além de indicar revisor distinto. Sem essa decisão, não se afirma condição satisfatória para o envio condicionado. A verificação remota deverá ser repetida imediatamente antes do primeiro push e qualquer divergência interromperá o envio.
