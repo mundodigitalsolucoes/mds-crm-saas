@@ -18,14 +18,11 @@ type ChatwootInboxResponse = {
 class InstagramInboxError extends Error {
   status: number
   code: string
-  detail?: string
-
-  constructor(message: string, status = 500, code = 'INSTAGRAM_INBOX_ERROR', detail?: string) {
+  constructor(message: string, status = 500, code = 'INSTAGRAM_INBOX_ERROR') {
     super(message)
     this.name = 'InstagramInboxError'
     this.status = status
     this.code = code
-    this.detail = detail
   }
 }
 
