@@ -98,3 +98,32 @@ test('different-email advisory locks do not block each other', async () => {
     await prisma.$disconnect()
   }
 })
+
+test('PostgreSQL CAS permits only one concurrent inbox reservation per tenant', async () => {
+  assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
+  const { Client } = require('pg')
+  const setup = new Client({ connectionString: process.env.DATABASE_URL })
+  const first = new Client({ connectionString: process.env.DATABASE_URL })
+  const second = new Client({ connectionString: process.env.DATABASE_URL })
+  await Promise.all([setup.connect(), first.connect(), second.connect()])
+  try {
+    // Disposable table models the same tenant + deletedAt + settings equality
+    // predicate used by organization.updateMany; no application migration.
+    await setup.query('CREATE TEMP TABLE block2_cas_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text) ON COMMIT PRESERVE ROWS')
+    // TEMP tables are connection-local; use a transaction-scoped shared test table
+    // in the disposable CI database for the competing connections.
+    await setup.query('CREATE TABLE block2_inbox_cas_probe (tenant_id text PRIMARY KEY, deleted_at timestamptz, settings text)')
+    await setup.query("INSERT INTO block2_inbox_cas_probe VALUES ('tenant-a', NULL, 'original')")
+    const sql = "UPDATE block2_inbox_cas_probe SET settings = $1 WHERE tenant_id = 'tenant-a' AND deleted_at IS NULL AND settings = 'original'"
+    const results = await Promise.all([
+      first.query(sql, ['pending-first']),
+      second.query(sql, ['pending-second']),
+    ])
+    assert.deepEqual(results.map((r) => r.rowCount).sort(), [0, 1])
+    const saved = await setup.query("SELECT settings FROM block2_inbox_cas_probe WHERE tenant_id = 'tenant-a'")
+    assert.ok(['pending-first', 'pending-second'].includes(saved.rows[0].settings))
+  } finally {
+    await setup.query('DROP TABLE IF EXISTS block2_inbox_cas_probe')
+    await Promise.all([setup.end(), first.end(), second.end()])
+  }
+})
