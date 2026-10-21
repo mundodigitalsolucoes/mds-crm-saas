@@ -121,6 +121,9 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     'src/app/api/tags', 'src/app/api/tasks',
     // Explicit C5 SECURITY authorization: only the two vulnerable Task handlers.
     ':(exclude)src/app/api/tasks/route.ts', ':(exclude)src/app/api/tasks/[[]id[]]/route.ts',
+    // Current granular authorization includes exactly these two subtask routes; full deltas pinned below.
+    ':(exclude)src/app/api/tasks/[[]id[]]/subtasks/route.ts',
+    ':(exclude)src/app/api/tasks/[[]id[]]/subtasks/[[]subtaskId[]]/route.ts',
     'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');
 });
@@ -160,4 +163,25 @@ test('C5 keeps every existing identity/subscription/tenant check and legacy guar
   assert.equal(declaration(current, 'validPermissions'), declaration(before, 'validPermissions')!.replace("if (!('leads' in value)) return false;", "if (!Object.keys(value).some(key => ALL_MODULES.includes(key as PermissionModule))) return false;"));
   const guardBefore = execFileSync('git', ['show', 'a27316c:src/lib/authorization/guards.ts'], { encoding: 'utf8' });
   assert.ok(readFileSync('src/lib/authorization/guards.ts', 'utf8').startsWith(guardBefore.trimEnd()));
+});
+
+// Current scope permits additive commercial checks only; tenant checks, schemas and CRUD bodies stay identical.
+test('C5 granular subtask batch preserves original handlers except the exact approved additive guard', () => {
+  for (const [suffix, actions] of [['', ['view', 'edit']], ['/[subtaskId]', ['edit', 'delete']]] as const) {
+    const path = `src/app/api/tasks/[id]/subtasks${suffix}/route.ts`;
+    const original = execFileSync('git', ['show', `f0acc3e:${path}`], { encoding: 'utf8' });
+    let expected = original.replace("import { checkPermission } from '@/lib/checkPermission';", "import { checkPermission } from '@/lib/checkPermission';\nimport { taskCommercialDenial } from '@/lib/authorization/guards';")
+      .replace('select: { id: true },', 'select: { id: true, type: true, leadId: true, projectId: true },');
+    const marker = "      return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });\n    }";
+    let cursor = 0;
+    for (const action of actions) {
+      const offset = expected.indexOf(marker, cursor);
+      assert.ok(offset >= 0);
+      const end = offset + marker.length;
+      const addition = `\n\n    const commercialDenied = await taskCommercialDenial(session!, '${action}', task);\n    if (commercialDenied) return commercialDenied;`;
+      expected = expected.slice(0, end) + addition + expected.slice(end);
+      cursor = end + addition.length;
+    }
+    assert.equal(readFileSync(path, 'utf8'), expected);
+  }
 });
