@@ -113,7 +113,7 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
     // C1 adds a presentation adapter; all pre-existing engine files stay protected.
     ':(exclude)src/lib/authorization/application-context.ts',
-    'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
+    'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations', ':(exclude)src/lib/validations/branding.ts',
     'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');
 });

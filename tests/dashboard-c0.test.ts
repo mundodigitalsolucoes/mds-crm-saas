@@ -33,6 +33,7 @@ for (const component of ['dashboard/page', 'layout']) {
     const denied = new Proxy({}, { get() { throw Error('Unexpected data access'); } });
     const imports: Record<string, unknown> = {
       '@/lib/authorization/application-context': {},
+      '@/lib/branding': {},
       '@/lib/entitlements/organization': { getOrganizationEntitlements: async () => ({ ok: true, entitlements: { module: () => ({ contracted: true }) } }) },
       '@/lib/checkPermission': { checkAuth: async () => ({ authenticated: false, session: null }) },
       '@/lib/prisma': { prisma: denied },

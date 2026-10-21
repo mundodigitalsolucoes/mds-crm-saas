@@ -4,6 +4,7 @@ import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { loadServerModule } from './helpers/load-server-module';
 import { resolveCommercialEntitlements } from '../src/lib/entitlements/resolver';
+import * as brandingValues from '../src/lib/branding-values';
 import type { ApplicationContext } from '../src/lib/authorization/application-context';
 const modules = ['atendimento', 'vendas', 'marketing'];
 const resources = ['atendimento', 'leads', 'kanban', 'agenda', 'tasks', 'goals', 'projects', 'os', 'reports', 'users', 'integrations'];
@@ -16,6 +17,7 @@ for (let mask = 1; mask < 8; mask++) for (const role of ['owner', 'admin', 'user
       views: Object.fromEntries(resources.map(resource => [resource, role !== 'user' || resource !== (tenant === 'a' ? 'leads' : 'tasks')])),
     };
     const { default: Sidebar } = loadServerModule<{ default: React.ComponentType<{ access: ApplicationContext }> }>(new URL('../src/components/Sidebar.tsx', import.meta.url), {
+      '@/lib/branding-values': brandingValues,
       react: { ...React, useState: (initial: unknown) => React.useState(typeof initial === 'object' ? { atendimento: true, vendas: true, marketing: true, configuracoes: true, ajuda: true } : initial) },
       'next/link': { default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement('a', props) },
       'next/navigation': { usePathname: () => '/dashboard' },

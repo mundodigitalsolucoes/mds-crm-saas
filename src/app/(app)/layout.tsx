@@ -11,25 +11,17 @@ import WhatsAppStatusBanner from '@/components/integrations/WhatsAppStatusBanner
 import { checkAuth } from '@/lib/checkPermission';
 import { getApplicationContext } from '@/lib/authorization/application-context';
 import { redirect } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
+import { getOrgBranding, brandingCssVars } from '@/lib/branding';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'MDS CRM - Dashboard',
-  description: 'Sistema de Gestão de Leads e Projetos',
-};
-
-async function getOrgBranding(organizationId: string) {
-  try {
-    const org = await prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { favicon: true },
-    });
-
-    return org;
-  } catch {
-    return null;
-  }
+export async function generateMetadata(): Promise<Metadata> {
+  const auth = await checkAuth();
+  if (!auth.authenticated || !auth.session) return {};
+  const branding = await getOrgBranding(auth.session.user.organizationId);
+  return {
+    title: { default: branding.name, template: `%s | ${branding.name}` },
+    icons: { icon: branding.favicon ?? '/favicon.ico', shortcut: branding.favicon ?? '/favicon.ico' },
+  };
 }
 
 export default async function AppLayout({
@@ -46,12 +38,7 @@ export default async function AppLayout({
 
   const favicon = branding?.favicon ?? '/favicon.ico';
 
-  const cssVars = `
-    :root {
-      --color-primary: #2f3453;
-      --color-secondary: #374b89;
-    }
-  `;
+  const cssVars = brandingCssVars(branding);
 
   return (
     <NextAuthSessionProvider>
@@ -63,7 +50,7 @@ export default async function AppLayout({
         <WhatsAppStatusBanner />
 
         <div className="flex h-screen overflow-hidden bg-[#f6f8fc]">
-          <Sidebar access={context} />
+          <Sidebar access={context} branding={branding} />
 
           <div className="flex min-w-0 min-h-0 flex-1 flex-col bg-[#f6f8fc]">
             <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">

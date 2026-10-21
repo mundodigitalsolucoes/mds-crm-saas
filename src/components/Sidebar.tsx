@@ -36,6 +36,7 @@ import {
 import { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { usePermission } from '@/hooks/usePermission';
 import dynamic from 'next/dynamic';
+import { DEFAULT_BRANDING, brandingValues, type OrgBranding } from '@/lib/branding-values';
 import type { ApplicationContext } from '@/lib/authorization/application-context';
 import type { CommercialModuleId } from '@/lib/entitlements/catalog';
 import type { PermissionModule } from '@/types/permissions';
@@ -61,24 +62,12 @@ interface MenuSection {
   commercialModule?: CommercialModuleId;
 }
 
-const BRAND = {
-  logo: '/images/logo-fundo-escuro.png',
-  primary: '#2f3453',
-  secondary: '#374b89',
-  white: '#ffffff',
-};
-
-function makePalette() {
+function makePalette(brand: OrgBranding) {
   return {
-    bg: BRAND.primary,
-    bgDark: '#28304c',
-    bgDarker: '#252c45',
-    active: BRAND.secondary,
-    hover: 'rgba(255,255,255,0.08)',
-    hoverSoft: 'rgba(255,255,255,0.05)',
-    border: 'rgba(255,255,255,0.10)',
-    textMuted: 'rgba(255,255,255,0.78)',
-    textLabel: 'rgba(255,255,255,0.42)',
+    bg: brand.primaryColor, bgDark: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#28304c' : brand.primaryColor, bgDarker: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#252c45' : 'rgba(0,0,0,0.12)',
+    active: brand.secondaryColor,
+    hover: 'rgba(255,255,255,0.08)', hoverSoft: 'rgba(255,255,255,0.05)',
+    border: 'rgba(255,255,255,0.10)', textMuted: 'rgba(255,255,255,0.78)', textLabel: 'rgba(255,255,255,0.42)',
   };
 }
 
@@ -157,7 +146,7 @@ function subscribeCollapsed(onChange: () => void) {
   };
 }
 
-export default function Sidebar({ access }: { access: ApplicationContext }) {
+export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { access: ApplicationContext; branding?: OrgBranding }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { canAccess, isAdmin, isLoading } = usePermission();
@@ -171,7 +160,8 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
   };
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
-  const palette = useMemo(() => makePalette(), []);
+  const brand = useMemo(() => brandingValues(branding), [branding]);
+  const palette = useMemo(() => makePalette(brand), [brand]);
 
   useEffect(() => {
     const width = isCollapsed ? '88px' : '288px';
@@ -270,7 +260,7 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="fixed left-4 top-4 z-50 rounded-xl p-2 text-white shadow-lg transition-opacity hover:opacity-80 lg:hidden"
-        style={{ backgroundColor: BRAND.primary }}
+        style={{ backgroundColor: brand.primaryColor }}
         aria-label={isMobileOpen ? 'Fechar menu' : 'Abrir menu'}
       >
         {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -304,8 +294,8 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
           >
             <div className="flex items-center justify-center">
               <img
-                src={BRAND.logo}
-                alt="MDS"
+                src={brand.logo ?? DEFAULT_BRANDING.logo!}
+                alt={brand.name}
                 className={`${isDesktopCollapsed ? 'h-10 w-10' : 'h-11 w-11'} object-contain`}
               />
             </div>
@@ -317,7 +307,7 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
               style={{
                 borderColor: palette.border,
                 backgroundColor: palette.hover,
-                color: BRAND.white,
+                color: '#ffffff',
               }}
               aria-label={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
               title={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
@@ -345,7 +335,7 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
                       : 'transparent',
                   color:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
-                      ? BRAND.white
+                      ? '#ffffff'
                       : palette.textMuted,
                   fontWeight:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
@@ -382,7 +372,7 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
                       }`}
                       style={{
                         backgroundColor: hasActiveItem && !isOpen ? palette.hover : 'transparent',
-                        color: BRAND.white,
+                        color: '#ffffff',
                       }}
                       title={isDesktopCollapsed ? section.title : undefined}
                     >
@@ -416,7 +406,7 @@ export default function Sidebar({ access }: { access: ApplicationContext }) {
                                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
                                 style={{
                                   backgroundColor: isActive ? palette.active : 'transparent',
-                                  color: isActive ? BRAND.white : palette.textMuted,
+                                  color: isActive ? '#ffffff' : palette.textMuted,
                                   fontWeight: isActive ? 600 : 500,
                                 }}
                                 onMouseEnter={(e) => {

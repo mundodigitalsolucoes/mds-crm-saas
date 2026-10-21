@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Dashboard | MDS CRM',
+  title: 'Dashboard',
   description: 'Painel principal do CRM com métricas em tempo real.',
 };
 

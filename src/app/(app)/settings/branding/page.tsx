@@ -3,11 +3,12 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { DEFAULT_BRANDING } from '@/lib/branding-values';
 import {
   Palette,
-  Image,
+  Image as ImageIcon,
   Globe,
   CheckCircle,
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface OrgBranding {
+  whiteLabelActive?: boolean;
   id:             string;
   name:           string;
   slug:           string;
@@ -28,10 +30,7 @@ interface OrgBranding {
   secondaryColor: string;
 }
 
-const DEFAULTS = {
-  primaryColor:   '#6366f1',
-  secondaryColor: '#4f46e5',
-};
+const DEFAULTS = DEFAULT_BRANDING;
 
 // ── Componente de preview de cor ──────────────────────────────────────────────
 function ColorSwatch({ color, label }: { color: string; label: string }) {
@@ -61,9 +60,10 @@ function ColorInput({
   onChange: (v: string) => void;
   description: string;
 }) {
-  const [text, setText] = useState(value);
-
-  useEffect(() => { setText(value); }, [value]);
+  const [draft, setDraft] = useState({ source: value, text: value });
+  if (draft.source !== value) setDraft({ source: value, text: value });
+  const text = draft.text;
+  const setText = (text: string) => setDraft({ source: value, text });
 
   const handleTextChange = (v: string) => {
     setText(v);
@@ -99,7 +99,7 @@ function ColorInput({
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function BrandingPage() {
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role ?? '';
+  const role = session?.user?.role ?? '';
   const canEdit = role === 'owner' || role === 'admin';
 
   const [loading, setLoading]   = useState(true);
@@ -115,40 +115,26 @@ export default function BrandingPage() {
   const [original, setOriginal] = useState<OrgBranding | null>(null);
 
   // ── Carregar dados ──────────────────────────────────────────────────────────
-  const loadBranding = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/organizations');
-      if (!res.ok) throw new Error('Erro ao carregar branding');
-      const data: OrgBranding = await res.json();
-
-      setOriginal(data);
-      setName(data.name);
-      setLogo(data.logo ?? '');
-      setFavicon(data.favicon ?? '');
-      setPrimaryColor(data.primaryColor);
-      setSecondaryColor(data.secondaryColor);
-    } catch {
-      setMessage({ type: 'error', text: 'Erro ao carregar configurações.' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadBranding(); }, [loadBranding]);
-
-  // ── Aplicar preview de cor em tempo real ───────────────────────────────────
   useEffect(() => {
-    document.documentElement.style.setProperty('--color-primary', primaryColor);
-    document.documentElement.style.setProperty('--color-secondary', secondaryColor);
-  }, [primaryColor, secondaryColor]);
+    let active = true;
+    fetch('/api/organizations').then(async response => {
+      if (!response.ok) throw Error('Erro ao carregar branding');
+      return response.json() as Promise<OrgBranding>;
+    }).then(data => {
+      if (!active) return;
+      setOriginal(data); setName(data.name); setLogo(data.logo ?? '');
+      setFavicon(data.favicon ?? ''); setPrimaryColor(data.primaryColor); setSecondaryColor(data.secondaryColor);
+    }).catch(() => { if (active) setMessage({ type: 'error', text: 'Erro ao carregar configurações.' }); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   // ── Salvar ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
     setMessage(null);
     try {
-      const body: Record<string, any> = { name, primaryColor, secondaryColor };
+      const body: Record<string, string | null> = { name, primaryColor, secondaryColor };
       if (logo)     body.logo    = logo;
       if (favicon)  body.favicon = favicon;
       if (!logo)    body.logo    = null;
@@ -166,20 +152,14 @@ export default function BrandingPage() {
       }
 
       const updated: OrgBranding = await res.json();
-      setOriginal(updated);
+      setOriginal({ ...updated, whiteLabelActive: original?.whiteLabelActive });
       setMessage({ type: 'success', text: 'Branding salvo com sucesso!' });
-
-      // Atualizar favicon dinamicamente
-      if (updated.favicon) {
-        const link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
-        if (link) link.href = updated.favicon;
-      }
 
       // Recarrega para aplicar cores no Sidebar e layout
       setTimeout(() => window.location.reload(), 1200);
 
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message });
+    } catch (err: unknown) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Erro ao salvar' });
     } finally {
       setSaving(false);
     }
@@ -226,6 +206,9 @@ export default function BrandingPage() {
         </p>
       </div>
 
+      <p className="mb-4 text-sm text-gray-400">
+        {original?.whiteLabelActive ? 'White-Label habilitado pela MDS. As alterações serão aplicadas após salvar.' : 'Marca MDS ativa. Você pode salvar suas configurações; a aplicação da identidade própria depende do adicional White-Label habilitado pela MDS.'}
+      </p>
       {/* Feedback */}
       {message && (
         <div className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
@@ -397,7 +380,7 @@ export default function BrandingPage() {
       {/* ── Seção: CSS Variables ── */}
       <div className="bg-gray-900 rounded-xl border border-white/10 p-6 mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <Image className="w-5 h-5 text-indigo-400" />
+          <ImageIcon className="w-5 h-5 text-indigo-400" />
           <h2 className="text-base font-semibold text-gray-100">CSS Variables</h2>
         </div>
         <p className="text-xs text-gray-500 mb-3">
