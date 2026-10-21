@@ -295,3 +295,17 @@ Candidata **audit/block2-sanitized**, base local **audit/block2-sanitized-base**
 Parecer solicitado a uma pessoa distinta deve revisar os artefatos desta candidata, casos críticos de reserva/timeout/replay/tenant, origem e alcance de lint/dependências, exceções públicas e rollback. A conta autenticada é o único colaborador conhecido; nenhum reviewer independente foi inventado, nenhum pedido remoto enviado e nenhuma autoaprovação emitida. CI da base cb1884e anteriormente verde não vale como CI desta candidata; **CI remota do SHA saneado: NÃO EXECUTADA**.
 
 Rollback proposto para revisão, não executado: suspender o fluxo afetado antes de recuar, preservar identidades/recibos duráveis e nunca apagar pending/remote_unknown para liberar POST. Reverter a correção do perdedor da reserva reabre a falha de disponibilidade; reverter guard/dependência reabre riscos corrigidos. Tabelas aditivas devem permanecer durante eventual recuo; qualquer remoção depende de plano próprio/backup. Nenhum merge, push, deploy, migration em produção, alteração no Coolify ou enforcement comercial foi realizado.
+
+---
+
+## Adendo — continuidade oficial e auditoria da frente comercial, 20/10/2026
+
+HEAD de entrada **18507ac**, árvore limpa; mesma candidata saneada. Nesta execução foram reconfirmados **102 testes Node/PostgreSQL,171 TypeScript,22 checks HTTP, build, typecheck e schema diff**, todos positivos;17 casos funcionais Widget e9 de persistência Instagram continuam incluídos. Lint global permanece182 erros/77 avisos, com diagnósticos idênticos aos anteriores; auditoria46 pacotes,zero críticos. **Nenhum gate G1–G6 formalmente aprovado.** Nenhuma fonte funcional, teste versionado, schema, dependência, provider ou política foi alterada.
+
+As duas novas decisões documentais remotas c4cd327/12e0e67 foram lidas e incorporadas somente por conteúdo, sem importar ancestrais. O tip remoto atual é12e0e67, não cb1884e; ambos os novos commits alteram apenas um documento cada. Nada foi mesclado, rebaseado ou enviado. A origem dos documentos e as dez correspondências da auditoria original foram verificadas; core protegido e observe_only permanecem intactos.
+
+Entregas separadas: **[A — reconfirmação do encerramento e G1–G6](BLOCK2_CLOSURE_RECONFIRMATION_2026-10-20.md)** e **[B — diferencial comercial local e menor plano de adaptação](COMMERCIAL_DIFFERENTIAL_LOCAL_AUDIT_2026-10-20.md)**. [Evidências sanitizadas de matriz/comparação](evidence/BLOCK2_COMMERCIAL_AUDIT_2026-10-20.json). Logs atuais em /workspace/mds-crm-onboarding-evidence/commercial-audit/.
+
+Os12 arquivos comerciais comparados com a fonte remota da auditoria são idênticos. A infraestrutura já existe; faltam conexões e governança específicas. A matriz de fundamento teve14 cenários/126 decisões puras positivas, mas a Sidebar real em SSR para owner divergiu do menu contratado em12/14 casos e manteve logo MDS nos7 casos White-Label. Isso não foi descrito como frente comercial homologada. As seis suspeitas remotas foram classificadas com código local e testes de sondagem; nenhuma feature/refatoração comercial foi iniciada.
+
+Próxima ação: revisão independente de A/B e decisão sobre base/destino saneado para futura CI. Proposta de implementação mínima está em B, sem antecipar Blocos3–5, preços/cobrança/domínio ou conectar WhatsApp real. Sem merge, push, deploy, migrations em produção, credenciais reais, mudanças no Coolify ou ativação de enforcement; APPROVED_ENFORCEMENTS vazio.
