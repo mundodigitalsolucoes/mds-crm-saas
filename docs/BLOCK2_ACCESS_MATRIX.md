@@ -1,5 +1,7 @@
 # Bloco 2 — Matriz de acesso e inventário de superfícies
 
+> **Revisão C5 — 2026-10-21:** matriz por operação e evidências atuais em [BLOCK2_C5_ACCESS_AUDIT_2026-10-21.md](BLOCK2_C5_ACCESS_AUDIT_2026-10-21.md). Inventário: 116 APIs, 177 métodos, 28 páginas; 35 guards de módulo e 22 observers de canal. **Rollout bloqueado:** 42 falhas de isolamento em vínculos Tarefas/OS e 28 exposições de Lead por Tarefas com leads.view negado. Observe_only e manifesto vazio preservados. A matriz histórica abaixo não constitui aprovação nem certificação de todos os métodos.
+
 Base da matriz original: `f93c3435fff316a548255993d749ef545c9c7670`. Revisão documental e HTTP anterior: `9e2a785a9cdbcf5502991e3d5853d29b8685e27a`, com os 12 canônicos recebidos em `docs/oficiais/` e origem preservada em `ORIGEM.md`. Esta matriz é inventário de código, não homologação de segurança de todas as rotas. Nenhuma consulta de produção foi executada.
 
 ## Decisões e limites de cobertura

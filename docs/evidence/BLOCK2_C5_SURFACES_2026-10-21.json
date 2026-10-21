@@ -1,0 +1,5626 @@
+{
+  "referenceHead": "5f0f8a9905be91aa1e68ccd00e9602c346e6a5ee",
+  "sourceTree": "eb24acc3c06c0adf89c9299ebc28cd8bfeb2e84c",
+  "note": "AST calls only, not data-flow, auth completeness or tenant isolation certification. Helper-delegated guards require manual review. Callbacks require provider authentication, not a fabricated tenant session.",
+  "summary": {
+    "apiFiles": 116,
+    "operations": 177,
+    "pages": 28,
+    "observedOperations": 57
+  },
+  "api": [
+    {
+      "url": "/api/admin/auth",
+      "method": "POST",
+      "path": "src/app/api/admin/auth/route.ts",
+      "group": "administration",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.superAdmin.findUnique",
+          "line": 27,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/auth",
+      "method": "GET",
+      "path": "src/app/api/admin/auth/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 83
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/auth",
+      "method": "DELETE",
+      "path": "src/app/api/admin/auth/route.ts",
+      "group": "administration",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/coupons/[id]",
+      "method": "PUT",
+      "path": "src/app/api/admin/coupons/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 23
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.coupon.findUnique",
+          "line": 36,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.findUnique",
+          "line": 41,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.update",
+          "line": 56,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/coupons/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/admin/coupons/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 68
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.coupon.findUnique",
+          "line": 74,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.couponUsage.count",
+          "line": 77,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.update",
+          "line": 80,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.delete",
+          "line": 84,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/coupons",
+      "method": "GET",
+      "path": "src/app/api/admin/coupons/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 26
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.coupon.findMany",
+          "line": 45,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.count",
+          "line": 52,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/coupons",
+      "method": "POST",
+      "path": "src/app/api/admin/coupons/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 70
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.coupon.findUnique",
+          "line": 84,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.coupon.create",
+          "line": 89,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/dashboard",
+      "method": "GET",
+      "path": "src/app/api/admin/dashboard/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 12
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.count",
+          "line": 36,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.count",
+          "line": 37,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.count",
+          "line": 38,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.marketingProject.count",
+          "line": 39,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.task.count",
+          "line": 40,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.serviceOrder.count",
+          "line": 41,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.count",
+          "line": 42,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.count",
+          "line": 49,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.count",
+          "line": 56,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findMany",
+          "line": 64,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.groupBy",
+          "line": 83,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/organizations/[id]",
+      "method": "GET",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 16
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 23,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.whatsappInstance.count",
+          "line": 41,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/organizations/[id]",
+      "method": "PUT",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 77
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 89,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 108,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 125,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.update",
+          "line": 160,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.update",
+          "line": 181,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/organizations/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 204
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 210,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 273,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.update",
+          "line": 293,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 311,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.update",
+          "line": 312,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.connectedAccount.updateMany",
+          "line": 321,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/organizations",
+      "method": "GET",
+      "path": "src/app/api/admin/organizations/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findMany",
+          "line": 37,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.count",
+          "line": 67,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/organizations",
+      "method": "POST",
+      "path": "src/app/api/admin/organizations/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 107
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 116,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.create",
+          "line": 124,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/orgs/[orgId]/provision-chatwoot",
+      "method": "POST",
+      "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 30
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 39,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 61,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/orgs/[orgId]/provision-chatwoot",
+      "method": "GET",
+      "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 111
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 117,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 126,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/plans/[id]",
+      "method": "PUT",
+      "path": "src/app/api/admin/plans/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 14
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.plan.findUnique",
+          "line": 33,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.plan.update",
+          "line": 48,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 56,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/plans/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/admin/plans/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 94
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.plan.findUnique",
+          "line": 102,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.count",
+          "line": 107,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.plan.delete",
+          "line": 115,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/plans",
+      "method": "GET",
+      "path": "src/app/api/admin/plans/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.plan.findMany",
+          "line": 16,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.count",
+          "line": 22,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/plans",
+      "method": "POST",
+      "path": "src/app/api/admin/plans/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.plan.findUnique",
+          "line": 60,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.plan.create",
+          "line": 68,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/users/[id]",
+      "method": "PUT",
+      "path": "src/app/api/admin/users/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 39
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.update",
+          "line": 52,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/users/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/admin/users/[id]/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 78
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 88,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.updateMany",
+          "line": 163,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.updateMany",
+          "line": 177,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.delete",
+          "line": 190,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 192,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/admin/users",
+      "method": "GET",
+      "path": "src/app/api/admin/users/route.ts",
+      "group": "administration",
+      "guards": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findMany",
+          "line": 39,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/agenda/[id]",
+      "method": "GET",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'view'"
+          ],
+          "line": 32
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.agendaEvent.findFirst",
+          "line": 37,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/agenda/[id]",
+      "method": "PUT",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'edit'"
+          ],
+          "line": 65
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.agendaEvent.findFirst",
+          "line": 72,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 102,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.marketingProject.findFirst",
+          "line": 112,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.findFirst",
+          "line": 122,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.agendaEvent.update",
+          "line": 136,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/agenda/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'delete'"
+          ],
+          "line": 158
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.agendaEvent.findFirst",
+          "line": 164,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.agendaEvent.delete",
+          "line": 175,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/agenda",
+      "method": "GET",
+      "path": "src/app/api/agenda/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'view'"
+          ],
+          "line": 54
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.agendaEvent.findMany",
+          "line": 123,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.agendaEvent.count",
+          "line": 133,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/agenda",
+      "method": "POST",
+      "path": "src/app/api/agenda/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'create'"
+          ],
+          "line": 160
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 183,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.marketingProject.findFirst",
+          "line": 193,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.findFirst",
+          "line": 203,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.agendaEvent.create",
+          "line": 211,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/agentes",
+      "method": "GET",
+      "path": "src/app/api/atendimento/agentes/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 18
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findMany",
+          "line": 26,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/agentes/sync",
+      "method": "POST",
+      "path": "src/app/api/atendimento/agentes/sync/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 18
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findMany",
+          "line": 36,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.update",
+          "line": 70,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 87,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/connect",
+      "method": "POST",
+      "path": "src/app/api/atendimento/canais/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 22
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 29
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 32,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.whatsappInstance.count",
+          "line": 65,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/email/google/authorize",
+      "method": "POST",
+      "path": "src/app/api/atendimento/canais/email/google/authorize/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 8
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/email",
+      "method": "GET",
+      "path": "src/app/api/atendimento/canais/email/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 29
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 34
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/email",
+      "method": "DELETE",
+      "path": "src/app/api/atendimento/canais/email/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'delete'"
+          ],
+          "line": 53
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 58
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/providers",
+      "method": "GET",
+      "path": "src/app/api/atendimento/canais/providers/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 9
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 14,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.whatsappInstance.count",
+          "line": 32,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/whatsapp-cloud/connect",
+      "method": "POST",
+      "path": "src/app/api/atendimento/canais/whatsapp-cloud/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 19
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 23
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.whatsappInstance.count",
+          "line": 29,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/canais/whatsapp-cloud/delete",
+      "method": "POST",
+      "path": "src/app/api/atendimento/canais/whatsapp-cloud/delete/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 64
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 68
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.whatsappInstance.findFirst",
+          "line": 79,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.whatsappInstance.update",
+          "line": 108,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes/[teamId]/members",
+      "method": "GET",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 35
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes/[teamId]/members",
+      "method": "POST",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 84
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes/[teamId]/members",
+      "method": "DELETE",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 157
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes/[teamId]",
+      "method": "DELETE",
+      "path": "src/app/api/atendimento/equipes/[teamId]/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'delete' }"
+          ],
+          "line": 44
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes",
+      "method": "GET",
+      "path": "src/app/api/atendimento/equipes/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 27
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/equipes",
+      "method": "POST",
+      "path": "src/app/api/atendimento/equipes/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'create' }"
+          ],
+          "line": 78
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/inboxes/[inboxId]/members",
+      "method": "GET",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 37
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/inboxes/[inboxId]/members",
+      "method": "POST",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 86
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/inboxes/[inboxId]/members",
+      "method": "DELETE",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 169
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/inboxes",
+      "method": "GET",
+      "path": "src/app/api/atendimento/inboxes/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/accounts",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/accounts/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 38
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 48,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/callback",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/callback/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [
+        {
+          "call": "getServerSession",
+          "arguments": [
+            "authOptions"
+          ],
+          "line": 140
+        },
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 147
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 154,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 217,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/connect",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 21
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 27
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/create-inbox",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/create-inbox/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 120
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 130
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 133,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 146,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 365,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 449,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 462,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 501,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/debug-business-pages",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/debug-business-pages/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 40
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 50,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/debug-pages",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/debug-pages/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 37
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 47,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/debug-token",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/debug-token/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 37
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 47,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/exchange-token",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/exchange-token/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "trustedOrganizationId",
+            "'instagram_channel'"
+          ],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 29,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 102,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 157
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 165
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 167,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 205
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 213
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 235,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 285,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 295,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/select-account",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/select-account/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 44
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 65
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 67,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 188,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/subscribe-page",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/subscribe-page/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 27
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 35
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 37,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 165,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/sync-account",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/sync-account/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 38
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 48,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 191,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/webhook",
+      "method": "GET",
+      "path": "src/app/api/atendimento/instagram/webhook/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/instagram/webhook",
+      "method": "POST",
+      "path": "src/app/api/atendimento/instagram/webhook/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 238,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/session-diagnostics",
+      "method": "GET",
+      "path": "src/app/api/atendimento/session-diagnostics/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 76
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 96,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/widget/agents",
+      "method": "POST",
+      "path": "src/app/api/atendimento/widget/agents/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 195
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 205
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 208,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 221,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.widgetInboxOperation.findUnique",
+          "line": 326,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 369,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 380,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/widget/provision",
+      "method": "POST",
+      "path": "src/app/api/atendimento/widget/provision/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 506
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 516
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 519,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 532,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.widgetInboxOperation.findUnique",
+          "line": 563,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 685,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findFirst",
+          "line": 759,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 761,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.widgetInboxOperation.updateMany",
+          "line": 772,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 773,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/widget",
+      "method": "GET",
+      "path": "src/app/api/atendimento/widget/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 335
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 339
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 341,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/atendimento/widget",
+      "method": "POST",
+      "path": "src/app/api/atendimento/widget/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 383
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 387
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 410,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 446,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 456,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "channel-observer",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/attachments/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/attachments/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'delete'"
+          ],
+          "line": 38
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.attachment.findUnique",
+          "line": 28,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.findUnique",
+          "line": 48,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.attachment.delete",
+          "line": 70,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/attachments",
+      "method": "GET",
+      "path": "src/app/api/attachments/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'view'"
+          ],
+          "line": 40
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.attachment.findMany",
+          "line": 43,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/attachments",
+      "method": "POST",
+      "path": "src/app/api/attachments/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'edit'"
+          ],
+          "line": 103
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.attachment.create",
+          "line": 133,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/[...nextauth]",
+      "method": "GET",
+      "path": "src/app/api/auth/[...nextauth]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/[...nextauth]",
+      "method": "POST",
+      "path": "src/app/api/auth/[...nextauth]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/delete-account",
+      "method": "DELETE",
+      "path": "src/app/api/auth/delete-account/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 11
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 18,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.update",
+          "line": 40,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.updateMany",
+          "line": 54,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/export-data",
+      "method": "GET",
+      "path": "src/app/api/auth/export-data/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 16,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/forgot-password",
+      "method": "POST",
+      "path": "src/app/api/auth/forgot-password/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findFirst",
+          "line": 20,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 37,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/me",
+      "method": "GET",
+      "path": "src/app/api/auth/me/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 13,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/reset-password",
+      "method": "POST",
+      "path": "src/app/api/auth/reset-password/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.passwordResetToken.findUnique",
+          "line": 19,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.findFirst",
+          "line": 46,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 64,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/auth/signup",
+      "method": "POST",
+      "path": "src/app/api/auth/signup/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 50,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 68,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.$transaction",
+          "line": 72,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/comments/[id]",
+      "method": "PUT",
+      "path": "src/app/api/comments/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'edit'"
+          ],
+          "line": 36
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.comment.findUnique",
+          "line": 26,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.update",
+          "line": 54,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/comments/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/comments/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'delete'"
+          ],
+          "line": 97
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.comment.findUnique",
+          "line": 87,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.findUnique",
+          "line": 102,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.deleteMany",
+          "line": 116,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.delete",
+          "line": 120,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/comments",
+      "method": "GET",
+      "path": "src/app/api/comments/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'view'"
+          ],
+          "line": 37
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.comment.findMany",
+          "line": 41,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.comment.findMany",
+          "line": 59,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/comments",
+      "method": "POST",
+      "path": "src/app/api/comments/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'edit'"
+          ],
+          "line": 116
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.comment.create",
+          "line": 119,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/coupons/validate",
+      "method": "POST",
+      "path": "src/app/api/coupons/validate/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.coupon.findUnique",
+          "line": 20,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.couponUsage.count",
+          "line": 38,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]/actions/[actionId]",
+      "method": "PATCH",
+      "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 16
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 22,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goalAction.findFirst",
+          "line": 31,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.goalAction.update",
+          "line": 50,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]/actions/[actionId]",
+      "method": "DELETE",
+      "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'delete'"
+          ],
+          "line": 76
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 82,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goalAction.findFirst",
+          "line": 91,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.goalAction.delete",
+          "line": 99,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]/actions",
+      "method": "GET",
+      "path": "src/app/api/goals/[id]/actions/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 16
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 22,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goalAction.findMany",
+          "line": 31,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]/actions",
+      "method": "POST",
+      "path": "src/app/api/goals/[id]/actions/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 51
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 57,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goalAction.findFirst",
+          "line": 74,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.goalAction.create",
+          "line": 82,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]",
+      "method": "GET",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 23
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 29,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]",
+      "method": "PATCH",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 53
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 60,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goal.update",
+          "line": 81,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'delete'"
+          ],
+          "line": 135
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findFirst",
+          "line": 141,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.goal.delete",
+          "line": 149,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals",
+      "method": "GET",
+      "path": "src/app/api/goals/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 74
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.findMany",
+          "line": 101,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.goal.count",
+          "line": 112,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/goals",
+      "method": "POST",
+      "path": "src/app/api/goals/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'create'"
+          ],
+          "line": 139
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.goal.create",
+          "line": 159,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/import",
+      "method": "POST",
+      "path": "src/app/api/import/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'create' }"
+          ],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.create",
+          "line": 89,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/connect",
+      "method": "POST",
+      "path": "src/app/api/integrations/chatwoot/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.upsert",
+          "line": 43,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/credentials",
+      "method": "GET",
+      "path": "src/app/api/integrations/chatwoot/credentials/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 109
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 126,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 136,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.findFirst",
+          "line": 153,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/disconnect",
+      "method": "POST",
+      "path": "src/app/api/integrations/chatwoot/disconnect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.updateMany",
+          "line": 12,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/status",
+      "method": "GET",
+      "path": "src/app/api/integrations/chatwoot/status/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/team-members",
+      "method": "POST",
+      "path": "src/app/api/integrations/chatwoot/team-members/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 20
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/teams/[teamId]",
+      "method": "DELETE",
+      "path": "src/app/api/integrations/chatwoot/teams/[teamId]/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/teams",
+      "method": "GET",
+      "path": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 23
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/chatwoot/teams",
+      "method": "POST",
+      "path": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 49
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/connect",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 21
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.whatsappInstance.count",
+          "line": 45,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/delete",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/delete/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/disconnect",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/disconnect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/finalize",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/finalize/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/instances",
+      "method": "GET",
+      "path": "src/app/api/integrations/evolution/instances/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 14
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 19,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/qrcode",
+      "method": "GET",
+      "path": "src/app/api/integrations/evolution/qrcode/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 30
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.whatsappInstance.findFirst",
+          "line": 41,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/reconnect",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/reconnect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/setup-inbox",
+      "method": "POST",
+      "path": "src/app/api/integrations/evolution/setup-inbox/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/evolution/status",
+      "method": "GET",
+      "path": "src/app/api/integrations/evolution/status/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 12
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp-cloud/setup",
+      "method": "POST",
+      "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 29
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 50,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.upsert",
+          "line": 101,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp-cloud/setup",
+      "method": "DELETE",
+      "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 140
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 146,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.update",
+          "line": 171,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp-cloud/status",
+      "method": "GET",
+      "path": "src/app/api/integrations/whatsapp-cloud/status/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 31
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 36,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 53,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp-cloud/validate",
+      "method": "POST",
+      "path": "src/app/api/integrations/whatsapp-cloud/validate/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 79
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.connectedAccount.findUnique",
+          "line": 84,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp/connect",
+      "method": "POST",
+      "path": "src/app/api/integrations/whatsapp/connect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp/create-inbox",
+      "method": "POST",
+      "path": "src/app/api/integrations/whatsapp/create-inbox/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp/disconnect",
+      "method": "POST",
+      "path": "src/app/api/integrations/whatsapp/disconnect/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/integrations/whatsapp/status",
+      "method": "GET",
+      "path": "src/app/api/integrations/whatsapp/status/route.ts",
+      "group": "atendimento-or-provider",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 7
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/kanban/stages/[key]",
+      "method": "PUT",
+      "path": "src/app/api/kanban/stages/[key]/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'edit' }"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.leadPipelineStage.findFirst",
+          "line": 24,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadPipelineStage.update",
+          "line": 32,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/kanban/stages/[key]",
+      "method": "DELETE",
+      "path": "src/app/api/kanban/stages/[key]/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'delete' }"
+          ],
+          "line": 57
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.leadPipelineStage.findFirst",
+          "line": 63,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.count",
+          "line": 71,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadPipelineStage.delete",
+          "line": 86,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/kanban/stages",
+      "method": "GET",
+      "path": "src/app/api/kanban/stages/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'view' }"
+          ],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.leadPipelineStage.findMany",
+          "line": 50,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/kanban/stages",
+      "method": "POST",
+      "path": "src/app/api/kanban/stages/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'create' }"
+          ],
+          "line": 73
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.leadPipelineStage.findFirst",
+          "line": 89,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadPipelineStage.create",
+          "line": 94,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]",
+      "method": "GET",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 40
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 46,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]",
+      "method": "PUT",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 87
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 111,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.update",
+          "line": 189,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 199,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'delete' }"
+          ],
+          "line": 226
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 231,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.delete",
+          "line": 242,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]/stage",
+      "method": "PATCH",
+      "path": "src/app/api/leads/[id]/stage/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 14
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 35,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.update",
+          "line": 48,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 58,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]/tags",
+      "method": "GET",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 19,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadTag.findMany",
+          "line": 28,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]/tags",
+      "method": "POST",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 45
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 59,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.tag.findFirst",
+          "line": 63,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadTag.upsert",
+          "line": 77,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 96,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/[id]/tags",
+      "method": "DELETE",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 121
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 135,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.tag.findFirst",
+          "line": 139,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadTag.deleteMany",
+          "line": 153,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 162,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/bulk-delete",
+      "method": "POST",
+      "path": "src/app/api/leads/bulk-delete/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'delete' }"
+          ],
+          "line": 19
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findMany",
+          "line": 30,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.deleteMany",
+          "line": 45,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads/bulk-update",
+      "method": "POST",
+      "path": "src/app/api/leads/bulk-update/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 47
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findMany",
+          "line": 58,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.updateMany",
+          "line": 83,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads",
+      "method": "GET",
+      "path": "src/app/api/leads/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findMany",
+          "line": 87,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.count",
+          "line": 97,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/leads",
+      "method": "POST",
+      "path": "src/app/api/leads/route.ts",
+      "group": "vendas",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'create' }"
+          ],
+          "line": 120
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.create",
+          "line": 145,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/notifications/read",
+      "method": "POST",
+      "path": "src/app/api/notifications/read/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 11
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.notification.updateMany",
+          "line": 25,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.notification.updateMany",
+          "line": 30,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.notification.count",
+          "line": 39,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/notifications",
+      "method": "GET",
+      "path": "src/app/api/notifications/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.notification.findMany",
+          "line": 23,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.notification.count",
+          "line": 28,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/organizations",
+      "method": "GET",
+      "path": "src/app/api/organizations/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'settings'",
+            "'view'"
+          ],
+          "line": 15
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 20,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/organizations",
+      "method": "PATCH",
+      "path": "src/app/api/organizations/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'settings'",
+            "'edit'"
+          ],
+          "line": 52
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.update",
+          "line": 83,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 98,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/os/[id]",
+      "method": "GET",
+      "path": "src/app/api/os/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'view'"
+          ],
+          "line": 31
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.serviceOrder.findFirst",
+          "line": 36,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/os/[id]",
+      "method": "PUT",
+      "path": "src/app/api/os/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'edit'"
+          ],
+          "line": 66
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.serviceOrder.findFirst",
+          "line": 72,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.serviceOrder.update",
+          "line": 123,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/os/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/os/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'delete'"
+          ],
+          "line": 147
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.serviceOrder.findFirst",
+          "line": 153,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.serviceOrder.delete",
+          "line": 164,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/os",
+      "method": "GET",
+      "path": "src/app/api/os/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'view'"
+          ],
+          "line": 40
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.serviceOrder.findMany",
+          "line": 76,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.serviceOrder.count",
+          "line": 87,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/os",
+      "method": "POST",
+      "path": "src/app/api/os/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'create'"
+          ],
+          "line": 109
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.serviceOrder.create",
+          "line": 133,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/projects/[id]",
+      "method": "GET",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "group": "marketing",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.marketingProject.findFirst",
+          "line": 20,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/projects/[id]",
+      "method": "PUT",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "group": "marketing",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'edit' }"
+          ],
+          "line": 57
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.marketingProject.findFirst",
+          "line": 69,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.marketingProject.update",
+          "line": 97,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/projects/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "group": "marketing",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'delete' }"
+          ],
+          "line": 121
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.marketingProject.findFirst",
+          "line": 127,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.marketingProject.delete",
+          "line": 138,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/projects",
+      "method": "GET",
+      "path": "src/app/api/projects/route.ts",
+      "group": "marketing",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'view' }"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.marketingProject.findMany",
+          "line": 46,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.marketingProject.count",
+          "line": 60,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/projects",
+      "method": "POST",
+      "path": "src/app/api/projects/route.ts",
+      "group": "marketing",
+      "guards": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'create' }"
+          ],
+          "line": 82
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.marketingProject.create",
+          "line": 103,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "module-guard",
+      "commercial": "observed-not-blocking",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]/availability",
+      "method": "OPTIONS",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]/availability",
+      "method": "GET",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]/lead",
+      "method": "OPTIONS",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]/lead",
+      "method": "POST",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 78,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 84,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.update",
+          "line": 106,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.create",
+          "line": 122,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]",
+      "method": "OPTIONS",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/booking/[organizationSlug]/[userSlug]",
+      "method": "POST",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.$transaction",
+          "line": 156,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/briefings/[organizationSlug]",
+      "method": "OPTIONS",
+      "path": "src/app/api/public/briefings/[organizationSlug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/briefings/[organizationSlug]",
+      "method": "POST",
+      "path": "src/app/api/public/briefings/[organizationSlug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 95,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.findFirst",
+          "line": 139,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.update",
+          "line": 165,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.create",
+          "line": 192,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/widget/[slug]",
+      "method": "OPTIONS",
+      "path": "src/app/api/public/widget/[slug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/public/widget/[slug]",
+      "method": "GET",
+      "path": "src/app/api/public/widget/[slug]/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 258,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tags/[id]",
+      "method": "GET",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'view'"
+          ],
+          "line": 13
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.tag.findFirst",
+          "line": 19,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tags/[id]",
+      "method": "PUT",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'edit'"
+          ],
+          "line": 43
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.tag.findFirst",
+          "line": 51,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.tag.update",
+          "line": 62,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tags/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'delete'"
+          ],
+          "line": 109
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.tag.findFirst",
+          "line": 115,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.leadTag.deleteMany",
+          "line": 141,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.tag.delete",
+          "line": 148,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]",
+      "method": "GET",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 27
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.task.findFirst",
+          "line": 32,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.attachment.findMany",
+          "line": 48,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.findMany",
+          "line": 55,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.findMany",
+          "line": 66,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.attachment.count",
+          "line": 95,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.count",
+          "line": 96,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]",
+      "method": "PUT",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 140
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.task.findFirst",
+          "line": 153,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.task.update",
+          "line": 194,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.notification.create",
+          "line": 210,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.notification.create",
+          "line": 227,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 240,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.attachment.count",
+          "line": 255,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.count",
+          "line": 256,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'delete'"
+          ],
+          "line": 295
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.task.findFirst",
+          "line": 301,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.attachment.deleteMany",
+          "line": 311,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.deleteMany",
+          "line": 314,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.subtask.deleteMany",
+          "line": 317,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.task.delete",
+          "line": 322,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 327,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]/subtasks/[subtaskId]",
+      "method": "PUT",
+      "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 28
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.subtask.findUnique",
+          "line": 45,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.subtask.update",
+          "line": 68,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]/subtasks/[subtaskId]",
+      "method": "DELETE",
+      "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'delete'"
+          ],
+          "line": 96
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.subtask.findUnique",
+          "line": 106,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.subtask.delete",
+          "line": 114,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]/subtasks",
+      "method": "GET",
+      "path": "src/app/api/tasks/[id]/subtasks/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 28
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.subtask.findMany",
+          "line": 37,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks/[id]/subtasks",
+      "method": "POST",
+      "path": "src/app/api/tasks/[id]/subtasks/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 67
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.subtask.findFirst",
+          "line": 84,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.subtask.create",
+          "line": 92,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks",
+      "method": "GET",
+      "path": "src/app/api/tasks/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 23
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.task.findMany",
+          "line": 144,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.task.count",
+          "line": 176,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.attachment.groupBy",
+          "line": 183,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.comment.groupBy",
+          "line": 188,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/tasks",
+      "method": "POST",
+      "path": "src/app/api/tasks/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'create'"
+          ],
+          "line": 245
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.task.create",
+          "line": 257,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.activity.create",
+          "line": 308,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/usage",
+      "method": "GET",
+      "path": "src/app/api/usage/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/users/[id]/permissions",
+      "method": "PUT",
+      "path": "src/app/api/users/[id]/permissions/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 47,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.update",
+          "line": 120,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/users/[id]",
+      "method": "DELETE",
+      "path": "src/app/api/users/[id]/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'users'",
+            "'delete'"
+          ],
+          "line": 25
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findFirst",
+          "line": 40,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.update",
+          "line": 82,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/users/invite",
+      "method": "POST",
+      "path": "src/app/api/users/invite/route.ts",
+      "group": "shared-or-other",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findUnique",
+          "line": 142,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.user.create",
+          "line": 157,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.findUnique",
+          "line": 177,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findUnique",
+          "line": 181,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/users",
+      "method": "GET",
+      "path": "src/app/api/users/route.ts",
+      "group": "shared-or-other",
+      "guards": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'users'",
+            "'view'"
+          ],
+          "line": 10
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.user.findMany",
+          "line": 16,
+          "tenantSignal": true
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/webhooks/asaas",
+      "method": "POST",
+      "path": "src/app/api/webhooks/asaas/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 56,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.update",
+          "line": 68,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 89,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 104,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.updateMany",
+          "line": 117,
+          "tenantSignal": false
+        }
+      ],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/webhooks/chatwoot",
+      "method": "POST",
+      "path": "src/app/api/webhooks/chatwoot/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/webhooks/whatsapp-cloud",
+      "method": "GET",
+      "path": "src/app/api/webhooks/whatsapp-cloud/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    },
+    {
+      "url": "/api/webhooks/whatsapp-cloud",
+      "method": "POST",
+      "path": "src/app/api/webhooks/whatsapp-cloud/route.ts",
+      "group": "provider-callback-manual-review",
+      "guards": [],
+      "databaseCalls": [],
+      "commercialKind": "none-or-delegated",
+      "commercial": "not-integrated-or-delegated",
+      "classification": "source-signals-require-runtime-evidence"
+    }
+  ],
+  "pages": [
+    {
+      "url": "/agenda",
+      "path": "src/app/(app)/agenda/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/atendimento",
+      "path": "src/app/(app)/atendimento/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/dashboard",
+      "path": "src/app/(app)/dashboard/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 58
+        },
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'view'"
+          ],
+          "line": 62
+        }
+      ],
+      "databaseCalls": [
+        {
+          "call": "prisma.lead.count",
+          "line": 110,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.marketingProject.count",
+          "line": 111,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.task.count",
+          "line": 114,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.task.count",
+          "line": 120,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.lead.count",
+          "line": 126,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.lead.findMany",
+          "line": 129,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.task.findMany",
+          "line": 135,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.task.findMany",
+          "line": 153,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.organization.findFirst",
+          "line": 169,
+          "tenantSignal": false
+        },
+        {
+          "call": "prisma.marketingProject.count",
+          "line": 180,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.serviceOrder.count",
+          "line": 181,
+          "tenantSignal": true
+        },
+        {
+          "call": "prisma.user.count",
+          "line": 182,
+          "tenantSignal": true
+        }
+      ]
+    },
+    {
+      "url": "/follow-ups",
+      "path": "src/app/(app)/follow-ups/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/goals",
+      "path": "src/app/(app)/goals/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/help/[slug]",
+      "path": "src/app/(app)/help/[slug]/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/help",
+      "path": "src/app/(app)/help/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/kanban",
+      "path": "src/app/(app)/kanban/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/kanban/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/leads",
+      "path": "src/app/(app)/leads/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/leads/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/os",
+      "path": "src/app/(app)/os/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/projects",
+      "path": "src/app/(app)/projects/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/projects/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/reports",
+      "path": "src/app/(app)/reports/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/account",
+      "path": "src/app/(app)/settings/account/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/automacoes",
+      "path": "src/app/(app)/settings/atendimento/automacoes/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/canais/cloud-api",
+      "path": "src/app/(app)/settings/atendimento/canais/cloud-api/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/canais",
+      "path": "src/app/(app)/settings/atendimento/canais/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/canais/provider-lab",
+      "path": "src/app/(app)/settings/atendimento/canais/provider-lab/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/equipes",
+      "path": "src/app/(app)/settings/atendimento/equipes/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/instagram",
+      "path": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento",
+      "path": "src/app/(app)/settings/atendimento/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/relatorios",
+      "path": "src/app/(app)/settings/atendimento/relatorios/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/respostas",
+      "path": "src/app/(app)/settings/atendimento/respostas/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/atendimento/widget",
+      "path": "src/app/(app)/settings/atendimento/widget/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/settings/atendimento/layout.tsx",
+          "commercialObservation": true,
+          "activeIdentity": false
+        },
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/billing",
+      "path": "src/app/(app)/settings/billing/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/branding",
+      "path": "src/app/(app)/settings/branding/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/integrations",
+      "path": "src/app/(app)/settings/integrations/page.tsx",
+      "clientComponent": false,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/settings/members",
+      "path": "src/app/(app)/settings/members/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    },
+    {
+      "url": "/tasks",
+      "path": "src/app/(app)/tasks/page.tsx",
+      "clientComponent": true,
+      "layouts": [
+        {
+          "path": "src/app/(app)/layout.tsx",
+          "commercialObservation": false,
+          "activeIdentity": true
+        }
+      ],
+      "guards": [],
+      "databaseCalls": []
+    }
+  ]
+}

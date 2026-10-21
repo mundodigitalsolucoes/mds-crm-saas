@@ -509,3 +509,43 @@ As primeiras verificações de lint detectaram efeitos síncronos já existentes
 - Sem push, merge, deploy, produção, Coolify ou migrations; sem C5–C6. Nenhum arquivo .env, credencial real, dado de produção ou log temporário foi adicionado aos commits. As strings adversariais de testes e credenciais geradas em memória são exclusivamente sintéticas.
 
 Rollback proposto, não executado: reverter C4 e depois C3 para retornar ao C2, preservando C0 e dados existentes; não há schema/migration a desfazer. A capacidade pode ser desabilitada por operação MDS autenticada, com auditoria, sem apagar assets, caso essa ação seja autorizada no ambiente alvo. A política comercial global não foi promovida por este lote.
+
+## 2026-10-21 — C5: auditoria de URLs/APIs; aceite de segurança reprovado
+
+Referência real: `audit/block2-sanitized`, HEAD inicial `5f0f8a9905be91aa1e68ccd00e9602c346e6a5ee`, árvore inicialmente limpa. C0–C4 e seus commits foram preservados. **Rollout bloqueado.** A aplicação e o motor comercial permaneceram idênticos a esse HEAD; as falhas abaixo já estavam presentes no início da auditoria. C5 acrescenta inventário, testes e evidência, sem correção dos handlers.
+
+Matriz completa, classificações por operação e plano de correção: [BLOCK2_C5_ACCESS_AUDIT_2026-10-21.md](BLOCK2_C5_ACCESS_AUDIT_2026-10-21.md). Manifestos: `docs/evidence/BLOCK2_C5_SURFACES_2026-10-21.json` e `docs/evidence/BLOCK2_C5_RESULTS_2026-10-21.json`. Artefatos completos: `/workspace/mds-crm-onboarding-evidence/c5/`. Hashes referem-se a código/evidências, nunca a credenciais.
+
+### Falhas confirmadas
+
+1. **C5-01 — P1, isolamento de relações:** Tarefas e OS aceitam referências estrangeiras apesar do filtro tenant na entidade principal. Três papéis autorizados no recurso principal reproduziram **30 gravações HTTP 201/200**, com vínculo estrangeiro persistido e dados relacionados devolvidos. **12 leituras HTTP 200** também expuseram relações estrangeiras persistidas, modelando legado inválido. Houve **nove notificações para responsável de outro tenant** na fixture. Rotas: GET/POST `/api/tasks`, GET/PUT `/api/tasks/[id]`, GET/POST `/api/os`, GET/PUT `/api/os/[id]`. Exigem validação de referências antes de escrever/notificar e proteção de leitura das relações históricas.
+2. **C5-02 — P1, permissão relacionada:** em **28 cenários** o usuário sem leads.view recebe 403 de `/api/leads`, mas o nome do Lead vinculado aparece em `GET /api/tasks`. O Dashboard C0 continua sem esse dado. A autorização de Tarefas não pode certificar automaticamente todos os dados relacionados; a política por recurso precisa ser aplicada no servidor.
+3. **Cobertura comercial parcial:** 116 arquivos API, 177 operações e 28 páginas inventariados. **35 operações** usam guards de módulo; **22** observam canal sem bloquear; **120** não mostram integração direta ou delegam controles, incluindo administração/plataforma/protocolos públicos, que não devem receber bloqueio comercial indiscriminado. O manifesto sozinho não cobre todo o produto.
+4. **Compatibilidade antes de promoção:** permissões parciais válidas para Atendimento são negadas pelo futuro motor devido à exigência artificial da chave leads; pares compartilhados tasks/os/agenda/goals/reports não estão homologados no motor. Snapshots vazios/inválidos não herdam o plano; trial vencido e identificadores opacos têm diferenças de tratamento entre legado/módulos/canais. Não houve migração, sync automático ou alteração de contratos para ocultar essas diferenças.
+
+### Resultados executados
+
+| Verificação | Resultado e limite |
+|---|---|
+| `node tests/c5-direct-access-http.mjs` | **Exit 1 / segurança reprovada:** 84 cenários (sete conjuntos × MDS/White-Label × três papéis × dois tenants), 924 GETs de páginas, 840 leituras API, oito controles anônimos e três configurações legadas. O comportamento observe_only foi confirmado; **28 falhas** de permissão relacionada não foram tratadas como PASS |
+| `node tests/c5-cross-tenant-http.mjs` | **Exit 1 / segurança reprovada:** **42 expectativas seguras falharam**, além de nove notificações estrangeiras. Sem TODO/skip. Rerodado no build final |
+| `node --import tsx --test tests/c5-commercial-guards-postgres.test.mjs` | Cinco testes PASS: **1.344 requests em ambos os modos** isolados; 17 operações reais de handlers param antes de recurso/provider; identidade, permissão, tenant e diagnósticos de compatibilidade. Não equivale a testar todos os métodos com provider real |
+| `npx tsx --test tests/c5-commercial-pages.test.ts` | 15 PASS: 140 chamadas de layouts reais em modos isolados + compatibilidade de identificadores |
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs` | **110 PASS**, zero fail/skip/TODO. Os probes HTTP standalone acima são gates separados e continuam falhando; esse total não aprova C5 |
+| `npx tsx --test tests/*.test.ts` | **383 PASS**, zero fail/skip/TODO |
+| Regressões HTTP C0–C4 | C0 PASS, inclusive no build final: removidos 307 sem dados e permissão Leads preservada. White-Label: **84 cenários PASS**, 29 mudanças comerciais auditadas; smoke: **22 PASS**. C1/C2 também cobertos pela nova matriz contratual |
+| `npm run build` e `npx tsc --noEmit` após restaurar next-env.d.ts gerado | PASS, Node v24.19.0; aviso preexistente images.domains. Sem migration |
+| Lint dos cinco arquivos de código/testes adicionados | Zero erros/avisos; nenhuma regra alterada |
+| Inventário legado existente, `--fixtures` / `--database` | Fixtures diagnosticadas; leitura PostgreSQL local em transação READ ONLY, com **zero organizações reais disponíveis**. Não certifica clientes ou planos de produção |
+| Isolamento do estágio | `modeForOrganization` permanece observe_only. Query mode=enforce não promove HTTP real. Injeção de modo somente no VM dos testes; APPROVED_ENFORCEMENTS segue vazio |
+| Limpeza e fronteiras | Zero organizações/Super Admins/atividades órfãs dos probes restantes. A limpeza corrigiu o descarte de 18 atividades sintéticas órfãs das primeiras execuções, por marcador exato no banco descartável. Diff de aplicação, schema, dependências e workflows contra 5f0f8a9 vazio |
+
+### Arquivos, limites e próximo aceite
+
+Adicionados `scripts/block2-c5-access-inventory.mjs`, `tests/c5-commercial-guards-postgres.test.mjs`, `tests/c5-commercial-pages.test.ts`, `tests/c5-direct-access-http.mjs`, `tests/c5-cross-tenant-http.mjs`, a matriz C5 e os dois manifestos. Atualizados somente este relatório e `docs/BLOCK2_ACCESS_MATRIX.md`. Nenhum handler, provider, guard de produção, configuração comercial, .env, credencial ou workflow foi alterado.
+
+As evidências distinguem fonte estática, HTTP real, isolamento de teste e falha confirmada. Shell HTTP 200 não comprova acesso a dados nem bloqueio comercial. Os providers remotos e seus lifecycle não foram acionados; o exemplo positivo de Atendimento HTTP usa a leitura local do Widget. Logs completos permanecem locais. Não houve navegador completo, inventário de produção, CI remoto ou aprovação independente.
+
+Antes de autorizar rollout, corrigir C5-01/C5-02 e fazer os probes retornarem zero; aprovar os contratos compartilhados e completar sua cobertura sem trocar permissões operacionais por permissões mais fracas; tratar compatibilidade dos registros reais e definir tenant piloto/monitoramento/rollback. Os arquivos mínimos de correção e os critérios estão na matriz C5. Desativar/ativar o motor comercial não resolve os dois P1 operacionais.
+
+**G1–G6 não aprovados automaticamente.** G2/G3 têm falhas confirmadas; G5/rollout permanecem bloqueados por cobertura/compatibilidade; G6 requer revisão independente, CI e homologação restante. As regressões G1/G4 e C0–C4 passando não substituem o aceite C5 reprovado. C6 não iniciado. Sem push, merge, deploy, migrations ou alterações em produção/Coolify. O commit da auditoria é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C5_RESULTS_2026-10-21.json`.

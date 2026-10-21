@@ -1,0 +1,2862 @@
+{
+  "referenceHead": "5f0f8a9905be91aa1e68ccd00e9602c346e6a5ee",
+  "status": "BLOCKED_SECURITY_ACCEPTANCE_FAILED",
+  "runtime": "Node v24.19.0; actual local Next build and disposable PostgreSQL; no production inventory",
+  "functionalSourceUnchanged": true,
+  "sourceTree": "eb24acc3c06c0adf89c9299ebc28cd8bfeb2e84c",
+  "surfaces": {
+    "apiFiles": 116,
+    "operations": 177,
+    "pages": 28,
+    "observedOperations": 57
+  },
+  "commercialCoverage": {
+    "moduleGuardOperations": 35,
+    "channelObserverOperations": 22,
+    "noneOrDelegatedOperations": 120,
+    "runtimeMode": "observe_only",
+    "approvedEnforcements": []
+  },
+  "checks": {
+    "node": {
+      "pass": 110,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "typescript": {
+      "pass": 383,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "isolatedGuardCombinations": 1344,
+    "isolatedModesCompared": [
+      "observe_only",
+      "enforce"
+    ],
+    "realApiOperationsBlockedInIsolation": 17,
+    "isolatedPageLayoutCalls": 140,
+    "httpScenarios": 84,
+    "directPageGets": 924,
+    "apiReadsRecorded": 840,
+    "anonymousControls": [
+      {
+        "url": "/atendimento",
+        "status": 307
+      },
+      {
+        "url": "/leads",
+        "status": 307
+      },
+      {
+        "url": "/projects",
+        "status": 307
+      },
+      {
+        "url": "/api/leads",
+        "status": 401
+      },
+      {
+        "url": "/api/projects",
+        "status": 401
+      },
+      {
+        "url": "/api/atendimento/widget",
+        "status": 401
+      },
+      {
+        "url": "/api/tasks",
+        "status": 401
+      },
+      {
+        "url": "/api/os",
+        "status": 401
+      }
+    ],
+    "baselineObserveOnlyExpected": true,
+    "crossTenantAcceptanceExitCode": 1,
+    "relatedPermissionAcceptanceExitCode": 1,
+    "crossTenantFailures": 42,
+    "foreignNotificationsCreated": 9,
+    "relatedPermissionFailures": 28,
+    "whiteLabelRegressionScenarios": 84,
+    "auditedWhiteLabelUpdates": 29,
+    "generalHttpRegression": 22,
+    "build": "pass",
+    "typecheck": "pass",
+    "changedFileLint": {
+      "errors": 0,
+      "warnings": 0
+    },
+    "readonlyLocalOrganizationRows": 0
+  },
+  "httpScenarios": [
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 1,
+      "modules": [
+        "atendimento"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 2,
+      "modules": [
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 3,
+      "modules": [
+        "atendimento",
+        "vendas"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 4,
+      "modules": [
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 5,
+      "modules": [
+        "atendimento",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 6,
+      "modules": [
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": false,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 0,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "owner",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "admin",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 200,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 404,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": false
+    },
+    {
+      "mask": 7,
+      "modules": [
+        "atendimento",
+        "vendas",
+        "marketing"
+      ],
+      "whiteLabel": true,
+      "role": "user",
+      "tenant": 1,
+      "pageGets": 11,
+      "allPageShellStatuses": [
+        200
+      ],
+      "apiStatuses": {
+        "/api/leads": 403,
+        "/api/projects": 200,
+        "/api/kanban/stages": 200,
+        "/api/tasks": 200,
+        "/api/agenda": 200,
+        "/api/os": 200,
+        "/api/goals": 200,
+        "/api/atendimento/widget": 200,
+        "/api/leads/[foreign-id]": 403,
+        "/api/projects/[foreign-id]": 404
+      },
+      "relatedLeadExposure": true
+    }
+  ],
+  "crossTenantSecurityProbe": {
+    "referenceHead": "5f0f8a9",
+    "kind": "SECURITY_ACCEPTANCE_NOT_A_SUCCESS_BASELINE",
+    "results": [
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "leadId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "leadId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "leadId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "leadId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "leadId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "leadId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "projectId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os",
+        "method": "POST",
+        "field": "assignedToId",
+        "status": 201,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "projectId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os/[id]",
+        "method": "PUT",
+        "field": "assignedToId",
+        "status": 200,
+        "foreignRelationStored": true,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os/[id]",
+        "method": "GET",
+        "field": "persisted-foreign-links",
+        "status": 200,
+        "foreignRelationStored": null,
+        "foreignMarkerReturned": true,
+        "secureExpectationPassed": false
+      }
+    ],
+    "foreignNotificationsCreated": 9,
+    "passed": false
+  },
+  "cleanup": {
+    "organizations": 0,
+    "admins": 0,
+    "orphanProbeActivities": 0,
+    "passed": true
+  },
+  "sourceFiles": [
+    {
+      "path": "scripts/block2-c5-access-inventory.mjs",
+      "sha256": "fd3983c6878683f53e2a51c429517ba3cf301b3aefb0ed1e6a7e47d1a90e4a2f"
+    },
+    {
+      "path": "tests/c5-commercial-guards-postgres.test.mjs",
+      "sha256": "256669c6853143f5c7bd7195b42fc4c5bc2d8b546270b4ff600db420f0a09b7a"
+    },
+    {
+      "path": "tests/c5-commercial-pages.test.ts",
+      "sha256": "84e155f81051f453d2c1f5cc2bd852a0817570f9c0ef05c333d9c26b5b988888"
+    },
+    {
+      "path": "tests/c5-direct-access-http.mjs",
+      "sha256": "eeea36f5fe214d5f933f12ffbdb0c0853181b291ce7a991bf99a7f9ca23254ac"
+    },
+    {
+      "path": "tests/c5-cross-tenant-http.mjs",
+      "sha256": "37196e79d0507737315d410cb083a350d610d7f6854cbbaab34336c2e8bf701c"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/direct-http-matrix.json",
+      "sha256": "6a6706e5022dddfd911611fc6867eef1c35f59f6f3f60794ca028ab62a0e84c4"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/cross-tenant-http-final.json",
+      "sha256": "a3fa572b235e1a2b233b1f14c1bbea0199001e0aaf16e626f29ec85ad2bb79c2"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/isolated-enforce.tap",
+      "sha256": "d73a89e65a1ae903e0fda84f09bbc9048a8fb8346f658c5731d239ed978682d6"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/isolated-pages.log",
+      "sha256": "9913c8071b79698d1df46ea48050479f69895f5983a38054dd0c3087581b7d42"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/node-tests.tap",
+      "sha256": "00ee339ffbfd6faa4bff9bb93f22d309b35bca4802bb39e14d11b2fc7dd0e9f4"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/ts-tests.log",
+      "sha256": "8cc308ee8908d97ffb992d2ba12af5f53df689f2bd6cc4a1ca0ed2d0c71b9cbb"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/c3-c4-http-regression.json",
+      "sha256": "e71c49dde478028750b4b87fb23ef3f0b81e528a80b98a61c0f6433e89bd387e"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/c0-http-final.json",
+      "sha256": "7f02c14aaa3d0e428a976557cde54d0a2412c18c27b8a248ae402cc607247941"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/general-http-regression.log",
+      "sha256": "e29941af2ba414fde9b29a83fb51a453445be90c879b6156934df9d919e931ae"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/legacy-fixtures.json",
+      "sha256": "d19a6d85cc54ddb5f547733d95e930fe55551d00359f97f271ce6ccb601c44fe"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/local-inventory-readonly.json",
+      "sha256": "374f4258a28c947d0288faac65fed7d56982c87a6e7a17162f824c424688f4f0"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/build.log",
+      "sha256": "a797a74a6da97cf84c96351682402f6bb4edf971c8cab93ab9de5259ca5f6274"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/typecheck-final.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/lint-final.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/cleanup-final.json",
+      "sha256": "ac57be1f13ad78c36b25f74ba368a6a6bc8e72bf2bdcdd5c81965c87e4d9d8a4"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c5/legacy-probe-cleanup.json",
+      "sha256": "e6bb82fe4ea0129c0052b9f2d1b9ebdc18a8788ab0f42d4bb3b12b6329ec4887"
+    }
+  ]
+}
