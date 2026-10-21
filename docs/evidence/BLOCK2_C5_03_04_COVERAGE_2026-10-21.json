@@ -9,13 +9,14 @@
     "pages": 28,
     "backendStatus": {
       "shared-or-protocol-specific-review-required": 51,
-      "pending-commercial-integration": 55,
+      "pending-commercial-integration": 52,
       "existing-guard-observe-only": 35,
       "observer-only-does-not-enforce": 22,
-      "confirmed-indirect-commercial-gap": 3,
+      "confirmed-indirect-commercial-gap": 2,
       "pending-resource-payload-filter": 1,
       "prepared-additive-guard-observe-only": 5,
-      "prepared-type-and-dependency-scope-observe-only": 5
+      "prepared-type-and-dependency-scope-observe-only": 5,
+      "prepared-parent-task-guard-observe-only": 4
     }
   },
   "operations": [
@@ -3736,8 +3737,8 @@
         "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
         "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-parent-task-guard-observe-only",
+      "evidence": "isolated-HTTP-CRUD-seven-contracts-two-brands-three-roles-two-task-types; foreign-parent-denied; no-write-negative",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -3760,8 +3761,8 @@
         "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
         "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-parent-task-guard-observe-only",
+      "evidence": "isolated-HTTP-CRUD-seven-contracts-two-brands-three-roles-two-task-types; foreign-parent-denied; no-write-negative",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -3784,8 +3785,8 @@
         "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
         "path": "src/app/api/tasks/[id]/subtasks/route.ts"
       },
-      "backendStatus": "confirmed-indirect-commercial-gap",
-      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "backendStatus": "prepared-parent-task-guard-observe-only",
+      "evidence": "isolated-HTTP-CRUD-seven-contracts-two-brands-three-roles-two-task-types; foreign-parent-denied; no-write-negative",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -3808,8 +3809,8 @@
         "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
         "path": "src/app/api/tasks/[id]/subtasks/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-parent-task-guard-observe-only",
+      "evidence": "isolated-HTTP-CRUD-seven-contracts-two-brands-three-roles-two-task-types; foreign-parent-denied; no-write-negative",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -4209,5 +4210,12 @@
       "rule": "Marketing plus existing permission; reports additionally Vendas/leads.view",
       "status": "prepared-layout-observe-only"
     }
-  ]
+  ],
+  "latestBatch": {
+    "referenceHead": "f0acc3e",
+    "functionalCommit": "7d4bcf78793dca646a83d603d560dba652e4ddf1",
+    "batch": "1-subtasks",
+    "globalMode": "observe_only",
+    "remainingOriginalIndirectFailures": 6
+  }
 }
