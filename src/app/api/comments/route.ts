@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { hasPermission, parsePermissions } from '@/lib/permissions';
 import { parseBody, commentCreateSchema, commentEntityTypeEnum } from '@/lib/validations';
-import type { PermissionModule } from '@/types/permissions';
+import type { PermissionModule, UserRole } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
 const entityTypeToModule: Record<string, PermissionModule> = {
@@ -33,6 +34,21 @@ async function lockEntity(tx: Prisma.TransactionClient, entityType: string, enti
         SELECT id FROM ${tables[entityType as keyof typeof tables]}
         WHERE id = ${entityId} AND organization_id = ${organizationId} FOR SHARE`);
   if (!rows.length) throw new InvalidCommentReference(404);
+}
+
+// Authorization is rechecked after the membership lock: revocation/transfer committed
+// before this point must take effect; later changes wait until this operation completes.
+async function lockAuthorizedActor(tx: Prisma.TransactionClient, userId: string, organizationId: string,
+  permissionModule: PermissionModule, action: 'view' | 'edit') {
+  const actors = await tx.$queryRaw<{ id: string; role: string; permissions: string }[]>(Prisma.sql`
+    SELECT u.id, u.role, u.permissions FROM users u JOIN organizations o ON o.id = u.organization_id
+    WHERE u.id = ${userId} AND u.organization_id = ${organizationId}
+      AND u.deleted_at IS NULL AND o.deleted_at IS NULL FOR SHARE OF u, o`);
+  const actor = actors[0];
+  if (!actor || (actor.role !== 'owner' &&
+    !hasPermission(parsePermissions(actor.permissions, actor.role as UserRole), permissionModule, action))) {
+    throw new InvalidCommentReference(403);
+  }
 }
 
 function referenceError(error: unknown) {
@@ -75,6 +91,7 @@ export async function GET(request: NextRequest) {
 
     const { comments, replies } = await prisma.$transaction(async tx => {
       const organizationId = session!.user.organizationId;
+      await lockAuthorizedActor(tx, session!.user.id, organizationId, permissionModule, 'view');
       await lockEntity(tx, entityType, entityId, organizationId);
       const scope = { organizationId, entityType, entityId, author: { organizationId } };
       const comments = await tx.comment.findMany({
@@ -159,12 +176,7 @@ export async function POST(request: NextRequest) {
 
     const comment = await prisma.$transaction(async tx => {
       const organizationId = session!.user.organizationId;
-      // Revalidate and lock membership while references and INSERT are committed.
-      const actor = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT u.id FROM users u JOIN organizations o ON o.id = u.organization_id
-        WHERE u.id = ${session!.user.id} AND u.organization_id = ${organizationId}
-          AND u.deleted_at IS NULL AND o.deleted_at IS NULL FOR SHARE OF u, o`);
-      if (!actor.length) throw new InvalidCommentReference(403);
+      await lockAuthorizedActor(tx, session!.user.id, organizationId, permissionModule, 'edit');
       await lockEntity(tx, data.entityType, data.entityId, organizationId);
       if (data.parentId) {
         const parent = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`

@@ -1,0 +1,784 @@
+{
+  "referenceHead": "17b11d901a30b78be8d84d1ba18ee1d22df175e7",
+  "testedWorkingTreeSha256": {
+    "src/app/api/comments/route.ts": "67fc09a5075e058beddc0a6e86bbaba0ce31d0c56be72683cceedb2790aec655",
+    "tests/comments-revocation-postgres.test.mjs": "ae8ad1f9f08880d44d8c625889f6ba55ea73c16a445c32f2f9bdbf5f9ed2d0e2",
+    "tests/pilot-contract-http.mjs": "542d18808377e7727fbe0112527a93dc9790c07732f449762f6c2bd549f999ea",
+    "tests/pilot-contract-postgres.test.mjs": "11629c6ac1e2f65a661ebf879715f750a81fe38f178cd0a7ed5e575c6fbde7e0"
+  },
+  "runtime": "Node22.21.1",
+  "database": "Disposable PostgreSQL loopback; synthetic organizations only; no migrations",
+  "revocationBefore": [
+    {
+      "case": "permission-revocation-before-post-transaction",
+      "revokedBeforeTransaction": true,
+      "status": 201,
+      "persisted": 1
+    },
+    {
+      "case": "membership-transfer-before-get-transaction",
+      "transferredBeforeTransaction": true,
+      "status": 200,
+      "previousOrganizationDataReturned": true,
+      "currentMembershipMatchesRequestedTenant": false
+    }
+  ],
+  "revocationAfter": [
+    {
+      "case": "permission-revocation-before-post-transaction",
+      "revokedBeforeTransaction": true,
+      "status": 403,
+      "persisted": 0
+    },
+    {
+      "case": "membership-transfer-before-get-transaction",
+      "transferredBeforeTransaction": true,
+      "status": 403,
+      "previousOrganizationDataReturned": false,
+      "currentMembershipMatchesRequestedTenant": false
+    }
+  ],
+  "nodePostgres": {
+    "passed": 144,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "typescript": {
+    "passed": 383,
+    "failed": 0
+  },
+  "commentsHttp": {
+    "deleteCases": 62,
+    "deletePassed": true,
+    "getPostCases": 53,
+    "getPostPassed": true
+  },
+  "c0C5": [
+    {
+      "script": "dashboard-c0-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "commercial-dashboard-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "branding-white-label-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-cross-tenant-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-direct-access-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-task-os-regression-http",
+      "exit": 0,
+      "signal": null
+    }
+  ],
+  "pilotContract": {
+    "kind": "PILOT_CONTRACT_ACCEPTANCE",
+    "organizations": 2,
+    "roles": [
+      "owner",
+      "admin",
+      "user"
+    ],
+    "results": [
+      {
+        "organization": "mds",
+        "role": "owner",
+        "dashboard": 200,
+        "whiteLabel": false,
+        "brandingAssetStatus": 404,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      },
+      {
+        "organization": "mds",
+        "role": "admin",
+        "dashboard": 200,
+        "whiteLabel": false,
+        "brandingAssetStatus": 404,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      },
+      {
+        "organization": "mds",
+        "role": "user",
+        "dashboard": 200,
+        "whiteLabel": false,
+        "brandingAssetStatus": 404,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      },
+      {
+        "organization": "pilot",
+        "role": "owner",
+        "dashboard": 200,
+        "whiteLabel": true,
+        "brandingAssetStatus": 200,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      },
+      {
+        "organization": "pilot",
+        "role": "admin",
+        "dashboard": 200,
+        "whiteLabel": true,
+        "brandingAssetStatus": 200,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      },
+      {
+        "organization": "pilot",
+        "role": "user",
+        "dashboard": 200,
+        "whiteLabel": true,
+        "brandingAssetStatus": 200,
+        "operationalChecksPassed": true,
+        "operations": [
+          {
+            "url": "/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/kanban",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/atendimento",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/kanban/stages",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/atendimento/widget",
+            "status": 200,
+            "contracted": true,
+            "contractSatisfied": true,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/reports",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/projects",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": true
+          },
+          {
+            "url": "/api/tasks",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/os",
+            "status": 200,
+            "contracted": false,
+            "contractSatisfied": false,
+            "ownProjectDataReturned": false
+          },
+          {
+            "url": "/api/leads/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          },
+          {
+            "url": "/api/projects/[foreign-id]",
+            "status": 404,
+            "crossTenantDenied": true
+          }
+        ]
+      }
+    ],
+    "operationalBaselinePassed": true,
+    "pilotContractPassed": false,
+    "commercialEnforcementActivated": false
+  },
+  "commercialFailures": 21,
+  "pilotProbeExit": 1,
+  "isolatedGuardSimulationPassed": true,
+  "isolatedGuardSimulationIsActivation": false,
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "lintErrors": 0,
+  "lintWarnings": 0,
+  "commercialPolicyChanged": false,
+  "approvedEnforcementsChanged": false,
+  "productionAccess": false,
+  "remoteChanges": false,
+  "newRemoteCi": false,
+  "gatesApproved": false,
+  "note": "Historical observational probes remain unchanged and are not acceptance tests for this fix. Node contains five new revocation acceptance tests plus one pilot-policy test. Pilot HTTP FAIL is intentional evidence of unmet commercial contract, not a passing homologation."
+}
