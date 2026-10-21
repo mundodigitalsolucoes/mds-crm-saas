@@ -39,7 +39,8 @@ function referenceError(error: unknown) {
   if (error instanceof InvalidCommentReference) {
     return NextResponse.json({ error: error.message }, { status: error.status });
   }
-  if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2025', 'P2034'].includes(error.code)) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError &&
+    (['P2025', 'P2034'].includes(error.code) || (error.code === 'P2010' && ['40001', '40P01'].includes(String(error.meta?.code))))) {
     return NextResponse.json({ error: 'Conflito de atualização; tente novamente' }, { status: 409 });
   }
   return null;

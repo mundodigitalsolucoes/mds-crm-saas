@@ -1,0 +1,100 @@
+{
+  "referenceHead": "18594d0952f4b70e67813f64476a598c61ac0e3b",
+  "previousRemoteHead": "f4866f538f211cf253a1a8e08b800b4ef5fdf4a7",
+  "testedWorkingTreeSha256": {
+    "src/app/api/comments/route.ts": "9c85c5ab363d55d243c51ee4189ab450f1066c5c6058bb92d710f32655da2105",
+    "src/app/api/comments/[id]/route.ts": "44bb67db8587e2550be9ac52dd9e3a097e4232911325a8d6f9e1dee506b9e4ff",
+    "tests/comments-delete-postgres.test.mjs": "b0829ccde3bf733c33bb3359bf137047006412614f421f55b85812a28b0d1051",
+    "docs/evidence/BLOCK2_COMMENTS_REVOCATION_PROBES_2026-10-21.mjs": "01b8dc7011f0735964c546e4869606e40524f022145da42fed9cfb51cd4ca901"
+  },
+  "nodePostgres": {
+    "passed": 138,
+    "failed": 0
+  },
+  "typescript": {
+    "passed": 383,
+    "failed": 0
+  },
+  "deleteHttp": {
+    "cases": 62,
+    "passed": true
+  },
+  "getPostHttp": {
+    "cases": 53,
+    "passed": true
+  },
+  "httpC0C5": [
+    {
+      "script": "dashboard-c0-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "commercial-dashboard-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "branding-white-label-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-cross-tenant-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-direct-access-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-task-os-regression-http",
+      "exit": 0,
+      "signal": null
+    }
+  ],
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "lintErrors": 0,
+  "lintWarnings": 0,
+  "concurrency": {
+    "deleteStatus": 200,
+    "postStatus": 409,
+    "orphanRows": 0,
+    "retry": false,
+    "unrelatedErrorsRemain500": true
+  },
+  "independentReview": {
+    "agent": "/root/comments_independent_review",
+    "postgresTestsPassed": 15,
+    "newP0P1": 0,
+    "residuals": [
+      {
+        "severity": "conditional P2",
+        "case": "GET membership transfer after authorization but before transaction",
+        "status": 200,
+        "previousTenantDataReturned": true
+      },
+      {
+        "severity": "conditional P2",
+        "case": "POST permission revoked after authorization but before transaction",
+        "status": 201,
+        "persistedRows": 1
+      }
+    ],
+    "policyCondition": "Requests authorized before revocation; immediate revocation and supported membership transfer semantics require separate decision",
+    "httpReproductionOfResiduals": false
+  },
+  "triggerAudit": {
+    "reviewedWorkflowDefinitions": 8,
+    "publicationIndicators": 0,
+    "defaultBranch": "main",
+    "defaultBranchWorkflowFiles": 0,
+    "hooksRead": "403; user previously confirmed production main, previews off and no hooks",
+    "workflowChanges": false
+  },
+  "remoteCi": "To be observed on pushed SHA; actual run URLs/results will be recorded in PR #15 and external local delivery report, not inferred from local tests",
+  "gatesApproved": false
+}

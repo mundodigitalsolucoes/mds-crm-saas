@@ -2,7 +2,7 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {PrismaClient} from '@prisma/client';
+import {Prisma,PrismaClient} from '@prisma/client';
 import {NextRequest,NextResponse} from 'next/server.js';
 import * as permissions from '../src/lib/permissions.ts';
 import * as validation from '../src/lib/validations/index.ts';
@@ -111,7 +111,23 @@ test('DELETE versus POST: a concurrent reply cannot be committed after its paren
  const app=route(a,wrapped('post'),'src/app/api/comments/route.ts',error=>errors.push({code:error.code,sqlState:error.meta?.code}));
  const posting=app.POST(new NextRequest('http://localhost/api/comments',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({entityType:'task',entityId:a.task.id,parentId:a.parent.id,content:'Must not be orphaned'})}));
  try{await checkpoint(reading);}finally{release();}
- assert.equal((await deleting).status,200);// Existing POST maps this serialization conflict to 500. Document, do not silently
- // broaden the DELETE-only fix or claim this availability limitation is resolved.
- assert.equal((await posting).status,500);assert.deepEqual(errors,[{code:'P2010',sqlState:'40001'}]);assert.equal(await db.comment.count({where:{organizationId:a.org.id}}),0);
+ assert.equal((await deleting).status,200);
+ const rejected=await posting;assert.equal(rejected.status,409);
+ assert.deepEqual(await rejected.json(),{error:'Conflito de atualização; tente novamente'});
+ assert.deepEqual(errors,[]);assert.equal(await db.comment.count({where:{organizationId:a.org.id}}),0);
+});
+
+test('comments conflict mapping: only known serialization/deadlock conflicts return 409; unrelated failures remain 500',async()=>{
+ const [a]=await fixture();
+ for(const sqlState of ['40001','40P01','23505',undefined,'unexpected']){
+  const failure=sqlState==='unexpected'?Error('Synthetic failure details must not be returned'):new Prisma.PrismaClientKnownRequestError('Synthetic failure details must not be returned',{code:'P2010',clientVersion:Prisma.prismaVersion.client,meta:sqlState?{code:sqlState}:{}});
+  const client=new Proxy(db,{get(target,key){if(key==='$transaction')return async()=>{throw failure;};const value=target[key];return typeof value==='function'?value.bind(target):value;}});
+  const expected=['40001','40P01'].includes(sqlState)?409:500;
+  for(const method of ['GET','POST']){
+   const logged=[],app=route(a,client,'src/app/api/comments/route.ts',error=>logged.push(error));
+   const response=await app[method](new NextRequest('http://localhost/api/comments?entityType=task&entityId='+a.task.id,{method,...(method==='POST'?{headers:{'content-type':'application/json'},body:JSON.stringify({entityType:'task',entityId:a.task.id,parentId:a.parent.id,content:'No partial write'})}:{})}));
+   assert.equal(response.status,expected);assert.deepEqual(await response.json(),{error:expected===409?'Conflito de atualização; tente novamente':'Erro interno do servidor'});
+   assert.equal(logged.length,expected===409?0:1);assert.equal(await db.comment.count({where:{organizationId:a.org.id}}),1);
+  }
+ }
 });
