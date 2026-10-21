@@ -87,7 +87,7 @@ const marketingItems: MenuItem[] = [
   { name: 'Projetos', icon: FolderKanban, path: '/projects', module: 'projects' },
   { name: 'OS', icon: FileText, path: '/os', module: 'os' },
   { name: 'Tarefas', icon: CheckSquare, path: '/tasks', module: 'tasks' },
-  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports' },
+  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports', commercialModule: 'vendas', additionalPermission: 'leads' },
 ];
 
 const settingsItems: MenuItem[] = [

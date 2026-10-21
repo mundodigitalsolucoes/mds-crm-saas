@@ -47,7 +47,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     ':(exclude)src/lib/atendimento/widget-inbox-store.ts',
-    'src/lib/chatwoot.ts', 'src/lib/permissions.ts',
+    'src/lib/chatwoot.ts', // C5-04 permission parsing is pinned separately below.
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma', ':(exclude)prisma/schema.prisma',
     ':(exclude)prisma/migrations/20261020230000_instagram_security_storage/migration.sql',
@@ -111,6 +111,9 @@ test('existing Atendimento permission contract remains unchanged without calling
 test('Vendas integration preserves Marketing, the existing authorization engine and the empty enforcement manifest', () => {
   const diff = execFileSync('git', ['diff', '98663c6d4a5c0b1a661f90966d6edc81a386a523', '--',
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
+    // Explicit C5-03/C5-04 additions; unchanged core functions are pinned separately below.
+    ':(exclude)src/lib/authorization/authorize.ts', ':(exclude)src/lib/authorization/guards.ts',
+    ':(exclude)src/lib/authorization/operation-data.ts',
     // C1 adds a presentation adapter; all pre-existing engine files stay protected.
     ':(exclude)src/lib/authorization/application-context.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
@@ -134,4 +137,27 @@ test('C4 leaves the organization DELETE/provider lifecycle byte-for-byte unchang
   const original = execFileSync('git', ['show', `d626bff:${path}`], { encoding: 'utf8' });
   const current = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
   assert.equal(current.slice(current.indexOf('export async function DELETE')), original.slice(original.indexOf('export async function DELETE')));
+});
+
+test('C5-04 changes only the documented partial-permission recognition condition', () => {
+  const original = execFileSync('git', ['show', 'a27316c:src/lib/permissions.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/lib/permissions.ts', 'utf8');
+  const before = "if (typeof parsed === 'object' && parsed !== null && 'leads' in parsed) {";
+  const after = "if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&\n      ('leads' in parsed || (Object.keys(parsed).some(key => ALL_MODULES.includes(key as PermissionModule)) &&\n        Object.values(parsed).every(value => value !== null && typeof value === 'object' && !Array.isArray(value) &&\n          Object.values(value).every(flag => typeof flag === 'boolean'))))) {";
+  assert.ok(current.includes(after));
+  assert.equal(current.replace(after, before), original);
+});
+
+test('C5 keeps every existing identity/subscription/tenant check and legacy guard body unchanged', async () => {
+  const ts = await import('typescript');
+  const before = execFileSync('git', ['show', 'a27316c:src/lib/authorization/authorize.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/lib/authorization/authorize.ts', 'utf8');
+  const declaration = (text: string, name: string) => {
+    const source = ts.createSourceFile('contract.ts', text, ts.ScriptTarget.Latest, true);
+    return source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === name)?.getText(source);
+  };
+  for (const name of ['createModuleAuthorizer', 'createAdministrativeAuthorizer']) assert.equal(declaration(current, name), declaration(before, name));
+  assert.equal(declaration(current, 'validPermissions'), declaration(before, 'validPermissions')!.replace("if (!('leads' in value)) return false;", "if (!Object.keys(value).some(key => ALL_MODULES.includes(key as PermissionModule))) return false;"));
+  const guardBefore = execFileSync('git', ['show', 'a27316c:src/lib/authorization/guards.ts'], { encoding: 'utf8' });
+  assert.ok(readFileSync('src/lib/authorization/guards.ts', 'utf8').startsWith(guardBefore.trimEnd()));
 });

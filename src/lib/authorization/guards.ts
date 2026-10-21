@@ -34,3 +34,31 @@ export async function checkModulePermission(request: ModuleAccessRequest) {
   // observe_only retains the legacy decision, never substitutes allowed:true on a new-engine error.
   return legacy;
 }
+
+/** C5 additive boundary after the handler's existing operational guard. */
+export async function commercialModuleDenial(
+  session: { user: { id: string; organizationId: string } }, request: ModuleAccessRequest,
+): Promise<NextResponse | null> {
+  if (modeForOrganization(session.user.organizationId) !== 'enforce') return null;
+  const result = await checkModulePermission(request);
+  if (!result.allowed) return result.errorResponse ?? NextResponse.json({ error: 'Acesso indisponível' }, { status: 403 });
+  if (result.session?.user.id !== session.user.id || result.session.user.organizationId !== session.user.organizationId) {
+    return NextResponse.json({ error: 'Acesso indisponível' }, { status: 403 });
+  }
+  return null;
+}
+
+/** Task type selects its module; linked Lead/Project retain their independent contracts. */
+export async function taskCommercialDenial(
+  session: { user: { id: string; organizationId: string } }, action: ModuleAccessRequest['action'],
+  task: { type?: string; leadId?: string | null; projectId?: string | null },
+): Promise<NextResponse | null> {
+  const requests: ModuleAccessRequest[] = [{ module: task.type === 'follow_up' ? 'vendas' : 'marketing', permission: 'tasks', action }];
+  if (task.leadId) requests.push({ module: 'vendas', permission: 'leads', action: 'view' });
+  if (task.projectId) requests.push({ module: 'marketing', permission: 'projects', action: 'view' });
+  for (const request of requests) {
+    const denied = await commercialModuleDenial(session, request);
+    if (denied) return denied;
+  }
+  return null;
+}

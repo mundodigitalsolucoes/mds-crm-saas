@@ -1,3 +1,4 @@
+import { taskCommercialDenial } from '@/lib/authorization/guards';
 // src/app/api/tasks/[id]/route.ts
 // Detalhe, atualização e exclusão de task com permissões granulares
 import { Prisma } from '@prisma/client';
@@ -163,6 +164,9 @@ export async function PUT(
       if (!currentTask) {
         return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
       }
+
+      const commercialDenied = await taskCommercialDenial(session!, 'edit', { ...currentTask, ...data });
+      if (commercialDenied) return commercialDenied;
 
       const updateData: Record<string, unknown> = {};
 

@@ -1,3 +1,4 @@
+import { commercialModuleDenial } from '@/lib/authorization/guards';
 // src/app/api/os/route.ts
 // API de Ordens de Serviço — Listagem e Criação com permissões granulares e limites de plano
 import { Prisma } from '@prisma/client';
@@ -40,6 +41,8 @@ export async function GET(request: NextRequest) {
     // ✅ Permissão granular: os.view
     const { allowed, session, errorResponse } = await checkPermission('os', 'view');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'view' });
+    if (commercialDenied) return commercialDenied;
 
     const organizationId = session!.user.organizationId;
 
@@ -109,6 +112,8 @@ export async function POST(request: NextRequest) {
     // ✅ Permissão granular: os.create
     const { allowed, session, errorResponse } = await checkPermission('os', 'create');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'create' });
+    if (commercialDenied) return commercialDenied;
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;

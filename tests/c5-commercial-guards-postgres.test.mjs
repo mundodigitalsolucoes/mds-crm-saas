@@ -13,7 +13,7 @@ const orgs = [];
 before(() => { db = new PrismaClient({ datasources: { db: { url: disposableDatabaseUrl() } } }); });
 after(async () => { if (db) { for (const org of orgs) await db.organization.delete({ where: { id: org.id } }); await db.$disconnect(); } });
 const resources = ['leads', 'kanban', 'projects', 'tasks', 'os', 'agenda', 'goals', 'reports', 'integrations', 'settings', 'users', 'atendimento'];
-const pairs = [['vendas', 'leads'], ['vendas', 'kanban'], ['marketing', 'projects'], ['atendimento', 'atendimento']];
+const pairs = [['vendas', 'leads'], ['vendas', 'kanban'], ['marketing', 'projects'], ['atendimento', 'atendimento'], ['marketing','tasks'], ['marketing','os'], ['marketing','reports'], ['vendas','tasks']];
 async function fixture(label) {
  const org = await db.organization.create({ data: { name: 'C5 guard fixture', slug: 'c5-guard-' + label + randomUUID(), features: '[]', plan: 'trial', trialEndsAt: new Date(Date.now()+86400000) } }); orgs.push(org);
  const user = await db.user.create({ data: { organizationId: org.id, name: 'Fixture', email: randomUUID()+'@example.invalid', passwordHash: 'not-a-login', role: 'user', permissions: JSON.stringify(Object.fromEntries(resources.map(resource=>[resource,{view:true,create:true,edit:true,delete:true}])))} });
@@ -22,10 +22,10 @@ async function fixture(label) {
 function adapter(f, mode) {
  const legacy = loadHandler('src/lib/checkPermission.ts', { 'next/server': { NextResponse }, 'next-auth': { getServerSession: async()=>f.session }, '@/lib/auth': { authOptions:{} }, '@/lib/prisma': { prisma:db }, '@/lib/permissions':permissions });
  const authorize = createModuleAuthorizer({ session:async()=>f.session, readUser:id=>db.user.findUnique({where:{id},include:{organization:true}}) });
- const guards=loadHandler('src/lib/authorization/guards.ts', { 'next/server':{NextResponse}, '../checkPermission':legacy, './policy':policy, './server':{evaluateModuleAccess:async request=>policy.authorizationEffect(await authorize(request),mode)} },{console:{info(){}}});
+ const guards=loadHandler('src/lib/authorization/guards.ts', { 'next/server':{NextResponse}, '../checkPermission':legacy, './policy':{...policy,modeForOrganization:()=>mode}, './server':{evaluateModuleAccess:async request=>policy.authorizationEffect(await authorize(request),mode)} },{console:{info(){}}});
  return { ...guards, authorize };
 }
-test('C5: seven contracts × both brands × three DB roles × two tenants × four resources × four actions',async()=>{
+test('C5: seven contracts × both brands × three DB roles × two tenants × eight audited resources × four actions',async()=>{
  const fixtures=await Promise.all(['a','b'].map(fixture));let comparisons=0;
  for(let mask=1;mask<8;mask++)for(const whiteLabel of [false,true])for(const role of ['owner','admin','user'])for(const f of fixtures){
   const modules=['atendimento','vendas','marketing'].filter((_,i)=>mask&(1<<i));
@@ -41,7 +41,7 @@ test('C5: seven contracts × both brands × three DB roles × two tenants × fou
    assert.equal(policy.modeForOrganization(f.org.id),'observe_only');comparisons++;
   }
  }
- assert.equal(comparisons,1344);
+ assert.equal(comparisons,2688);
 });
 test('C5: real API entry points stop before database/provider access in isolated enforce mode',async()=>{
  const f=await fixture('handlers');const guards=adapter(f,'enforce');let resourceAccess=0;
@@ -68,7 +68,7 @@ test('C5: identity, permissions and tenant are effective in observe_only, regard
   for(const [module,permission] of pairs){const result=await adapter(f,'observe_only').checkModulePermission({module,permission,action:'view'});assert.equal(result.allowed,false,state);assert.ok([401,403].includes(result.errorResponse.status));}
  }
 });
-test('C5 legacy diagnostics: no Plan fallback; partial permission records can be denied by future engine',async()=>{
+test('C5 legacy diagnostics: no Plan fallback; valid partial permission records remain compatible',async()=>{
  const f=await fixture('legacy');
  for(const features of ['[]','{invalid','["white_label"]','["financeiro"]']){
   await db.organization.update({where:{id:f.org.id},data:{plan:'enterprise',features}});
@@ -79,13 +79,15 @@ test('C5 legacy diagnostics: no Plan fallback; partial permission records can be
  await db.user.update({where:{id:f.user.id},data:{permissions:'{"atendimento":{"view":true,"create":true,"edit":true,"delete":true}}'}});
  assert.equal((await adapter(f,'observe_only').checkModulePermission({module:'atendimento',permission:'atendimento',action:'view'})).allowed,true);
  const decision=await adapter(f,'enforce').authorize({module:'atendimento',permission:'atendimento',action:'view'});
- // Records a compatibility blocker, NOT an assertion that this denial is commercially correct.
- assert.equal(decision.reason,'insufficient_permission');
+ // C5-04 fixes the documented blocker; a valid Atendimento-only record is legitimate.
+ assert.equal(decision.allowed,true);
+ for(const action of ['create','edit','delete'])assert.equal((await adapter(f,'enforce').checkModulePermission({module:'atendimento',permission:'atendimento',action})).allowed,true);
 });
-test('C5: shared resources have no audited module pair; inactive legacy subscriptions need review',async()=>{
+test('C5: audited task/OS/report pairs work; unaudited pairs and inactive subscriptions remain denied',async()=>{
  const f=await fixture('shared');
  await db.organization.update({where:{id:f.org.id},data:{features:'["marketing","vendas","atendimento"]'}});
- for(const [module,permission] of [['marketing','tasks'],['marketing','os'],['marketing','reports'],['vendas','agenda'],['vendas','goals']]){
+ for(const permission of ['tasks','os','reports'])assert.equal((await adapter(f,'enforce').authorize({module:'marketing',permission,action:'view'})).allowed,true);
+ for(const [module,permission] of [['vendas','agenda'],['vendas','goals'],['atendimento','integrations']]){
   const decision=await adapter(f,'enforce').authorize({module,permission,action:'view'});
   assert.equal(decision.reason,'insufficient_permission','Unsupported pairs must not be mistaken for rollout coverage');
  }

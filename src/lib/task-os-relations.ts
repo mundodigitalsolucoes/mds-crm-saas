@@ -1,4 +1,5 @@
 // Data integrity for the existing Task/OS handlers; authentication remains checkPermission.
+import { commercialResourceScope } from '@/lib/authorization/operation-data';
 import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { checkPermission } from '@/lib/checkPermission';
@@ -30,6 +31,7 @@ export async function resourceReadScope(organizationId: string, kind: 'task' | '
     { OR: [{ createdById: null }, { createdBy: { organizationId } }] },
   ];
   if (kind === 'task') {
+    AND.push(await commercialResourceScope(organizationId, 'task'));
     const leads = await checkPermission('leads', 'view');
     AND.push({ OR: [{ leadId: null }, ...(leads.allowed ? [{ lead: { organizationId } }] : [])] });
   }

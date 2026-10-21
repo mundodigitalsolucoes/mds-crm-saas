@@ -1,3 +1,4 @@
+import { taskCommercialDenial } from '@/lib/authorization/guards';
 // src/app/api/tasks/route.ts
 // CRUD de tasks com permissões granulares e multi-tenant
 import { Prisma } from '@prisma/client';
@@ -25,6 +26,8 @@ export async function GET(request: NextRequest) {
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
+    const commercialDenied = await taskCommercialDenial(session!, 'view', { type: new URL(request.url).searchParams.get('type') || 'task' });
+    if (commercialDenied) return commercialDenied;
     return await prisma.$transaction(async (tx) => {
       const { searchParams } = new URL(request.url);
       const params = taskFiltersSchema.parse(Object.fromEntries(searchParams));
@@ -254,6 +257,8 @@ export async function POST(request: NextRequest) {
     const parsed = parseBody(taskCreateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
+    const commercialDenied = await taskCommercialDenial(session!, 'create', data);
+    if (commercialDenied) return commercialDenied;
 
     return await prisma.$transaction(async (tx) => {
       await validateResourceReferences(tx, organizationId, userId, { ...data, assignedToId: data.assignedToId || userId, createdById: userId });

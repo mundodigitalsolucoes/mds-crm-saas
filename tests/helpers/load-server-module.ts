@@ -18,7 +18,9 @@ export function loadServerModule<T>(sourceUrl: URL, imports: Record<string, unkn
   const require = createRequire(sourceUrl);
   runInNewContext(compiled.outputText, {
     module: runtimeModule, exports: runtimeModule.exports, console, URL, URLSearchParams,
-    require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id] : require(id),
+    require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id]
+      : ['@/lib/authorization/guards', '@/lib/authorization/operation-data'].includes(id)
+        ? require(fileURLToPath(new URL('../../src/lib/authorization/' + id.split('/').at(-1) + '.ts', import.meta.url))) : require(id),
   }, { filename });
   return runtimeModule.exports as T;
 }

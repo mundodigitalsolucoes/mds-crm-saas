@@ -123,7 +123,7 @@ test('authorization: custom plan name and divergence never cause a Plan.features
 });
 
 test('authorization: malformed permissions, unknown roles and wrong module-permission pair cannot grant rights', async () => {
-  for (const permissions of ['{', 'null', '{"projects":{"view":true}}', '{"leads":true}', '{"leads":{"view":"true"}}']) {
+  for (const permissions of ['{', 'null', '{"unknown_permission":{"view":true}}', '{"leads":true}', '{"leads":{"view":"true"}}']) {
     assert.equal((await evaluate({ ...user(), permissions })(request)).reason, 'insufficient_permission');
   }
   assert.equal((await evaluate({ ...user(), role: 'superadmin' })(request)).reason, 'insufficient_permission');

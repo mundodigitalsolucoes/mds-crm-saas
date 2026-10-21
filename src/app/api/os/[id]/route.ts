@@ -1,3 +1,4 @@
+import { commercialModuleDenial } from '@/lib/authorization/guards';
 // src/app/api/os/[id]/route.ts
 // API de Ordens de Serviço — Detalhe, Atualização e Exclusão com permissões granulares
 import { Prisma } from '@prisma/client';
@@ -32,6 +33,8 @@ export async function GET(
     // ✅ Permissão granular: os.view
     const { allowed, session, errorResponse } = await checkPermission('os', 'view');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'view' });
+    if (commercialDenied) return commercialDenied;
 
     const { id } = await params;
 
@@ -69,6 +72,8 @@ export async function PUT(
     // ✅ Permissão granular: os.edit
     const { allowed, session, errorResponse } = await checkPermission('os', 'edit');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'edit' });
+    if (commercialDenied) return commercialDenied;
 
     const { id } = await params;
 
@@ -160,6 +165,8 @@ export async function DELETE(
     // ✅ Permissão granular: os.delete
     const { allowed, session, errorResponse } = await checkPermission('os', 'delete');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'delete' });
+    if (commercialDenied) return commercialDenied;
 
     const { id } = await params;
 

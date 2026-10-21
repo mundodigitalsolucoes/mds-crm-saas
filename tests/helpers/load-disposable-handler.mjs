@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import { webcrypto } from 'node:crypto'
 import ts from 'typescript'
 const loadDependency = createRequire(import.meta.url)
@@ -16,7 +17,7 @@ export function loadHandler(filename, imports, globals = {}) {
   runInNewContext(compiled, {
     module: runtimeModule, exports: runtimeModule.exports, Buffer, URL, URLSearchParams, TextEncoder, AbortSignal, Request, Response,
     crypto: webcrypto, console, process: { env: {} },
-    require: id => { if (Object.hasOwn(imports, id)) return imports[id]; if (id.startsWith('@/')) throw new Error(`Unmocked infrastructure import: ${id}`); return loadDependency(id) },
+    require: id => { if (Object.hasOwn(imports, id)) return imports[id]; if (['@/lib/authorization/guards', '@/lib/authorization/operation-data'].includes(id)) return loadDependency(fileURLToPath(new URL('../../src/lib/authorization/' + id.split('/').at(-1) + '.ts', import.meta.url))); if (id.startsWith('@/')) throw new Error(`Unmocked infrastructure import: ${id}`); return loadDependency(id) },
     ...globals,
   }, { filename })
   return runtimeModule.exports
