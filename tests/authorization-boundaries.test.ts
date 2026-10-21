@@ -111,6 +111,8 @@ test('existing Atendimento permission contract remains unchanged without calling
 test('Vendas integration preserves Marketing, the existing authorization engine and the empty enforcement manifest', () => {
   const diff = execFileSync('git', ['diff', '98663c6d4a5c0b1a661f90966d6edc81a386a523', '--',
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
+    // C1 adds a presentation adapter; all pre-existing engine files stay protected.
+    ':(exclude)src/lib/authorization/application-context.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
     'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');

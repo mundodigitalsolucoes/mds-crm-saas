@@ -1,6 +1,7 @@
 // src/app/(app)/dashboard/page.tsx
 import { Metadata } from 'next';
 import { checkAuth, checkPermission } from '@/lib/checkPermission';
+import { getOrganizationEntitlements } from '@/lib/entitlements/organization';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
@@ -62,7 +63,16 @@ export default async function DashboardPage() {
   if (checks.some(check => !check.session ||
     check.session.user.id !== auth.session.user.id ||
     check.session.user.organizationId !== orgId)) redirect('/auth/login');
-  const [canLeads, canProjects, canTasks, canOS, canUsers] = checks.map(check => check.allowed);
+  const commercial = await getOrganizationEntitlements(orgId);
+  if (!commercial.ok) redirect('/auth/login');
+  const sales = commercial.entitlements.module('vendas').contracted;
+  const marketing = commercial.entitlements.module('marketing').contracted;
+  const [viewLeads, viewProjects, viewTasks, viewOS, canUsers] = checks.map(check => check.allowed);
+  const canLeads = sales && viewLeads;
+  const canProjects = marketing && viewProjects;
+  const canTasks = marketing && viewTasks;
+  const canFollowUps = sales && viewTasks;
+  const canOS = marketing && viewOS;
 
   // Linked resources must also belong to this tenant and be authorized.
   const taskScope: Prisma.TaskWhereInput = {
@@ -107,7 +117,7 @@ export default async function DashboardPage() {
         status: { notIn: ['done', 'cancelled'] },
       },
     }) : 0,
-    canTasks ? prisma.task.count({
+    canFollowUps ? prisma.task.count({
       where: {
         ...followUpTaskFilter,
         status: { notIn: ['done', 'cancelled'] },
@@ -140,7 +150,7 @@ export default async function DashboardPage() {
       orderBy: { dueDate: 'asc' },
       include: { assignedTo: { select: { name: true } } },
     }) : [],
-    canTasks ? prisma.task.findMany({
+    canFollowUps ? prisma.task.findMany({
       where: {
         ...followUpTaskFilter,
         dueDate: {
@@ -267,7 +277,7 @@ export default async function DashboardPage() {
         </div>)}
 
         {/* Card Follow-ups */}
-        {canTasks && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {canFollowUps && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-orange-100 text-orange-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -379,7 +389,7 @@ export default async function DashboardPage() {
         </div>)}
 
         {/* Lista de Follow-ups de Hoje */}
-        {canTasks && (<div className="bg-white rounded-lg shadow overflow-hidden">
+        {canFollowUps && (<div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Follow-ups de Hoje</h2>
           </div>

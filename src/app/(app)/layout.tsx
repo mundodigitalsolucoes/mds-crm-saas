@@ -9,6 +9,7 @@ import { Providers } from '@/components/providers';
 import NotificationBellWrapper from '@/components/NotificationBellWrapper';
 import WhatsAppStatusBanner from '@/components/integrations/WhatsAppStatusBanner';
 import { checkAuth } from '@/lib/checkPermission';
+import { getApplicationContext } from '@/lib/authorization/application-context';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
@@ -38,6 +39,9 @@ export default async function AppLayout({
 }) {
   const auth = await checkAuth();
   if (!auth.authenticated || !auth.session) redirect('/auth/login');
+  const context = await getApplicationContext();
+  if (!context || context.userId !== auth.session.user.id ||
+    context.organizationId !== auth.session.user.organizationId) redirect('/auth/login');
   const branding = await getOrgBranding(auth.session.user.organizationId);
 
   const favicon = branding?.favicon ?? '/favicon.ico';
@@ -59,7 +63,7 @@ export default async function AppLayout({
         <WhatsAppStatusBanner />
 
         <div className="flex h-screen overflow-hidden bg-[#f6f8fc]">
-          <Sidebar />
+          <Sidebar access={context} />
 
           <div className="flex min-w-0 min-h-0 flex-1 flex-col bg-[#f6f8fc]">
             <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">

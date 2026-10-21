@@ -376,3 +376,61 @@ A primeira tentativa Node sem `--import tsx` não forneceu a execução válida 
 C0 corrigido e verificado localmente para os cenários acima. G1 e G2 **não aprovados**: isto não certifica todas as rotas/sessões ou todas as permissões do produto. G3/G4/G5 não recebem aprovação nova por esta entrega; os testes existentes de isolamento, Widget e Instagram foram reexecutados na suíte Node. G5 permanece `observe_only`, com `APPROVED_ENFORCEMENTS` vazio e arquivo de política intacto. G6 segue pendente de revisão independente, CI remota e demais critérios do encerramento.
 
 O layout compartilhado agora recusa identidades inativas também nas demais páginas do grupo `(app)`; os componentes protegidos e as APIs existentes não foram modificados. Testes HTTP usam cliente sem navegador: não certificam navegação visual, cache de uma aba já aberta ou revogação retroativa de dados já enviados. A validação é por requisição e não serializa uma exclusão concorrente com todas as consultas; não equivale a revogação transacional global. Continuam pendentes lint global, dependências e homologação ampla. C1–C6 não iniciados. Sem push, merge, deploy, produção, Coolify, rotação de credenciais ou alteração de histórico. O commit desta entrega é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C0_2026-10-21.json`.
+
+## 2026-10-21 — C1 + C2: navegação e indicadores contratuais
+
+Autorização específica C1/C2 posterior ao C0; HEAD inicial confirmado `192a110025a29e2a8cd4b5bce5595165e1bfca22`, branch `audit/block2-sanitized`, árvore inicialmente limpa. Esta autorização atualiza a proposta anterior de apenas prévia contratual: **a apresentação local passa a respeitar a assinatura mesmo em observe_only**, conforme solicitado. Não promove o enforcement comercial de páginas/APIs. White-Label/C3–C6 permanecem fora do escopo.
+
+### Arquivos e contratos reutilizados
+
+- C1, commit `7f02b38`: `src/lib/authorization/application-context.ts` e `tests/commercial-application-context.test.ts`. Adaptador servidor sem parâmetros do cliente, sem cache global, usando checkAuth/checkPermission, getOrganizationEntitlements → resolveCommercialEntitlements → FEATURE_CATALOG e modeForOrganization. DTO serializável mínimo (identidade, módulos, decisões view e modo), sem sessão completa, tokens, configuração de integrações ou novo modelo de dados. Erro de leitura/identidade divergente falha fechado.
+- C2: `src/app/(app)/layout.tsx` entrega essa projeção à Sidebar após validar novamente a identidade; `src/components/Sidebar.tsx` cruza contrato servidor e permissões existentes. Owner conserva privilégio operacional, mas nunca adiciona módulo ausente. Atendimento exige também atendimento.view; configuração de Atendimento exige contrato e integrations.view. Dashboard/Configurações/Ajuda seguem compartilhados. Follow-ups cruza leads.view e tasks.view, em vez de oferecer um link cuja API exige uma permissão ausente.
+- `src/app/(app)/dashboard/page.tsx`: consulta o mesmo resolver existente antes das queries; cruza Vendas/Marketing com as permissões C0. Não duplica parser, catálogo, resolver ou authorizer. Dados negados não são buscados nem enviados ao RSC. Isolamento dos vínculos e validação independente da página C0 preservados.
+- Agrupamento de apresentação mantido da Sidebar atual: Vendas = Leads/Kanban/Agenda/Follow-ups/Metas; Marketing = Projetos/OS/Tarefas/Relatórios; Atendimento independente. No Dashboard, Leads/conversão/follow-ups seguem Vendas; projetos/OS/tarefas seguem Marketing; utilização de membros permanece compartilhada sob users.view. Vínculos de tarefas com outro módulo exigem também autorização e contrato daquele recurso. Isso não redefine o contrato global de Tasks/Agenda/OS, suas APIs ou suas regras de escrita.
+- Ajustes locais necessários ao lint da Sidebar: persistência de recolhimento como store do navegador com useSyncExternalStore e seções derivadas do pathname, sem setState síncrono em efeitos; cores/logo/branding intactos. As decisões servidor só são usadas quando a identidade da sessão corresponde ao DTO.
+- Testes novos: `tests/commercial-sidebar.test.ts` (renderização do componente real), `tests/commercial-dashboard.test.ts` (execução da página real com spies antes de query) e `tests/commercial-dashboard-http.mjs` (HTTP real + NextAuth + PostgreSQL local).
+- `tests/dashboard-c0.test.ts` recebe apenas mocks dos novos imports, preservando as asserções anteriores. A fixture de `tests/dashboard-c0-http.mjs` declara os três módulos explicitamente, evitando presumir direitos pelo plano trial. `tests/authorization-boundaries.test.ts` permite somente o **novo** adaptador C1; todos os arquivos preexistentes do motor e as fronteiras históricas continuam protegidos.
+
+### Matriz verificável
+
+Cada linha foi coberta por três papéis (owner/admin/user) e dois tenants: **42 cenários de contrato, 42 de markup real da Sidebar e 42 de HTTP Dashboard**. Na renderização, usuários restritos variam entre Leads negado e Tasks negado; no HTTP, usuário restrito tem Leads negado e demais permissões explícitas. Fixtures sintéticas são apagadas no finally.
+
+| Contratado | Seções comerciais na navegação | Indicadores comerciais do Dashboard, sujeitos a view e vínculos |
+|---|---|---|
+| Atendimento | Atendimento | Nenhum indicador de Vendas/Marketing |
+| Vendas | Vendas | Leads, conversão e follow-ups |
+| Marketing | Marketing | Projetos, OS e tarefas |
+| Atendimento + Vendas | Atendimento, Vendas | Vendas |
+| Atendimento + Marketing | Atendimento, Marketing | Marketing |
+| Vendas + Marketing | Vendas, Marketing | Vendas e Marketing |
+| Atendimento + Vendas + Marketing | Todas | Vendas e Marketing |
+
+O cenário legado é reproduzido com snapshot explícito dos três módulos; não certifica o cadastro de cada cliente MDS existente. Recursos compartilhados continuam sob suas permissões. Configuração vazia, JSON inválido ou só White-Label/módulo planejado não gera módulos por fallback de plano/owner (três cenários HTTP adicionais). White-Label não vira módulo nem altera branding.
+
+### Execuções e evidências
+
+Evidência versionada: `docs/evidence/BLOCK2_C1_C2_2026-10-21.json`, com a matriz individual, resultados C0, hashes dos quatro arquivos de implementação e dos artefatos. Logs completos em `/workspace/mds-crm-onboarding-evidence/c1-c2/`. Hashes são de arquivos de código/evidência, não de credenciais.
+
+| Comando | Resultado final |
+|---|---|
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs`, BLOCK2_TEST_DATABASE_URL local explícito | 102 PASS; zero fail/skip/TODO |
+| `npx tsx --test tests/*.test.ts` | 281 PASS; zero fail/skip/TODO: 180 anteriores + 45 contexto + 42 Sidebar + 14 seleção de queries |
+| `npm run build` | PASS, Prisma generate e Next build; sem migration; aviso preexistente images.domains |
+| `npx next start --hostname 127.0.0.1 --port 3100` | Build final no loopback; não utiliza prestart |
+| `node tests/commercial-dashboard-http.mjs` | 42 cenários PASS + 3 configurações inválidas; 28 GETs diretos /leads e /projects com owner permanecem 200 em observe_only |
+| `node tests/dashboard-c0-http.mjs` | PASS: removidos → 307 sem dados, Leads negado → API 403 e Dashboard sem Leads; dados próprios e isolamento preservados |
+| `node .cache/bloco02-smoke.cjs` | 22 PASS, incluindo autenticação, tenant, mass assignment, concorrência, sessão forjada e limitação de tentativas |
+| `npx tsc --noEmit` após restaurar somente next-env.d.ts gerado | PASS |
+| `npx eslint` nos arquivos de implementação/teste alterados | Zero erros; um aviso preexistente no img da Sidebar; nenhuma regra desativada |
+| `git diff --check` | PASS |
+
+A primeira suíte TS detectou a fronteira histórica que também abrangia arquivos novos; a exceção nominal do adaptador autorizado resolveu a incompatibilidade sem liberar o motor existente. A primeira matriz HTTP não obteve a sessão de fixture (TypeError em login, antes dos cenários); o cliente foi corrigido com asserção explícita de sessão e IP fictício separado por cliente, como a regressão HTTP existente. A causa exata daquela sessão ausente não foi certificada; os resultados finais foram obtidos isoladamente no build final. Falhas iniciais não são contadas como cenários aprovados.
+
+### Limitações, gates e rollback
+
+- Sem testes de browser completo: Sidebar renderizada de verdade com infraestrutura de sessão/rotas simulada; Dashboard/APIs testados por HTTP real. Recolhimento mobile, persistência entre abas e atualização de menu numa sessão já aberta exigem homologação visual. Mudanças de assinatura exigem nova renderização/refresh do layout; não foi adicionado mecanismo global de invalidação.
+- Contratos legados sem módulos explícitos deixam de exibir módulos/indicadores na apresentação. Isso segue o resolver e a autorização atual; inventário de cadastros reais continua necessário antes da publicação. Nenhuma assinatura foi alterada por este lote.
+- URLs e APIs continuam sob os controles existentes em observe_only: esconder navegação não certifica bloqueio de acesso direto. C5 não iniciado. G1/G2/G3/G4/G5/G6 não recebem aprovação formal por estes resultados; revisão independente e CI remota permanecem pendentes. Alertas globais de lint/dependências registrados no C0 não foram resolvidos neste lote.
+- Core protegido, providers, schema, migrations, motor comercial, catálogo/resolver, manifesto e APIs permaneceram intactos. APPROVED_ENFORCEMENTS segue vazio. Nenhuma credencial, .env ou artefato temporário integra os commits; evidência versionada contém só resultados/metadados sem segredos.
+- Rollback proposto, não executado: reverter o commit C2 restaura a apresentação do C0; depois reverter C1 remove o adaptador sem consumidores. Preservar C0. Sem mudança de dados a desfazer. O commit C2 é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C1_C2_2026-10-21.json`.
+- Sem push, merge, deploy, produção, Coolify ou migrations. C3–C6 não iniciados.

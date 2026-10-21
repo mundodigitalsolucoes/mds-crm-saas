@@ -8,7 +8,7 @@ const db=new PrismaClient();const cookies=new Map(),base='http://127.0.0.1:3100'
 async function req(path,options={}){const r=await fetch(base+path,{redirect:'manual',...options,headers:{'x-forwarded-for':'198.51.100.180',cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...options.headers}});for(const c of r.headers.getSetCookie()){const pair=c.split(';')[0],i=pair.indexOf('=');cookies.set(pair.slice(0,i),pair.slice(i+1))}return {status:r.status,body:await r.text()}}
 (async()=>{
  const suffix=crypto.randomUUID(),password=crypto.randomBytes(24).toString('hex'),marker='dashboard-fixture-'+suffix;
- org=await db.organization.create({data:{name:'Dashboard review fixture',slug:'review-'+suffix,plan:'trial',trialEndsAt:new Date(Date.now()+86400000)}});
+ org=await db.organization.create({data:{features:JSON.stringify(['atendimento','vendas','marketing']),name:'Dashboard review fixture',slug:'review-'+suffix,plan:'trial',trialEndsAt:new Date(Date.now()+86400000)}});
  const user=await db.user.create({data:{name:'Review owner',email:'review-'+suffix+'@example.invalid',passwordHash:await bcrypt.hash(password,10),organizationId:org.id,role:'owner'}});
  await db.lead.create({data:{name:marker,organizationId:org.id,createdById:user.id}});
  foreignOrg=await db.organization.create({data:{name:'Foreign dashboard fixture',slug:'foreign-'+suffix}});
