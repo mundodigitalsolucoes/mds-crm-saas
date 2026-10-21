@@ -50,6 +50,8 @@ jobs:
         run: npx prisma validate
       - name: Generate Prisma client (local only)
         run: npx prisma generate
+      - name: Generate Next.js route types for a clean checkout
+        run: npx next typegen
       - name: Check TypeScript
         run: npx tsc --noEmit
       - name: Build Next.js without starting server
