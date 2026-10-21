@@ -9,10 +9,10 @@
     "pages": 28,
     "backendStatus": {
       "shared-or-protocol-specific-review-required": 51,
-      "pending-commercial-integration": 52,
+      "pending-commercial-integration": 47,
       "existing-guard-observe-only": 35,
       "observer-only-does-not-enforce": 22,
-      "confirmed-indirect-commercial-gap": 2,
+      "prepared-canonical-resource-guard-observe-only": 7,
       "pending-resource-payload-filter": 1,
       "prepared-additive-guard-observe-only": 5,
       "prepared-type-and-dependency-scope-observe-only": 5,
@@ -1639,8 +1639,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/attachments/[id]/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -1664,8 +1664,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/attachments/route.ts"
       },
-      "backendStatus": "confirmed-indirect-commercial-gap",
-      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -1689,8 +1689,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/attachments/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -1836,8 +1836,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/comments/[id]/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -1861,8 +1861,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/comments/[id]/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkAuth",
@@ -1891,8 +1891,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/comments/route.ts"
       },
-      "backendStatus": "confirmed-indirect-commercial-gap",
-      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -1916,8 +1916,8 @@
         "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
         "path": "src/app/api/comments/route.ts"
       },
-      "backendStatus": "pending-commercial-integration",
-      "evidence": "source-only-not-runtime-certified",
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "real-HTTP-CRUD-seven-contracts-two-brands-three-roles; canonical binding; static file URL explicitly NOT protected",
       "existingGuardSignals": [
         {
           "call": "checkPermission",
@@ -4212,10 +4212,23 @@
     }
   ],
   "latestBatch": {
-    "referenceHead": "f0acc3e",
-    "functionalCommit": "7d4bcf78793dca646a83d603d560dba652e4ddf1",
-    "batch": "1-subtasks",
+    "referenceHead": "786233c",
+    "functionalCommit": "cb31230cbbcb85830648fc4b0f9ccf03b4f6b3d8",
+    "batch": "2-helpers-comments-attachments",
     "globalMode": "observe_only",
-    "remainingOriginalIndirectFailures": 6
-  }
+    "originalIndirectPassed": 9,
+    "publicDownloadsBlocked": false
+  },
+  "additionalSurfaces": [
+    {
+      "url": "/uploads/[org]/[file]",
+      "kind": "static-attachment-download-outside-177-API-operations",
+      "status": "CONFIRMED-BLOCKER",
+      "httpStatus": 200,
+      "anonymousAllowed": true,
+      "uncontractedMarketingBytesReturned": true,
+      "evidence": "isolated legacy file present before startup; six requests, one underlying surface",
+      "nextPlan": "docs/BLOCK2_ATTACHMENTS_PRIVATE_DOWNLOAD_PLAN_2026-10-21.md"
+    }
+  ]
 }

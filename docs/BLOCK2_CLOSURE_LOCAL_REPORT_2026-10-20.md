@@ -640,3 +640,13 @@ Sobre f0acc3e, árvore inicialmente limpa, commit local **7d4bcf7**: apenas duas
 Dos nove negativos originais, **três PASS/seis FAIL**: comentários/anexos permanecem200 com marcador de módulo não contratado. Probe ampliado372 PASS/6 FAIL, incluindo336 checks de subtarefas em sete contratos × duas marcas × três papéis × dois tipos × CRUD. Direto21/21 PASS somente em cópia isolada.147 Node/PostgreSQL,386 TypeScript,115 HTTP comentários e seis probes C0–C5 PASS; typecheck/build/lint do lote sem erros/avisos. Core/manifesto/política/Widget/OAuth/P2 intactos. Zero fixtures residuais.
 
 Próximo lote interrompido pela limitação expressa de61 APIs/quatro layouts: doze recusas legítimas PostgreSQL confirmam quatro pares ausentes em authorize.ts; o adapter transacional de comentários também depende de helpers fora do recorte. Proposta restrita para quatro helpers existentes documentada, ainda não implementada. Não se contornou a dependência criando outro motor ou exigindo permissão diferente. Restam59 APIs/quatro layouts; não iniciar grupos posteriores antes de comentários/anexos. G2/G3/G5 sem aprovação global; G5/piloto bloqueados. Sem push, atualização de PR15, merge, deploy, migrations, produção/Coolify ou ativação comercial.
+
+## C5 — Lote2, helpers e comentários/anexos,21/10/2026
+
+Sobre786233c, helpers em46f8b7d/8c750be e APIs em **cb31230**. [Relatório](BLOCK2_C5_LOT2_2026-10-21.md), [evidências](evidence/BLOCK2_C5_LOT2_RESULTS_2026-10-21.json), [matriz atualizada](BLOCK2_C5_03_04_COVERAGE_2026-10-21.md).
+
+**12/12 recusas indevidas eliminadas;9/9 negativos originais e1089/1089 HTTP das APIs PASS.**151 Node/PostgreSQL,387 TypeScript,115 HTTP comentários,6 probes C0–C5, build/typecheck e lint estrito de14 arquivos PASS. Helper usa o mesmo authorizer/cliente transacional, inclusive pool1/quota; permissões/tenant não dependem do enforcement. Guards core e APIs têm commits separados; P1/P2/Widget/OAuth preservados.
+
+**Novo bloqueador comprovado:** arquivo sintético legado de Marketing em public/uploads retorna200/bytes por URL conhecida, inclusive anônimo.6 requests FAIL/uma superfície; agregado de aceitação exit1. Nenhum arquivo real de produção acessado. Proteção integral por URL não concluída; correção estrutural interrompida e [plano privado para autorização](BLOCK2_ATTACHMENTS_PRIVATE_DOWNLOAD_PLAN_2026-10-21.md) preparado, sem implementar novo storage/GET/cutover.
+
+Restam55 APIs/quatro layouts sem completar integração comercial e o complemento de anexos. G2/G3/G5 bloqueados para homologação global; nenhum gate/piloto aprovado. Manifesto vazio/observe_only preservados; sem push/PR15, merge, deploy, migrations, produção/Coolify ou enforcement.

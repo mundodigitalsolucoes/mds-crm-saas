@@ -95,3 +95,7 @@ Após essa exceção autorizada: lote2 somente `comments/route.ts` e `comments/[
 G1/G4 não foram alterados e não recebem aprovação automática por regressão; G6 depende também dos lotes restantes, revisão independente e CI do SHA futuro autorizado. Nenhuma ativação nominal está pronta para execução. A proposta anterior de rollout da Ótica São Paulo continua condicionada a cobertura completa, compatibilidade, aceite e autorização específica; manifesto permanece vazio. Nenhum dado real foi consultado ou migrado. Histórico e imagem/SHA de produção continuam inalterados.
 
 Rollback local do lote é a reversão revisada apenas do commit7d4bcf7, preservando C0/P2/tenant/Widget/OAuth. Isso restaura a lacuna comercial de subtarefas sob futuro enforcement, portanto não é um rollback aceitável para liberar o piloto. Não há migration, reversão de dados, remoção de nonces/receipts/inbox ou credenciais. Rollback/ativação em ambiente real não foram autorizados nem executados.
+
+## Atualização posterior — exceção autorizada no Lote2
+
+O usuário autorizou os quatro helpers; a dependência descrita acima foi tratada em46f8b7d/8c750be. [Lote2](BLOCK2_C5_LOT2_2026-10-21.md):12 recusas eliminadas, nove negativos originais PASS e APIs1089/1089. Surgiu prova adicional de download estático legado200 sem sessão; não se considera anexos integralmente protegidos por URL. O novo plano de storage privado ainda depende de autorização; a justificativa do lote1 não foi reutilizada para impedir a exceção já autorizada.
