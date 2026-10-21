@@ -53,12 +53,32 @@ export async function taskCommercialDenial(
   session: { user: { id: string; organizationId: string } }, action: ModuleAccessRequest['action'],
   task: { type?: string; leadId?: string | null; projectId?: string | null },
 ): Promise<NextResponse | null> {
-  const requests: ModuleAccessRequest[] = [{ module: task.type === 'follow_up' ? 'vendas' : 'marketing', permission: 'tasks', action }];
-  if (task.leadId) requests.push({ module: 'vendas', permission: 'leads', action: 'view' });
-  if (task.projectId) requests.push({ module: 'marketing', permission: 'projects', action: 'view' });
+  const { taskModuleRequirements } = await import('./operation-data');
+  const requests = taskModuleRequirements(task, action);
   for (const request of requests) {
     const denied = await commercialModuleDenial(session, request);
     if (denied) return denied;
+  }
+  return null;
+}
+
+/** Shared-resource boundary; caller supplies its existing transaction and verified session. */
+export async function commercialEntityDenial(
+  client: import('@prisma/client').Prisma.TransactionClient,
+  session: { user: { id: string; organizationId: string } },
+  entityType: string, entityId: string, action: ModuleAccessRequest['action'],
+): Promise<NextResponse | null> {
+  if (modeForOrganization(session.user.organizationId) !== 'enforce') return null;
+  const { entityModuleRequirements } = await import('./operation-data');
+  const requests = await entityModuleRequirements(client, session.user.organizationId, entityType, entityId, action);
+  if (!requests) return NextResponse.json({ error: 'Recurso indisponível' }, { status: 404 });
+  for (const request of requests) {
+    const evaluation = await evaluateModuleAccess(request, { client, session });
+    recordAuthorizationObservation(request, evaluation.decision);
+    if (!evaluation.decision.allowed) return NextResponse.json({ error: 'Acesso indisponível' }, { status: evaluation.decision.status });
+    if (evaluation.decision.context.userId !== session.user.id || evaluation.decision.context.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Acesso indisponível' }, { status: 403 });
+    }
   }
   return null;
 }

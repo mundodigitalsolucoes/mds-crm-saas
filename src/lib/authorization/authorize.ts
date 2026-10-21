@@ -30,8 +30,8 @@ const deny = (reason: DenialReason, status: 401 | 403 | 503 = 403): Authorizatio
 /** Only audited operational permission pairs. Shared resources need their own approved rule. */
 const modulePermissions: Partial<Record<CommercialModuleId, readonly PermissionModule[]>> = {
   marketing: ['projects', 'tasks', 'os', 'reports'],
-  vendas: ['leads', 'kanban', 'tasks'],
-  atendimento: ['atendimento'],
+  vendas: ['leads', 'kanban', 'tasks', 'projects', 'goals', 'agenda'],
+  atendimento: ['atendimento', 'integrations'],
 };
 
 function validPermissions(raw: string): boolean {

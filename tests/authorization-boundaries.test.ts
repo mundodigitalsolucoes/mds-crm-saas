@@ -113,7 +113,7 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
     // Explicit C5-03/C5-04 additions; unchanged core functions are pinned separately below.
     ':(exclude)src/lib/authorization/authorize.ts', ':(exclude)src/lib/authorization/guards.ts',
-    ':(exclude)src/lib/authorization/operation-data.ts',
+    ':(exclude)src/lib/authorization/operation-data.ts', ':(exclude)src/lib/authorization/server.ts',
     // C1 adds a presentation adapter; all pre-existing engine files stay protected.
     ':(exclude)src/lib/authorization/application-context.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
@@ -184,4 +184,22 @@ test('C5 granular subtask batch preserves original handlers except the exact app
     }
     assert.equal(readFileSync(path, 'utf8'), expected);
   }
+});
+
+test('Lot2 server adapter changes only database/session binding and preserves default rules', () => {
+  let expected = execFileSync('git', ['show', '786233c:src/lib/authorization/server.ts'], { encoding: 'utf8' });
+  expected = "import type { Prisma } from '@prisma/client';\nimport type { TrustedSessionIdentity } from './authorize';\n" + expected;
+  expected = expected.replace('export async function evaluateModuleAccess(request: ModuleAccessRequest) {', `/** Context is server-owned and used only after the caller authenticates/locks the actor. */
+export interface TransactionAuthorizationContext {
+  session: TrustedSessionIdentity;
+  client: Prisma.TransactionClient;
+}
+
+export async function evaluateModuleAccess(request: ModuleAccessRequest, context?: TransactionAuthorizationContext) {
+  const database = context?.client ?? prisma;`)
+    .replace('const session = await getServerSession(authOptions);', 'const session = context?.session ?? await getServerSession(authOptions);')
+    .replace('      return session;', '      return session ?? null;')
+    .replace('readUser: (id) => prisma.user.findUnique', 'readUser: (id) => database.user.findUnique')
+    .replace('return await prisma.marketingProject.count', 'return await database.marketingProject.count');
+  assert.equal(readFileSync('src/lib/authorization/server.ts', 'utf8'), expected);
 });

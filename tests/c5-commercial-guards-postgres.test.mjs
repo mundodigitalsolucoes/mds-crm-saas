@@ -87,7 +87,7 @@ test('C5: audited task/OS/report pairs work; unaudited pairs and inactive subscr
  const f=await fixture('shared');
  await db.organization.update({where:{id:f.org.id},data:{features:'["marketing","vendas","atendimento"]'}});
  for(const permission of ['tasks','os','reports'])assert.equal((await adapter(f,'enforce').authorize({module:'marketing',permission,action:'view'})).allowed,true);
- for(const [module,permission] of [['vendas','agenda'],['vendas','goals'],['atendimento','integrations']]){
+ for(const [module,permission] of [['vendas','atendimento'],['marketing','integrations'],['atendimento','leads']]){
   const decision=await adapter(f,'enforce').authorize({module,permission,action:'view'});
   assert.equal(decision.reason,'insufficient_permission','Unsupported pairs must not be mistaken for rollout coverage');
  }
