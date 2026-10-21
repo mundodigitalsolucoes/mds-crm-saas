@@ -5,8 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { commercialEntityDenial } from '@/lib/authorization/guards';
 import { checkPermission } from '@/lib/checkPermission';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import { join } from 'path';
+import { attachmentDownloadUrl, writePrivateAttachment, removePrivateAttachment, AttachmentStorageError, type AttachmentFile } from '@/lib/attachments/storage';
 import { randomUUID } from 'crypto';
 import type { PermissionModule } from '@/types/permissions';
 
@@ -23,6 +22,7 @@ class AttachmentAccessError extends Error {
   constructor(readonly status: number) { super('Recurso indisponível ou não autorizado'); }
 }
 function attachmentError(error: unknown) {
+  if (error instanceof AttachmentStorageError) return NextResponse.json({ error: error.message }, { status: error.status });
   if (error instanceof AttachmentAccessError) return NextResponse.json({ error: error.message }, { status: error.status });
   if (error instanceof Prisma.PrismaClientKnownRequestError && (['P2025', 'P2034'].includes(error.code) || (error.code === 'P2010' && ['40001', '40P01'].includes(String(error.meta?.code))))) return NextResponse.json({ error: 'Conflito de atualização; tente novamente' }, { status: 409 });
   return null;
@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       attachments.map(a => ({
         ...a,
+        url: attachmentDownloadUrl(a.id),
         createdAt: a.createdAt.toISOString(),
       }))
     );
@@ -89,14 +90,14 @@ export async function GET(request: NextRequest) {
 
 // POST /api/attachments (multipart/form-data)
 export async function POST(request: NextRequest) {
-  let pendingFilePath: string | undefined;
+  let pendingFile: AttachmentFile | undefined;
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const entityType = formData.get('entityType') as string;
     const entityId = formData.get('entityId') as string;
 
-    if (!file || !entityType || !entityId) {
+    if (!file || typeof file.arrayBuffer !== 'function' || typeof file.name !== 'string' || !entityType || !entityId) {
       return NextResponse.json(
         { error: 'file, entityType e entityId são obrigatórios' },
         { status: 400 }
@@ -134,27 +135,18 @@ export async function POST(request: NextRequest) {
     const attachment = await prisma.$transaction(async tx => {
       const denied = await commercialEntityDenial(tx, session!, entityType, entityId, 'edit');
       if (denied) throw new AttachmentAccessError(denied.status);
-    // Gerar nome único
-    const ext = file.name.split('.').pop() || 'bin';
-    const filename = `${randomUUID()}.${ext}`;
-
-    // Criar diretório de uploads se não existir
-    const uploadDir = join(process.cwd(), 'public', 'uploads', session!.user.organizationId);
-    await mkdir(uploadDir, { recursive: true });
-
-    // Salvar arquivo
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const filePath = join(uploadDir, filename);
-    pendingFilePath = filePath;
-    await writeFile(filePath, buffer);
-
-    // URL pública
-    const url = `/uploads/${session!.user.organizationId}/${filename}`;
+      const id = randomUUID();
+      const filename = `${id}.bin`;
+      const url = attachmentDownloadUrl(id);
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const storedFile = { id, organizationId: session!.user.organizationId, filename, url };
+      await writePrivateAttachment(storedFile, bytes);
+      pendingFile = storedFile;
 
     // Criar registro no banco
     return tx.attachment.create({
       data: {
+        id,
         organizationId: session!.user.organizationId,
         entityType,
         entityId,
@@ -172,14 +164,14 @@ export async function POST(request: NextRequest) {
       },
     });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
-    pendingFilePath = undefined;
+    pendingFile = undefined;
 
     return NextResponse.json({
       ...attachment,
       createdAt: attachment.createdAt.toISOString(),
     }, { status: 201 });
   } catch (error) {
-    if (pendingFilePath) await unlink(pendingFilePath).catch(() => console.error('Falha na limpeza do upload não confirmado'));
+    if (pendingFile) await removePrivateAttachment(pendingFile).catch(() => console.error('Falha na limpeza do upload não confirmado'));
     const denied = attachmentError(error);
     if (denied) return denied;
     console.error('Erro ao criar attachment:', error);

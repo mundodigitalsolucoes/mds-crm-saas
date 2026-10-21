@@ -1,3 +1,4 @@
+import { attachmentDownloadUrl } from '@/lib/attachments/storage';
 import { taskCommercialDenial } from '@/lib/authorization/guards';
 // src/app/api/tasks/[id]/route.ts
 // Detalhe, atualização e exclusão de task com permissões granulares
@@ -114,6 +115,7 @@ export async function GET(
         })),
         attachments: attachments.map(a => ({
           ...a,
+          url: attachmentDownloadUrl(a.id),
           createdAt: a.createdAt.toISOString(),
         })),
         comments: commentsWithReplies,

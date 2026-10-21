@@ -5,8 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { commercialEntityDenial } from '@/lib/authorization/guards';
 import { checkAuth, checkPermission } from '@/lib/checkPermission';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
+import { readAttachment, removePrivateAttachment, attachmentHeaders, AttachmentStorageError } from '@/lib/attachments/storage';
 import type { PermissionModule } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
@@ -47,9 +46,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
     }
 
-    const deletedUrl = await prisma.$transaction(async tx => {
-      const rows = await tx.$queryRaw<{ entityType: string; entityId: string; uploadedById: string; url: string }[]>(Prisma.sql`
-        SELECT a.entity_type AS "entityType", a.entity_id AS "entityId", a.uploaded_by AS "uploadedById", a.url
+    const deletedFile = await prisma.$transaction(async tx => {
+      const rows = await tx.$queryRaw<{ entityType: string; entityId: string; uploadedById: string; url: string; filename: string }[]>(Prisma.sql`
+        SELECT a.entity_type AS "entityType", a.entity_id AS "entityId", a.uploaded_by AS "uploadedById", a.url, a.filename
         FROM attachments a JOIN users u ON u.id = a.uploaded_by
         WHERE a.id = ${id} AND a.organization_id = ${organizationId}
           AND u.organization_id = ${organizationId} FOR UPDATE OF a FOR SHARE OF u`);
@@ -60,13 +59,11 @@ export async function DELETE(
       const actor = await tx.user.findUnique({ where: { id: session!.user.id }, select: { role: true } });
       if (current.uploadedById !== session!.user.id && !['owner', 'admin'].includes(actor?.role || '')) throw new AttachmentDeleteError(403);
       await tx.attachment.delete({ where: { id, organizationId, uploadedById: current.uploadedById } });
-      return current.url;
+      return { id, organizationId, url: current.url, filename: current.filename };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
     // Only a committed, authorized deletion may touch the filesystem.
     try {
-      const prefix = `/uploads/${organizationId}/`;
-      const filename = deletedUrl.startsWith(prefix) ? deletedUrl.slice(prefix.length) : '';
-      if (filename && /^[A-Za-z0-9._-]+$/.test(filename) && !filename.includes('..')) await unlink(join(process.cwd(), 'public', 'uploads', organizationId, filename));
+      await removePrivateAttachment(deletedFile);
     } catch {
       console.warn('Arquivo do anexo não removido do filesystem');
     }
@@ -85,4 +82,38 @@ export async function DELETE(
 
 class AttachmentDeleteError extends Error {
   constructor(readonly status: number) { super('Attachment deletion rejected'); }
+}
+
+
+// Authenticated bytes only; no public redirect, conditional304 or unauthenticated range shortcut.
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const auth = await checkAuth();
+    if (!auth.authenticated) {
+      auth.errorResponse!.headers.set('Cache-Control', 'private, no-store');
+      auth.errorResponse!.headers.set('Vary', 'Cookie');
+      auth.errorResponse!.headers.set('X-Content-Type-Options', 'nosniff');
+      return auth.errorResponse!;
+    }
+    const { id } = await params;
+    const organizationId = auth.session!.user.organizationId;
+    const result = await prisma.$transaction(async tx => {
+      const rows = await tx.$queryRaw<{ id: string; entityType: string; entityId: string; filename: string; url: string; originalName: string }[]>(Prisma.sql`
+        SELECT a.id, a.entity_type AS "entityType", a.entity_id AS "entityId", a.filename, a.url, a.original_name AS "originalName"
+        FROM attachments a JOIN users u ON u.id = a.uploaded_by
+        WHERE a.id = ${id} AND a.organization_id = ${organizationId}
+          AND u.organization_id = ${organizationId} FOR SHARE OF a, u`);
+      const file = rows[0];
+      if (!file) throw new AttachmentDeleteError(404);
+      const denied = await commercialEntityDenial(tx, auth.session!, file.entityType, file.entityId, 'view');
+      if (denied) throw new AttachmentDeleteError(denied.status);
+      const bytes = await readAttachment({ ...file, organizationId });
+      return { bytes, originalName: file.originalName };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+    // Range and validators never bypass authorization; authenticated requests receive the full bounded file.
+    return new NextResponse(new Uint8Array(result.bytes), { status: 200, headers: attachmentHeaders(result.bytes, result.originalName) });
+  } catch (error) {
+    const status = error instanceof AttachmentDeleteError || error instanceof AttachmentStorageError ? error.status : 500;
+    return NextResponse.json({ error: 'Arquivo indisponível' }, { status, headers: { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', Vary: 'Cookie' } });
+  }
 }
