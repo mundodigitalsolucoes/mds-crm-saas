@@ -1,0 +1,4213 @@
+{
+  "referenceHead": "a27316c299bd8b13b6891430eaf46cdccccc9b4b",
+  "scope": "working-tree C5-03/C5-04 on 2026-10-21; static inventory is not authorization or tenant certification",
+  "globalMode": "observe_only",
+  "approvedEnforcements": [],
+  "summary": {
+    "apiFiles": 116,
+    "operations": 177,
+    "pages": 28,
+    "backendStatus": {
+      "shared-or-protocol-specific-review-required": 51,
+      "pending-commercial-integration": 55,
+      "existing-guard-observe-only": 35,
+      "observer-only-does-not-enforce": 22,
+      "confirmed-indirect-commercial-gap": 3,
+      "pending-resource-payload-filter": 1,
+      "prepared-additive-guard-observe-only": 5,
+      "prepared-type-and-dependency-scope-observe-only": 5
+    }
+  },
+  "operations": [
+    {
+      "operation": "POST /api/admin/auth",
+      "path": "src/app/api/admin/auth/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/auth/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/auth",
+      "path": "src/app/api/admin/auth/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/auth/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 83
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/admin/auth",
+      "path": "src/app/api/admin/auth/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/auth/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/admin/coupons/[id]",
+      "path": "src/app/api/admin/coupons/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/coupons/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 23
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/admin/coupons/[id]",
+      "path": "src/app/api/admin/coupons/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/coupons/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 68
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/coupons",
+      "path": "src/app/api/admin/coupons/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/coupons/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 26
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/admin/coupons",
+      "path": "src/app/api/admin/coupons/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/coupons/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 70
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/dashboard",
+      "path": "src/app/api/admin/dashboard/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/dashboard/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 12
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/organizations/[id]",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/organizations/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 16
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/admin/organizations/[id]",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/organizations/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 77
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/admin/organizations/[id]",
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/organizations/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 204
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/organizations",
+      "path": "src/app/api/admin/organizations/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/organizations/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/admin/organizations",
+      "path": "src/app/api/admin/organizations/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/organizations/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 107
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/admin/orgs/[orgId]/provision-chatwoot",
+      "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 30
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/orgs/[orgId]/provision-chatwoot",
+      "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 111
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/admin/plans/[id]",
+      "path": "src/app/api/admin/plans/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/plans/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 14
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/admin/plans/[id]",
+      "path": "src/app/api/admin/plans/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/plans/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 94
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/plans",
+      "path": "src/app/api/admin/plans/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/plans/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/admin/plans",
+      "path": "src/app/api/admin/plans/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/plans/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/admin/users/[id]",
+      "path": "src/app/api/admin/users/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/users/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 39
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/admin/users/[id]",
+      "path": "src/app/api/admin/users/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/users/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 78
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/admin/users",
+      "path": "src/app/api/admin/users/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "platform administration: separate live SuperAdmin identity; no tenant commercial bypass",
+        "path": "src/app/api/admin/users/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "verifyAdminToken",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/agenda/[id]",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "contract": {
+        "kind": "agenda",
+        "permission": "agenda",
+        "action": "view",
+        "rule": "Sales agenda; project-bound records additionally require Marketing; collection without project filters excludes uncontracted project records",
+        "path": "src/app/api/agenda/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'view'"
+          ],
+          "line": 32
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/agenda/[id]",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "contract": {
+        "kind": "agenda",
+        "permission": "agenda",
+        "action": "edit",
+        "rule": "Sales agenda; project-bound records additionally require Marketing; collection without project filters excludes uncontracted project records",
+        "path": "src/app/api/agenda/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'edit'"
+          ],
+          "line": 65
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/agenda/[id]",
+      "path": "src/app/api/agenda/[id]/route.ts",
+      "contract": {
+        "kind": "agenda",
+        "permission": "agenda",
+        "action": "delete",
+        "rule": "Sales agenda; project-bound records additionally require Marketing; collection without project filters excludes uncontracted project records",
+        "path": "src/app/api/agenda/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'delete'"
+          ],
+          "line": 158
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/agenda",
+      "path": "src/app/api/agenda/route.ts",
+      "contract": {
+        "kind": "agenda",
+        "permission": "agenda",
+        "action": "view",
+        "rule": "Sales agenda; project-bound records additionally require Marketing; collection without project filters excludes uncontracted project records",
+        "path": "src/app/api/agenda/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'view'"
+          ],
+          "line": 54
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/agenda",
+      "path": "src/app/api/agenda/route.ts",
+      "contract": {
+        "kind": "agenda",
+        "permission": "agenda",
+        "action": "create",
+        "rule": "Sales agenda; project-bound records additionally require Marketing; collection without project filters excludes uncontracted project records",
+        "path": "src/app/api/agenda/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'agenda'",
+            "'create'"
+          ],
+          "line": 160
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/agentes",
+      "path": "src/app/api/atendimento/agentes/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/agentes/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 18
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/agentes/sync",
+      "path": "src/app/api/atendimento/agentes/sync/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "edit",
+        "path": "src/app/api/atendimento/agentes/sync/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 18
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/canais/connect",
+      "path": "src/app/api/atendimento/canais/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/canais/connect/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 22
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 29
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/canais/email/google/authorize",
+      "path": "src/app/api/atendimento/canais/email/google/authorize/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/canais/email/google/authorize/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 8
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/canais/email",
+      "path": "src/app/api/atendimento/canais/email/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/canais/email/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 29
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 34
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/atendimento/canais/email",
+      "path": "src/app/api/atendimento/canais/email/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "delete",
+        "path": "src/app/api/atendimento/canais/email/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'delete'"
+          ],
+          "line": 53
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'email_channel'"
+          ],
+          "line": 58
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/canais/providers",
+      "path": "src/app/api/atendimento/canais/providers/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/canais/providers/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 9
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/canais/whatsapp-cloud/connect",
+      "path": "src/app/api/atendimento/canais/whatsapp-cloud/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/canais/whatsapp-cloud/connect/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 19
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 23
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/canais/whatsapp-cloud/delete",
+      "path": "src/app/api/atendimento/canais/whatsapp-cloud/delete/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/canais/whatsapp-cloud/delete/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 64
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'whatsapp'"
+          ],
+          "line": 68
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/equipes/[teamId]/members",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 35
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/equipes/[teamId]/members",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "edit",
+        "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 84
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/atendimento/equipes/[teamId]/members",
+      "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "edit",
+        "path": "src/app/api/atendimento/equipes/[teamId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 157
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/atendimento/equipes/[teamId]",
+      "path": "src/app/api/atendimento/equipes/[teamId]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "delete",
+        "path": "src/app/api/atendimento/equipes/[teamId]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'delete' }"
+          ],
+          "line": 44
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/equipes",
+      "path": "src/app/api/atendimento/equipes/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/equipes/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 27
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/equipes",
+      "path": "src/app/api/atendimento/equipes/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "create",
+        "path": "src/app/api/atendimento/equipes/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'create' }"
+          ],
+          "line": 78
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/inboxes/[inboxId]/members",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 37
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/inboxes/[inboxId]/members",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "edit",
+        "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 86
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/atendimento/inboxes/[inboxId]/members",
+      "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "edit",
+        "path": "src/app/api/atendimento/inboxes/[inboxId]/members/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'edit' }"
+          ],
+          "line": 169
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/inboxes",
+      "path": "src/app/api/atendimento/inboxes/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/inboxes/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/accounts",
+      "path": "src/app/api/atendimento/instagram/accounts/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/instagram/accounts/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 38
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/callback",
+      "path": "src/app/api/atendimento/instagram/callback/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/atendimento/instagram/callback/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "getServerSession",
+          "arguments": [
+            "authOptions"
+          ],
+          "line": 140
+        },
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 147
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/connect",
+      "path": "src/app/api/atendimento/instagram/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/connect/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 21
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 27
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/create-inbox",
+      "path": "src/app/api/atendimento/instagram/create-inbox/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/create-inbox/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 120
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 130
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/debug-business-pages",
+      "path": "src/app/api/atendimento/instagram/debug-business-pages/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/instagram/debug-business-pages/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 40
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/debug-pages",
+      "path": "src/app/api/atendimento/instagram/debug-pages/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/instagram/debug-pages/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 37
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/debug-token",
+      "path": "src/app/api/atendimento/instagram/debug-token/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/instagram/debug-token/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 37
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "session!.user.organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/exchange-token",
+      "path": "src/app/api/atendimento/instagram/exchange-token/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/exchange-token/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "trustedOrganizationId",
+            "'instagram_channel'"
+          ],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram",
+      "path": "src/app/api/atendimento/instagram/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/instagram/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 157
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 165
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram",
+      "path": "src/app/api/atendimento/instagram/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 205
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 213
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/select-account",
+      "path": "src/app/api/atendimento/instagram/select-account/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/select-account/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 44
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 65
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/subscribe-page",
+      "path": "src/app/api/atendimento/instagram/subscribe-page/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/subscribe-page/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 27
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 35
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/sync-account",
+      "path": "src/app/api/atendimento/instagram/sync-account/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/instagram/sync-account/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 38
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'instagram_channel'"
+          ],
+          "line": 46
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/instagram/webhook",
+      "path": "src/app/api/atendimento/instagram/webhook/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/atendimento/instagram/webhook/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/instagram/webhook",
+      "path": "src/app/api/atendimento/instagram/webhook/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/atendimento/instagram/webhook/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/session-diagnostics",
+      "path": "src/app/api/atendimento/session-diagnostics/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/atendimento/session-diagnostics/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 76
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/widget/agents",
+      "path": "src/app/api/atendimento/widget/agents/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/widget/agents/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 195
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 205
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/widget/provision",
+      "path": "src/app/api/atendimento/widget/provision/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/widget/provision/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 506
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 516
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/atendimento/widget",
+      "path": "src/app/api/atendimento/widget/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/atendimento/widget/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 335
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 339
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/atendimento/widget",
+      "path": "src/app/api/atendimento/widget/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/atendimento/widget/route.ts"
+      },
+      "backendStatus": "observer-only-does-not-enforce",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 383
+        },
+        {
+          "call": "observeChannelEntitlement",
+          "arguments": [
+            "organizationId",
+            "'site_widget'"
+          ],
+          "line": 387
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/attachments/[id]",
+      "path": "src/app/api/attachments/[id]/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "delete",
+        "resource": "attachment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/attachments/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'delete'"
+          ],
+          "line": 38
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/attachments",
+      "path": "src/app/api/attachments/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "view",
+        "resource": "attachment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/attachments/route.ts"
+      },
+      "backendStatus": "confirmed-indirect-commercial-gap",
+      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'view'"
+          ],
+          "line": 40
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/attachments",
+      "path": "src/app/api/attachments/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "create",
+        "resource": "attachment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/attachments/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "module",
+            "'edit'"
+          ],
+          "line": 103
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/auth/[...nextauth]",
+      "path": "src/app/api/auth/[...nextauth]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/[...nextauth]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/auth/[...nextauth]",
+      "path": "src/app/api/auth/[...nextauth]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/[...nextauth]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/auth/delete-account",
+      "path": "src/app/api/auth/delete-account/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/delete-account/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 11
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/auth/export-data",
+      "path": "src/app/api/auth/export-data/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/export-data/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/auth/forgot-password",
+      "path": "src/app/api/auth/forgot-password/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/forgot-password/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/auth/me",
+      "path": "src/app/api/auth/me/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/me/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/auth/reset-password",
+      "path": "src/app/api/auth/reset-password/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/reset-password/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/auth/signup",
+      "path": "src/app/api/auth/signup/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "identity/session/recovery/LGPD: existing protocol and active membership rules; independent of module purchase",
+        "path": "src/app/api/auth/signup/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/comments/[id]",
+      "path": "src/app/api/comments/[id]/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "edit",
+        "resource": "comment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/comments/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "permissionModule",
+            "'edit'"
+          ],
+          "line": 37
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/comments/[id]",
+      "path": "src/app/api/comments/[id]/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "delete",
+        "resource": "comment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/comments/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 91
+        },
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "permissionModule",
+            "'delete'"
+          ],
+          "line": 115
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/comments",
+      "path": "src/app/api/comments/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "view",
+        "resource": "comment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/comments/route.ts"
+      },
+      "backendStatus": "confirmed-indirect-commercial-gap",
+      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "permissionModule",
+            "'view'"
+          ],
+          "line": 85
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/comments",
+      "path": "src/app/api/comments/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "create",
+        "resource": "comment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/comments/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "permissionModule",
+            "'edit'"
+          ],
+          "line": 174
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/coupons/validate",
+      "path": "src/app/api/coupons/validate/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/coupons/validate/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PATCH /api/goals/[id]/actions/[actionId]",
+      "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "edit",
+        "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 16
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/goals/[id]/actions/[actionId]",
+      "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "delete",
+        "path": "src/app/api/goals/[id]/actions/[actionId]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'delete'"
+          ],
+          "line": 76
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/goals/[id]/actions",
+      "path": "src/app/api/goals/[id]/actions/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "view",
+        "path": "src/app/api/goals/[id]/actions/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 16
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/goals/[id]/actions",
+      "path": "src/app/api/goals/[id]/actions/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "edit",
+        "path": "src/app/api/goals/[id]/actions/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 51
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/goals/[id]",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "view",
+        "path": "src/app/api/goals/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 23
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PATCH /api/goals/[id]",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "edit",
+        "path": "src/app/api/goals/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'edit'"
+          ],
+          "line": 53
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/goals/[id]",
+      "path": "src/app/api/goals/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "delete",
+        "path": "src/app/api/goals/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'delete'"
+          ],
+          "line": 135
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/goals",
+      "path": "src/app/api/goals/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "view",
+        "path": "src/app/api/goals/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'view'"
+          ],
+          "line": 74
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/goals",
+      "path": "src/app/api/goals/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "goals",
+        "action": "create",
+        "path": "src/app/api/goals/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'goals'",
+            "'create'"
+          ],
+          "line": 139
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/import",
+      "path": "src/app/api/import/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "create",
+        "path": "src/app/api/import/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'create' }"
+          ],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/chatwoot/connect",
+      "path": "src/app/api/integrations/chatwoot/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/chatwoot/connect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/chatwoot/credentials",
+      "path": "src/app/api/integrations/chatwoot/credentials/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "atendimento",
+        "action": "view",
+        "path": "src/app/api/integrations/chatwoot/credentials/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'atendimento', permission: 'atendimento', action: 'view' }"
+          ],
+          "line": 109
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/chatwoot/disconnect",
+      "path": "src/app/api/integrations/chatwoot/disconnect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/chatwoot/disconnect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/chatwoot/status",
+      "path": "src/app/api/integrations/chatwoot/status/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/chatwoot/status/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/chatwoot/team-members",
+      "path": "src/app/api/integrations/chatwoot/team-members/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/chatwoot/team-members/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 20
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/integrations/chatwoot/teams/[teamId]",
+      "path": "src/app/api/integrations/chatwoot/teams/[teamId]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/chatwoot/teams/[teamId]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/chatwoot/teams",
+      "path": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/chatwoot/teams/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 23
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/chatwoot/teams",
+      "path": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/chatwoot/teams/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 49
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/connect",
+      "path": "src/app/api/integrations/evolution/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/connect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 21
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/delete",
+      "path": "src/app/api/integrations/evolution/delete/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/delete/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/disconnect",
+      "path": "src/app/api/integrations/evolution/disconnect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/disconnect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/finalize",
+      "path": "src/app/api/integrations/evolution/finalize/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/finalize/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/evolution/instances",
+      "path": "src/app/api/integrations/evolution/instances/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/evolution/instances/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 14
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/evolution/qrcode",
+      "path": "src/app/api/integrations/evolution/qrcode/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/evolution/qrcode/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 30
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/reconnect",
+      "path": "src/app/api/integrations/evolution/reconnect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/reconnect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 17
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/evolution/setup-inbox",
+      "path": "src/app/api/integrations/evolution/setup-inbox/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/evolution/setup-inbox/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/evolution/status",
+      "path": "src/app/api/integrations/evolution/status/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/evolution/status/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 12
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/whatsapp-cloud/setup",
+      "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 29
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/integrations/whatsapp-cloud/setup",
+      "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp-cloud/setup/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 140
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/whatsapp-cloud/status",
+      "path": "src/app/api/integrations/whatsapp-cloud/status/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/whatsapp-cloud/status/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 31
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/whatsapp-cloud/validate",
+      "path": "src/app/api/integrations/whatsapp-cloud/validate/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp-cloud/validate/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 79
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/whatsapp/connect",
+      "path": "src/app/api/integrations/whatsapp/connect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp/connect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/whatsapp/create-inbox",
+      "path": "src/app/api/integrations/whatsapp/create-inbox/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp/create-inbox/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/integrations/whatsapp/disconnect",
+      "path": "src/app/api/integrations/whatsapp/disconnect/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "edit",
+        "path": "src/app/api/integrations/whatsapp/disconnect/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'edit'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/integrations/whatsapp/status",
+      "path": "src/app/api/integrations/whatsapp/status/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "atendimento",
+        "permission": "integrations",
+        "action": "view",
+        "path": "src/app/api/integrations/whatsapp/status/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'integrations'",
+            "'view'"
+          ],
+          "line": 7
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/kanban/stages/[key]",
+      "path": "src/app/api/kanban/stages/[key]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/kanban/stages/[key]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'edit' }"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/kanban/stages/[key]",
+      "path": "src/app/api/kanban/stages/[key]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "delete",
+        "path": "src/app/api/kanban/stages/[key]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'delete' }"
+          ],
+          "line": 57
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/kanban/stages",
+      "path": "src/app/api/kanban/stages/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "view",
+        "path": "src/app/api/kanban/stages/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'view' }"
+          ],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/kanban/stages",
+      "path": "src/app/api/kanban/stages/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "create",
+        "path": "src/app/api/kanban/stages/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'kanban', action: 'create' }"
+          ],
+          "line": 73
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/leads/[id]",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "view",
+        "path": "src/app/api/leads/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 40
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/leads/[id]",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/leads/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 87
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/leads/[id]",
+      "path": "src/app/api/leads/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "delete",
+        "path": "src/app/api/leads/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'delete' }"
+          ],
+          "line": 226
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PATCH /api/leads/[id]/stage",
+      "path": "src/app/api/leads/[id]/stage/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/leads/[id]/stage/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 14
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/leads/[id]/tags",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "view",
+        "path": "src/app/api/leads/[id]/tags/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/leads/[id]/tags",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/leads/[id]/tags/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 45
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/leads/[id]/tags",
+      "path": "src/app/api/leads/[id]/tags/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/leads/[id]/tags/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 121
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/leads/bulk-delete",
+      "path": "src/app/api/leads/bulk-delete/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "delete",
+        "path": "src/app/api/leads/bulk-delete/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'delete' }"
+          ],
+          "line": 19
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/leads/bulk-update",
+      "path": "src/app/api/leads/bulk-update/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/leads/bulk-update/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'edit' }"
+          ],
+          "line": 47
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/leads",
+      "path": "src/app/api/leads/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "view",
+        "path": "src/app/api/leads/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/leads",
+      "path": "src/app/api/leads/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "create",
+        "path": "src/app/api/leads/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'vendas', permission: 'leads', action: 'create' }"
+          ],
+          "line": 120
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/notifications/read",
+      "path": "src/app/api/notifications/read/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "own-recipient marking/count is shared; cannot grant access to referenced module or serialize its payload",
+        "path": "src/app/api/notifications/read/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 11
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/notifications",
+      "path": "src/app/api/notifications/route.ts",
+      "contract": {
+        "kind": "shared-resource",
+        "rule": "own-recipient notification lifecycle is shared; payload must inherit canonical resource module before serialization; pending audit/filter",
+        "path": "src/app/api/notifications/route.ts"
+      },
+      "backendStatus": "pending-resource-payload-filter",
+      "evidence": "source-review-only-no-runtime-exploit-claimed",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 9
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/organizations",
+      "path": "src/app/api/organizations/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/organizations/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'settings'",
+            "'view'"
+          ],
+          "line": 15
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PATCH /api/organizations",
+      "path": "src/app/api/organizations/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "existing operational branding permissions plus MDS-only commercial capability authority; cannot enable own white_label or modules",
+        "path": "src/app/api/organizations/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'settings'",
+            "'edit'"
+          ],
+          "line": 52
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/os/[id]",
+      "path": "src/app/api/os/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "os",
+        "action": "view",
+        "path": "src/app/api/os/[id]/route.ts"
+      },
+      "backendStatus": "prepared-additive-guard-observe-only",
+      "evidence": "isolated-GET-HTTP-plus-Task-OS-regression-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'view'"
+          ],
+          "line": 34
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/os/[id]",
+      "path": "src/app/api/os/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "os",
+        "action": "edit",
+        "path": "src/app/api/os/[id]/route.ts"
+      },
+      "backendStatus": "prepared-additive-guard-observe-only",
+      "evidence": "isolated-GET-HTTP-plus-Task-OS-regression-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'edit'"
+          ],
+          "line": 73
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/os/[id]",
+      "path": "src/app/api/os/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "os",
+        "action": "delete",
+        "path": "src/app/api/os/[id]/route.ts"
+      },
+      "backendStatus": "prepared-additive-guard-observe-only",
+      "evidence": "isolated-GET-HTTP-plus-Task-OS-regression-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'delete'"
+          ],
+          "line": 166
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/os",
+      "path": "src/app/api/os/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "os",
+        "action": "view",
+        "path": "src/app/api/os/route.ts"
+      },
+      "backendStatus": "prepared-additive-guard-observe-only",
+      "evidence": "isolated-GET-HTTP-plus-Task-OS-regression-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'view'"
+          ],
+          "line": 42
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/os",
+      "path": "src/app/api/os/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "os",
+        "action": "create",
+        "path": "src/app/api/os/route.ts"
+      },
+      "backendStatus": "prepared-additive-guard-observe-only",
+      "evidence": "isolated-GET-HTTP-plus-Task-OS-regression-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'os'",
+            "'create'"
+          ],
+          "line": 113
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/projects/[id]",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "projects",
+        "action": "view",
+        "path": "src/app/api/projects/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'view' }"
+          ],
+          "line": 15
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/projects/[id]",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "projects",
+        "action": "edit",
+        "path": "src/app/api/projects/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'edit' }"
+          ],
+          "line": 57
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/projects/[id]",
+      "path": "src/app/api/projects/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "projects",
+        "action": "delete",
+        "path": "src/app/api/projects/[id]/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'delete' }"
+          ],
+          "line": 121
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/projects",
+      "path": "src/app/api/projects/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "projects",
+        "action": "view",
+        "path": "src/app/api/projects/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'view' }"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/projects",
+      "path": "src/app/api/projects/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "marketing",
+        "permission": "projects",
+        "action": "create",
+        "path": "src/app/api/projects/route.ts"
+      },
+      "backendStatus": "existing-guard-observe-only",
+      "evidence": "existing-C0-C5-regression-and-guard-matrix-not-every-route-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkModulePermission",
+          "arguments": [
+            "{ module: 'marketing', permission: 'projects', action: 'create' }"
+          ],
+          "line": 82
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "OPTIONS /api/public/booking/[organizationSlug]/[userSlug]/availability",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "CORS preflight only; no data or module grant",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/public/booking/[organizationSlug]/[userSlug]/availability",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts",
+      "contract": {
+        "kind": "public",
+        "module": "vendas",
+        "slugParam": "organizationSlug",
+        "rule": "publicly enabled resource; resolve organization by slug, retain original origin/rate/owner rules",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/availability/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "OPTIONS /api/public/booking/[organizationSlug]/[userSlug]/lead",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "CORS preflight only; no data or module grant",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/public/booking/[organizationSlug]/[userSlug]/lead",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts",
+      "contract": {
+        "kind": "public",
+        "module": "vendas",
+        "slugParam": "organizationSlug",
+        "rule": "publicly enabled resource; resolve organization by slug, retain original origin/rate/owner rules",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/lead/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "OPTIONS /api/public/booking/[organizationSlug]/[userSlug]",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "CORS preflight only; no data or module grant",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/public/booking/[organizationSlug]/[userSlug]",
+      "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts",
+      "contract": {
+        "kind": "public",
+        "module": "vendas",
+        "slugParam": "organizationSlug",
+        "rule": "publicly enabled resource; resolve organization by slug, retain original origin/rate/owner rules",
+        "path": "src/app/api/public/booking/[organizationSlug]/[userSlug]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "OPTIONS /api/public/briefings/[organizationSlug]",
+      "path": "src/app/api/public/briefings/[organizationSlug]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "CORS preflight only; no data or module grant",
+        "path": "src/app/api/public/briefings/[organizationSlug]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/public/briefings/[organizationSlug]",
+      "path": "src/app/api/public/briefings/[organizationSlug]/route.ts",
+      "contract": {
+        "kind": "public",
+        "module": "vendas",
+        "slugParam": "organizationSlug",
+        "rule": "publicly enabled resource; resolve organization by slug, retain original origin/rate/owner rules",
+        "path": "src/app/api/public/briefings/[organizationSlug]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "OPTIONS /api/public/widget/[slug]",
+      "path": "src/app/api/public/widget/[slug]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "CORS preflight only; no data or module grant",
+        "path": "src/app/api/public/widget/[slug]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/public/widget/[slug]",
+      "path": "src/app/api/public/widget/[slug]/route.ts",
+      "contract": {
+        "kind": "public",
+        "module": "atendimento",
+        "slugParam": "slug",
+        "rule": "publicly enabled resource; resolve organization by slug, retain original origin/rate/owner rules",
+        "path": "src/app/api/public/widget/[slug]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/tags/[id]",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "view",
+        "path": "src/app/api/tags/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'view'"
+          ],
+          "line": 13
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/tags/[id]",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "edit",
+        "path": "src/app/api/tags/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'edit'"
+          ],
+          "line": 43
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/tags/[id]",
+      "path": "src/app/api/tags/[id]/route.ts",
+      "contract": {
+        "kind": "module",
+        "module": "vendas",
+        "permission": "leads",
+        "action": "delete",
+        "path": "src/app/api/tags/[id]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'leads'",
+            "'delete'"
+          ],
+          "line": 109
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/tasks/[id]",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "view",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/route.ts"
+      },
+      "backendStatus": "prepared-type-and-dependency-scope-observe-only",
+      "evidence": "isolated-GET-HTTP-and-seven-contracts-PostgreSQL-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 30
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/tasks/[id]",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "edit",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/route.ts"
+      },
+      "backendStatus": "prepared-type-and-dependency-scope-observe-only",
+      "evidence": "isolated-GET-HTTP-and-seven-contracts-PostgreSQL-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 145
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/tasks/[id]",
+      "path": "src/app/api/tasks/[id]/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "delete",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/route.ts"
+      },
+      "backendStatus": "prepared-type-and-dependency-scope-observe-only",
+      "evidence": "isolated-GET-HTTP-and-seven-contracts-PostgreSQL-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'delete'"
+          ],
+          "line": 310
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/tasks/[id]/subtasks/[subtaskId]",
+      "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "edit",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 28
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/tasks/[id]/subtasks/[subtaskId]",
+      "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "delete",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/subtasks/[subtaskId]/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'delete'"
+          ],
+          "line": 96
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/tasks/[id]/subtasks",
+      "path": "src/app/api/tasks/[id]/subtasks/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "view",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/subtasks/route.ts"
+      },
+      "backendStatus": "confirmed-indirect-commercial-gap",
+      "evidence": "HTTP-GET-200-with-uncontracted-marker-owner-admin-user",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 28
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/tasks/[id]/subtasks",
+      "path": "src/app/api/tasks/[id]/subtasks/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "edit",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/[id]/subtasks/route.ts"
+      },
+      "backendStatus": "pending-commercial-integration",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'edit'"
+          ],
+          "line": 67
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/tasks",
+      "path": "src/app/api/tasks/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "view",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/route.ts"
+      },
+      "backendStatus": "prepared-type-and-dependency-scope-observe-only",
+      "evidence": "isolated-GET-HTTP-and-seven-contracts-PostgreSQL-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'view'"
+          ],
+          "line": 25
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/tasks",
+      "path": "src/app/api/tasks/route.ts",
+      "contract": {
+        "kind": "task",
+        "permission": "tasks",
+        "action": "create",
+        "rule": "explicit follow_up collection/body or persisted task => vendas; ordinary task => marketing; Lead/Project dependencies require their own module",
+        "path": "src/app/api/tasks/route.ts"
+      },
+      "backendStatus": "prepared-type-and-dependency-scope-observe-only",
+      "evidence": "isolated-GET-HTTP-and-seven-contracts-PostgreSQL-not-every-write-commercial-runtime",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'tasks'",
+            "'create'"
+          ],
+          "line": 249
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/usage",
+      "path": "src/app/api/usage/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/usage/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": [],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "PUT /api/users/[id]/permissions",
+      "path": "src/app/api/users/[id]/permissions/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/users/[id]/permissions/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "DELETE /api/users/[id]",
+      "path": "src/app/api/users/[id]/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/users/[id]/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'users'",
+            "'delete'"
+          ],
+          "line": 25
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/users/invite",
+      "path": "src/app/api/users/invite/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/users/invite/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/users",
+      "path": "src/app/api/users/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "shared-account-control: active membership and existing operational authority; no module grant",
+        "path": "src/app/api/users/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [
+        {
+          "call": "checkPermission",
+          "arguments": [
+            "'users'",
+            "'view'"
+          ],
+          "line": 10
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/webhooks/asaas",
+      "path": "src/app/api/webhooks/asaas/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/webhooks/asaas/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/webhooks/chatwoot",
+      "path": "src/app/api/webhooks/chatwoot/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/webhooks/chatwoot/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/webhooks/whatsapp-cloud",
+      "path": "src/app/api/webhooks/whatsapp-cloud/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/webhooks/whatsapp-cloud/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "POST /api/webhooks/whatsapp-cloud",
+      "path": "src/app/api/webhooks/whatsapp-cloud/route.ts",
+      "contract": {
+        "kind": "exception",
+        "rule": "protocol continuity: signature/state/nonce and persisted tenant binding; no human API grant, no blind remote reprovisioning",
+        "path": "src/app/api/webhooks/whatsapp-cloud/route.ts"
+      },
+      "backendStatus": "shared-or-protocol-specific-review-required",
+      "evidence": "source-only-not-runtime-certified",
+      "existingGuardSignals": [],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    }
+  ],
+  "pages": [
+    {
+      "url": "/agenda",
+      "path": "src/app/(app)/agenda/page.tsx",
+      "module": "vendas",
+      "rule": "module plus existing operational permission; agenda project references additionally Marketing",
+      "status": "pending-direct-page-guard"
+    },
+    {
+      "url": "/atendimento",
+      "path": "src/app/(app)/atendimento/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/dashboard",
+      "path": "src/app/(app)/dashboard/page.tsx",
+      "module": "shared",
+      "rule": "shared shell; each indicator requires both its contracted module and existing permission; C0-C2 retained",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/follow-ups",
+      "path": "src/app/(app)/follow-ups/page.tsx",
+      "module": "vendas",
+      "rule": "module plus existing operational permission; agenda project references additionally Marketing",
+      "status": "pending-direct-page-guard"
+    },
+    {
+      "url": "/goals",
+      "path": "src/app/(app)/goals/page.tsx",
+      "module": "vendas",
+      "rule": "module plus existing operational permission; agenda project references additionally Marketing",
+      "status": "pending-direct-page-guard"
+    },
+    {
+      "url": "/help/[slug]",
+      "path": "src/app/(app)/help/[slug]/page.tsx",
+      "module": "shared",
+      "rule": "authenticated active identity; existing operational permissions; no module grant",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/help",
+      "path": "src/app/(app)/help/page.tsx",
+      "module": "shared",
+      "rule": "authenticated active identity; existing operational permissions; no module grant",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/kanban",
+      "path": "src/app/(app)/kanban/page.tsx",
+      "module": "vendas",
+      "rule": "module plus existing operational permission; agenda project references additionally Marketing",
+      "status": "existing-guard-observe-only"
+    },
+    {
+      "url": "/leads",
+      "path": "src/app/(app)/leads/page.tsx",
+      "module": "vendas",
+      "rule": "module plus existing operational permission; agenda project references additionally Marketing",
+      "status": "existing-guard-observe-only"
+    },
+    {
+      "url": "/os",
+      "path": "src/app/(app)/os/page.tsx",
+      "module": "marketing",
+      "rule": "Marketing plus existing permission; reports additionally Vendas/leads.view",
+      "status": "prepared-layout-observe-only"
+    },
+    {
+      "url": "/projects",
+      "path": "src/app/(app)/projects/page.tsx",
+      "module": "marketing",
+      "rule": "Marketing plus existing permission; reports additionally Vendas/leads.view",
+      "status": "existing-guard-observe-only"
+    },
+    {
+      "url": "/reports",
+      "path": "src/app/(app)/reports/page.tsx",
+      "module": "marketing",
+      "rule": "Marketing plus existing permission; reports additionally Vendas/leads.view",
+      "status": "prepared-layout-observe-only"
+    },
+    {
+      "url": "/settings/account",
+      "path": "src/app/(app)/settings/account/page.tsx",
+      "module": "shared",
+      "rule": "authenticated active identity; existing operational permissions; no module grant",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/settings/atendimento/automacoes",
+      "path": "src/app/(app)/settings/atendimento/automacoes/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/canais/cloud-api",
+      "path": "src/app/(app)/settings/atendimento/canais/cloud-api/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/canais",
+      "path": "src/app/(app)/settings/atendimento/canais/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/canais/provider-lab",
+      "path": "src/app/(app)/settings/atendimento/canais/provider-lab/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/equipes",
+      "path": "src/app/(app)/settings/atendimento/equipes/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/instagram",
+      "path": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento",
+      "path": "src/app/(app)/settings/atendimento/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/relatorios",
+      "path": "src/app/(app)/settings/atendimento/relatorios/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/respostas",
+      "path": "src/app/(app)/settings/atendimento/respostas/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/atendimento/widget",
+      "path": "src/app/(app)/settings/atendimento/widget/page.tsx",
+      "module": "atendimento",
+      "rule": "Atendimento plus existing attendance/integration permission; provider human APIs still need commercial integration",
+      "status": "existing-layout-observe-only"
+    },
+    {
+      "url": "/settings/billing",
+      "path": "src/app/(app)/settings/billing/page.tsx",
+      "module": "shared",
+      "rule": "authenticated active identity; existing operational permissions; no module grant",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/settings/branding",
+      "path": "src/app/(app)/settings/branding/page.tsx",
+      "module": "shared",
+      "rule": "shared settings; MDS fallback without white_label; client editing does not enable commercial capability",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/settings/integrations",
+      "path": "src/app/(app)/settings/integrations/page.tsx",
+      "module": "atendimento",
+      "rule": "provider configuration belongs to Atendimento; settings permission remains operational prerequisite",
+      "status": "pending-layout-and-provider-guard"
+    },
+    {
+      "url": "/settings/members",
+      "path": "src/app/(app)/settings/members/page.tsx",
+      "module": "shared",
+      "rule": "authenticated active identity; existing operational permissions; no module grant",
+      "status": "shared-existing-controls"
+    },
+    {
+      "url": "/tasks",
+      "path": "src/app/(app)/tasks/page.tsx",
+      "module": "marketing",
+      "rule": "Marketing plus existing permission; reports additionally Vendas/leads.view",
+      "status": "prepared-layout-observe-only"
+    }
+  ]
+}

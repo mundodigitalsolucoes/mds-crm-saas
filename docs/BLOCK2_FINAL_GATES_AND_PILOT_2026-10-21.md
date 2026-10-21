@@ -92,3 +92,7 @@ O runner local inicia `next start` diretamente em loopback com segredos sintéti
 5. Registrar aceite G1–G6 e autorização própria para piloto/publicação. Este trabalho não faz merge, push, deploy, alteração de PR/Coolify/produção ou ativação comercial.
 
 Commit local desta rodada identificável por `git log -1 --format=%H -- src/app/api/comments/route.ts`; os fingerprints registram a árvore testada sobre17b11d9 e evitam atribuir testes ao SHA anterior. A correção de comentários não altera schema nem requer migration.
+
+## Atualização posterior C5-03/C5-04
+
+A autorização C5-03/C5-04 foi executada parcialmente, com resultado no [relatório específico](BLOCK2_C5_03_04_CLOSURE_2026-10-21.md). Sobre `a27316c`, o commit `061b7fe` corrige permissões parciais válidas e prepara limites comerciais pontuais. Os21 negativos diretos agora passam em cópia isolada; nove acessos indiretos continuam reprovados. Isso substitui o diagnóstico anterior de21 negativos sem apagar a evidência histórica. Na candidata real a política segue observe_only, manifesto vazio; piloto/G5/G6 continuam bloqueados. Regressões atuais147 Node/PG +385 TS +115 HTTP comentários + seis probes C0–C5 PASS. Demais gates não recebem aprovação automática. O plano amplo restante foi retido após rejeição automática e está discriminado para revisão/anuência granular.
