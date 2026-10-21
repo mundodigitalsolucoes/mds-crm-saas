@@ -223,3 +223,75 @@ Os quatro workflows existentes antes desta rodada só disparavam em push da bran
 | G6 | Revisão dos nove, build/typecheck/testes e pacote de revisão local concluídos | **Bloqueado** por histórico sensível/artefatos antigos, lint global,46 pacotes sinalizados, ausência de CI deste SHA e reviewer independente |
 
 Não houve merge, push, deploy, publicação ou migrations em produção; nem alteração de serviços/credenciais reais. Para prosseguir no GitHub, o responsável deve decidir tratamento de `.env.backup` histórico e confirmar rotação/revogação quando aplicável, além de indicar revisor distinto. Sem essa decisão, não se afirma condição satisfatória para o envio condicionado. A verificação remota deverá ser repetida imediatamente antes do primeiro push e qualquer divergência interromperá o envio.
+
+---
+
+## Adendo — retomada autorizada e candidata saneada, 20/10/2026 (America/Sao_Paulo)
+
+**Decisão: candidata preparada para revisão local, Bloco 02 ainda NÃO HOMOLOGADO. Nenhum gate formalmente aprovado.** O responsável confirmou que `.env.backup` foi criado intencionalmente para testes e que os valores atuais conferidos no Coolify são diferentes ou ausentes. Essa informação permite continuar a homologação sem rotação indiscriminada de produção. Não é prova técnica de que valores antigos estejam revogados em todos os serviços. Nenhuma alteração de credenciais/Coolify/produção foi feita.
+
+### Preservação, credenciais e saneamento
+
+`audit/block2-closure` permanece exatamente em **59da966edfcc627c074b8c47a8bb50c314ad90a3**, conservando todos os commits originais. A nova ref local **audit/block2-sanitized** contém a linhagem filtrada. Base local saneada: **8aa1db0b893b042967c3905a3582916b713cf9ab**, ref `audit/block2-sanitized-base`. Código/testes verificados: **cf45f38edbef8c475c90d801b0d75423b1e1499d**; o commit deste adendo acrescenta apenas documentação/evidências. HEAD final é identificado por `git log -1` e execution-record.json, sem referência circular.
+
+Git-filter-repo2.47.0 foi executado somente sobre a ref candidata, sem reescrever branches remotas ou a auditoria original. Foram eliminados dos ancestrais da candidata `.env.backup`, `build.log` e o backup antigo de leads. Conferidas **783 correspondências de árvore**: no passo de filtragem, a única diferença era esses três caminhos. As dez correções/documentações originais possuem equivalentes com mesmo conteúdo funcional. [Mapa de linhagem](evidence/BLOCK2_SANITIZED_LINEAGE_2026-10-20.json). SHAs ancestrais mudaram; dois baselines nos testes foram remapeados para commits de conteúdo equivalente e todas as asserções foram mantidas. Não houve alteração de core, contratos comerciais, lock, schema ou migrations nesta retomada. A correção nova do Widget abaixo é a única alteração funcional adicional.
+
+A varredura da linhagem candidata não encontrou os quatro valores expostos nem padrões de chave privada/GitHub/Google/AWS. `.env.example` permanece como template. Não se certificou ausência universal de segredo de formato desconhecido ou PII. As refs antigas continuam intencionalmente no repositório local e o histórico público permanece inalterado: **não enviar --all, --mirror, tags ou a branch antiga**.
+
+Comparação por HMAC efêmero, com chave e impressões digitais somente em memória, inclusive busca de coincidências em outros nomes de variáveis locais: DATABASE_URL/NEXTAUTH_SECRET/TOKENS_SECRET diferentes; chave AES efetiva também diferente; META_APP_SECRET ausente; nenhuma coincidência nas configurações locais disponíveis. O nome operacional Instagram no código é META_INSTAGRAM_APP_SECRET, que também deve ser considerado na verificação manual de ambientes. Coolify/providers não estão vinculados às ferramentas desta sessão; nenhuma sondagem com as credenciais antigas foi feita. **Validade em serviços externos não acessíveis: indeterminada.** Não foi declarada atividade nem revogação global sem prova. Declaração do responsável e comparações são registradas separadamente no [resumo sanitizado](evidence/BLOCK2_SANITIZED_VALIDATION_2026-10-20.json).
+
+### Corrida do Widget reproduzida e corrigida
+
+A primeira reexecução completa registrou **100 PASS/1 FAIL**. O perdedor da reserva durável podia persistir erro no JSON ainda original antes do CAS do criador, impedindo a criação (zero POST em vez de um). Não foi observada duplicação nesse caso, mas era falha de disponibilidade do mesmo fluxo do Bloco 02. O novo teste determinístico pausa o criador antes do CAS, executa o perdedor e comprova a invalidação antes da correção.
+
+Correção mínima em ae77a5d: resposta WIDGET_INBOX_RECONCILIATION_REQUIRED sem posse da reserva não persiste erro nos settings compartilhados. Reserva durável, autorização, identidade remota e bloqueio de resultado incerto permanecem. O teste exige HTTP409 do perdedor, snapshot intacto, HTTP200 do criador e exatamente um POST; **17 testes funcionais Widget passaram**. Nenhuma asserção/TODO foi removida.
+
+Uma segunda execução teve **101 PASS/1 FAIL** somente por regex estática que exigia indentação de seis espaços em expectedSettings. cf45f38 passou a conferir o argumento dentro da chamada persistRuntimeError independentemente da indentação; preserva a condição CAS e não relaxa controle de acesso. O resultado final é **102 PASS**, zero falha/skip/TODO. Logs das duas falhas foram mantidos em resumption/node-tests.tap, widget-race-before.log e node-tests-source-assert-before.tap, separados do resultado final.
+
+### Verificações finais nesta candidata
+
+Artefatos: `/workspace/mds-crm-onboarding-evidence/resumption/`. Código/testes correspondem a cf45f38; documentação/evidências posteriores não alteram runtime. Segredos e hashes de segredos não foram colocados em Git, documentos ou logs. Somente PostgreSQL descartável loopback mds_crm_dev e providers simulados nos testes de handlers. Smoke usa sessões HTTP reais com dados fictícios.
+
+| Comando/verificação | Resultado real e evidência |
+| --- | --- |
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs` | **102 PASS**, zero fail/skip/TODO; node-tests-final.tap |
+| `npx tsx --test tests/*.test.ts` | **171 PASS**, zero fail/skip/TODO; tsx-tests-final.log |
+| Suite funcional Widget isolada | **17 PASS**; widget-race-after.log; novo caso determinístico falhou antes |
+| `npm run build` após correção funcional | PASS Next16.3.8; build-final.log |
+| `npx tsc --noEmit` após build | PASS; typecheck-final.log; next-env.d.ts gerado restaurado |
+| Prisma validate e migrate diff local `--exit-code` | PASS, diff vazio; prisma-validate.log/prisma-diff.log; nenhuma migration aplicada nesta rodada |
+| `npx prisma migrate status` | Retorno1 esperado pelas duas migrations MDS históricas de dados ainda pendentes; migrate-status.log |
+| `npx next start`, sem npm start/prestart, e smoke autenticado | **22 PASS**, login sem500, IDOR/tenant/assignee/permissão, rate limit e um201/sete409 na agenda concorrente; http-smoke-results.json |
+| ESLint dos quatro arquivos de código/teste alterados no saneamento/correção | PASS; scoped-lint-final.log |
+| `npm run lint -- --output-file .../lint.json --format json` | Retorno1, **182 erros/77 avisos**, nenhum diagnóstico novo por âncora; lint.json |
+| `npm audit --json` | Retorno1, **46 pacotes:0 críticos/40 altos/3 moderados/3 baixos**; npm-audit.json |
+| Auditoria repetida do lock original, fora do checkout, `--package-lock-only --ignore-scripts` | Retorno1,49 pacotes/2 críticos; npm-audit-base-current.json; nenhum pacote sinalizado novo na candidata |
+| Revisão G2 por método repetida |116 arquivos,177 métodos,50 páginas/layouts,zero não classificados; g2-review.json; revisão estática não prova todos os ramos |
+| Quatro workflows YAML | PASS, permissões read-only e gatilhos PR preservados; nenhum job remoto executado |
+| Bundle de candidata/base importado em bare separado, sem objetos compartilhados | PASS: baselines saneados disponíveis, objeto da auditoria antiga ausente, caminhos removidos e valores expostos não alcançáveis; standalone-bundle-check.json |
+| Limpeza final PostgreSQL | Zero organizations/OAuth states/receipts/Widget operations de teste; database-cleanup.log |
+
+O registro individual de **182 erros/77 avisos** e **46 pacotes** foi atualizado para a candidata saneada: [riscos](BLOCK2_INDEPENDENT_RISK_REGISTER_2026-10-20.md), [dados por diagnóstico/pacote](evidence/BLOCK2_INDEPENDENT_RISKS_2026-10-20.json). Continuam44 diagnósticos em fronteiras sensíveis, não44 vulnerabilidades comprovadas. Nenhuma regra desativada nem atualização em massa. O17 anterior permanece apenas snapshot histórico. Aviso images.domains legado permanece risco/configuração a revisar; nenhum exploit foi executado.
+
+### G1–G6 e condições de aceite restantes
+
+| Gate | Verificação concluída no escopo autorizado | Pendência para aceite formal |
+| --- | --- | --- |
+| G1 | Login HTTP real e suites de admin, sessões, reset/tokens/convites/concorrência positivos | Browser/e-mail reais e revisão independente; logout não certificado como revogação de JWT roubado |
+| G2 | Revisão por método repetida; guards/papel atual e54 combinações negativas/18 legítimas de recursos pessoais positivos | Revisão independente de ramos/recursos indiretos e exceções públicas; classificação não é autorização de produto |
+| G3 | Multi-tenant/providers simulados positivos;17 testes funcionais Widget, inclusive novo interleaving determinístico | Providers reais isolados, referências legadas e procedimento de resultado sem ID ainda sem homologação |
+| G4 | Nove testes reais PostgreSQL de nonce, callback, assinatura, replay e isolamento incluídos na suite positiva | Meta real, retenção/limpeza e operação de pending/remote_unknown ainda sem aceite |
+| G5 | Suites de entitlements/boundary positivas; observe_only e APPROVED_ENFORCEMENTS vazio confirmados | Aceite independente da matriz/legado; nenhum enforcement autorizado ou ativado |
+| G6 | Candidata saneada portável, testes/typecheck/build/smoke e documentação concluídos localmente | Lint/dependências, reviewer independente, CI do SHA enviado e decisão de destino/base/promover continuam pendentes |
+
+Nenhum gate foi marcado aprovado. As pendências externas não foram substituídas por testes de código-fonte ou pela confirmação do arquivo de testes. Não há acesso autorizado a providers reais isolados nesta sessão para certificar esses fluxos; nenhuma operação de produção foi tentada.
+
+### Apresentação para autorização de envio — nada enviado
+
+Candidata **audit/block2-sanitized**, base local **audit/block2-sanitized-base**. Bundle local inclui exclusivamente essas duas refs, não a auditoria antiga. O SHA final está no commit deste relatório e execution-record.json. A base remota feature/modular-plans-entitlements foi novamente consultada e continua em cb1884e; nenhuma branch audit remota foi encontrada. Nenhuma divergência remota foi incorporada ou resolvida automaticamente.
+
+**Uma PR direta contra a base pública não saneada não é o plano proposto:** a reescrita muda o merge-base, mistura linhagens e não remove a exposição nas outras refs públicas. Para envio futuro, autorizar um destino isolado com ambas as refs saneadas ou um plano separado/coordenado de saneamento da base remota. Os quatro workflows ainda filtram PRs para feature/modular-plans-entitlements; se for escolhido outro nome de base, ajustar e validar o filtro antes do envio. Não criar repositório, alterar base remota ou enviar refs sem a nova autorização. Mesmo eventual envio da candidata não limpa sozinho histórico público/caches/PRs antigos.
+
+Parecer solicitado a uma pessoa distinta deve revisar os artefatos desta candidata, casos críticos de reserva/timeout/replay/tenant, origem e alcance de lint/dependências, exceções públicas e rollback. A conta autenticada é o único colaborador conhecido; nenhum reviewer independente foi inventado, nenhum pedido remoto enviado e nenhuma autoaprovação emitida. CI da base cb1884e anteriormente verde não vale como CI desta candidata; **CI remota do SHA saneado: NÃO EXECUTADA**.
+
+Rollback proposto para revisão, não executado: suspender o fluxo afetado antes de recuar, preservar identidades/recibos duráveis e nunca apagar pending/remote_unknown para liberar POST. Reverter a correção do perdedor da reserva reabre a falha de disponibilidade; reverter guard/dependência reabre riscos corrigidos. Tabelas aditivas devem permanecer durante eventual recuo; qualquer remoção depende de plano próprio/backup. Nenhum merge, push, deploy, migration em produção, alteração no Coolify ou enforcement comercial foi realizado.

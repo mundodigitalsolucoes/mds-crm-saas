@@ -1,6 +1,6 @@
 # Bloco 02 — classificação de riscos para revisão independente
 
-Candidato funcional: `3f4ef1bfeb60a104e4e17e116462d24f301a3050`; base remota verificada: `cb1884e413203baa123ca94dfb0a4c4635b6502a`. Esta classificação não aprova gates. Dados detalhados e referências GHSA: [registro por diagnóstico e pacote](evidence/BLOCK2_INDEPENDENT_RISKS_2026-10-20.json).
+Candidato funcional: `cf45f38edbef8c475c90d801b0d75423b1e1499d`; base saneada local: `8aa1db0b893b042967c3905a3582916b713cf9ab`. Esta classificação não aprova gates. Dados detalhados e referências GHSA: [registro por diagnóstico e pacote](evidence/BLOCK2_INDEPENDENT_RISKS_2026-10-20.json).
 
 ## Lint
 
@@ -50,9 +50,11 @@ Todas as versões abaixo já estavam no lock da base e permanecem iguais. A clas
 | Snapshot | Críticos | Altos | Moderados | Baixos | Total |
 | --- | --- | --- | --- | --- | --- |
 | Base cb1884e, execução atual | 2 | 37 | 8 | 2 | 49 |
-| Candidata 3f4ef1b, execução atual | 0 | 40 | 3 | 3 | 46 |
+| Candidata saneada, execução atual | 0 | 40 | 3 | 3 | 46 |
 | Candidata, registro anterior | 0 | 14 | 2 | 1 | 17 |
 
 A auditoria do lock da base foi executada em diretório temporário fora do checkout, com npm audit --package-lock-only --ignore-scripts, sem instalar pacotes nem executar scripts. O lock candidato não mudou nesta rodada. A contagem npm inclui propagação de metavulnerabilidades; o agregado retornado mudou para o mesmo lock entre os registros. Não se inferiu que todos os avisos foram publicados agora ou que surgiram por código novo. Na comparação pareada atual, **nenhum pacote sinalizado novo e nenhuma URL de advisory direto nova**; nanoid, sharp e uuid saíram da lista. Next, NextAuth e PostCSS foram atualizados no incremento anterior e mantêm avisos herdados já presentes na base (source-map-js e baseline-browser-mapping). Os demais nós sinalizados têm versões idênticas. Isso sustenta ausência de regressão conhecida de dependência nesta comparação, não ausência de vulnerabilidade alcançável.
 
 O registro JSON lista os 46 pacotes atuais, suas versões/base, cadeia via, GHSA/range e sugestão npm. FixAvailable é sugestão variável do registry, não aprovação de compatibilidade; não executar audit fix nem downgrade de Next/ESLint automaticamente. Risco alto no runtime merece revisão específica; cadeia dev também importa para CI e processamento de arquivos hostis. Lint global e dependências permanecem abertos para decisão do responsável, sem exceção formal criada.
+
+Adendo da candidata saneada: contagens182/77 e46 pacotes repetidas nesta branch; mapa de baseline mantém o mesmo conteúdo. A correção mínima de concorrência Widget não introduziu diagnóstico de lint nem dependência. A auditoria pareada da base foi repetida no lock original fora do checkout, novamente49/2 críticos. Base saneada ainda não existe no GitHub; não presumir autorização de envio.

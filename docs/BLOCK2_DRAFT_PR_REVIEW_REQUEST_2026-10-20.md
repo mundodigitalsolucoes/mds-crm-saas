@@ -1,4 +1,6 @@
-# PR Draft preparada — revisão independente Bloco 02
+# PR Draft histórica — revisão independente Bloco 02
+
+**SUPERADA na retomada:** a candidata atual é audit/block2-sanitized, comparada a audit/block2-sanitized-base. Não enviar a branch antiga. Consulte BLOCK2_SANITIZED_CANDIDATE_2026-10-20.md e o último adendo do relatório. A declaração do responsável sobre o backup de testes substitui a necessidade presumida de rotação indiscriminada, sem certificar validade externa.
 
 **Estado: somente texto local; PR não criada, nenhum push realizado.** O requisito de ausência de segredos/arquivos locais no histórico falhou por `.env.backup` preexistente. A preparação técnica não autoriza ignorar esse bloqueio.
 

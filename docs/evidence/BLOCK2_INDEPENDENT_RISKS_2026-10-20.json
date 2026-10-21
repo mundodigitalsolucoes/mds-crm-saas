@@ -1,7 +1,7 @@
 {
-  "candidateHead": "3f4ef1bfeb60a104e4e17e116462d24f301a3050",
-  "base": "cb1884e413203baa123ca94dfb0a4c4635b6502a",
-  "scope": "nine existing implementation commits; documentation and PR CI trigger preparation recorded separately",
+  "candidateHead": "cf45f38edbef8c475c90d801b0d75423b1e1499d",
+  "base": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+  "scope": "sanitized candidate; original audit preserved separately; minimal Widget reservation loser correction and equivalent mapped baseline assertions",
   "summary": {
     "lint": {
       "errors": 182,
@@ -2821,7 +2821,7 @@
         },
         {
           "package": "axios",
-          "title": "Axios: ReDoS (O(N²)) in shouldBypassProxy host normalization, reachable via untrusted redirect Location",
+          "title": "Axios: ReDoS (O(N\u00b2)) in shouldBypassProxy host normalization, reachable via untrusted redirect Location",
           "severity": "high",
           "range": ">=1.15.0 <1.20.0",
           "url": "https://github.com/advisories/GHSA-mghh-pgcx-3jjj"
@@ -3279,7 +3279,7 @@
           "package": "minimatch"
         }
       ],
-      "suggestedFix": true,
+      "suggestedFix": false,
       "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
     },
     {
@@ -3450,7 +3450,7 @@
         },
         {
           "package": "js-yaml",
-          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported",
+          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) \u2014 CVE-2026-59870 fix not backported",
           "severity": "high",
           "range": ">=4.0.0 <4.3.1",
           "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj"
