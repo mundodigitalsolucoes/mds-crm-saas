@@ -1,5 +1,8 @@
 # B — Auditoria diferencial local: módulos e White-Label
 
+**Preparação posterior para aprovação:** o [plano C0–C6](COMMERCIAL_MINIMUM_EXECUTION_PLAN_2026-10-20.md) detalha os arquivos/testes/commits. A [revisão crítica](BLOCK2_EVIDENCE_CRITICAL_REVIEW_2026-10-20.md) comprovou falha operacional no Dashboard e qualifica o alcance do SSR White-Label. C0 de autenticação/permissão precede qualquer adaptação comercial; observe_only permanece e nenhuma implementação foi iniciada.
+
+
 **Data:**20/10/2026 (America/Sao_Paulo). **Fonte auditada:**`audit/block2-sanitized`, HEAD18507ac7f0f98449e8d1768d5c631c58e8f25cb3. **Resultado: adaptar o CRM existente; nenhuma implementação comercial iniciada.**
 
 ## Base, método e limites

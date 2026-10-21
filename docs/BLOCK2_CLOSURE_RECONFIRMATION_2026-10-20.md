@@ -1,5 +1,8 @@
 # A — Bloco 02: reconfirmação local para encerramento
 
+**Atualização da revisão crítica:** G1/G2 têm agora bloqueador funcional P1 no Dashboard (identidade removida e Leads sem permissão ainda expostos). Os PASS abaixo continuam evidência dos casos executados, sem cobrir essa nova reprodução. Consulte [revisão crítica](BLOCK2_EVIDENCE_CRITICAL_REVIEW_2026-10-20.md) e [C0 do plano para aprovação](COMMERCIAL_MINIMUM_EXECUTION_PLAN_2026-10-20.md). Nenhuma correção de aplicação foi executada.
+
+
 **Data:**20/10/2026, America/Sao_Paulo. **Estado: NÃO HOMOLOGADO; nenhum gate aprovado formalmente.**
 
 Candidato efetivamente testado: `audit/block2-sanitized`, HEAD **18507ac7f0f98449e8d1768d5c631c58e8f25cb3**, árvore inicialmente limpa. O commit que inclui este relatório altera somente documentos/evidências. Nenhuma reconstrução, alteração comercial ou correção de aplicação foi necessária nesta execução.
