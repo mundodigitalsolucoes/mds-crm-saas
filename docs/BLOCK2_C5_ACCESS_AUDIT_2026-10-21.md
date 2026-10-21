@@ -1,6 +1,8 @@
 # C5 — Auditoria de URLs/APIs por contrato — 2026-10-21
 
-Referência inicial confirmada: `audit/block2-sanitized`, HEAD `5f0f8a9905be91aa1e68ccd00e9602c346e6a5ee`, árvore limpa. **Resultado: rollout bloqueado; aceite de segurança reprovado.** C5 executa auditoria, testes e documentação; não altera handlers, motor comercial, providers ou o core. `observe_only` permanece efetivo e `APPROVED_ENFORCEMENTS` permanece vazio. C6 não iniciado.
+Referência inicial confirmada: `audit/block2-sanitized`, HEAD `5f0f8a9905be91aa1e68ccd00e9602c346e6a5ee`, árvore limpa. **Resultado original: rollout bloqueado; aceite de segurança reprovado.** C5 executa auditoria, testes e documentação; não altera handlers, motor comercial, providers ou o core. `observe_only` permanece efetivo e `APPROVED_ENFORCEMENTS` permanece vazio. C6 não iniciado.
+
+> **Atualização C5 SECURITY:** os casos C5-01 (P0 nesta autorização) e C5-02 (P1) foram corrigidos no commit `a9aa6ed`; probes originais: **42/42 expectativas seguras, zero notificações estrangeiras e zero exposição de Leads nos 84 cenários**. [Correção, matriz atualizada, comandos e riscos](BLOCK2_C5_SECURITY_FIX_2026-10-21.md). [Evidência comparativa](evidence/BLOCK2_C5_SECURITY_RESULTS_2026-10-21.json). A seção abaixo preserva a auditoria anterior à correção. C5-03/C5-04 e rollout continuam pendentes; G1–G6 não aprovados. Observe_only e manifesto vazio intactos; C6 não iniciado.
 
 ## Como interpretar a matriz
 

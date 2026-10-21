@@ -549,3 +549,27 @@ As evidências distinguem fonte estática, HTTP real, isolamento de teste e falh
 Antes de autorizar rollout, corrigir C5-01/C5-02 e fazer os probes retornarem zero; aprovar os contratos compartilhados e completar sua cobertura sem trocar permissões operacionais por permissões mais fracas; tratar compatibilidade dos registros reais e definir tenant piloto/monitoramento/rollback. Os arquivos mínimos de correção e os critérios estão na matriz C5. Desativar/ativar o motor comercial não resolve os dois P1 operacionais.
 
 **G1–G6 não aprovados automaticamente.** G2/G3 têm falhas confirmadas; G5/rollout permanecem bloqueados por cobertura/compatibilidade; G6 requer revisão independente, CI e homologação restante. As regressões G1/G4 e C0–C4 passando não substituem o aceite C5 reprovado. C6 não iniciado. Sem push, merge, deploy, migrations ou alterações em produção/Coolify. O commit da auditoria é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C5_RESULTS_2026-10-21.json`.
+
+
+## Atualização — C5 SECURITY: bloqueadores P0/P1 — 2026-10-21
+
+Entrada confirmada `audit/block2-sanitized`, **5ec8ed1**, árvore limpa. Correção funcional **a9aa6ed6316b41bcfd7cedc1d52c3d4420187aa6**. [Relatório específico com arquivos, causas, matriz, comandos e limitações](BLOCK2_C5_SECURITY_FIX_2026-10-21.md); [evidências comparativas verificáveis](evidence/BLOCK2_C5_SECURITY_RESULTS_2026-10-21.json).
+
+C5-01 foi tratado como **P0**, conforme a autorização atual; C5-02 como **P1**. A raiz estava restrita ao tenant, mas referências e joins não; permissões de Tarefas permitiam serializar Lead sem leads.view. Quatro handlers agora validam referências efetivas, escopam relações e contagens antes da resposta e escrevem tarefa/OS, atividades e notificações atomicamente. Locks PostgreSQL protegem raiz/referências durante a escrita; destinatários precisam ser ativos e autorizados no mesmo tenant. Tarefas com Lead não acessível não aparecem na resposta; PUT não permite desvincular o Lead para revelar os dados. Nenhuma mudança de motor comercial/autenticação/providers/schema/dependências.
+
+| Evidência | Antes | Depois no código executado |
+|---|---|---|
+| Probes originais cross-tenant | 42 expectativas reprovadas, nove notificações ao outro tenant | **42/42 PASS**; 30 escritas estrangeiras **400**, seis listas **200 sem relações inválidas**, seis detalhes **404**; **zero notificações estrangeiras** |
+| Matriz HTTP comercial original | 28 exposições de Lead via Tasks com Leads API 403 | **84/84 cenários PASS**, 924 páginas/840 leituras API; **zero exposições**, API Leads continua 403 para os restritos |
+| Regressão HTTP nova Tarefas/OS | Cobertura positiva nova | **14 casos PASS**: 12 ciclos completos **201/200/200/200** em dois tenants/três papéis; dois GET/PUT de Lead restrito **404/404 sem alteração** |
+| Node/PostgreSQL | 110 testes na auditoria C5 | **119 PASS**, zero fail/skip/TODO; nove novos testes funcionais reais de integridade/atomicidade/concorrência, sem substituir probes por testes de fonte |
+| TypeScript | 383 PASS | **383 PASS**, zero fail/skip/TODO |
+| Dashboard/White-Label/smoke HTTP | Positivos na rodada anterior | **PASS**; White-Label 84 cenários/29 ações auditadas; smoke 22 checks |
+| Typecheck/build/lint do recorte | Positivos na rodada anterior | **PASS**, lint dos oito arquivos 0 erros/0 avisos; nenhuma regra relaxada |
+| Limpeza READ ONLY | Fixtures descartáveis | **Zero fixtures de organizações/admins e atividades órfãs dos marcadores conferidos** |
+
+Os probes originais não foram modificados. O cross-tenant foi reproduzido antes desta correção; o baseline de Leads é o artefato C5 preservado, com igualdade de fonte funcional entre 5f0f8a9 e 5ec8ed1 verificada. Os rótulos antigos referenceHead dentro dos scripts não representam o SHA executado; o manifesto novo registra o commit funcional real. Houve bloqueio transitório de sockets locais pelo sandbox numa conferência adicional; repetição autorizada em loopback passou, sem produção ou alterações de configuração.
+
+**Situação:** C5-01/C5-02 corrigidos nos casos comprovados, sem declarar C5 ou gates aprovados integralmente. G1 mantém regressões positivas; G2/G3 têm os bloqueadores deste recorte resolvidos, com revisão ampla/independente e providers pendentes; G4 mantém regressões locais; G5/rollout continuam bloqueados por cobertura e compatibilidade C5-03/C5-04; G6 mantém pendências de revisão independente, CI e homologação restante. Dados históricos malformados não foram reparados; demais recursos compartilhados/subrotas não são certificados por analogia. Custos de locks/carga, ambiente Node 22/CI e providers reais não homologados. Lint e dependências globais anteriores não foram saneados neste lote.
+
+`observe_only` e `APPROVED_ENFORCEMENTS = []` byte a byte preservados. Core protegido e providers sem alteração; a exceção do teste de congelamento limita-se aos dois handlers de Tarefas explicitamente autorizados. Sem push, merge, deploy, migrations, produção ou Coolify. C6 não iniciado. Commit documental identificável por `git log -1 --format=%H -- docs/BLOCK2_C5_SECURITY_FIX_2026-10-21.md`.
