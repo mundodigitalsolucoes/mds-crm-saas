@@ -36,6 +36,7 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -69,6 +70,7 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
