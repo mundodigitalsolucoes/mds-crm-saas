@@ -67,6 +67,7 @@ export type AdminOrgCreateInput = z.infer<typeof adminOrgCreateSchema>;
 // ============================================
 
 export const adminOrgUpdateSchema = z.object({
+  whiteLabel: z.boolean().optional(),
   name: z
     .string()
     .min(1, 'Nome não pode ser vazio')

@@ -434,3 +434,78 @@ A primeira suíte TS detectou a fronteira histórica que também abrangia arquiv
 - Core protegido, providers, schema, migrations, motor comercial, catálogo/resolver, manifesto e APIs permaneceram intactos. APPROVED_ENFORCEMENTS segue vazio. Nenhuma credencial, .env ou artefato temporário integra os commits; evidência versionada contém só resultados/metadados sem segredos.
 - Rollback proposto, não executado: reverter o commit C2 restaura a apresentação do C0; depois reverter C1 remove o adaptador sem consumidores. Preservar C0. Sem mudança de dados a desfazer. O commit C2 é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C1_C2_2026-10-21.json`.
 - Sem push, merge, deploy, produção, Coolify ou migrations. C3–C6 não iniciados.
+
+## 2026-10-21 — C3 + C4: White-Label existente e governança MDS
+
+HEAD inicial real `d626bffe6596f455a598465c7027a606ba18fa50`, branch `audit/block2-sanitized`, árvore inicialmente limpa. Preservados C0 (`192a110`), C1 (`7f02b38`) e C2 (`d626bff`). Execução exclusivamente local e restrita a C3/C4. C3: commit `39facc0`. O commit C4 desta entrega é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C3_C4_2026-10-21.json`.
+
+### Política verificada antes de restringir operações
+
+A API existente de organizações permite editar nome/logo/favicon/cores a owner/admin com `settings.edit`; essa política **foi preservada**, inclusive sem White-Label. Esses campos não habilitam capacidade comercial. Apenas o snapshot explícito `Organization.features`, interpretado pelo resolver existente, habilita `white_label`. Nome do plano, papel elevado ou escolha de cores não concedem essa capacidade. Sem White-Label o shell aplica MDS, mas conserva as configurações armazenadas para uma habilitação futura. O nome empresarial continua no campo existente, sem criar um segundo modelo de identidade.
+
+A MDS já controla planos e sincronização de features por autenticação Super Admin separada. C4 acrescenta uma operação explícita e isolada de habilitar/desabilitar somente `white_label` no editor administrativo atual, sem editor de planos paralelo nem campo novo no banco. Clientes não podem usar essa administração nem gravar `features/whiteLabel` pela API tenant. Configurações operacionais autorizadas continuam disponíveis.
+
+### Arquivos de implementação
+
+| Escopo | Arquivos e alteração |
+|---|---|
+| C3 — helper existente | `src/lib/branding.ts`: lê organização ativa do tenant validado, resolve a capacidade comercial pelo resolver existente e retorna marca MDS ou valores sanitizados. Sem cache global ou busca de imagens no servidor |
+| C3 — valores e validação compartilhados | `src/lib/branding-values.ts`: move o contrato OrgBranding existente, defaults MDS reais, validação de assets e CSS seguro para um módulo puro reutilizável. `src/lib/validations/branding.ts`: schema estrito da edição existente; aceita HTTPS sem credenciais ou caminhos locais seguros, cores hex6; rejeita campos comerciais/injeção |
+| C3 — shell atual | `src/app/(app)/layout.tsx`: reutiliza o helper, mantém checkAuth/contexto C1, aplica favicon, CSS e metadata; `src/components/Sidebar.tsx`: recebe logo/nome/cores da mesma organização e preserva a seleção comercial C2. `src/app/(app)/dashboard/page.tsx`: somente título passa a herdar a marca, sem mudanças nas consultas ou permissões |
+| C3 — aparência existente | `src/app/(app)/settings/branding/page.tsx`: informa a capacidade comercial, mantém edição e preview local, remove o preview global que alterava CSS da aplicação antes de salvar e usa os defaults canônicos no reset. O favicon efetivo é aplicado pelo layout após reload, não pelo formulário sem verificar capacidade |
+| C3/C4 — API tenant existente | `src/app/api/organizations/route.ts`: reutiliza schema seguro, mantém permissões e role atuais; GET informa whiteLabelActive sem expor features brutas. PATCH não aceita autoativação nem organização arbitrária |
+| C4 — administração existente | `src/lib/validations/admin.ts`: somente o boolean opcional whiteLabel foi acrescentado ao schema estrito. `src/app/api/admin/organizations/[id]/route.ts`: PUT exige Super Admin, aceita a alteração comercial separadamente, preserva todos os demais identificadores, usa CAS no snapshot e transação com auditoria; contratos inválidos/inativos/conflitantes retornam 409. DELETE e providers byte a byte preservados |
+| C4 — editor atual MDS | `src/components/OrganizationWhiteLabelControl.tsx`, embutido em `src/app/admin/organizations/page.tsx`: lê contrato atual e salva somente whiteLabel, sem syncFromPlan. O operador é avisado de que uma sincronização posterior do plano pode substituir o snapshot, conforme o comportamento administrativo já existente |
+
+Ajustes de lint ficaram nas telas alteradas: carregamento assíncrono com cancelamento de respostas obsoletas, tipos explícitos e remoção de setState síncrono em efeitos. Busca, paginação, edição, exclusão e salvamento do editor administrativo mantêm os handlers existentes; sua homologação visual completa não foi substituída por testes HTTP.
+
+### Testes e evidência funcional
+
+Evidência versionada: `docs/evidence/BLOCK2_C3_C4_2026-10-21.json`; contém cada cenário HTTP, negações comerciais, resultados C0, contagens, hashes dos arquivos e dos logs. Artefatos completos em `/workspace/mds-crm-onboarding-evidence/c3-c4/`. Hashes são de código/evidências, não de segredos.
+
+| Matriz/caso | Evidência e resultado |
+|---|---|
+| Sete combinações não vazias de Atendimento/Vendas/Marketing × MDS/White-Label × owner/admin/user × dois tenants | **84 cenários** de execução do helper e renderização da Sidebar real; **84 cenários HTTP** de Dashboard com autenticação real. Capability independente dos módulos; logo/alt/cores/favicon do tenant correto; MDS sem adicional |
+| Persistência e governança | Owner/admin efetuam quatro PATCHs visuais autorizados, com persistência verificada. Usuário comum é recusado mesmo com settings.edit concedido na fixture, preservando a regra de papel existente. Campos features/whiteLabel, organização arbitrária e URL com credenciais são rejeitados |
+| Administração comercial por cliente | Seis tentativas, três papéis × dois tenants: HTTP **307 para /admin/login**, sem acesso à operação Super Admin. A asserção inicial esperava 401 e falhou; foi corrigida para comprovar a negação real da camada de middleware existente e o destino exato, sem mudar o produto |
+| Super Admin real | Login separado em `/api/admin/auth`, cookie administrativo real, **29 alterações comerciais auditadas**; white_label isolado, módulos e identificadores legados preservados. Contrato inválido e alteração combinada com plano são recusados |
+| Concorrência e falha de auditoria em PostgreSQL | Três testes de execução do PUT real: CAS perdido → 409 sem sobrescrever módulos; falha da auditoria → 500 com rollback da capacidade; sucesso conserva identificador opaco e registra ator Super Admin com userId nulo. Organização removida → 409 |
+| Imagens e favicon | Quatro recuperações de assets locais com HTTP 200, usando arquivos/URLs distintos por tenant. Testes de renderização verificam src/alt/cores; HTTP verifica CSS, favicon e prop de logo entregue à Sidebar. Não são imagens de clientes reais |
+| C0 | Usuário removido e organização removida: **307 sem Lead**. Usuário sem Leads: API **403**, Dashboard **200 sem Lead/indicadores**; dados autorizados e isolamento mantidos |
+| C1/C2 | **42 cenários HTTP** comerciais + três configurações inválidas; **28 acessos diretos** a Leads/Projetos preservam observe_only. A renderização contratual/permissões existente também foi reexecutada na suíte TS |
+| Regressão geral | **22 cenários HTTP PASS**, incluindo sessões, administração, tenant, mass assignment, permissões, concorrência de agenda e limitação de tentativas |
+
+Testes adicionados: `tests/branding-presentation.test.ts`, `tests/branding-governance-postgres.test.mjs`, `tests/branding-white-label-http.mjs`. Ajustados `tests/dashboard-c0.test.ts` e `tests/commercial-sidebar.test.ts` apenas para os imports novos. Em `tests/authorization-boundaries.test.ts`, a exceção do novo schema de branding e da alteração administrativa autorizada é limitada por asserção adicional: o schema admin deve ser idêntico ao anterior removendo somente a linha whiteLabel; o DELETE deve permanecer byte a byte idêntico.
+
+### Comandos finais e resultados
+
+Execução com Node **v24.19.0**, Next compilado e PostgreSQL descartável de loopback. `.env.local` ignorado foi carregado sem impressão; o servidor local usou chave administrativa de teste gerada em memória, e fixtures/credenciais sintéticas foram removidas. Não certifica Node 22/CI remoto.
+
+| Comando | Resultado |
+|---|---|
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs`, BLOCK2_TEST_DATABASE_URL local explícito | **105 PASS**, zero fail/skip/TODO (102 anteriores + 3 governança) |
+| `npx tsx --test tests/*.test.ts` | **368 PASS**, zero fail/skip/TODO (281 anteriores + 85 branding/validação + 2 fronteiras) |
+| `npm run build` | PASS; gera Prisma Client e build Next, não executa migrations; permanece aviso preexistente images.domains |
+| `npx next start --hostname 127.0.0.1 --port 3100` | Servidor local do build final; sem npm start/prestart |
+| `node tests/branding-white-label-http.mjs` | PASS; 84 cenários + governança, persistência, assets e auditoria |
+| `node tests/dashboard-c0-http.mjs` | PASS no build final; o probe conserva o campo histórico de referência be26c81, mas esta execução está vinculada ao manifesto C3/C4 |
+| `node tests/commercial-dashboard-http.mjs` | PASS: 42 cenários + configurações inválidas e URLs diretas |
+| `node .cache/bloco02-smoke.cjs` | 22 PASS |
+| `npx tsc --noEmit` após restaurar somente next-env.d.ts gerado | PASS |
+| `npx eslint` nos arquivos alterados | **Zero erros, oito avisos preexistentes**: três img e cinco variáveis da sincronização de plano anterior; nenhuma regra desativada |
+| Verificação das fixtures após o último teste | Zero organizações branding/governance/commercial e zero Super Admins de teste restantes |
+| Diff do core/policy/providers/schema/Leads/Kanban contra d626bff e `git diff --check` | Diff protegido vazio e verificação sem erros; DELETE adicionalmente testado |
+
+As primeiras verificações de lint detectaram efeitos síncronos já existentes nas telas editadas; foram corrigidos localmente. A primeira expectativa HTTP 401 para administração foi substituída por prova do redirect de negação existente. Esses resultados iniciais não foram contados como cenários aprovados.
+
+### Limitações, riscos residuais e gates
+
+- Sem navegador completo ou homologação visual humana: não certifica cache de favicon, foco do editor de cores, contraste de toda combinação customizada, troca entre abas ou todos os fluxos visuais da administração. A prova combina renderização real dos componentes com infraestrutura simulada e HTTP real da aplicação; não é apenas teste de código-fonte.
+- Branding é aplicado ao shell autenticado, CSS compartilhado, logo/alt e metadata, incluindo Dashboard. Login público, domínio próprio, estilos/títulos literais de páginas operacionais protegidas e identidade interna do Chatwoot/WhatsApp permanecem fora deste lote. Não houve reconstrução operacional.
+- Snapshots legados sem white_label explícito exibem MDS; assets armazenados são preservados. Inventariar contratos reais antes da publicação, sem inferir direitos pelo plano/papel. Uma sincronização administrativa de plano continua podendo substituir features; o operador MDS recebe aviso. Contratos malformados exigem revisão antes do toggle.
+- Assinatura/branding precisam de reload para refletir uma alteração em uma aba já aberta; não foi criado cache global nem mecanismo novo de invalidação. O preview fica local à página, sem contaminar CSS global ou favicon de outra organização.
+- Dependências não foram alteradas; os alertas de lint/dependências globais documentados anteriormente continuam pendentes e não foram auditados novamente neste lote.
+- G1/G2: regressões e negativos C0/C4 comprovados localmente, **sem aprovação integral**. G3: isolamento de branding comprovado em dois tenants, sem substituir homologação de providers. G4: suíte existente Instagram/PostgreSQL passou, sem nova aprovação. G5: apresentação White-Label e autoridade MDS verificadas; `observe_only` e `APPROVED_ENFORCEMENTS` vazio preservados. G6: revisão independente, CI remota e homologação visual permanecem pendentes. **Nenhum gate G1–G6 é declarado aprovado por C3/C4.**
+- Sem push, merge, deploy, produção, Coolify ou migrations; sem C5–C6. Nenhum arquivo .env, credencial real, dado de produção ou log temporário foi adicionado aos commits. As strings adversariais de testes e credenciais geradas em memória são exclusivamente sintéticas.
+
+Rollback proposto, não executado: reverter C4 e depois C3 para retornar ao C2, preservando C0 e dados existentes; não há schema/migration a desfazer. A capacidade pode ser desabilitada por operação MDS autenticada, com auditoria, sem apagar assets, caso essa ação seja autorizada no ambiente alvo. A política comercial global não foi promovida por este lote.

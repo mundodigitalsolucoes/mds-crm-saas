@@ -113,7 +113,22 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     'src/app/api/projects', 'src/app/(app)/projects', 'src/lib/authorization', ':(exclude)src/lib/authorization/channel-observation.ts',
     // C1 adds a presentation adapter; all pre-existing engine files stay protected.
     ':(exclude)src/lib/authorization/application-context.ts',
-    'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations', ':(exclude)src/lib/validations/branding.ts',
+    'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
+    ':(exclude)src/lib/validations/branding.ts', ':(exclude)src/lib/validations/admin.ts',
     'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');
+});
+
+// C4 permits exactly one optional capability field; other existing validation remains frozen.
+test('C4 preserves existing admin validation except the explicit White-Label boolean', () => {
+  const original = execFileSync('git', ['show', 'd626bff:src/lib/validations/admin.ts'], { encoding: 'utf8' });
+  const current = readFileSync(new URL('../src/lib/validations/admin.ts', import.meta.url), 'utf8');
+  assert.equal(current.replace('  whiteLabel: z.boolean().optional(),\n', ''), original);
+});
+
+test('C4 leaves the organization DELETE/provider lifecycle byte-for-byte unchanged', () => {
+  const path = 'src/app/api/admin/organizations/[id]/route.ts';
+  const original = execFileSync('git', ['show', `d626bff:${path}`], { encoding: 'utf8' });
+  const current = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+  assert.equal(current.slice(current.indexOf('export async function DELETE')), original.slice(original.indexOf('export async function DELETE')));
 });

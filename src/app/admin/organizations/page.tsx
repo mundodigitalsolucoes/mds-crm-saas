@@ -1,4 +1,5 @@
 'use client';
+import OrganizationWhiteLabelControl from '@/components/OrganizationWhiteLabelControl';
 
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -100,35 +101,26 @@ export default function AdminOrganizationsPage() {
     plan: 'trial',
   });
 
-  const fetchOrganizations = useCallback(async (page = 1) => {
-    setLoading(true);
-    setError('');
-
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '10',
-      });
-
-      if (search) params.set('search', search);
-      if (planFilter) params.set('plan', planFilter);
-
-      const res = await fetch(`/api/admin/organizations?${params}`);
-      if (!res.ok) throw new Error('Erro ao carregar organizações');
-
-      const data = await res.json();
-      setOrganizations(data.organizations);
-      setPagination(data.pagination);
-    } catch (err) {
-      console.error(err);
-      setError('Erro ao carregar organizações');
-    } finally {
-      setLoading(false);
-    }
+  const fetchOrganizations = useCallback(async (page = 1): Promise<{ organizations: Organization[]; pagination: Pagination }> => {
+    const params = new URLSearchParams({ page: String(page), limit: '10' });
+    if (search) params.set('search', search);
+    if (planFilter) params.set('plan', planFilter);
+    const res = await fetch(`/api/admin/organizations?${params}`);
+    if (!res.ok) throw Error('Erro ao carregar organizações');
+    return res.json();
   }, [search, planFilter]);
 
+  const refreshOrganizations = async (page: number) => {
+    const data = await fetchOrganizations(page);
+    setOrganizations(data.organizations); setPagination(data.pagination); setError('');
+  };
   useEffect(() => {
-    fetchOrganizations(1);
+    let active = true;
+    fetchOrganizations(1).then(data => {
+      if (active) { setOrganizations(data.organizations); setPagination(data.pagination); setError(''); }
+    }).catch(() => { if (active) setError('Erro ao carregar organizações'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [fetchOrganizations]);
 
   const handleCreate = () => {
@@ -176,9 +168,9 @@ export default function AdminOrganizationsPage() {
       }
 
       setShowModal(false);
-      await fetchOrganizations(pagination.page);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao salvar organização');
+      await refreshOrganizations(pagination.page);
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : '') || 'Erro ao salvar organização');
     } finally {
       setSaving(false);
     }
@@ -193,7 +185,7 @@ export default function AdminOrganizationsPage() {
       if (!res.ok) throw new Error('Erro ao deletar');
 
       setDeleteConfirm(null);
-      await fetchOrganizations(pagination.page);
+      await refreshOrganizations(pagination.page);
     } catch {
       setError('Erro ao deletar organização');
     }
@@ -393,7 +385,7 @@ export default function AdminOrganizationsPage() {
 
             <div className="flex gap-1">
               <button
-                onClick={() => fetchOrganizations(pagination.page - 1)}
+                onClick={() => { void refreshOrganizations(pagination.page - 1).catch(() => setError('Erro ao carregar organizações')); }}
                 disabled={pagination.page <= 1}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
@@ -401,7 +393,7 @@ export default function AdminOrganizationsPage() {
               </button>
 
               <button
-                onClick={() => fetchOrganizations(pagination.page + 1)}
+                onClick={() => { void refreshOrganizations(pagination.page + 1).catch(() => setError('Erro ao carregar organizações')); }}
                 disabled={pagination.page >= pagination.totalPages}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
@@ -433,6 +425,7 @@ export default function AdminOrganizationsPage() {
             </div>
 
             <div className="p-5 space-y-4">
+              {editingOrg && <OrganizationWhiteLabelControl key={editingOrg.id} organizationId={editingOrg.id} />}
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
                   Nome *
