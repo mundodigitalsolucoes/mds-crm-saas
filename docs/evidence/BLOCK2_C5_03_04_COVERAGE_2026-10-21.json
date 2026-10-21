@@ -5,14 +5,14 @@
   "approvedEnforcements": [],
   "summary": {
     "apiFiles": 116,
-    "operations": 177,
+    "operations": 178,
     "pages": 28,
     "backendStatus": {
       "shared-or-protocol-specific-review-required": 51,
       "pending-commercial-integration": 47,
       "existing-guard-observe-only": 35,
       "observer-only-does-not-enforce": 22,
-      "prepared-canonical-resource-guard-observe-only": 7,
+      "prepared-canonical-resource-guard-observe-only": 8,
       "pending-resource-payload-filter": 1,
       "prepared-additive-guard-observe-only": 5,
       "prepared-type-and-dependency-scope-observe-only": 5,
@@ -4011,6 +4011,27 @@
       "evidence": "source-only-not-runtime-certified",
       "existingGuardSignals": [],
       "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
+    },
+    {
+      "operation": "GET /api/attachments/[id]",
+      "path": "src/app/api/attachments/[id]/route.ts",
+      "contract": {
+        "kind": "entity",
+        "permission": "tasks",
+        "action": "view",
+        "resource": "attachment",
+        "rule": "inherit canonical persisted entity, task type and dependencies; never trust a client-selected organization",
+        "path": "src/app/api/attachments/[id]/route.ts"
+      },
+      "backendStatus": "prepared-canonical-resource-guard-observe-only",
+      "evidence": "Lote3 real HTTP: authorized bytes; anonymous401, foreign404, revoked403; legacy public URLs remain unsafe",
+      "existingGuardSignals": [
+        {
+          "call": "checkAuth",
+          "arguments": []
+        }
+      ],
+      "tenantIsolation": "existing-scope-must-remain; inventory-is-not-certification"
     }
   ],
   "pages": [
@@ -4212,17 +4233,21 @@
     }
   ],
   "latestBatch": {
-    "referenceHead": "786233c",
-    "functionalCommit": "cb31230cbbcb85830648fc4b0f9ccf03b4f6b3d8",
-    "batch": "2-helpers-comments-attachments",
+    "referenceHead": "7bd515d1002b64c39947e8ae30277629c0a38426",
+    "batch": "3-private-storage-authenticated-download",
     "globalMode": "observe_only",
+    "approvedEnforcements": [],
     "originalIndirectPassed": 9,
-    "publicDownloadsBlocked": false
+    "privateDownloadNegativesPassed": 6,
+    "legacyDownloadNegativesFailed": 6,
+    "publicDownloadsBlocked": false,
+    "apiChecksPassed": 1191,
+    "report": "docs/BLOCK2_C5_LOT3_2026-10-21.md"
   },
   "additionalSurfaces": [
     {
       "url": "/uploads/[org]/[file]",
-      "kind": "static-attachment-download-outside-177-API-operations",
+      "kind": "legacy-static-attachment-download-outside-current-178-API-operations",
       "status": "CONFIRMED-BLOCKER",
       "httpStatus": 200,
       "anonymousAllowed": true,

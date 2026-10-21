@@ -1,6 +1,8 @@
 # Anexos — proposta de armazenamento privado e download autenticado
 
-**Somente plano para autorização. Não implementado nem executado. Piloto/publicação bloqueados.**
+**Atualização Lote3: código e testes locais autorizados e implementados. Corte do legado, infraestrutura e produção NÃO executados. Piloto/publicação continuam bloqueados.**
+
+O texto abaixo preserva a proposta original do Lote2. A execução e suas limitações estão em [Lote3](BLOCK2_C5_LOT3_2026-10-21.md). O dry-run implementado inventaria somente metadados no banco descartável, sem conferir filesystem; não é uma ferramenta de migração/apply. A escrita usa criação exclusiva e imutável com fsync, não rename temporário. Migração simulada completa e inventário real não foram executados.
 
 Na aceitação do Lote2, as APIs passaram nos nove negativos comerciais originais e em1089 verificações HTTP. Um arquivo sintético legado de Marketing, presente no diretório público **antes** de iniciar a cópia descartável do Next, continuou retornando200 com bytes por `/uploads/[org]/[file]`, com e sem sessão, nos três papéis. A organização fictícia não contratava Marketing. O endereço foi considerado conhecido, como ocorre com URLs obtidas antes da remoção de um módulo; não houve enumeração/brute force, acesso a arquivo real ou consulta de produção.
 

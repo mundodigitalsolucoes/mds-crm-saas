@@ -104,3 +104,8 @@ A autorização C5-03/C5-04 foi executada parcialmente, com resultado no [relat�
 ## Atualização Lote2 — compatibilidade e recursos indiretos
 
 [Relatório atual](BLOCK2_C5_LOT2_2026-10-21.md): helpers46f8b7d/8c750be; APIscb31230.12 recusas e nove negativos originais corrigidos;1089 HTTP de APIs PASS;151 Node/PG,387 TypeScript,115 HTTP comentários, seis probes C0–C5, build/typecheck/lint PASS. Porém arquivo legado sintético em public/uploads continua200 inclusive anônimo/Marketing ausente: seis FAIL, agregado exit1. **G2/G3/G5 e piloto continuam bloqueados**; G6 também depende de storage/cobertura/CI/revisão. A exceção anterior dos quatro helpers foi autorizada e executada; o novo limite é storage/download/cutover, com plano concreto ainda não implementado. Sem produção ou ação remota.
+
+
+## Atualização Lote3 — novos anexos privados, legado ainda bloqueador
+
+[Relatório Lote3](BLOCK2_C5_LOT3_2026-10-21.md): referência7bd515d; novos uploads fora de public e GET autenticado no handler existente, sem schema ou alteração do motor comercial. Inventário atual116 APIs/178 operações/28 páginas (uma operação GET adicional). Matriz HTTP1191/1191,21 negativos diretos e seis negativos do novo download privado PASS. **Os seis negativos originais de URLs estáticas legadas continuam FAIL/HTTP200**, sem redução de asserções. Observe_only real e manifesto vazio preservados; enforcement somente na cópia de teste para organização fictícia.55 arquivos de API e quatro layouts continuam pendentes do recorte granular anterior. G2/G3/G5, homologação integral e piloto não aprovados; corte do legado/configuração durável requerem autorização específica. Nenhum envio remoto ou mudança de produção.

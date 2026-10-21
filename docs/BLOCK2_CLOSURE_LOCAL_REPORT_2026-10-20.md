@@ -650,3 +650,8 @@ Sobre786233c, helpers em46f8b7d/8c750be e APIs em **cb31230**. [Relatório](BLOC
 **Novo bloqueador comprovado:** arquivo sintético legado de Marketing em public/uploads retorna200/bytes por URL conhecida, inclusive anônimo.6 requests FAIL/uma superfície; agregado de aceitação exit1. Nenhum arquivo real de produção acessado. Proteção integral por URL não concluída; correção estrutural interrompida e [plano privado para autorização](BLOCK2_ATTACHMENTS_PRIVATE_DOWNLOAD_PLAN_2026-10-21.md) preparado, sem implementar novo storage/GET/cutover.
 
 Restam55 APIs/quatro layouts sem completar integração comercial e o complemento de anexos. G2/G3/G5 bloqueados para homologação global; nenhum gate/piloto aprovado. Manifesto vazio/observe_only preservados; sem push/PR15, merge, deploy, migrations, produção/Coolify ou enforcement.
+
+
+## Atualização Lote3 — novos anexos privados, legado ainda bloqueador
+
+[Relatório Lote3](BLOCK2_C5_LOT3_2026-10-21.md): referência7bd515d; novos uploads fora de public e GET autenticado no handler existente, sem schema ou alteração do motor comercial. Inventário atual116 APIs/178 operações/28 páginas (uma operação GET adicional). Matriz HTTP1191/1191,21 negativos diretos e seis negativos do novo download privado PASS. **Os seis negativos originais de URLs estáticas legadas continuam FAIL/HTTP200**, sem redução de asserções. Observe_only real e manifesto vazio preservados; enforcement somente na cópia de teste para organização fictícia.55 arquivos de API e quatro layouts continuam pendentes do recorte granular anterior. G2/G3/G5, homologação integral e piloto não aprovados; corte do legado/configuração durável requerem autorização específica. Nenhum envio remoto ou mudança de produção.
