@@ -68,10 +68,24 @@ export async function commercialEntityDenial(
   session: { user: { id: string; organizationId: string } },
   entityType: string, entityId: string, action: ModuleAccessRequest['action'],
 ): Promise<NextResponse | null> {
-  if (modeForOrganization(session.user.organizationId) !== 'enforce') return null;
+  const { Prisma } = await import('@prisma/client');
+  const { hasPermission, parsePermissions } = await import('../permissions');
+  const actors = await client.$queryRaw<{ role: string; permissions: string }[]>(Prisma.sql`
+    SELECT u.role, u.permissions FROM users u JOIN organizations o ON o.id = u.organization_id
+    WHERE u.id = ${session.user.id} AND u.organization_id = ${session.user.organizationId}
+      AND u.deleted_at IS NULL AND o.deleted_at IS NULL FOR SHARE OF u, o`);
+  const actor = actors[0];
+  if (!actor) return NextResponse.json({ error: 'Acesso indisponível' }, { status: 403 });
   const { entityModuleRequirements } = await import('./operation-data');
   const requests = await entityModuleRequirements(client, session.user.organizationId, entityType, entityId, action);
   if (!requests) return NextResponse.json({ error: 'Recurso indisponível' }, { status: 404 });
+  // Existing legacy semantics, including owner, remain independent of commercial mode.
+  for (const request of requests) {
+    if (actor.role !== 'owner' && !hasPermission(parsePermissions(actor.permissions, actor.role as import('@/types/permissions').UserRole), request.permission, request.action)) {
+      return NextResponse.json({ error: 'Acesso indisponível' }, { status: 403 });
+    }
+  }
+  if (modeForOrganization(session.user.organizationId) !== 'enforce') return null;
   for (const request of requests) {
     const evaluation = await evaluateModuleAccess(request, { client, session });
     recordAuthorizationObservation(request, evaluation.decision);

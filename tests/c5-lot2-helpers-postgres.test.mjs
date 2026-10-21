@@ -6,7 +6,8 @@ import {NextResponse} from 'next/server.js';
 import * as engine from '../src/lib/authorization/authorize.ts';
 import * as policy from '../src/lib/authorization/policy.ts';
 import * as data from '../src/lib/authorization/operation-data.ts';
-import {ALL_MODULES} from '../src/lib/permissions.ts';
+import * as permissions from '../src/lib/permissions.ts';
+const {ALL_MODULES}=permissions;
 import {loadHandler,disposableDatabaseUrl} from './helpers/load-disposable-handler.mjs';
 let db;const orgs=[];const flags={view:true,create:true,edit:true,delete:true};
 const pairs=[['vendas','projects'],['vendas','goals'],['vendas','agenda'],['atendimento','integrations']];
@@ -18,7 +19,7 @@ function adapters(mode='enforce'){
  if(cachedAdapters.has(mode))return cachedAdapters.get(mode);
  const forbidden=()=>{throw Error('Global connection/session must not be used inside transaction');};
  const server=loadHandler('src/lib/authorization/server.ts',{'next-auth':{getServerSession:forbidden},'../auth':{authOptions:{}},'../prisma':{prisma:new Proxy({},{get:forbidden})},'./authorize':engine,'../admin-auth':{verifyAdminToken:forbidden},'./policy':{...policy,modeForOrganization:()=>mode}});
- const guards=loadHandler('src/lib/authorization/guards.ts',{'next/server':{NextResponse},'../checkPermission':{checkPermission:forbidden},'./server':server,'./policy':{...policy,modeForOrganization:()=>mode},'./operation-data':data},{console:{info(){}}});
+ const guards=loadHandler('src/lib/authorization/guards.ts',{'next/server':{NextResponse},'../checkPermission':{checkPermission:forbidden},'./server':server,'./policy':{...policy,modeForOrganization:()=>mode},'./operation-data':data,'../permissions':permissions},{console:{info(){}}});
  const result={...server,...guards};cachedAdapters.set(mode,result);return result;
 }
 test('Lot2 helpers: 12 legitimate refusals fixed; seven contracts, both brands, three roles, two tenants, four actions remain exact',async()=>{
@@ -51,5 +52,6 @@ test('Lot2 resource inheritance: canonical task/comment bindings, foreign resour
   assert.equal((await adapters().commercialEntityDenial(tx,a.session,'task',foreign.id,'view')).status,404);
   assert.equal(await data.entityModuleRequirements(tx,a.org.id,'comment',comment.id,'view') instanceof Array,true);
   assert.equal(await adapters('observe_only').commercialEntityDenial(tx,a.session,'task',task.id,'view'),null);
+  assert.equal((await adapters('observe_only').commercialEntityDenial(tx,a.session,'task',foreign.id,'view')).status,404);
  },{timeout:5000});}
 });
