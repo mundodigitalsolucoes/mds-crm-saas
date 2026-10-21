@@ -115,7 +115,10 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     ':(exclude)src/lib/authorization/application-context.ts',
     'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
     ':(exclude)src/lib/validations/branding.ts', ':(exclude)src/lib/validations/admin.ts',
-    'src/app/api/tags', 'src/app/api/tasks', 'src/app/api/agenda'], { encoding: 'utf8' });
+    'src/app/api/tags', 'src/app/api/tasks',
+    // Explicit C5 SECURITY authorization: only the two vulnerable Task handlers.
+    ':(exclude)src/app/api/tasks/route.ts', ':(exclude)src/app/api/tasks/[[]id[]]/route.ts',
+    'src/app/api/agenda'], { encoding: 'utf8' });
   assert.equal(diff, '');
 });
 
