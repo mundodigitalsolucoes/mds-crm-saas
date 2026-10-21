@@ -8,8 +8,8 @@ import NextAuthSessionProvider from '@/providers/session-provider';
 import { Providers } from '@/components/providers';
 import NotificationBellWrapper from '@/components/NotificationBellWrapper';
 import WhatsAppStatusBanner from '@/components/integrations/WhatsAppStatusBanner';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkAuth } from '@/lib/checkPermission';
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import type { Metadata } from 'next';
 
@@ -18,13 +18,10 @@ export const metadata: Metadata = {
   description: 'Sistema de Gestão de Leads e Projetos',
 };
 
-async function getOrgBranding() {
+async function getOrgBranding(organizationId: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return null;
-
-    const org = await prisma.organization.findUnique({
-      where: { id: (session.user as any).organizationId },
+    const org = await prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
       select: { favicon: true },
     });
 
@@ -39,7 +36,9 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const branding = await getOrgBranding();
+  const auth = await checkAuth();
+  if (!auth.authenticated || !auth.session) redirect('/auth/login');
+  const branding = await getOrgBranding(auth.session.user.organizationId);
 
   const favicon = branding?.favicon ?? '/favicon.ico';
 

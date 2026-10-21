@@ -325,3 +325,54 @@ G1/G2 agora têm bloqueador funcional explícito, não somente falta de parecer 
 Esta revisão crítica pelo agente da continuidade **não substitui parecer independente por responsável distinto**. A API de colaboradores retornou apenas a conta autenticada; nenhum reviewer foi inventado, nenhuma autoaprovação nem solicitação remota foi realizada. [Evidência sanitizada](evidence/BLOCK2_MINIMUM_PLAN_REVIEW_2026-10-20.json); logs novos em /workspace/mds-crm-onboarding-evidence/minimal-plan/.
 
 Estratégia proposta: futura criação das refs audit/block2-sanitized e review/block2-sanitized-base(8aa1db0), PR Draft entre ambas, sem merge ou reescrita de main/feature. Os4 filtros CI precisam da nova base antes do envio; C6 cobre essa preparação. Qualquer divergência remota interrompe o procedimento. Nenhum envio é autorizado por este adendo. Plano de código, envio/PR e promoção/enforcement exigem decisões separadas; manifesto continua vazio e observe_only preservado.
+
+## 2026-10-21 — C0 autorizado: segurança do Dashboard
+
+Referência real confirmada: `audit/block2-sanitized`, HEAD inicial `be26c813231602e14e33c12866a9e1d9baba6781`, árvore limpa. Somente C0 implementado. Evidência versionada: `docs/evidence/BLOCK2_C0_2026-10-21.json`; contém resultados e SHA-256 dos artefatos de execução (não de segredos). Artefatos completos locais em `/workspace/mds-crm-onboarding-evidence/c0/`.
+
+### Alteração e fronteiras
+
+- `src/app/(app)/layout.tsx`: `checkAuth` antes da consulta de favicon, organização ativa e identificação tipada; a falha de autenticação não é absorvida pelo fallback visual.
+- `src/app/(app)/dashboard/page.tsx`: validação própria por `checkAuth` (o RSC pode executar em paralelo ao layout), seguida de permissões operacionais existentes `leads/projects/tasks/os/users.view` antes das respectivas consultas. Não cria permissão Dashboard. Contagens, conversão, listas e barras de uso não são consultadas nem renderizadas sem a permissão correspondente.
+- Tarefas/follow-ups excluem vínculos com Leads/Projetos não autorizados, vínculos de outra organização e responsáveis removidos ou de outro tenant. Preserva as consultas e apresentação dos recursos autorizados. O nome do responsável continua sob a autorização de tarefas, como na API existente.
+- `tests/dashboard-c0.test.ts`: nove testes de execução do código real com infraestrutura isolada: nenhuma consulta a recurso negado, tenant em todas as consultas, rejeição antes de consultar no layout/página e rejeição de mudança de contexto.
+- `tests/dashboard-c0-http.mjs`: teste funcional com Next compilado, NextAuth real e PostgreSQL descartável. Somente fixtures sintéticas, limpeza no finally, cookies/senha apenas em memória. Executar explicitamente; não depende da descoberta `*.test.mjs`.
+
+### HTTP antes/depois
+
+| Cenário | Antes (`be26c81`) | Depois C0 |
+|---|---|---|
+| Usuário removido com cookie anterior | 200, Lead exposto | 307 para login, Lead ausente |
+| Organização removida com cookie anterior | 200, Lead exposto | 307 para login, Lead ausente |
+| Usuário sem Leads | API 403; Dashboard 200 com Lead | API 403; Dashboard 200 sem Lead, indicadores de Leads ou follow-up vinculado |
+| Proprietário legítimo | 200 com Lead próprio | 200 com Lead, tarefa e follow-up próprios |
+| Outra organização, inclusive vínculo cruzado proposital | Não medido no probe inicial | Marcadores ausentes da resposta |
+
+As verificações examinam o corpo HTTP completo, incluindo payload RSC, não apenas elementos visíveis. A remoção é feita antes da requisição ao Dashboard, sem chamar uma API intermediária que atualize o cookie e mascare a falha.
+
+### Comandos e resultados
+
+Variáveis carregadas de `.env.local` ignorado, sem imprimir valores; os testes PostgreSQL usam `BLOCK2_TEST_DATABASE_URL` apontando exclusivamente para o mesmo banco local descartável. Nenhuma migration necessária.
+
+| Comando | Resultado |
+|---|---|
+| `node .cache/c0-before.cjs` | Retorno 1 esperado: reproduz os três vazamentos; `http-before.json` |
+| `npm run build` | PASS, geração Prisma e build Next; aviso preexistente de `images.domains` |
+| `npx next start --hostname 127.0.0.1 --port 3100` | Servidor local do build; sem `npm start`/prestart/migration |
+| `node tests/dashboard-c0-http.mjs` | PASS; `http-after.json` |
+| `node --import tsx --test --test-reporter=tap tests/*.test.mjs` | 102 PASS, zero fail/skip/TODO |
+| `npx tsx --test tests/*.test.ts` | 180 PASS, zero fail/skip/TODO (171 anteriores + 9 C0) |
+| `node .cache/bloco02-smoke.cjs` | 22 PASS: autenticação, administração, autorização, isolamento e concorrência |
+| `npx tsc --noEmit` | PASS após restaurar somente a alteração automática de `next-env.d.ts` |
+| `npx eslint` nos quatro arquivos de código/teste alterados | Zero erro/aviso |
+| `npx eslint . --format json` | FAIL: 181 erros e 77 avisos, ante 182/77; removido o `any` do layout, nenhuma nova regra desativada |
+| `npm audit --json` | Retorno 1: 46 alertas (40 high, 3 moderate, 3 low, zero critical); dependências intactas |
+| `git diff --check` | PASS |
+
+A primeira tentativa Node sem `--import tsx` não forneceu a execução válida dos módulos TypeScript; a execução final acima, com loader e banco explícitos, é a evidência considerada. Não houve alteração de dependências para contornar testes.
+
+### Gates e riscos residuais
+
+C0 corrigido e verificado localmente para os cenários acima. G1 e G2 **não aprovados**: isto não certifica todas as rotas/sessões ou todas as permissões do produto. G3/G4/G5 não recebem aprovação nova por esta entrega; os testes existentes de isolamento, Widget e Instagram foram reexecutados na suíte Node. G5 permanece `observe_only`, com `APPROVED_ENFORCEMENTS` vazio e arquivo de política intacto. G6 segue pendente de revisão independente, CI remota e demais critérios do encerramento.
+
+O layout compartilhado agora recusa identidades inativas também nas demais páginas do grupo `(app)`; os componentes protegidos e as APIs existentes não foram modificados. Testes HTTP usam cliente sem navegador: não certificam navegação visual, cache de uma aba já aberta ou revogação retroativa de dados já enviados. A validação é por requisição e não serializa uma exclusão concorrente com todas as consultas; não equivale a revogação transacional global. Continuam pendentes lint global, dependências e homologação ampla. C1–C6 não iniciados. Sem push, merge, deploy, produção, Coolify, rotação de credenciais ou alteração de histórico. O commit desta entrega é identificável por `git log -1 --format=%H -- docs/evidence/BLOCK2_C0_2026-10-21.json`.
