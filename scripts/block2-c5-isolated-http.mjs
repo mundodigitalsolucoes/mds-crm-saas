@@ -16,6 +16,8 @@ for (const key of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY','http_proxy
 try{
  for(const f of files){if(f.startsWith('.env')&&f!=='.env.example')throw Error('Sensitive file must not be copied');const target=join(work,f);mkdirSync(dirname(target),{recursive:true});copyFileSync(f,target);}
  symlinkSync(resolve('node_modules'),join(work,'node_modules'),'dir');
+ // Synthetic legacy upload exists before startup, matching persisted public-file deployments.
+ const uploadFixture=join(work,'public','uploads','00000000-0000-4000-8000-000000000002');mkdirSync(uploadFixture,{recursive:true});writeFileSync(join(uploadFixture,'lot2-known-file.txt'),'SYNTHETIC_LEGACY_MARKETING_FILE');
  // Only this synthetic fixture UUID changes selector in this disposable test copy.
  const testPolicy=original.replace('export function modeForOrganization(organizationId: string | undefined): AuthorizationMode {',"export function modeForOrganization(organizationId: string | undefined): AuthorizationMode {\n  if (organizationId === '00000000-0000-4000-8000-000000000002') return 'enforce';");
  if(testPolicy===original)throw Error('Expected policy selector missing');writeFileSync(join(work,policyPath),testPolicy);

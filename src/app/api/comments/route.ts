@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { commercialEntityDenial } from '@/lib/authorization/guards';
 import { hasPermission, parsePermissions } from '@/lib/permissions';
 import { parseBody, commentCreateSchema, commentEntityTypeEnum } from '@/lib/validations';
 import type { PermissionModule, UserRole } from '@/types/permissions';
@@ -93,6 +94,8 @@ export async function GET(request: NextRequest) {
       const organizationId = session!.user.organizationId;
       await lockAuthorizedActor(tx, session!.user.id, organizationId, permissionModule, 'view');
       await lockEntity(tx, entityType, entityId, organizationId);
+      const commercialDenied = await commercialEntityDenial(tx, session!, entityType, entityId, 'view');
+      if (commercialDenied) throw new InvalidCommentReference(commercialDenied.status);
       const scope = { organizationId, entityType, entityId, author: { organizationId } };
       const comments = await tx.comment.findMany({
         where: {
@@ -178,6 +181,8 @@ export async function POST(request: NextRequest) {
       const organizationId = session!.user.organizationId;
       await lockAuthorizedActor(tx, session!.user.id, organizationId, permissionModule, 'edit');
       await lockEntity(tx, data.entityType, data.entityId, organizationId);
+      const commercialDenied = await commercialEntityDenial(tx, session!, data.entityType, data.entityId, 'edit');
+      if (commercialDenied) throw new InvalidCommentReference(commercialDenied.status);
       if (data.parentId) {
         const parent = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
           SELECT c.id FROM comments c JOIN users u ON u.id = c.author_id

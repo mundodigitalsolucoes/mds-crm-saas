@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { checkAuth, checkPermission } from '@/lib/checkPermission';
+import { commercialEntityDenial } from '@/lib/authorization/guards';
+import { hasPermission, parsePermissions } from '@/lib/permissions';
 import { parseBody, commentUpdateSchema } from '@/lib/validations';
-import type { PermissionModule } from '@/types/permissions';
+import type { PermissionModule, UserRole } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
 const entityTypeToModule: Record<string, PermissionModule> = {
@@ -23,9 +25,11 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    // Buscar o comment primeiro para saber o entityType
-    const existingComment = await prisma.comment.findUnique({
-      where: { id },
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.errorResponse!;
+    const organizationId = auth.session!.user.organizationId;
+    const existingComment = await prisma.comment.findFirst({
+      where: { id, organizationId, author: { organizationId } },
     });
 
     if (!existingComment) {
@@ -38,7 +42,7 @@ export async function PUT(
     if (!allowed) return errorResponse!;
 
     // Verificar autoria — só o autor pode editar seu próprio comentário
-    if (existingComment.authorId !== session!.user.id) {
+    if (existingComment.authorId !== session!.user.id || session!.user.organizationId !== organizationId) {
       return NextResponse.json(
         { error: 'Você só pode editar seus próprios comentários' },
         { status: 403 }
@@ -52,15 +56,30 @@ export async function PUT(
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    const comment = await prisma.comment.update({
-      where: { id },
-      data: { content: data.content },
-      include: {
-        author: {
-          select: { id: true, name: true, avatarUrl: true },
-        },
-      },
-    });
+    const comment = await prisma.$transaction(async tx => {
+      const actors = await tx.$queryRaw<{ role: string; permissions: string }[]>(Prisma.sql`
+        SELECT u.role, u.permissions FROM users u JOIN organizations o ON o.id = u.organization_id
+        WHERE u.id = ${session!.user.id} AND u.organization_id = ${organizationId}
+          AND u.deleted_at IS NULL AND o.deleted_at IS NULL FOR SHARE OF u, o`);
+      const actor = actors[0];
+      if (!actor) throw new CommentDeleteError(403);
+      const rows = await tx.$queryRaw<{ entityType: string; entityId: string; parentId: string | null }[]>(Prisma.sql`
+        SELECT entity_type AS "entityType", entity_id AS "entityId", parent_id AS "parentId" FROM comments
+        WHERE id = ${id} AND organization_id = ${organizationId} AND author_id = ${session!.user.id} FOR UPDATE`);
+      const current = rows[0];
+      if (!current || !Object.hasOwn(entityTypeToModule, current.entityType)) throw new CommentDeleteError(404);
+      if (actor.role !== 'owner' && !hasPermission(parsePermissions(actor.permissions, actor.role as UserRole), entityTypeToModule[current.entityType], 'edit')) throw new CommentDeleteError(403);
+      const commercialDenied = await commercialEntityDenial(tx, session!, current.entityType, current.entityId, 'edit');
+      if (commercialDenied) throw new CommentDeleteError(commercialDenied.status);
+      if (current.parentId && !await tx.comment.findFirst({ where: {
+        id: current.parentId, organizationId, entityType: current.entityType, entityId: current.entityId, author: { organizationId },
+      }, select: { id: true } })) throw new CommentDeleteError(409);
+      return tx.comment.update({
+        where: { id, organizationId, authorId: session!.user.id },
+        data: { content: data.content },
+        include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
     return NextResponse.json({
       ...comment,
@@ -68,6 +87,8 @@ export async function PUT(
       updatedAt: comment.updatedAt.toISOString(),
     });
   } catch (error) {
+    if (error instanceof CommentDeleteError) return NextResponse.json({ error: 'Recurso indisponível ou não autorizado' }, { status: error.status });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (['P2025', 'P2034'].includes(error.code) || (error.code === 'P2010' && ['40001', '40P01'].includes(String(error.meta?.code))))) return NextResponse.json({ error: 'Conflito de atualização; tente novamente' }, { status: 409 });
     console.error('Erro ao atualizar comment:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
@@ -130,6 +151,8 @@ export async function DELETE(
             SELECT id FROM ${tables[root.entityType as keyof typeof tables]}
             WHERE id = ${root.entityId} AND organization_id = ${organizationId} FOR SHARE`);
       if (!entity.length) throw new CommentDeleteError(404);
+      const commercialDenied = await commercialEntityDenial(tx, auth.session!, root.entityType, root.entityId, 'delete');
+      if (commercialDenied) throw new CommentDeleteError(commercialDenied.status);
 
       const scope = { organizationId, entityType: root.entityType, entityId: root.entityId, author: { organizationId } };
       if (root.parentId && !await tx.comment.findFirst({ where: { ...scope, id: root.parentId }, select: { id: true } })) {

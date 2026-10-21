@@ -55,3 +55,12 @@ test('Lot2 resource inheritance: canonical task/comment bindings, foreign resour
   assert.equal((await adapters('observe_only').commercialEntityDenial(tx,a.session,'task',foreign.id,'view')).status,404);
  },{timeout:5000});}
 });
+test('Lot2 transactional adapter preserves project quota using only the pool1 transaction',async()=>{
+ const f=await fixture();await db.organization.update({where:{id:f.org.id},data:{maxProjects:1}});
+ await db.$transaction(async tx=>{
+  const request={module:'marketing',permission:'projects',action:'create'};
+  assert.equal((await adapters().evaluateModuleAccess(request,{client:tx,session:f.session})).decision.allowed,true);
+  await tx.marketingProject.create({data:{organizationId:f.org.id,title:'Quota fixture',ownerId:f.user.id}});
+  assert.equal((await adapters().evaluateModuleAccess(request,{client:tx,session:f.session})).decision.reason,'additional_rule_denied');
+ },{timeout:5000});
+});
