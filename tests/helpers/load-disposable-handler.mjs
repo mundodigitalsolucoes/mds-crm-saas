@@ -17,7 +17,7 @@ export function loadHandler(filename, imports, globals = {}) {
   runInNewContext(compiled, {
     module: runtimeModule, exports: runtimeModule.exports, Buffer, URL, URLSearchParams, TextEncoder, AbortSignal, Request, Response,
     crypto: webcrypto, console, process: { env: {} },
-    require: id => { if (Object.hasOwn(imports, id)) return imports[id]; if (['@/lib/authorization/guards', '@/lib/authorization/operation-data'].includes(id)) return loadDependency(fileURLToPath(new URL('../../src/lib/authorization/' + id.split('/').at(-1) + '.ts', import.meta.url))); if (id.startsWith('@/')) throw new Error(`Unmocked infrastructure import: ${id}`); return loadDependency(id) },
+    require: id => { if (Object.hasOwn(imports, id)) return imports[id]; if (['@/lib/authorization/guards', '@/lib/authorization/operation-data'].includes(id)) return loadDependency(fileURLToPath(new URL('../../src/lib/authorization/' + id.split('/').at(-1) + '.ts', import.meta.url))); if (id === '@/lib/attachments/storage') return loadDependency(fileURLToPath(new URL('../../src/lib/attachments/storage.ts', import.meta.url))); if (id.startsWith('@/')) throw new Error(`Unmocked infrastructure import: ${id}`); return loadDependency(id) },
     ...globals,
   }, { filename })
   return runtimeModule.exports

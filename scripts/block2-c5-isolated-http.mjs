@@ -11,13 +11,13 @@ mkdirSync(out,{recursive:true,mode:0o700});
 const policyPath='src/lib/authorization/policy.ts',original=readFileSync(policyPath,'utf8'),fingerprint=createHash('sha256').update(original).digest('hex');
 if(!/APPROVED_ENFORCEMENTS[^=]*=\s*\[\s*\]/.test(original))throw Error('Manifest must remain empty');
 const work=mkdtempSync(join(out,'isolated-')),files=new Set([...execFileSync('git',['ls-files','-z']).toString().split('\0'),...execFileSync('git',['ls-files','--others','--exclude-standard','-z']).toString().split('\0')].filter(Boolean));
-let server,fd;const env={PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',DATABASE_URL:process.env.DATABASE_URL,BLOCK2_TEST_DATABASE_URL:process.env.DATABASE_URL,NEXTAUTH_URL:'http://127.0.0.1:3101',BLOCK2_TEST_HTTP_ORIGIN:'http://127.0.0.1:3101',NEXTAUTH_SECRET:randomBytes(48).toString('hex'),ADMIN_JWT_SECRET:randomBytes(48).toString('hex'),TOKENS_SECRET:randomBytes(32).toString('hex'),NEXT_TELEMETRY_DISABLED:'1'};
+let server,fd;const env={PATH:process.env.PATH,HOME:process.env.HOME,NODE_ENV:'production',DATABASE_URL:process.env.DATABASE_URL,BLOCK2_TEST_DATABASE_URL:process.env.DATABASE_URL,NEXTAUTH_URL:'http://127.0.0.1:3101',BLOCK2_TEST_HTTP_ORIGIN:'http://127.0.0.1:3101',NEXTAUTH_SECRET:randomBytes(48).toString('hex'),ADMIN_JWT_SECRET:randomBytes(48).toString('hex'),TOKENS_SECRET:randomBytes(32).toString('hex'),NEXT_TELEMETRY_DISABLED:'1',CRM_ATTACHMENTS_PRIVATE_ROOT:join(work,'.cache','private-attachments')};
 for (const key of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','NO_PROXY','http_proxy','https_proxy','all_proxy','no_proxy','NODE_EXTRA_CA_CERTS','SSL_CERT_FILE']) if(process.env[key]) env[key]=process.env[key];
 try{
  for(const f of files){if(f.startsWith('.env')&&f!=='.env.example')throw Error('Sensitive file must not be copied');const target=join(work,f);mkdirSync(dirname(target),{recursive:true});copyFileSync(f,target);}
  symlinkSync(resolve('node_modules'),join(work,'node_modules'),'dir');
  // Synthetic legacy upload exists before startup, matching persisted public-file deployments.
- const uploadFixture=join(work,'public','uploads','00000000-0000-4000-8000-000000000002');mkdirSync(uploadFixture,{recursive:true});writeFileSync(join(uploadFixture,'lot2-known-file.txt'),'SYNTHETIC_LEGACY_MARKETING_FILE');
+ const uploadFixture=join(work,'public','uploads','00000000-0000-4000-8000-000000000002');mkdirSync(uploadFixture,{recursive:true});writeFileSync(join(uploadFixture,'lot2-known-file.txt'),'SYNTHETIC_LEGACY_MARKETING_FILE');writeFileSync(join(uploadFixture,'lot3-sales-legacy.txt'),'SYNTHETIC_LEGACY_SALES_FILE');
  // Only this synthetic fixture UUID changes selector in this disposable test copy.
  const testPolicy=original.replace('export function modeForOrganization(organizationId: string | undefined): AuthorizationMode {',"export function modeForOrganization(organizationId: string | undefined): AuthorizationMode {\n  if (organizationId === '00000000-0000-4000-8000-000000000002') return 'enforce';");
  if(testPolicy===original)throw Error('Expected policy selector missing');writeFileSync(join(work,policyPath),testPolicy);
