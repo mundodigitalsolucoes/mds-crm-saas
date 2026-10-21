@@ -1,0 +1,505 @@
+{
+  "entryHead": "80ac574aa361378e5c6adffa09d4792e1a611c0e",
+  "preparedCiHead": "d0cfe6cd89b4365c632ea5b8272f0e9452e65369",
+  "fullSuiteExecutionHead": "db9f67a07dad655631024b4e4de083a8a1e9b515",
+  "applicationAndTestSourceEqualToFullSuiteExecution": true,
+  "finalWorkflowOnlyStepsSeparatelyValidated": true,
+  "nodeRuntime": "v22.21.1 (local isolated rehearsal; GitHub node-version 22 selects current patch)",
+  "sanitizedBase": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+  "candidateBranch": "audit/block2-sanitized",
+  "preparedBaseBranch": "review/block2-sanitized-base",
+  "status": "LOCAL_REHEARSAL_PASS_REVIEW_AND_REMOTE_CI_PENDING_PILOT_NOT_APPROVED",
+  "commitsPreserved": {
+    "C0": "192a110",
+    "C1": "7f02b38",
+    "C2": "d626bff",
+    "C3": "39facc0",
+    "C4": "5f0f8a9",
+    "C5Audit": "5ec8ed1",
+    "C5Security": "a9aa6ed",
+    "C5Evidence": "80ac574"
+  },
+  "historyScan": {
+    "candidateHead": "d0cfe6cd89b4365c632ea5b8272f0e9452e65369",
+    "reachableBlobsScanned": 1686,
+    "knownExposedValueMatches": {
+      "DATABASE_URL": 0,
+      "NEXTAUTH_SECRET": 0,
+      "TOKENS_SECRET": 0,
+      "META_APP_SECRET": 0
+    },
+    "strongPatternMatches": {
+      "private-key": 0,
+      "github-token": 0,
+      "aws-access-key": 0,
+      "slack-token": 0
+    },
+    "secretValuesOrFingerprintsStored": false,
+    "lineageMappingsRevalidated": 783,
+    "functionalTreeDifferencesOutsideThreeRemovedPaths": 0,
+    "authorDateMetadataDifferences": 0,
+    "originalAuditUnchanged": true,
+    "scope": "reachable candidate only; no provider authentication or production access; heuristic patterns are not a universal credential guarantee"
+  },
+  "workflows": [
+    {
+      "workflow": "security-c03-c04-build.yml",
+      "yamlParsed": true,
+      "shellStepsSyntaxChecked": 6,
+      "contentsReadOnly": true,
+      "noProductionSecretContext": true,
+      "candidateShaCheckout": true,
+      "noAllRefsOrTagsFetch": true,
+      "remoteRunStatus": "NOT_RUN_NO_PUSH_AUTHORIZED"
+    },
+    {
+      "workflow": "block2-authorization-tests.yml",
+      "yamlParsed": true,
+      "shellStepsSyntaxChecked": 8,
+      "contentsReadOnly": true,
+      "noProductionSecretContext": true,
+      "candidateShaCheckout": true,
+      "noAllRefsOrTagsFetch": true,
+      "remoteRunStatus": "NOT_RUN_NO_PUSH_AUTHORIZED"
+    },
+    {
+      "workflow": "block2-postgres-concurrency.yml",
+      "yamlParsed": true,
+      "shellStepsSyntaxChecked": 7,
+      "contentsReadOnly": true,
+      "noProductionSecretContext": true,
+      "candidateShaCheckout": true,
+      "noAllRefsOrTagsFetch": true,
+      "remoteRunStatus": "NOT_RUN_NO_PUSH_AUTHORIZED"
+    },
+    {
+      "workflow": "security-c03-c04.yml",
+      "yamlParsed": true,
+      "shellStepsSyntaxChecked": 4,
+      "contentsReadOnly": true,
+      "noProductionSecretContext": true,
+      "candidateShaCheckout": true,
+      "noAllRefsOrTagsFetch": true,
+      "remoteRunStatus": "NOT_RUN_NO_PUSH_AUTHORIZED"
+    }
+  ],
+  "checks": {
+    "cleanInstallNode22Exit": 0,
+    "prismaValidateExit": 0,
+    "prismaGenerateExit": 0,
+    "node": {
+      "tests": 123,
+      "pass": 123,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "typescript": {
+      "tests": 383,
+      "pass": 383,
+      "fail": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "http": {
+      "head": "db9f67a07dad655631024b4e4de083a8a1e9b515",
+      "runtime": "v22.21.1",
+      "results": [
+        {
+          "script": "dashboard-c0-http",
+          "exit": 0,
+          "signal": null
+        },
+        {
+          "script": "commercial-dashboard-http",
+          "exit": 0,
+          "signal": null
+        },
+        {
+          "script": "branding-white-label-http",
+          "exit": 0,
+          "signal": null
+        },
+        {
+          "script": "c5-cross-tenant-http",
+          "exit": 0,
+          "signal": null
+        },
+        {
+          "script": "c5-direct-access-http",
+          "exit": 0,
+          "signal": null
+        },
+        {
+          "script": "c5-task-os-regression-http",
+          "exit": 0,
+          "signal": null
+        }
+      ]
+    },
+    "buildExit": 0,
+    "nextTypegenExit": 0,
+    "typecheckExit": 0,
+    "scopedLint": {
+      "files": 37,
+      "errors": 0,
+      "warningsInheritedAt80ac574": 8,
+      "c6Errors": 0,
+      "c6Warnings": 0
+    },
+    "disposableSchemaDriftExit": 0,
+    "disposableSchemaPrepareExit": 0,
+    "cleanup": {
+      "remainingFixtureOrganizations": 0,
+      "remainingFixtureAdmins": 0,
+      "remainingSyntheticOrphanActivities": 0
+    },
+    "npmAuditExit": 1,
+    "npmAudit": {
+      "lockUnchangedFromEntry": true,
+      "metadata": {
+        "info": 0,
+        "low": 1,
+        "moderate": 2,
+        "high": 15,
+        "critical": 0,
+        "total": 18
+      },
+      "packages": [
+        {
+          "package": "@next/eslint-plugin-next",
+          "versions": [
+            "16.2.6"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "axios",
+          "versions": [
+            "1.16.1"
+          ],
+          "severity": "high",
+          "direct": true,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "baseline-browser-mapping",
+          "versions": [
+            "2.10.32"
+          ],
+          "severity": "moderate",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "brace-expansion",
+          "versions": [
+            "1.1.15",
+            "5.0.6"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "braces",
+          "versions": [
+            "3.0.3"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "browserslist",
+          "versions": [
+            "4.28.2"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "chokidar",
+          "versions": [
+            "3.6.0"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": false,
+          "introducedByC6": false
+        },
+        {
+          "package": "esbuild",
+          "versions": [
+            "0.28.0"
+          ],
+          "severity": "low",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "eslint-config-next",
+          "versions": [
+            "16.2.6"
+          ],
+          "severity": "high",
+          "direct": true,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "fast-glob",
+          "versions": [
+            "3.3.1",
+            "3.3.3"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "follow-redirects",
+          "versions": [
+            "1.16.0"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "form-data",
+          "versions": [
+            "4.0.5"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "js-yaml",
+          "versions": [
+            "4.1.1"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "micromatch",
+          "versions": [
+            "4.0.8"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "postcss-selector-parser",
+          "versions": [
+            "6.1.2"
+          ],
+          "severity": "moderate",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "source-map-js",
+          "versions": [
+            "1.2.1"
+          ],
+          "severity": "high",
+          "direct": false,
+          "fixAvailable": true,
+          "introducedByC6": false
+        },
+        {
+          "package": "tailwindcss",
+          "versions": [
+            "3.4.19"
+          ],
+          "severity": "high",
+          "direct": true,
+          "fixAvailable": false,
+          "introducedByC6": false
+        },
+        {
+          "package": "tailwindcss-animate",
+          "versions": [
+            "1.0.7"
+          ],
+          "severity": "high",
+          "direct": true,
+          "fixAvailable": false,
+          "introducedByC6": false
+        }
+      ]
+    }
+  },
+  "policy": {
+    "mode": "observe_only",
+    "approvedEnforcements": [],
+    "applicationSchemaLockAndCoreUnchangedByC6": true
+  },
+  "gates": {
+    "G1": "LOCAL_REGRESSION_PASS_NOT_APPROVED",
+    "G2": "C0_C5_NEGATIVES_PASS_WIDER_COVERAGE_REVIEW_PENDING",
+    "G3": "TENANT_WIDGET_MOCKS_PASS_REAL_PROVIDERS_PENDING",
+    "G4": "POSTGRES_TESTS_PASS_REAL_META_OPERATION_PENDING",
+    "G5": "OBSERVE_ONLY_COMMERCIAL_COVERAGE_LEGACY_AND_PILOT_DENIAL_PENDING",
+    "G6": "PACKAGE_AND_CI_PREPARED_REMOTE_CI_AND_DISTINCT_REVIEWER_PENDING"
+  },
+  "independentReviewPerformed": false,
+  "remoteCiPerformed": false,
+  "productionCompatibility": "Fixtures only; deployed SHA, schemas, channels and limits not read from production. Pilot Atendimento+Vendas+White-Label requires Marketing denied, which observe_only does not guarantee.",
+  "limitations": [
+    "Pattern scanning is bounded and is not universal secret detection. No credentials or secret fingerprints are in this evidence.",
+    "Current dependency graph has 18 flagged packages, 0 critical; unchanged lock means none introduced by C6. Runtime Axios chain needs impact triage.",
+    "YAML and shell syntax + local runner rehearsal do not equal an actual GitHub Actions run.",
+    "Initial tsx attempt blocked by sandbox IPC; successful retry is recorded, no test waived.",
+    "No push, production mutation, enforcement activation or independent sign-off."
+  ],
+  "fileHashesAreEvidenceIntegrityNotCredentialFingerprints": true,
+  "localArtifacts": [
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/npm-ci.log",
+      "sha256": "32910aa8ac5e61b48995e0c11248924d6a62d3dddbd420f3f6db38e366278a18",
+      "bytes": 442
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/node-postgres-node22.tap",
+      "sha256": "a986c554af3729fdde7283da41893c83d0f10ce55e70ce56d9cc116c7fa14e12",
+      "bytes": 28364
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/typescript-node22-retry.log",
+      "sha256": "8cc8a30ecff7a9e266ddf277d99b663435716dcc12a27a08926dd7b4934bf5c0",
+      "bytes": 102059
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/build-node22.log",
+      "sha256": "a0f9263d5d2d216b56754cb1507c7d53196f65bb9caa4cf25986ba7fed040bb8",
+      "bytes": 8149
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/next-typegen.log",
+      "sha256": "adba4af9194e10e47dda75ff0fd0f8c2b756474896d0eba5612799c527ff372a",
+      "bytes": 59
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/typecheck-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/lint-final.log",
+      "sha256": "90c546ed06883b40a96fa607fb4c230fce4f5815f9302bfc08a57517df29bc52",
+      "bytes": 1899
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/ci-safety-node22.log",
+      "sha256": "ae73aae3cfe91b731f7e93de141c2ac847e7b8d5bb60b6c2ca22781cbf3bfd97",
+      "bytes": 1086
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/prisma-validate.log",
+      "sha256": "87ec5a1ec220f83c7901f1e5363e347ac10881a41f69cdac2b2e74f2b3ed30a6",
+      "bytes": 96
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/prisma-generate.log",
+      "sha256": "ae4080ce1a1bba911c72ac1802080a5bae4a623670ae7c0131c0bed891cc6a53",
+      "bytes": 333
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/history-security-scan-source.json",
+      "sha256": "d1a9accc6066644212a52ef0f3ff44c69d455d43b2539c1e5c64b77d8ffe3092",
+      "bytes": 719
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/workflow-validation-final.json",
+      "sha256": "658e21068fbcc0d799f6ccd277ca23751708641ed79fa9017bdb3efcb9a0ca7e",
+      "bytes": 1214
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/disposable-schema-diff.log",
+      "sha256": "198913094e3f41610eb893459ab65a3c79991b65d4ef5fcb8c325ebe52ebf1ed",
+      "bytes": 25
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/disposable-prepare.log",
+      "sha256": "4d1799229ddb118f3b5984617aa1d2d9f10ebac1336c8bc854955cc42cd1a659",
+      "bytes": 193
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/cleanup.json",
+      "sha256": "7992c85510c708e0bede51bd988391327ab7073710c882241319c8b96e1a56b0",
+      "bytes": 115
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/dependency-risk-summary.json",
+      "sha256": "fa5da55ee3785834f3b7a0b635b5dbc69ba867c2b382e2e53b651a78a40271f0",
+      "bytes": 3811
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/tested-source-equality.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/protected-source-unchanged.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/summary.json",
+      "sha256": "cf0319f24bd21079986835a282d1aa554f4425c8bc4fe168181aebca5287b80b",
+      "bytes": 661
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/dashboard-c0-http.json",
+      "sha256": "7f02c14aaa3d0e428a976557cde54d0a2412c18c27b8a248ae402cc607247941",
+      "bytes": 854
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/commercial-dashboard-http.json",
+      "sha256": "50303388bcbf17872d1887799aa4dd05ff6ce7acc616f3c3a02624cf90299284",
+      "bytes": 10410
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/branding-white-label-http.json",
+      "sha256": "e71c49dde478028750b4b87fb23ef3f0b81e528a80b98a61c0f6433e89bd387e",
+      "bytes": 16150
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/c5-cross-tenant-http.json",
+      "sha256": "52fdc97093e349bcf5543862ba6a8e84b4430f6c11eaf875e42a829ba5c03c26",
+      "bytes": 10846
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/c5-direct-access-http.json",
+      "sha256": "b619793d9f7d6d3b83c149f4da238093cf570374943af612aec2fe2b736d725d",
+      "bytes": 175395
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c6/block2-c6-http/c5-task-os-regression-http.json",
+      "sha256": "5cefb5a9a1a0fce558dc30c00b2663826a2c78483c4604ebfbd113309603b1b8",
+      "bytes": 2591
+    }
+  ]
+}
