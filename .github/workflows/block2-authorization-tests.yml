@@ -38,14 +38,9 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-tags: false
-          fetch-depth: 1
-      - name: Fetch only candidate ancestry, never all legacy branches or tags
-        env:
-          C6_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
-            git fetch --no-tags --unshallow origin "$C6_CANDIDATE_SHA"
-          fi
+          # Positive depth fetches only this candidate, unlike depth 0 (all refs).
+          # The history guard fails closed if required roots/baselines are missing.
+          fetch-depth: 1000000
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
