@@ -4,25 +4,19 @@ on:
   pull_request:
     branches:
       - feature/modular-plans-entitlements
+      - review/block2-sanitized-base
   push:
     branches:
       - feature/modular-plans-entitlements
+      - audit/block2-sanitized
     paths:
-      - 'src/app/api/auth/forgot-password/route.ts'
-      - 'src/app/api/auth/**'
-      - 'src/app/api/atendimento/instagram/**'
-      - 'src/app/api/atendimento/widget/**'
-      - 'src/app/api/webhooks/asaas/route.ts'
-      - 'src/lib/checkPermission.ts'
-      - 'src/lib/atendimento/instagram-security-store.ts'
-      - 'src/lib/atendimento/widget-inbox-store.ts'
-      - 'src/app/api/notifications/**'
-      - 'src/app/api/usage/**'
-      - 'prisma/schema.prisma'
-      - 'tests/*.test.mjs'
-      - 'tests/helpers/load-disposable-handler.mjs'
-      - 'tests/block2-reset-postgres-integration.test.mjs'
-      - '.github/workflows/block2-postgres-concurrency.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/block2-*.mjs'
+      - 'prisma/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -31,28 +25,32 @@ permissions:
 jobs:
   postgres-concurrency:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_USER: block2
           POSTGRES_PASSWORD: block2_ci_only
-          POSTGRES_DB: block2_ci
+          POSTGRES_DB: mds_crm_dev
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U block2 -d block2_ci"
+          --health-cmd "pg_isready -U block2 -d mds_crm_dev"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
-      DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
+      BLOCK2_CI_DISPOSABLE: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/mds_crm_dev
+      DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/mds_crm_dev
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -62,11 +60,23 @@ jobs:
       - name: Verify concurrent reset token rotation on disposable database
         run: node --test tests/block2-reset-postgres-integration.test.mjs
       - name: Generate client and prepare only the disposable CI schema
-        run: npx prisma generate && npx prisma db push --skip-generate
+        run: npx prisma generate && node scripts/block2-c6-ci.mjs prepare
       - name: Verify actual handlers with PostgreSQL and provider mocks
         shell: bash
         run: |
           set -o pipefail
-          node --import tsx --test --test-reporter=tap tests/*.test.mjs | tee /tmp/block2-handlers.tap
+          node scripts/block2-c6-ci.mjs node | tee /tmp/block2-handlers.tap
       - name: Block acceptance while executable security TODO assertions remain
         run: node -e "const fs=require('fs'); const tap=fs.readFileSync('/tmp/block2-handlers.tap','utf8'); if (/^# todo [1-9][0-9]*$/m.test(tap)) { console.error('Unresolved security acceptance assertions; closure remains blocked'); process.exit(1); }"
+      - name: Build the actual HTTP candidate without migrations
+        run: npx next build
+      - name: Run real NextAuth HTTP regressions C0-C5 on disposable PostgreSQL
+        run: node scripts/block2-c6-ci.mjs http
+      - name: Preserve fixture-only HTTP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: block2-c6-http-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/block2-c6-http/*.json
+          if-no-files-found: ignore
+          retention-days: 7
