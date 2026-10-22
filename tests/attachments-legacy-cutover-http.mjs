@@ -85,6 +85,25 @@ try{
  const sales=await legacy('sales.txt'),mkt=await legacy('marketing.txt','task',marketing.id),conflict=await legacy('changed.txt'),deleted=await legacy('deleted.txt'),failed=await legacy('failed.txt'),collision=await legacy('collision.txt');
  const ambiguous=await legacy(brandingName,'lead',lead.id,true,brandingBytes);await db.organization.update({where:{id:pilot.id},data:{logo:ambiguous.url,favicon:ambiguous.url}});
  const missing=await legacy('missing.txt','lead',lead.id,false);await writeFile(join(publicDir,'orphan.txt'),'SYNTHETIC_ORPHAN_PRESERVED');
+ // Selective-cleanup fixtures are explicit IDs, never a production classification heuristic.
+ const cleanLead=await db.lead.create({data:{organizationId:pilot.id,name:'Synthetic classified disposable lead'}});
+ const retainedLead=await db.lead.create({data:{organizationId:pilot.id,name:'Synthetic unclassified retained lead',chatwootContactId:7001}});
+ const cleanTask=await db.task.create({data:{organizationId:pilot.id,title:'Synthetic classified disposable task',type:'follow_up',leadId:cleanLead.id}});
+ await db.task.create({data:{organizationId:pilot.id,title:'Synthetic retained task',leadId:retainedLead.id}});
+ const cleanChild=await db.subtask.create({data:{taskId:cleanTask.id,title:'Synthetic disposable subtask'}});
+ const cleanComment=await db.comment.create({data:{organizationId:pilot.id,entityType:'task',entityId:cleanTask.id,authorId:users[0].id,content:'Synthetic classified comment'}});
+ const cleanReply=await db.comment.create({data:{organizationId:pilot.id,entityType:'task',entityId:cleanTask.id,parentId:cleanComment.id,authorId:users[0].id,content:'Synthetic classified reply'}});
+ const cleanFile=await legacy('discard-classified.txt','comment',cleanComment.id);
+ const cleanActivity=await db.activity.create({data:{entityType:'lead',entityId:cleanLead.id,leadId:cleanLead.id,action:'synthetic',userId:users[0].id}});
+ const cleanNotification=await db.notification.create({data:{userId:users[0].id,type:'synthetic',title:'Synthetic disposable notification',entityType:'task',entityId:cleanTask.id}});
+ // Synthetic protected channel/credential/remote bindings, receipts, OAuth and configuration.
+ const connection=await db.connectedAccount.create({data:{organizationId:pilot.id,provider:'chatwoot',connectedById:users[0].id,accessTokenEnc:'SYNTHETIC_NOT_A_REAL_TOKEN',data:'{"chatwootInboxId":7001}'}});
+ await db.whatsappInstance.create({data:{organizationId:pilot.id,instanceName:'synthetic-protected-instance',chatwootInboxId:7001,metadata:'{"provider":"evolution","synthetic":true}'}});
+ await db.chatwootConversation.create({data:{organizationId:pilot.id,chatwootId:7001,chatwootAccountId:7001,chatwootInboxId:7001,chatwootContactId:7001,status:'open',leadId:retainedLead.id}});
+ await db.instagramOAuthState.create({data:{nonceHash:randomBytes(32).toString('hex'),organizationId:pilot.id,userId:users[0].id,expiresAt:new Date(Date.now()+600000)}});
+ await db.instagramWebhookReceipt.create({data:{organizationId:pilot.id,eventHash:randomBytes(32).toString('hex'),chatwootAccountId:7001,chatwootInboxId:7001,status:'pending'}});
+ await db.widgetInboxOperation.create({data:{organizationId:pilot.id,connectedAccountId:connection.id,accountId:7001,baseUrl:'https://example.invalid',status:'remote_unknown'}});
+
  async function inventory(){const rows=await db.attachment.findMany({where:{organizationId:pilot.id}});const org=await db.organization.findUnique({where:{id:pilot.id}});return Promise.all(rows.map(async row=>({id:row.id,classification:[org.logo,org.favicon].includes(row.url)?'ambiguous-public-branding':!await exists(join(publicDir,row.filename))?'missing':'internal-private-required'})));}
  const classified=await inventory();const referencedNames=new Set(fixtures.map(f=>f.filename));const orphans=(await readdir(publicDir)).filter(name=>!referencedNames.has(name));check('filesystem-orphan-classification',orphans.length===1&&orphans[0]==='orphan.txt');check('inventory-classifies-branding-and-missing',classified.find(x=>x.id===ambiguous.id).classification==='ambiguous-public-branding'&&classified.find(x=>x.id===missing.id).classification==='missing',{internal:classified.filter(x=>x.classification==='internal-private-required').length,ambiguous:1,missing:1,orphan:orphans.length});
  // Load the real adapter; no production module is changed or mocked.
@@ -149,6 +168,63 @@ try{
  for(const item of fixtures.filter(x=>committed.has(x.id)))check('private-file-not-reintroduced-'+item.filename,!await exists(join(publicDir,item.filename))&&hash(await storage.readAttachment(staged.get(item.id)))===checksums.get(item.id));
  check('unknown-orphan-preserved',(await readFile(join(publicDir,'orphan.txt'),'utf8'))==='SYNTHETIC_ORPHAN_PRESERVED');
  check('inventory-no-implicit-global-certification',await exists(join(publicDir,brandingName))&&!await exists(join(publicDir,missing.filename)));
+ // Selective cleanup never deletes identities/orgs/providers or relies on cascade.
+ const allowed={lead:[cleanLead.id],task:[cleanTask.id],subtask:[cleanChild.id],comment:[cleanComment.id,cleanReply.id],attachment:[cleanFile.id],activity:[cleanActivity.id],notification:[cleanNotification.id]};
+ const allModels=Prisma.dmmf.datamodel.models.map(model=>model.name[0].toLowerCase()+model.name.slice(1));
+ const snapshot=async client=>Object.fromEntries(await Promise.all(allModels.map(async model=>[model,await client[model].findMany()])));
+ const canonical=rows=>JSON.stringify(Object.fromEntries(Object.entries(rows).map(([model,items])=>[model,items.map(item=>JSON.stringify(item)).sort()])));
+ const backup=await snapshot(db),backupBytes=await readFile(join(publicDir,cleanFile.filename));
+ check('cleanup-backup-before-delete',hash(backupBytes)===checksums.get(cleanFile.id));
+ async function preflight(client,candidate){
+  assert.ok(allowed.lead.includes(candidate),'Only explicitly classified fixture IDs may be removed');
+  assert.equal(await client.chatwootConversation.count({where:{leadId:candidate}}),0);
+  assert.equal(await client.agendaEvent.count({where:{leadId:candidate}}),0);
+  assert.equal(await client.task.count({where:{leadId:candidate,id:{notIn:allowed.task}}}),0);
+  assert.equal(await client.activity.count({where:{leadId:candidate,id:{notIn:allowed.activity}}}),0);
+  assert.equal(await client.comment.count({where:{entityType:'lead',entityId:candidate,id:{notIn:allowed.comment}}}),0);
+ }
+ await assert.rejects(preflight(db,retainedLead.id));check('cleanup-unclassified-provider-linked-record-denied',canonical(await snapshot(db))===canonical(backup));
+ allowed.lead.push(retainedLead.id);await assert.rejects(preflight(db,retainedLead.id));allowed.lead.pop();check('cleanup-provider-link-overrides-test-label',canonical(await snapshot(db))===canonical(backup));
+ // A newly discovered protected dependent blocks an otherwise classified parent.
+ const blocker=await db.agendaEvent.create({data:{organizationId:pilot.id,title:'Synthetic protected dependency',date:new Date(),leadId:cleanLead.id}});
+ await assert.rejects(preflight(db,cleanLead.id));check('cleanup-protected-dependent-blocks-parent',await db.lead.count({where:{id:cleanLead.id}})===1);
+ // Remove only the temporary test blocker, not an unknown operational dependency.
+ await db.agendaEvent.delete({where:{id:blocker.id}});
+ const cleanup=async ({fail=false}={})=>db.$transaction(async tx=>{
+  await tx.$queryRaw(Prisma.sql`SELECT id FROM leads WHERE id=${cleanLead.id} AND organization_id=${pilot.id} FOR UPDATE`);
+  await preflight(tx,cleanLead.id);
+  for(const [model,ids]of [['attachment',allowed.attachment],['comment',[cleanReply.id]],['comment',[cleanComment.id]],['notification',allowed.notification],['activity',allowed.activity],['subtask',allowed.subtask],['task',allowed.task],['lead',allowed.lead]]){
+   const removed=await tx[model].deleteMany({where:{id:{in:ids}}});assert.equal(removed.count,ids.length);
+   if(fail&&model==='task')throw Error('Synthetic cleanup transaction abort');
+  }
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+ await assert.rejects(cleanup({fail:true}));check('cleanup-mid-transaction-failure-restores-all-tables',canonical(await snapshot(db))===canonical(backup));
+ await stop();await rename(join(publicDir,cleanFile.filename),join(quarantine,cleanFile.filename));
+ await cleanup();
+ const expected=Object.fromEntries(Object.entries(backup).map(([model,items])=>[model,items.filter(item=>!allowed[model]?.includes(item.id))]));
+ check('cleanup-only-approved-rows-removed',canonical(await snapshot(db))===canonical(expected),{removed:Object.values(allowed).reduce((sum,ids)=>sum+ids.length,0),protectedModels:allModels.length-Object.keys(allowed).length});
+ check('cleanup-file-quarantined-not-destroyed',hash(await readFile(join(quarantine,cleanFile.filename)))===checksums.get(cleanFile.id));
+ await start();
+ const gone=await request(cleanFile.url);check('cleanup-old-public-url-denied',[403,404].includes(gone.status)&&!gone.bytes.includes(backupBytes),{status:gone.status});
+ check('cleanup-deleted-attachment-api-denied',(await request('/api/attachments/'+cleanFile.id,{jar:jars[0]})).status===404);
+ check('cleanup-retained-private-download-integrity',hash((await request('/api/attachments/'+sales.id,{jar:jars[0]})).bytes)===checksums.get(sales.id));
+ check('cleanup-branding-preserved',(await request(brandingUrl)).status===200);
+ await stop();await start();
+ check('cleanup-preservation-after-restart',canonical(await snapshot(db))===canonical(expected));
+ check('cleanup-no-public-reappearance-after-restart',(await request(cleanFile.url)).status===404);
+ // Recover deleted synthetic rows from the pre-cleanup snapshot, parent-first, into private storage.
+ const restoredFile={...cleanFile,filename:cleanFile.id+'.bin',url:storage.attachmentDownloadUrl(cleanFile.id)};
+ await storage.writePrivateAttachment(restoredFile,backupBytes);
+ await db.$transaction(async tx=>{for(const model of ['lead','task','subtask','comment','attachment','activity','notification']){
+  const rows=backup[model].filter(item=>allowed[model]?.includes(item.id));
+  for(const row of rows)await tx[model].create({data:model==='attachment'?{...row,filename:restoredFile.filename,url:restoredFile.url}:row});
+ }});
+ const restoredExpected=Object.fromEntries(Object.entries(backup).map(([model,items])=>[model,items.map(item=>model==='attachment'&&item.id===cleanFile.id?{...item,filename:restoredFile.filename,url:restoredFile.url}:item)]));
+ check('cleanup-recovery-preserves-all-records-except-safe-file-pointer',canonical(await snapshot(db))===canonical(restoredExpected));
+ await stop();await start();
+ const recovered=await request(restoredFile.url,{jar:jars[0]});check('cleanup-recovered-private-download',recovered.status===200&&hash(recovered.bytes)===checksums.get(cleanFile.id),{status:recovered.status});
+ check('cleanup-recovery-never-restores-public-url',(await request(cleanFile.url)).status===404);
+ check('cleanup-protected-config-credentials-oauth-receipts-unchanged',canonical(await snapshot(db))===canonical(restoredExpected));
  if(previousPrivate===undefined)delete process.env.CRM_ATTACHMENTS_PRIVATE_ROOT;else process.env.CRM_ATTACHMENTS_PRIVATE_ROOT=previousPrivate;
  check('candidate-policy-byte-identical',(await readFile(join(root,'src/lib/authorization/policy.ts'),'utf8'))===baselinePolicy);
  check('candidate-working-tree-unchanged',execFileSync('git',['status','--porcelain=v1'],{cwd:root,encoding:'utf8'})===baselineFiles);
