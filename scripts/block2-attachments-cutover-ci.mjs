@@ -51,13 +51,14 @@ try {
   const names = new Set(run.result.results.map(item => item.name));
   assert.equal(run.exit, 0, 'Simulation failed');
   assert.equal(run.result.passed, true);
-  assert.equal(run.result.results.length, 168, 'Expected all 168 acceptance assertions');
-  assert.equal(names.size, 168, 'Duplicate acceptance assertions');
+  assert.equal(run.result.results.length, 174, 'Expected all 174 acceptance assertions');
+  assert.equal(names.size, 174, 'Duplicate acceptance assertions');
   assert.ok(run.result.results.every(item => item.passed));
   for (const name of ['candidate-policy-byte-identical', 'candidate-working-tree-unchanged',
     'external-fetch-denied-before-send', 'external-socket-denied-before-send',
     'cleanup-mid-transaction-failure-restores-all-tables', 'cleanup-preservation-after-restart',
-    'cleanup-recovery-never-restores-public-url', 'cleanup-protected-config-credentials-oauth-receipts-unchanged']) {
+    'cleanup-recovery-never-restores-public-url', 'cleanup-direct-preserved-attachment-blocks-lead',
+    'cleanup-direct-approved-pair-rollback', 'cleanup-direct-approved-pair-delete', 'cleanup-protected-config-credentials-oauth-receipts-unchanged']) {
     assert.ok(names.has(name), 'Required acceptance scenario missing');
   }
   report.simulationChecks = run.result.results.length;

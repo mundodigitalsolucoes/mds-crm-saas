@@ -173,6 +173,11 @@ try{
  const allModels=Prisma.dmmf.datamodel.models.map(model=>model.name[0].toLowerCase()+model.name.slice(1));
  const snapshot=async client=>Object.fromEntries(await Promise.all(allModels.map(async model=>[model,await client[model].findMany()])));
  const canonical=rows=>JSON.stringify(Object.fromEntries(Object.entries(rows).map(([model,items])=>[model,items.map(item=>JSON.stringify(item)).sort()])));
+ const protectedDirectLead=await db.lead.create({data:{organizationId:pilot.id,name:'Synthetic classified lead with preserved attachment'}});
+ const preservedId=randomUUID(),preservedBytes=Buffer.from('SYNTHETIC_PRESERVED_DIRECT_ATTACHMENT');
+ const preservedFile={id:preservedId,organizationId:pilot.id,filename:preservedId+'.bin',url:storage.attachmentDownloadUrl(preservedId)};
+ await storage.writePrivateAttachment(preservedFile,preservedBytes);
+ await db.attachment.create({data:{...preservedFile,entityType:'lead',entityId:protectedDirectLead.id,uploadedById:users[0].id,originalName:'preserved.txt',mimeType:'application/octet-stream',size:preservedBytes.length}});
  const backup=await snapshot(db),backupBytes=await readFile(join(publicDir,cleanFile.filename));
  check('cleanup-backup-before-delete',hash(backupBytes)===checksums.get(cleanFile.id));
  async function preflight(client,candidate){
@@ -182,7 +187,26 @@ try{
   assert.equal(await client.task.count({where:{leadId:candidate,id:{notIn:allowed.task}}}),0);
   assert.equal(await client.activity.count({where:{leadId:candidate,id:{notIn:allowed.activity}}}),0);
   assert.equal(await client.comment.count({where:{entityType:'lead',entityId:candidate,id:{notIn:allowed.comment}}}),0);
+  assert.equal(await client.attachment.count({where:{entityType:'lead',entityId:candidate,id:{notIn:allowed.attachment}}}),0);
  }
+ allowed.lead.push(protectedDirectLead.id);await assert.rejects(preflight(db,protectedDirectLead.id));allowed.lead.pop();
+ check('cleanup-direct-preserved-attachment-blocks-lead',canonical(await snapshot(db))===canonical(backup));
+ check('cleanup-direct-preserved-attachment-integrity',hash(await storage.readAttachment(preservedFile))===hash(preservedBytes));
+ const approvedLead=await db.lead.create({data:{organizationId:pilot.id,name:'Synthetic approved direct pair'}});
+ const approvedId=randomUUID(),approvedFile={id:approvedId,organizationId:pilot.id,filename:approvedId+'.bin',url:storage.attachmentDownloadUrl(approvedId)};
+ const approvedBytes=Buffer.from('SYNTHETIC_APPROVED_DIRECT_PAIR');await storage.writePrivateAttachment(approvedFile,approvedBytes);
+ await db.attachment.create({data:{...approvedFile,entityType:'lead',entityId:approvedLead.id,uploadedById:users[0].id,originalName:'approved.txt',mimeType:'application/octet-stream',size:approvedBytes.length}});
+ allowed.lead.push(approvedLead.id);allowed.attachment.push(approvedId);
+ const directSnapshot=await snapshot(db);
+ const cleanDirect=async fail=>db.$transaction(async tx=>{await tx.$queryRaw(Prisma.sql`SELECT id FROM leads WHERE id=${approvedLead.id} FOR UPDATE`);await preflight(tx,approvedLead.id);
+  assert.equal((await tx.attachment.deleteMany({where:{id:approvedId,organizationId:pilot.id,entityType:'lead',entityId:approvedLead.id}})).count,1);
+  if(fail)throw Error('Synthetic direct-pair abort');assert.equal((await tx.lead.deleteMany({where:{id:approvedLead.id,organizationId:pilot.id}})).count,1);
+ },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable});
+ await assert.rejects(cleanDirect(true));check('cleanup-direct-approved-pair-rollback',canonical(await snapshot(db))===canonical(directSnapshot));
+ await cleanDirect(false);allowed.lead.pop();allowed.attachment.pop();
+ check('cleanup-direct-approved-pair-delete',canonical(await snapshot(db))===canonical(backup));
+ check('cleanup-direct-approved-bytes-preserved',hash(await storage.readAttachment(approvedFile))===hash(approvedBytes));
+ await preflight(db,cleanLead.id);check('cleanup-original-eligible-lead-still-allowed',canonical(await snapshot(db))===canonical(backup));
  await assert.rejects(preflight(db,retainedLead.id));check('cleanup-unclassified-provider-linked-record-denied',canonical(await snapshot(db))===canonical(backup));
  allowed.lead.push(retainedLead.id);await assert.rejects(preflight(db,retainedLead.id));allowed.lead.pop();check('cleanup-provider-link-overrides-test-label',canonical(await snapshot(db))===canonical(backup));
  // A newly discovered protected dependent blocks an otherwise classified parent.
