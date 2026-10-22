@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { commercialEntityDenial } from '@/lib/authorization/guards';
-import { checkPermission } from '@/lib/checkPermission';
-import { attachmentDownloadUrl, writePrivateAttachment, removePrivateAttachment, AttachmentStorageError, type AttachmentFile } from '@/lib/attachments/storage';
+import { checkAuth, checkPermission } from '@/lib/checkPermission';
+import { attachmentDownloadUrl, writePrivateAttachment, removePrivateAttachment, AttachmentStorageError, MAX_ATTACHMENT_BYTES, type AttachmentFile } from '@/lib/attachments/storage';
 import { randomUUID } from 'crypto';
+import { setTimeout, clearTimeout } from 'node:timers';
 import type { PermissionModule } from '@/types/permissions';
 
 // Mapa: entityType → módulo de permissão
@@ -88,16 +89,60 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Cap the entire multipart envelope before invoking its parser, even without Content-Length.
+const MAX_UPLOAD_BODY_BYTES = MAX_ATTACHMENT_BYTES + 64 * 1024;
+async function boundedMultipart(request: NextRequest): Promise<FormData> {
+  const type = request.headers.get('content-type') || '';
+  if (!/^multipart\/form-data(?:\s*;|$)/i.test(type)) throw new AttachmentAccessError(415);
+  if (!/;\s*boundary=(?:"[^"]+"|[^;\s]+)(?:\s*;|\s*$)/i.test(type)) throw new AttachmentAccessError(400);
+  const declared = request.headers.get('content-length');
+  if (declared !== null && !/^\d+$/.test(declared)) throw new AttachmentAccessError(400);
+  if (declared !== null && BigInt(declared) > BigInt(MAX_UPLOAD_BODY_BYTES)) throw new AttachmentAccessError(413);
+  if (!request.body) throw new AttachmentAccessError(400);
+  const reader = request.body.getReader();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let expired = false;
+  const deadline = new Promise<never>((_, reject) => { timer = setTimeout(() => {
+    expired = true;
+    void reader.cancel().catch(() => undefined);
+    reject(new AttachmentAccessError(408));
+  }, 15000); });
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await Promise.race([reader.read(), deadline]);
+      if (expired) throw new AttachmentAccessError(408);
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_UPLOAD_BODY_BYTES) {
+        void reader.cancel().catch(() => undefined);
+        throw new AttachmentAccessError(413);
+      }
+      if (value.byteLength) chunks.push(Buffer.from(value));
+    }
+    try {
+      return await new Response(new Uint8Array(Buffer.concat(chunks)), { headers: { 'content-type': type } }).formData();
+    } catch { throw new AttachmentAccessError(400); }
+  } finally { clearTimeout(timer); reader.releaseLock(); }
+}
+
 // POST /api/attachments (multipart/form-data)
 export async function POST(request: NextRequest) {
   let pendingFile: AttachmentFile | undefined;
   try {
-    const formData = await request.formData();
+    const auth = await checkAuth();
+    if (!auth.authenticated) return auth.errorResponse!;
+    // Entity lives in the body: deny actors with no applicable edit permission before reading it.
+    // Specific entity/module authorization remains mandatory after bounded parsing and under lock.
+    const admission = await Promise.all(['tasks', 'leads', 'projects'].map(module => checkPermission(module as PermissionModule, 'edit')));
+    if (!admission.some(result => result.allowed)) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 });
+    const formData = await boundedMultipart(request);
     const file = formData.get('file') as File | null;
     const entityType = formData.get('entityType') as string;
     const entityId = formData.get('entityId') as string;
 
-    if (!file || typeof file.arrayBuffer !== 'function' || typeof file.name !== 'string' || !entityType || !entityId) {
+    if (!file || typeof file.arrayBuffer !== 'function' || typeof file.name !== 'string' || typeof entityType !== 'string' || !entityType || typeof entityId !== 'string' || !entityId) {
       return NextResponse.json(
         { error: 'file, entityType e entityId são obrigatórios' },
         { status: 400 }
@@ -124,11 +169,11 @@ export async function POST(request: NextRequest) {
     if (!allowed) return errorResponse!;
 
     // Validar tamanho (max 10MB)
-    const MAX_SIZE = 10 * 1024 * 1024;
+    const MAX_SIZE = MAX_ATTACHMENT_BYTES;
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
         { error: 'Arquivo muito grande. Máximo: 10MB' },
-        { status: 400 }
+        { status: 413 }
       );
     }
 
