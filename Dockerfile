@@ -44,4 +44,5 @@ COPY --from=builder /app/next.config.js ./next.config.js
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+# Database migrations are a separate, explicitly authorized operation.
+CMD ["node", "node_modules/next/dist/bin/next", "start", "--hostname", "0.0.0.0"]
