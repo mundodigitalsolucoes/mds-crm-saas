@@ -1,9 +1,14 @@
 name: C03-C04 Build Validation
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
+      - review/block2-sanitized-base
   push:
     branches:
       - feature/modular-plans-entitlements
+      - audit/block2-sanitized
     paths:
       - 'src/**'
       - 'prisma/**'
@@ -33,6 +38,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -44,6 +51,8 @@ jobs:
         run: npx prisma validate
       - name: Generate Prisma client (local only)
         run: npx prisma generate
+      - name: Generate Next.js route types for a clean checkout
+        run: npx next typegen
       - name: Check TypeScript
         run: npx tsc --noEmit
       - name: Build Next.js without starting server

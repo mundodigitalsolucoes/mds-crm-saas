@@ -8,30 +8,20 @@ import NextAuthSessionProvider from '@/providers/session-provider';
 import { Providers } from '@/components/providers';
 import NotificationBellWrapper from '@/components/NotificationBellWrapper';
 import WhatsAppStatusBanner from '@/components/integrations/WhatsAppStatusBanner';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { checkAuth } from '@/lib/checkPermission';
+import { getApplicationContext } from '@/lib/authorization/application-context';
+import { redirect } from 'next/navigation';
+import { getOrgBranding, brandingCssVars } from '@/lib/branding';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'MDS CRM - Dashboard',
-  description: 'Sistema de Gestão de Leads e Projetos',
-};
-
-async function getOrgBranding() {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) return null;
-
-    const org = await prisma.organization.findUnique({
-      where: { id: (session.user as any).organizationId },
-      select: { favicon: true },
-    });
-
-    return org;
-  } catch {
-    return null;
-  }
+export async function generateMetadata(): Promise<Metadata> {
+  const auth = await checkAuth();
+  if (!auth.authenticated || !auth.session) return {};
+  const branding = await getOrgBranding(auth.session.user.organizationId);
+  return {
+    title: { default: branding.name, template: `%s | ${branding.name}` },
+    icons: { icon: branding.favicon ?? '/favicon.ico', shortcut: branding.favicon ?? '/favicon.ico' },
+  };
 }
 
 export default async function AppLayout({
@@ -39,16 +29,16 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const branding = await getOrgBranding();
+  const auth = await checkAuth();
+  if (!auth.authenticated || !auth.session) redirect('/auth/login');
+  const context = await getApplicationContext();
+  if (!context || context.userId !== auth.session.user.id ||
+    context.organizationId !== auth.session.user.organizationId) redirect('/auth/login');
+  const branding = await getOrgBranding(auth.session.user.organizationId);
 
   const favicon = branding?.favicon ?? '/favicon.ico';
 
-  const cssVars = `
-    :root {
-      --color-primary: #2f3453;
-      --color-secondary: #374b89;
-    }
-  `;
+  const cssVars = brandingCssVars(branding);
 
   return (
     <NextAuthSessionProvider>
@@ -60,7 +50,7 @@ export default async function AppLayout({
         <WhatsAppStatusBanner />
 
         <div className="flex h-screen overflow-hidden bg-[#f6f8fc]">
-          <Sidebar />
+          <Sidebar access={context} branding={branding} />
 
           <div className="flex min-w-0 min-h-0 flex-1 flex-col bg-[#f6f8fc]">
             <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">

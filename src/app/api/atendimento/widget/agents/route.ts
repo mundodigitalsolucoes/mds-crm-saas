@@ -147,24 +147,11 @@ async function chatwootRequest<T>(params: {
     : null
 
   if (!response.ok) {
-    const detail =
-      (json &&
-      typeof json === 'object' &&
-      ('error' in json || 'message' in json)
-        ? String(
-            (json as { error?: string; message?: string }).error ||
-              (json as { error?: string; message?: string }).message ||
-              ''
-          )
-        : '') ||
-      text ||
-      `chatwoot_http_${response.status}`
-
     throw new WidgetAgentsError(
       'Falha ao vincular agente na inbox website.',
       response.status,
       'CHATWOOT_INBOX_AGENT_REQUEST_FAILED',
-      detail
+      `chatwoot_http_${response.status}`
     )
   }
 
@@ -179,7 +166,7 @@ async function chatwootRequest<T>(params: {
 
 async function persistRuntimeError(params: {
   organizationId: string
-  expectedSettings: string | null
+  expectedSettings: string
   parsedSettings: Record<string, unknown>
   runtime: WidgetRuntimeData
   message: string
@@ -334,6 +321,11 @@ export async function POST() {
         409,
         'CHATWOOT_BASE_URL_MISSING'
       )
+    }
+
+    const operation = await prisma.widgetInboxOperation.findUnique({ where: { organizationId } })
+    if (operation && (operation.inboxId !== inboxId || operation.accountId !== connectedAccountId || operation.connectedAccountId !== chatwootAccount.id || operation.baseUrl !== apiBaseUrl)) {
+      throw new WidgetAgentsError('Inbox pendente de reconciliação com a operação durável.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
     }
 
     const existingAgents = await chatwootRequest<InboxAgentsResponse>({

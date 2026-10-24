@@ -33,9 +33,12 @@ import {
   HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { usePermission } from '@/hooks/usePermission';
 import dynamic from 'next/dynamic';
+import { DEFAULT_BRANDING, brandingValues, type OrgBranding } from '@/lib/branding-values';
+import type { ApplicationContext } from '@/lib/authorization/application-context';
+import type { CommercialModuleId } from '@/lib/entitlements/catalog';
 import type { PermissionModule } from '@/types/permissions';
 
 const UsageBanner = dynamic(() => import('@/components/UsageBanner'), {
@@ -47,7 +50,8 @@ interface MenuItem {
   icon: LucideIcon;
   path: string;
   module?: PermissionModule;
-  ownerOnly?: boolean;
+  additionalPermission?: PermissionModule;
+  commercialModule?: CommercialModuleId;
 }
 
 interface MenuSection {
@@ -55,26 +59,15 @@ interface MenuSection {
   title: string;
   icon: LucideIcon;
   items: MenuItem[];
+  commercialModule?: CommercialModuleId;
 }
 
-const BRAND = {
-  logo: '/images/logo-fundo-escuro.png',
-  primary: '#2f3453',
-  secondary: '#374b89',
-  white: '#ffffff',
-};
-
-function makePalette() {
+function makePalette(brand: OrgBranding) {
   return {
-    bg: BRAND.primary,
-    bgDark: '#28304c',
-    bgDarker: '#252c45',
-    active: BRAND.secondary,
-    hover: 'rgba(255,255,255,0.08)',
-    hoverSoft: 'rgba(255,255,255,0.05)',
-    border: 'rgba(255,255,255,0.10)',
-    textMuted: 'rgba(255,255,255,0.78)',
-    textLabel: 'rgba(255,255,255,0.42)',
+    bg: brand.primaryColor, bgDark: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#28304c' : brand.primaryColor, bgDarker: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#252c45' : 'rgba(0,0,0,0.12)',
+    active: brand.secondaryColor,
+    hover: 'rgba(255,255,255,0.08)', hoverSoft: 'rgba(255,255,255,0.05)',
+    border: 'rgba(255,255,255,0.10)', textMuted: 'rgba(255,255,255,0.78)', textLabel: 'rgba(255,255,255,0.42)',
   };
 }
 
@@ -82,23 +75,23 @@ const salesItems: MenuItem[] = [
   { name: 'Leads', icon: Users, path: '/leads', module: 'leads' },
   { name: 'Kanban', icon: Kanban, path: '/kanban', module: 'kanban' },
   { name: 'Agenda', icon: Calendar, path: '/agenda', module: 'agenda' },
-  { name: 'Follow-ups', icon: CheckSquare, path: '/follow-ups', module: 'leads' },
+  { name: 'Follow-ups', icon: CheckSquare, path: '/follow-ups', module: 'leads', additionalPermission: 'tasks' },
   { name: 'Metas', icon: Target, path: '/goals', module: 'goals' },
 ];
 
 const serviceItems: MenuItem[] = [
-  { name: 'Atendimento', icon: MessageSquare, path: '/atendimento' },
+  { name: 'Atendimento', icon: MessageSquare, path: '/atendimento', module: 'atendimento' },
 ];
 
 const marketingItems: MenuItem[] = [
   { name: 'Projetos', icon: FolderKanban, path: '/projects', module: 'projects' },
   { name: 'OS', icon: FileText, path: '/os', module: 'os' },
   { name: 'Tarefas', icon: CheckSquare, path: '/tasks', module: 'tasks' },
-  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports' },
+  { name: 'Relatórios', icon: BarChart3, path: '/reports', module: 'reports', commercialModule: 'vendas', additionalPermission: 'leads' },
 ];
 
 const settingsItems: MenuItem[] = [
-  { name: 'Atendimento', icon: MessageSquare, path: '/settings/atendimento', module: 'integrations' },
+  { name: 'Atendimento', icon: MessageSquare, path: '/settings/atendimento', module: 'integrations', commercialModule: 'atendimento' },
   { name: 'Membros', icon: Shield, path: '/settings/members', module: 'users' },
   { name: 'Assinatura', icon: CreditCard, path: '/settings/billing' },
   { name: 'Minha Conta', icon: UserCog, path: '/settings/account' },
@@ -144,31 +137,33 @@ function SidebarSkeleton({
   );
 }
 
-export default function Sidebar() {
+function subscribeCollapsed(onChange: () => void) {
+  window.addEventListener('storage', onChange);
+  window.addEventListener('mds:sidebar:collapsed', onChange);
+  return () => {
+    window.removeEventListener('storage', onChange);
+    window.removeEventListener('mds:sidebar:collapsed', onChange);
+  };
+}
+
+export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { access: ApplicationContext; branding?: OrgBranding }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { canAccess, isAdmin, isLoading } = usePermission();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = useSyncExternalStore(subscribeCollapsed,
+    () => window.localStorage.getItem('mds:sidebar:collapsed') === '1', () => false);
+  const toggleCollapsed = () => {
+    window.localStorage.setItem('mds:sidebar:collapsed', isCollapsed ? '0' : '1');
+    window.dispatchEvent(new Event('mds:sidebar:collapsed'));
+  };
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
-  const palette = useMemo(() => makePalette(), []);
+  const brand = useMemo(() => brandingValues(branding), [branding]);
+  const palette = useMemo(() => makePalette(brand), [brand]);
 
   useEffect(() => {
-    const savedState = window.localStorage.getItem('mds:sidebar:collapsed');
-    const collapsed = savedState === '1';
-
-    setIsCollapsed(collapsed);
-    document.documentElement.style.setProperty(
-      '--app-sidebar-width',
-      collapsed ? '88px' : '288px'
-    );
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem('mds:sidebar:collapsed', isCollapsed ? '1' : '0');
-
     const width = isCollapsed ? '88px' : '288px';
     document.documentElement.style.setProperty('--app-sidebar-width', width);
 
@@ -179,36 +174,39 @@ export default function Sidebar() {
     );
   }, [isCollapsed]);
 
-  const role = (session?.user as any)?.role ?? '';
-  const isOwnerOrAdmin = role === 'owner' || role === 'admin';
-
-  const canViewItem = (item: MenuItem) => {
-    if (item.ownerOnly) return isOwnerOrAdmin;
-    if (!item.module) return true;
-    if (item.module === 'users') return isAdmin;
-    return canAccess(item.module);
-  };
-
+  const sameIdentity = session?.user?.id === access.userId && session?.user?.organizationId === access.organizationId;
   const dashboardItem: MenuItem = { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' };
 
   const visibleSections = useMemo<MenuSection[]>(() => {
-    if (isLoading) return [];
+    if (isLoading || !sameIdentity) return [];
+
+    const canViewItem = (item: MenuItem) => {
+      if (item.commercialModule && !access.modules.includes(item.commercialModule)) return false;
+      if (item.module && !access.views[item.module]) return false;
+      if (item.additionalPermission && (!access.views[item.additionalPermission] || !canAccess(item.additionalPermission))) return false;
+      if (!item.module) return true;
+      if (item.module === 'users') return isAdmin;
+      return canAccess(item.module);
+    };
 
     const sections: MenuSection[] = [
       {
         key: 'atendimento',
+        commercialModule: 'atendimento',
         title: 'Atendimento',
         icon: MessageSquare,
         items: serviceItems,
       },
       {
         key: 'vendas',
+        commercialModule: 'vendas',
         title: 'Vendas',
         icon: LayoutDashboard,
         items: salesItems,
       },
       {
         key: 'marketing',
+        commercialModule: 'marketing',
         title: 'Marketing',
         icon: FolderKanban,
         items: marketingItems,
@@ -228,51 +226,24 @@ export default function Sidebar() {
     ];
 
     return sections
+      .filter(section => !section.commercialModule || access.modules.includes(section.commercialModule))
       .map((section) => ({
         ...section,
         items: section.items.filter(canViewItem),
       }))
       .filter((section) => section.items.length > 0);
-  }, [canAccess, isAdmin, isLoading, isOwnerOrAdmin]);
-
-  useEffect(() => {
-    if (!visibleSections.length) return;
-
-    const nextState: Record<string, boolean> = {};
-
-    for (const section of visibleSections) {
-      const hasActiveItem = section.items.some(
-        (item) => pathname === item.path || pathname?.startsWith(item.path + '/')
-      );
-      nextState[section.key] = hasActiveItem;
-    }
-
-    setOpenSections((prev) => {
-      const merged = { ...prev };
-
-      for (const section of visibleSections) {
-        if (typeof merged[section.key] === 'undefined') {
-          merged[section.key] = nextState[section.key];
-        } else if (nextState[section.key]) {
-          merged[section.key] = true;
-        }
-      }
-
-      return merged;
-    });
-  }, [pathname, visibleSections]);
+  }, [canAccess, isAdmin, isLoading, access, sameIdentity]);
 
   const toggleSection = (key: string) => {
-    setOpenSections((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    const section = visibleSections.find(section => section.key === key);
+    const active = section?.items.some(item => pathname === item.path || pathname?.startsWith(item.path + '/')) ?? false;
+    setOpenSections(prev => ({ ...prev, [key]: !(prev[key] ?? active) }));
   };
 
   const handleLogout = () => signOut({ callbackUrl: '/auth/login' });
 
   const userName = session?.user?.name || 'Usuário';
-  const userRole = (session?.user as any)?.role || 'user';
+  const userRole = session?.user?.role || 'user';
   const userInitial = userName.charAt(0).toUpperCase();
 
   const ROLE_DISPLAY: Record<string, string> = {
@@ -289,7 +260,7 @@ export default function Sidebar() {
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="fixed left-4 top-4 z-50 rounded-xl p-2 text-white shadow-lg transition-opacity hover:opacity-80 lg:hidden"
-        style={{ backgroundColor: BRAND.primary }}
+        style={{ backgroundColor: brand.primaryColor }}
         aria-label={isMobileOpen ? 'Fechar menu' : 'Abrir menu'}
       >
         {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -323,20 +294,20 @@ export default function Sidebar() {
           >
             <div className="flex items-center justify-center">
               <img
-                src={BRAND.logo}
-                alt="MDS"
+                src={brand.logo ?? DEFAULT_BRANDING.logo!}
+                alt={brand.name}
                 className={`${isDesktopCollapsed ? 'h-10 w-10' : 'h-11 w-11'} object-contain`}
               />
             </div>
 
             <button
               type="button"
-              onClick={() => setIsCollapsed((prev) => !prev)}
+              onClick={toggleCollapsed}
               className="hidden h-10 w-10 items-center justify-center rounded-xl border transition-colors lg:inline-flex"
               style={{
                 borderColor: palette.border,
                 backgroundColor: palette.hover,
-                color: BRAND.white,
+                color: '#ffffff',
               }}
               aria-label={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
               title={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
@@ -364,7 +335,7 @@ export default function Sidebar() {
                       : 'transparent',
                   color:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
-                      ? BRAND.white
+                      ? '#ffffff'
                       : palette.textMuted,
                   fontWeight:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
@@ -379,10 +350,10 @@ export default function Sidebar() {
 
               {visibleSections.map((section) => {
                 const SectionIcon = section.icon;
-                const isOpen = !!openSections[section.key];
                 const hasActiveItem = section.items.some(
                   (item) => pathname === item.path || pathname?.startsWith(item.path + '/')
                 );
+                const isOpen = openSections[section.key] ?? hasActiveItem;
 
                 return (
                   <div
@@ -401,7 +372,7 @@ export default function Sidebar() {
                       }`}
                       style={{
                         backgroundColor: hasActiveItem && !isOpen ? palette.hover : 'transparent',
-                        color: BRAND.white,
+                        color: '#ffffff',
                       }}
                       title={isDesktopCollapsed ? section.title : undefined}
                     >
@@ -435,7 +406,7 @@ export default function Sidebar() {
                                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
                                 style={{
                                   backgroundColor: isActive ? palette.active : 'transparent',
-                                  color: isActive ? BRAND.white : palette.textMuted,
+                                  color: isActive ? '#ffffff' : palette.textMuted,
                                   fontWeight: isActive ? 600 : 500,
                                 }}
                                 onMouseEnter={(e) => {

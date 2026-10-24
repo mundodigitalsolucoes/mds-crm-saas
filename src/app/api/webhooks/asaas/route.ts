@@ -2,6 +2,7 @@
 // Webhook Asaas — atualiza planStatus da Organization conforme eventos de pagamento
 
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { syncPlanLimits } from '@/lib/checkLimits'
 
@@ -23,14 +24,15 @@ function resolvePlan(raw?: string): string {
 export async function POST(req: NextRequest) {
   try {
     // ── Validação de token ──────────────────────────────────────────
-    if (WEBHOOK_TOKEN) {
-      const token =
-        req.headers.get('asaas-access-token') ??
-        req.headers.get('x-webhook-token')
-      if (token !== WEBHOOK_TOKEN) {
-        console.warn('[Asaas] Token inválido')
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+    if (!WEBHOOK_TOKEN) {
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 })
+    }
+    const token = req.headers.get('asaas-access-token') ?? req.headers.get('x-webhook-token') ?? ''
+    const received = Buffer.from(token)
+    const expected = Buffer.from(WEBHOOK_TOKEN)
+    if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
+      console.warn('[Asaas] Token inválido')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await req.json()

@@ -1,0 +1,217 @@
+{
+  "referenceHead": "7bd515d1002b64c39947e8ae30277629c0a38426",
+  "implementationCommit": "17ffff8939759089df3d2605eb7575e16e41db3c",
+  "testCommit": "7c6400b40a8175bcbe1b2267fe38f5fbccaf83a2",
+  "globalMode": "observe_only",
+  "approvedEnforcements": [],
+  "syntheticDataOnly": true,
+  "productionAccess": false,
+  "pushPerformed": false,
+  "nodePostgres": {
+    "pass": 155,
+    "fail": 0,
+    "skip": 0
+  },
+  "typescript": {
+    "pass": 387,
+    "fail": 0,
+    "skip": 0
+  },
+  "httpComments": {
+    "delete": 62,
+    "getPost": 53,
+    "passed": true
+  },
+  "c0c5Probes": {
+    "head": "7bd515d1002b64c39947e8ae30277629c0a38426",
+    "runtime": "v22.21.1",
+    "results": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      }
+    ]
+  },
+  "indirectApi": {
+    "pass": 1191,
+    "fail": 0,
+    "originalNineNegativesPassed": true
+  },
+  "privateDownloadNegatives": [
+    {
+      "role": "owner",
+      "authenticated": true,
+      "status": 403,
+      "dataReturned": false,
+      "passed": true
+    },
+    {
+      "role": "owner",
+      "authenticated": false,
+      "status": 401,
+      "dataReturned": false,
+      "passed": true
+    },
+    {
+      "role": "admin",
+      "authenticated": true,
+      "status": 403,
+      "dataReturned": false,
+      "passed": true
+    },
+    {
+      "role": "admin",
+      "authenticated": false,
+      "status": 401,
+      "dataReturned": false,
+      "passed": true
+    },
+    {
+      "role": "user",
+      "authenticated": true,
+      "status": 403,
+      "dataReturned": false,
+      "passed": true
+    },
+    {
+      "role": "user",
+      "authenticated": false,
+      "status": 401,
+      "dataReturned": false,
+      "passed": true
+    }
+  ],
+  "legacyDownloadNegatives": [
+    {
+      "role": "owner",
+      "authenticated": true,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    },
+    {
+      "role": "owner",
+      "authenticated": false,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    },
+    {
+      "role": "admin",
+      "authenticated": true,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    },
+    {
+      "role": "admin",
+      "authenticated": false,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    },
+    {
+      "role": "user",
+      "authenticated": true,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    },
+    {
+      "role": "user",
+      "authenticated": false,
+      "url": "/uploads/[org]/[file]",
+      "status": 200,
+      "dataReturned": true,
+      "passed": false
+    }
+  ],
+  "isolatedRunnerExit": 1,
+  "isolatedRunnerPassed": false,
+  "pilotObserveOnlyExit": 1,
+  "typecheck": "PASS",
+  "build": "PASS",
+  "lintChangedCode": {
+    "files": 10,
+    "errors": 0,
+    "warnings": 0
+  },
+  "metadataDryRun": {
+    "mode": "metadata-read-only-dry-run",
+    "counts": {
+      "total": 0,
+      "private": 0,
+      "legacy": 0,
+      "unknown": 0,
+      "brandingOverlap": 0
+    },
+    "filesystemChecked": false,
+    "productionAccess": false,
+    "applySupported": false,
+    "cutoverApproved": false
+  },
+  "applyRejected": {
+    "exit": 1,
+    "rejectedBeforeDatabaseAccess": true
+  },
+  "inventory": {
+    "apiFiles": 116,
+    "operations": 178,
+    "pages": 28,
+    "remainingApiFiles": 55,
+    "remainingLayouts": 4
+  },
+  "sourceSha256": {
+    ".env.example": "59bbba6ff0348f80b6edbe76d14b366e887a98a70a4706ba657151de6d0f2fec",
+    "src/lib/attachments/storage.ts": "3981a186ee9f6a358d7c0fdca045c833b9d571a285946394b7d0732baaf5e114",
+    "src/app/api/attachments/route.ts": "66ce1d757c65d42fc66272c88042c57e545df7452d9a4495b751c23cdeef28fa",
+    "src/app/api/attachments/[id]/route.ts": "1e676aee535d39e3f81ac3cbd810941ff44f315f55380c1f2d5f7cf6e4518d27",
+    "src/app/api/tasks/[id]/route.ts": "ba5ae2f65b258475711307bce4f75f41d6ea679ca8e40c3a11236bb2157abd2a",
+    "scripts/block2-attachments-private-cutover.mjs": "04cc541029653b3924f35d85950f88c14303994e16b5198139ffe62e15cc1e11",
+    "scripts/block2-c5-isolated-http.mjs": "91eedadd1d8234657bedcfac60241aa2c2f79f03869778c3deb081113adf3c42",
+    "tests/attachments-private-storage.test.mjs": "2bd5514fc6e1ae1e6da6ffa76820cc74f30e73bedff6c3d7e51392e18b8017e1",
+    "tests/c5-remaining-surfaces-http.mjs": "0a49d3c2d639f7137f1b58de638b4a1f4f54debb4eb884bf9f1b1b37454385b9",
+    "tests/helpers/load-disposable-handler.mjs": "e9119655c6735c6aa0e946fa4d94ec93ba8daac0b35cb135cd36b8bbf1625b3d",
+    "tests/helpers/load-server-module.ts": "fccc317db2b3d2959543676b7a2c7da816f1a9b8f905031819c5de62ff397656"
+  },
+  "sourceHashNotice": "code integrity only; no credential hashes",
+  "remainingBlockers": [
+    "Legacy public URLs still return 200; six original negatives FAIL",
+    "Private durable root and selective legacy cutover not configured or executed",
+    "Complete migration simulation/reconciliation requires future approved work",
+    "Remaining granular commercial coverage; no real enforcement activation",
+    "Remote CI and independent review not updated in this local-only lot"
+  ],
+  "gatesApproved": []
+}

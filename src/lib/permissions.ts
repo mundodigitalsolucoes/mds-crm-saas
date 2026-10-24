@@ -194,7 +194,10 @@ export function parsePermissions(
   }
   try {
     const parsed = JSON.parse(json);
-    if (typeof parsed === 'object' && parsed !== null && 'leads' in parsed) {
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&
+      ('leads' in parsed || (Object.keys(parsed).some(key => ALL_MODULES.includes(key as PermissionModule)) &&
+        Object.values(parsed).every(value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
+          Object.values(value).every(flag => typeof flag === 'boolean'))))) {
       // Merge com defaults garante que novos módulos (ex: atendimento)
       // já tenham permissão definida para usuários com JSON antigo no banco
       const defaults = getDefaultPermissions(fallbackRole);

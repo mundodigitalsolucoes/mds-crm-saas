@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+import type { TrustedSessionIdentity } from './authorize';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth';
 import { prisma } from '../prisma';
@@ -5,15 +7,22 @@ import { createModuleAuthorizer, createAdministrativeAuthorizer, type ModuleAcce
 import { verifyAdminToken } from '../admin-auth';
 import { authorizationEffect, modeForOrganization } from './policy';
 
-export async function evaluateModuleAccess(request: ModuleAccessRequest) {
+/** Context is server-owned and used only after the caller authenticates/locks the actor. */
+export interface TransactionAuthorizationContext {
+  session: TrustedSessionIdentity;
+  client: Prisma.TransactionClient;
+}
+
+export async function evaluateModuleAccess(request: ModuleAccessRequest, context?: TransactionAuthorizationContext) {
+  const database = context?.client ?? prisma;
   let trustedOrganizationId: string | undefined;
   const authorize = createModuleAuthorizer({
     session: async () => {
-      const session = await getServerSession(authOptions);
+      const session = context?.session ?? await getServerSession(authOptions);
       trustedOrganizationId = session?.user?.organizationId;
-      return session;
+      return session ?? null;
     },
-    readUser: (id) => prisma.user.findUnique({
+    readUser: (id) => database.user.findUnique({
       where: { id },
       select: {
         id: true, organizationId: true, deletedAt: true, role: true, permissions: true,
@@ -27,7 +36,7 @@ export async function evaluateModuleAccess(request: ModuleAccessRequest) {
       if (request.module !== 'marketing' || request.action !== 'create') return true;
       if (!Number.isInteger(organization.maxProjects)) return false;
       if (organization.maxProjects <= 0) return true; // Existing scalar convention, unchanged.
-      return await prisma.marketingProject.count({ where: { organizationId: organization.id } }) < organization.maxProjects;
+      return await database.marketingProject.count({ where: { organizationId: organization.id } }) < organization.maxProjects;
     },
   });
   return authorizationEffect(await authorize(request), modeForOrganization(trustedOrganizationId));

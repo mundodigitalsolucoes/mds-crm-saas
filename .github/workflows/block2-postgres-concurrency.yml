@@ -1,13 +1,22 @@
-name: Block 2 PostgreSQL Concurrency Proof
+name: Block 2 PostgreSQL Handler and Concurrency Proof
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
+      - review/block2-sanitized-base
   push:
     branches:
       - feature/modular-plans-entitlements
+      - audit/block2-sanitized
     paths:
-      - 'src/app/api/auth/forgot-password/route.ts'
-      - 'tests/block2-reset-postgres-integration.test.cjs'
-      - '.github/workflows/block2-postgres-concurrency.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/block2-*.mjs'
+      - 'prisma/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -16,27 +25,35 @@ permissions:
 jobs:
   postgres-concurrency:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_USER: block2
           POSTGRES_PASSWORD: block2_ci_only
-          POSTGRES_DB: block2_ci
+          POSTGRES_DB: mds_crm_dev
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U block2 -d block2_ci"
+          --health-cmd "pg_isready -U block2 -d mds_crm_dev"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/block2_ci
+      BLOCK2_CI_DISPOSABLE: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      BLOCK2_TEST_DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/mds_crm_dev
+      DATABASE_URL: postgresql://block2:block2_ci_only@127.0.0.1:5432/mds_crm_dev
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
+          # Positive depth fetches only this candidate, unlike depth 0 (all refs).
+          # The history guard fails closed if required roots/baselines are missing.
+          fetch-depth: 1000000
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -44,4 +61,73 @@ jobs:
       - name: Install dependencies without lifecycle scripts
         run: npm ci --ignore-scripts
       - name: Verify concurrent reset token rotation on disposable database
-        run: node --test tests/block2-reset-postgres-integration.test.cjs
+        run: node --test tests/block2-reset-postgres-integration.test.mjs
+      - name: Generate client and prepare only the disposable CI schema
+        run: npx prisma generate && node scripts/block2-c6-ci.mjs prepare
+      - name: Verify actual handlers with PostgreSQL and provider mocks
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/block2-c6-ci.mjs node | tee /tmp/block2-handlers.tap
+      - name: Block acceptance while executable security TODO assertions remain
+        run: node -e "const fs=require('fs'); const tap=fs.readFileSync('/tmp/block2-handlers.tap','utf8'); if (/^# todo [1-9][0-9]*$/m.test(tap)) { console.error('Unresolved security acceptance assertions; closure remains blocked'); process.exit(1); }"
+      - name: Build the actual HTTP candidate without migrations
+        run: npx next build
+      - name: Run real NextAuth HTTP regressions C0-C5 on disposable PostgreSQL
+        run: node scripts/block2-c6-ci.mjs http
+      - name: Preserve fixture-only HTTP evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: block2-c6-http-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/block2-c6-http/*.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  attachments-cutover:
+    name: Private attachments cutover and selective cleanup (174 checks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: mds_dev
+          POSTGRES_PASSWORD: cutover_ci_fixture_only
+          POSTGRES_DB: mds_crm_dev
+        ports:
+          - '127.0.0.1:5432:5432'
+        options: >-
+          --health-cmd "pg_isready -U mds_dev -d mds_crm_dev"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout exact sanitized candidate without tags
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+      - name: Generate Prisma client without migrations
+        run: npx prisma generate
+      - name: Run cutover and configuration refusal acceptance in a clean environment
+        run: |
+          env -i PATH="$PATH" \
+            BLOCK2_CUTOVER_SIMULATION=synthetic-local-only \
+            BLOCK2_CUTOVER_DATABASE_URL=postgresql://mds_dev:cutover_ci_fixture_only@127.0.0.1:5432/mds_crm_dev \
+            node scripts/block2-attachments-cutover-ci.mjs
+      - name: Publish synthetic cutover evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: block2-cutover-${{ github.event.pull_request.head.sha || github.sha }}
+          path: /tmp/block2-cutover-ci-*/*.json
+          if-no-files-found: error
+          retention-days: 7

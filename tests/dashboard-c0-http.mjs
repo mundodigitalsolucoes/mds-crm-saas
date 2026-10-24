@@ -1,0 +1,42 @@
+// Local-only functional HTTP regression: start the built app on loopback:3100.
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
+const u=new URL(process.env.DATABASE_URL||'http://invalid');
+if(u.hostname!=='127.0.0.1'||u.port!=='5432'||u.pathname!=='/mds_crm_dev')throw Error('Disposable loopback database required');
+const db=new PrismaClient();const cookies=new Map(),base='http://127.0.0.1:3100';let org, foreignOrg;
+async function req(path,options={}){const r=await fetch(base+path,{redirect:'manual',...options,headers:{'x-forwarded-for':'198.51.100.180',cookie:[...cookies].map(([k,v])=>k+'='+v).join('; '),...options.headers}});for(const c of r.headers.getSetCookie()){const pair=c.split(';')[0],i=pair.indexOf('=');cookies.set(pair.slice(0,i),pair.slice(i+1))}return {status:r.status,body:await r.text()}}
+(async()=>{
+ const suffix=crypto.randomUUID(),password=crypto.randomBytes(24).toString('hex'),marker='dashboard-fixture-'+suffix;
+ org=await db.organization.create({data:{features:JSON.stringify(['atendimento','vendas','marketing']),name:'Dashboard review fixture',slug:'review-'+suffix,plan:'trial',trialEndsAt:new Date(Date.now()+86400000)}});
+ const user=await db.user.create({data:{name:'Review owner',email:'review-'+suffix+'@example.invalid',passwordHash:await bcrypt.hash(password,10),organizationId:org.id,role:'owner'}});
+ await db.lead.create({data:{name:marker,organizationId:org.id,createdById:user.id}});
+ foreignOrg=await db.organization.create({data:{name:'Foreign dashboard fixture',slug:'foreign-'+suffix}});
+ const foreignMarker='foreign-'+suffix;
+ await db.lead.create({data:{name:foreignMarker,organizationId:foreignOrg.id}});
+ const taskMarker='task-'+suffix;
+ const followMarker='follow-'+suffix;
+ const lead=await db.lead.findFirst({where:{organizationId:org.id}});
+ await db.task.createMany({data:[{title:taskMarker,type:'task',organizationId:org.id,dueDate:new Date()},{title:followMarker,type:'follow_up',organizationId:org.id,leadId:lead.id,dueDate:new Date()},{title:foreignMarker,type:'follow_up',organizationId:org.id,leadId:(await db.lead.findFirst({where:{organizationId:foreignOrg.id}})).id,dueDate:new Date()}]});
+ const csrf=JSON.parse((await req('/api/auth/csrf')).body).csrfToken;
+ await req('/api/auth/callback/credentials',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({email:user.email,password,csrfToken:csrf,callbackUrl:base+'/dashboard',json:'true'})});
+ const active=await req('/dashboard');
+ await db.user.update({where:{id:user.id},data:{deletedAt:new Date()}});
+ const deletedUser=await req('/dashboard');
+ await db.user.update({where:{id:user.id},data:{deletedAt:null}});
+ await db.organization.update({where:{id:org.id},data:{deletedAt:new Date()}});
+ const deletedOrg=await req('/dashboard');
+ await db.organization.update({where:{id:org.id},data:{deletedAt:null}});
+ const restricted=await db.user.create({data:{name:'Review restricted',email:'restricted-'+suffix+'@example.invalid',passwordHash:await bcrypt.hash(password,10),organizationId:org.id,role:'user',permissions:JSON.stringify({leads:{view:false,create:false,edit:false,delete:false}})}});
+ cookies.clear();
+ const restrictedCsrf=JSON.parse((await req('/api/auth/csrf')).body).csrfToken;
+ await req('/api/auth/callback/credentials',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({email:restricted.email,password,csrfToken:restrictedCsrf,callbackUrl:base+'/dashboard',json:'true'})});
+ const deniedApi=await req('/api/leads');
+ const restrictedDashboard=await req('/dashboard');
+ const result={referenceHead:'be26c813231602e14e33c12866a9e1d9baba6781',candidate:'C0 working tree',transport:'Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only',active:{status:active.status,fixtureLeadInBody:active.body.includes(marker)},deletedUser:{status:deletedUser.status,fixtureLeadInBody:deletedUser.body.includes(marker)},deletedOrganization:{status:deletedOrg.status,fixtureLeadInBody:deletedOrg.body.includes(marker)},restrictedUser:{leadApiStatus:deniedApi.status,dashboardStatus:restrictedDashboard.status,fixtureLeadInDashboard:restrictedDashboard.body.includes(marker)},regression:{ownTask:active.body.includes(taskMarker),ownFollowUp:active.body.includes(followMarker),foreignDataAbsent:!active.body.includes(foreignMarker),restrictedLeadLinkedTaskAbsent:!restrictedDashboard.body.includes(followMarker),restrictedLeadIndicatorsAbsent:!restrictedDashboard.body.includes('Total Leads')&&!restrictedDashboard.body.includes('Leads Recentes')},expected:'Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only'};
+ console.log(JSON.stringify(result,null,2));
+ if(active.status!==200||!active.body.includes(marker))throw Error('Active control failed; negative probe inconclusive');
+ if(deniedApi.status!==403)throw Error('Restricted permission control inconclusive');
+ if(deletedUser.body.includes(marker)||deletedOrg.body.includes(marker)||restrictedDashboard.body.includes(marker)||!Object.values(result.regression).every(Boolean))throw Error('Dashboard security regression');
+ if(![307,308].includes(deletedUser.status)||![307,308].includes(deletedOrg.status))throw Error('Removed identity must redirect without data');
+})().catch(e=>{console.error(e.message);process.exitCode=1}).finally(async()=>{if(org)await db.organization.delete({where:{id:org.id}});if(foreignOrg)await db.organization.delete({where:{id:foreignOrg.id}});await db.$disconnect()});

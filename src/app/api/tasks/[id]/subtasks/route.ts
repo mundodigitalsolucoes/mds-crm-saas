@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
+import { taskCommercialDenial } from '@/lib/authorization/guards';
 import { parseBody, subtaskCreateSchema } from '@/lib/validations';
 
 /**
@@ -11,7 +12,7 @@ import { parseBody, subtaskCreateSchema } from '@/lib/validations';
 async function validateTaskOwnership(taskId: string, organizationId: string) {
   const task = await prisma.task.findFirst({
     where: { id: taskId, organizationId },
-    select: { id: true },
+    select: { id: true, type: true, leadId: true, projectId: true },
   });
   return task;
 }
@@ -33,6 +34,9 @@ export async function GET(
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
+
+    const commercialDenied = await taskCommercialDenial(session!, 'view', task);
+    if (commercialDenied) return commercialDenied;
 
     const subtasks = await prisma.subtask.findMany({
       where: { taskId: id },
@@ -72,6 +76,9 @@ export async function POST(
     if (!task) {
       return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 });
     }
+
+    const commercialDenied = await taskCommercialDenial(session!, 'edit', task);
+    if (commercialDenied) return commercialDenied;
 
     const body = await request.json();
 

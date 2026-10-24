@@ -1,6 +1,6 @@
 import { resolveCommercialEntitlements } from '../entitlements/resolver';
 import { FEATURE_CATALOG, isFeatureId, type CommercialModuleId } from '../entitlements/catalog';
-import { hasPermission, parsePermissions } from '../permissions';
+import { ALL_MODULES, hasPermission, parsePermissions } from '../permissions';
 import type { PermissionAction, PermissionModule, UserRole } from '../../types/permissions';
 
 export interface TrustedSessionIdentity { user: { id: string; organizationId: string } }
@@ -29,7 +29,9 @@ const deny = (reason: DenialReason, status: 401 | 403 | 503 = 403): Authorizatio
 
 /** Only audited operational permission pairs. Shared resources need their own approved rule. */
 const modulePermissions: Partial<Record<CommercialModuleId, readonly PermissionModule[]>> = {
-  marketing: ['projects'], vendas: ['leads', 'kanban'], atendimento: ['atendimento'],
+  marketing: ['projects', 'tasks', 'os', 'reports'],
+  vendas: ['leads', 'kanban', 'tasks', 'projects', 'goals', 'agenda'],
+  atendimento: ['atendimento', 'integrations'],
 };
 
 function validPermissions(raw: string): boolean {
@@ -40,7 +42,7 @@ function validPermissions(raw: string): boolean {
     if (Array.isArray(value)) return value.length === 0;
     if (!value || typeof value !== 'object') return false;
     if (Object.keys(value).length === 0) return true;
-    if (!('leads' in value)) return false;
+    if (!Object.keys(value).some(key => ALL_MODULES.includes(key as PermissionModule))) return false;
     return Object.values(value).every((entry) => entry !== null && typeof entry === 'object'
       && !Array.isArray(entry) && Object.values(entry).every((flag) => typeof flag === 'boolean'));
   } catch { return false; }

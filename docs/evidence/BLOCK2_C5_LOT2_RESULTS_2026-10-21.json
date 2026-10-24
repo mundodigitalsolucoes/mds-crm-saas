@@ -1,0 +1,469 @@
+{
+  "initialHead": "786233c0a0d2324e5afe519588b15d63a7eabe66",
+  "helperCommits": [
+    "46f8b7d",
+    "8c750be"
+  ],
+  "apiCommit": "cb31230cbbcb85830648fc4b0f9ccf03b4f6b3d8",
+  "changedProductionPaths": [
+    "src/app/api/attachments/[id]/route.ts",
+    "src/app/api/attachments/route.ts",
+    "src/app/api/comments/[id]/route.ts",
+    "src/app/api/comments/route.ts",
+    "src/lib/authorization/authorize.ts",
+    "src/lib/authorization/guards.ts",
+    "src/lib/authorization/operation-data.ts",
+    "src/lib/authorization/server.ts"
+  ],
+  "globalMode": "observe_only",
+  "approvedEnforcements": [],
+  "compatibility": {
+    "before": [
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": false,
+        "reason": "insufficient_permission",
+        "expectedLegitimate": true
+      }
+    ],
+    "after": [
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "owner",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "admin",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "projects",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "goals",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "vendas",
+        "permission": "agenda",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      },
+      {
+        "role": "user",
+        "module": "atendimento",
+        "permission": "integrations",
+        "allowed": true,
+        "reason": "allowed",
+        "expectedLegitimate": true
+      }
+    ],
+    "original12Passed": true,
+    "newPairMatrix": {
+      "checks": 1344,
+      "moduleSets": 7,
+      "brands": 2,
+      "roles": 3,
+      "tenants": 2,
+      "permissionPairs": 4,
+      "actions": 4
+    },
+    "existingGuardMatrixComparisons": 2688,
+    "singleConnectionTransactionAndProjectQuota": "PASS"
+  },
+  "apiAcceptance": {
+    "originalIndirect": [
+      {
+        "role": "owner",
+        "url": "/api/comments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "owner",
+        "url": "/api/attachments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "admin",
+        "url": "/api/comments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "admin",
+        "url": "/api/attachments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "user",
+        "url": "/api/comments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "user",
+        "url": "/api/attachments",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 403,
+        "dataReturned": false,
+        "passed": true
+      }
+    ],
+    "allHttpChecks": 1089,
+    "allPassed": true,
+    "deniedWritesAndFilesUnchanged": true,
+    "legitimateUploadedFileCreatedAndDeleted": true,
+    "salesTaskLeadGoalAndCommentAttachment": "PASS"
+  },
+  "directAcceptance": {
+    "originalUncontractedChecks": 21,
+    "allPassed": true,
+    "isolatedOnly": true
+  },
+  "staticDownloadResidual": {
+    "requests": [
+      {
+        "role": "owner",
+        "authenticated": true,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "owner",
+        "authenticated": false,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "admin",
+        "authenticated": true,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "admin",
+        "authenticated": false,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "user",
+        "authenticated": true,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "user",
+        "authenticated": false,
+        "url": "/uploads/[org]/[file]",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      }
+    ],
+    "underlyingSurfaces": 1,
+    "aggregateAcceptancePassed": false,
+    "risk": "unauthenticated/uncontracted access to a known legacy public file; no production file accessed"
+  },
+  "regressions": {
+    "nodePostgres": 151,
+    "typescript": 387,
+    "commentsHttp": 115,
+    "httpC0C5": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "build": "PASS",
+    "typecheck": "PASS",
+    "strictLint": {
+      "files": 14,
+      "errors": 0,
+      "warnings": 0
+    },
+    "patchAndOtherHttpMethods": "no new PATCH or bulk endpoints invented"
+  },
+  "policyProof": {
+    "results": [
+      {
+        "script": "pilot-contract-http",
+        "exit": 0
+      },
+      {
+        "script": "c5-remaining-surfaces-http",
+        "exit": 1
+      }
+    ],
+    "candidatePolicyUnchanged": true,
+    "manifestEmpty": true,
+    "onlySyntheticUuidSelected": true,
+    "realOrganizationEnforcement": false,
+    "copyRemovedOnExit": true
+  },
+  "cleanup": {
+    "remainingFixtureOrganizations": 0,
+    "remainingFixtureAdmins": 0,
+    "remainingSyntheticOrphanActivities": 0
+  },
+  "history": {
+    "candidateHead": "cb31230cbbcb85830648fc4b0f9ccf03b4f6b3d8",
+    "reachableObjectsScanned": 2586,
+    "knownExposedValueMatches": {
+      "DATABASE_URL": 0,
+      "NEXTAUTH_SECRET": 0,
+      "TOKENS_SECRET": 0,
+      "META_APP_SECRET": 0
+    },
+    "strongPatternMatches": {
+      "private-key": 0,
+      "github-token": 0,
+      "aws-access-key": 0,
+      "slack-token": 0
+    },
+    "secretValuesOrFingerprintsStored": false,
+    "scope": "all reachable blobs and commit/tag messages of candidate; heuristic patterns are not universal credential guarantees"
+  },
+  "codeFingerprintsNotCredentialHashes": {
+    "scripts/block2-c5-isolated-http.mjs": "7a8fa74969ccfc67714bbc006394c86b746a8db58a1bc0e63ab6014f5e57ab84",
+    "src/app/api/attachments/[id]/route.ts": "306e27ea5940688af0f57e6242b7fcd7688cbca96f8ae92140c5480b754c14bb",
+    "src/app/api/attachments/route.ts": "8381d8fafeabcfb4de507fca4c92a072835f6999ceaa8ba00f02542c08fe33c2",
+    "src/app/api/comments/[id]/route.ts": "239a33a33e9d2c279c426a3f1e28166181b0cc3f774fb01270f76e992b25a6e3",
+    "src/app/api/comments/route.ts": "cb86b49029a0a3b795324e8dc6d91756045e61e3b125b9b4acf1c827730812ec",
+    "src/lib/authorization/authorize.ts": "375349c68c91865ec9d643bcee260794a75f4fa2c18f872b396c35e8450358a0",
+    "src/lib/authorization/guards.ts": "38b86e465ada840b85886c59ec0d8019b489abd7c8ea3b6b5fb92f0dce921472",
+    "src/lib/authorization/operation-data.ts": "f4759f5219167a51ec5d58810e21b1c482ea9ecbe11f747ce3222f1cf9f1d37b",
+    "src/lib/authorization/server.ts": "62c55efa146a4ab001229866f03396961317ef87d1130bb33ded2a1abaa81e9d",
+    "tests/authorization-atendimento-shared-integrations.test.ts": "50cc1d922b748921eb5d8492192126d387a6aed431df043b22959f2e160f8d66",
+    "tests/authorization-boundaries.test.ts": "17d62fcdd54ce5aab452672e9a1159ef33cb7caf8f7c6b334993ab487c8aef48",
+    "tests/c5-commercial-guards-postgres.test.mjs": "bfd462eb3377fcccbfd536547be9b0fd4944aff3813304d8b781c2419f082e13",
+    "tests/c5-lot2-helpers-postgres.test.mjs": "06b4d41438959171f7ea0299e1d5fbf7db0e33c22c8c8bda75607700e3ede261",
+    "tests/c5-remaining-surfaces-http.mjs": "fc138513ff8a1e360b94c2a7f0cbfa22c62841f6ac6bfb9a6ea9aab5238dc8b1"
+  },
+  "remainingUnintegratedApiFiles": 55,
+  "remainingLayouts": 4,
+  "newPublicStorageImplementation": false,
+  "productionOrRemoteActions": false,
+  "gatesApproved": false,
+  "pilotApproved": false
+}

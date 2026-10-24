@@ -115,6 +115,10 @@ model Organization {
   tags                  Tag[]
   leadPipelineStages    LeadPipelineStage[]
 
+  instagramOAuthStates      InstagramOAuthState[]
+  instagramWebhookReceipts  InstagramWebhookReceipt[]
+  widgetInboxOperation      WidgetInboxOperation?
+
   @@map("organizations")
 }
 
@@ -198,6 +202,8 @@ model User {
   @@index([organizationId])
   @@index([email])
   @@index([chatwootUserId])
+  instagramOAuthStates InstagramOAuthState[]
+
   @@map("users")
 }
 
@@ -1180,4 +1186,52 @@ model CouponUsage {
   @@index([organizationId])
   @@index([couponId])
   @@map("coupon_usages")
+}
+
+// Isolated security storage. No raw OAuth nonce, Meta token or webhook body.
+model InstagramOAuthState {
+  nonceHash      String        @id @map("nonce_hash")
+  organizationId String        @map("organization_id")
+  userId         String        @map("user_id")
+  expiresAt      DateTime      @map("expires_at")
+  consumedAt     DateTime?     @map("consumed_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, userId, expiresAt])
+  @@index([expiresAt])
+  @@map("instagram_oauth_states")
+}
+
+model InstagramWebhookReceipt {
+  id               String        @id @default(uuid())
+  organizationId   String        @map("organization_id")
+  eventHash        String        @map("event_hash")
+  chatwootAccountId Int           @map("chatwoot_account_id")
+  chatwootInboxId   Int           @map("chatwoot_inbox_id")
+  status           String        @default("pending")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  organization     Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, eventHash])
+  @@index([status, createdAt])
+  @@map("instagram_webhook_receipts")
+}
+
+// One durable creation identity per tenant, independent of mutable settings.
+model WidgetInboxOperation {
+  organizationId     String       @id @map("organization_id")
+  operationId        String       @unique @default(uuid()) @map("operation_id")
+  connectedAccountId String       @map("connected_account_id")
+  accountId          Int          @map("account_id")
+  baseUrl            String       @map("base_url")
+  inboxId            Int?         @map("inbox_id")
+  status             String       @default("reserved")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("widget_inbox_operations")
 }

@@ -1,30 +1,22 @@
 name: Block 2 Authorization Regression
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
+      - review/block2-sanitized-base
   push:
     branches:
       - feature/modular-plans-entitlements
+      - audit/block2-sanitized
     paths:
-      - 'src/lib/authorization/**'
-      - 'src/lib/entitlements/**'
-      - 'src/lib/permissions.ts'
-      - 'src/lib/checkPermission.ts'
-      - 'src/app/api/integrations/chatwoot/credentials/**'
-      - 'src/app/api/atendimento/**'
-      - 'src/app/api/projects/**'
-      - 'src/app/api/leads/**'
-      - 'src/app/api/kanban/**'
-      - 'src/app/(app)/projects/**'
-      - 'src/app/(app)/atendimento/**'
-      - 'src/app/(app)/settings/atendimento/**'
-      - 'src/app/(app)/leads/**'
-      - 'src/app/(app)/kanban/**'
-      - 'tests/authorization*.test.ts'
-      - 'tests/authorization-instagram-exchange-tenant.test.cjs'
-      - 'tests/authorization-instagram-sync-tenant.test.cjs'
-      - 'scripts/block2-route-inventory.mjs'
-      - 'tests/entitlements.test.ts'
-      - '.github/workflows/block2-authorization-tests.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/block2-*.mjs'
+      - 'prisma/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/**'
   workflow_dispatch:
 
 permissions:
@@ -44,7 +36,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
+          # Positive depth fetches only this candidate, unlike depth 0 (all refs).
+          # The history guard fails closed if required roots/baselines are missing.
+          fetch-depth: 1000000
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -56,10 +52,14 @@ jobs:
         run: npx prisma generate
       - name: Validate read-only route inventory
         run: node scripts/block2-route-inventory.mjs > /tmp/block2-route-inventory.json && node -e "const a=require('/tmp/block2-route-inventory.json'); if(a.summary.routeFiles<100 || a.summary.methodRows<a.summary.routeFiles) process.exit(1); console.log(JSON.stringify(a.summary))"
-      - name: Run Block 2 regression tests
-        run: npx tsx --test tests/entitlements.test.ts tests/authorization.test.ts tests/authorization-integration.test.ts tests/authorization-sales.test.ts tests/authorization-inventory.test.ts tests/authorization-boundaries.test.ts tests/authorization-atendimento-sso.test.ts tests/authorization-atendimento-inventory.test.ts tests/authorization-atendimento-shared-integrations.test.ts tests/authorization-channel-access.test.ts tests/authorization-channel-observation.test.ts tests/authorization-channel-route-coverage.test.ts tests/authorization-atendimento-page-coverage.test.ts tests/authorization-shared-resources-inventory.test.ts tests/authorization-evolution-qrcode-tenant.test.ts tests/authorization-evolution-lifecycle-tenant.test.ts tests/authorization-whatsapp-webhook-signature.test.ts tests/authorization-chatwoot-webhook-secret.test.ts tests/authorization-instagram-oauth-state.test.ts tests/authorization-instagram-webhook-signature.test.ts
+      - name: Verify sanitized candidate history and portable baselines
+        run: node scripts/block2-c6-ci.mjs history
+      - name: Lint every C0-C6 changed source and test file
+        run: node scripts/block2-c6-ci.mjs lint
+      - name: Run all TypeScript regressions including C0-C5
+        run: npx tsx --test tests/*.test.ts
 
       - name: Verify legacy Instagram exchange tenant guards
-        run: node --test tests/authorization-instagram-exchange-tenant.test.cjs
+        run: node --test tests/authorization-instagram-exchange-tenant.test.mjs
       - name: Verify Instagram sync tenant guards
-        run: node --test tests/authorization-instagram-sync-tenant.test.cjs
+        run: node --test tests/authorization-instagram-sync-tenant.test.mjs

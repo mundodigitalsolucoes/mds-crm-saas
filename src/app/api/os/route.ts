@@ -1,19 +1,21 @@
+import { commercialModuleDenial } from '@/lib/authorization/guards';
 // src/app/api/os/route.ts
 // API de Ordens de Serviço — Listagem e Criação com permissões granulares e limites de plano
+import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resourceReadScope, validateResourceReferences, relationError, resourceNotification } from '@/lib/task-os-relations';
 import { checkPermission } from '@/lib/checkPermission';
 import { checkOrganizationLimit, checkPlanActive } from '@/lib/checkLimits';
 import { parseBody, osCreateSchema } from '@/lib/validations';
-import { createNotification } from '@/lib/notify';
 
 // Gerar código sequencial da OS: OS-2026-0001
-async function generateOSCode(organizationId: string): Promise<string> {
+async function generateOSCode(organizationId: string, tx: Prisma.TransactionClient): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `OS-${year}-`;
 
   // Buscar a última OS do ano para esta organização
-  const lastOS = await prisma.serviceOrder.findFirst({
+  const lastOS = await tx.serviceOrder.findFirst({
     where: {
       organizationId,
       code: { startsWith: prefix },
@@ -39,63 +41,65 @@ export async function GET(request: NextRequest) {
     // ✅ Permissão granular: os.view
     const { allowed, session, errorResponse } = await checkPermission('os', 'view');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'view' });
+    if (commercialDenied) return commercialDenied;
 
     const organizationId = session!.user.organizationId;
 
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status') || '';
-    const type = searchParams.get('type') || '';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const skip = (page - 1) * limit;
+    return await prisma.$transaction(async (tx) => {
+      const { searchParams } = new URL(request.url);
+      const search = searchParams.get('search') || '';
+      const status = searchParams.get('status') || '';
+      const type = searchParams.get('type') || '';
+      const page = parseInt(searchParams.get('page') || '1');
+      const limit = parseInt(searchParams.get('limit') || '50');
+      const skip = (page - 1) * limit;
 
-    // Filtros com isolamento multi-tenant
-    const where: any = {
-      organizationId,
-    };
+      // Filtros com isolamento multi-tenant
+      const where: Prisma.ServiceOrderWhereInput = await resourceReadScope(organizationId, 'os');
 
-    // Busca por título, código ou descrição
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { code: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+      // Busca por título, código ou descrição
+      if (search) {
+        where.OR = [
+          { title: { contains: search, mode: 'insensitive' } },
+          { code: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ];
+      }
 
-    if (status) {
-      where.status = status;
-    }
+      if (status) {
+        where.status = status;
+      }
 
-    if (type) {
-      where.type = type;
-    }
+      if (type) {
+        where.type = type;
+      }
 
-    const [serviceOrders, total] = await Promise.all([
-      prisma.serviceOrder.findMany({
-        where,
-        include: {
-          assignedTo: { select: { id: true, name: true, email: true } },
-          createdBy: { select: { id: true, name: true, email: true } },
-          project: { select: { id: true, title: true } },
+      const [serviceOrders, total] = await Promise.all([
+        tx.serviceOrder.findMany({
+          where,
+          include: {
+            assignedTo: { select: { id: true, name: true, email: true } },
+            createdBy: { select: { id: true, name: true, email: true } },
+            project: { select: { id: true, title: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        tx.serviceOrder.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        serviceOrders,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
         },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.serviceOrder.count({ where }),
-    ]);
-
-    return NextResponse.json({
-      serviceOrders,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   } catch (error) {
     console.error('[API OS] Erro ao listar:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
@@ -108,6 +112,8 @@ export async function POST(request: NextRequest) {
     // ✅ Permissão granular: os.create
     const { allowed, session, errorResponse } = await checkPermission('os', 'create');
     if (!allowed) return errorResponse!;
+    const commercialDenied = await commercialModuleDenial(session!, { module: 'marketing', permission: 'os', action: 'create' });
+    if (commercialDenied) return commercialDenied;
 
     const organizationId = session!.user.organizationId;
     const userId = session!.user.id;
@@ -127,48 +133,53 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    // Gerar código automático
-    const code = await generateOSCode(organizationId);
+    return await prisma.$transaction(async (tx) => {
+      await validateResourceReferences(tx, organizationId, userId, { ...data, assignedToId: data.assignedToId || null, createdById: userId });
+      // Gerar código automático
+      const code = await generateOSCode(organizationId, tx);
 
-    const serviceOrder = await prisma.serviceOrder.create({
-      data: {
-        organizationId,
-        code,
-        title: data.title,
-        description: data.description || null,
-        type: data.type,
-        status: data.status,
-        priority: data.priority,
-        progress: data.progress,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        projectId: data.projectId || null,
-        assignedToId: data.assignedToId || null,
-        createdById: userId,
-        pilares: typeof data.pilares === 'string' ? data.pilares : JSON.stringify(data.pilares),
-        notes: data.notes || null,
-      },
-      include: {
-        assignedTo: { select: { id: true, name: true, email: true } },
-        createdBy: { select: { id: true, name: true, email: true } },
-        project: { select: { id: true, title: true } },
-      },
-    });
-
-    // ✅ Notificar responsável atribuído (se diferente de quem criou)
-    if (data.assignedToId && data.assignedToId !== userId) {
-      await createNotification({
-        userId: data.assignedToId,
-        type: 'os_assigned',
-        title: 'Nova OS atribuída',
-        message: `A ordem de serviço "${serviceOrder.title}" (${serviceOrder.code}) foi atribuída a você`,
-        entityType: 'os',
-        entityId: serviceOrder.id,
+      const serviceOrder = await tx.serviceOrder.create({
+        data: {
+          organizationId,
+          code,
+          title: data.title,
+          description: data.description || null,
+          type: data.type,
+          status: data.status,
+          priority: data.priority,
+          progress: data.progress,
+          startDate: data.startDate ? new Date(data.startDate) : null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          projectId: data.projectId || null,
+          assignedToId: data.assignedToId || null,
+          createdById: userId,
+          pilares: typeof data.pilares === 'string' ? data.pilares : JSON.stringify(data.pilares),
+          notes: data.notes || null,
+        },
+        include: {
+          assignedTo: { select: { id: true, name: true, email: true } },
+          createdBy: { select: { id: true, name: true, email: true } },
+          project: { select: { id: true, title: true } },
+        },
       });
-    }
 
-    return NextResponse.json(serviceOrder, { status: 201 });
+      // ✅ Notificar responsável atribuído (se diferente de quem criou)
+      if (data.assignedToId && data.assignedToId !== userId) {
+        await resourceNotification(tx, organizationId, serviceOrder, {
+          userId: data.assignedToId,
+          type: 'os_assigned',
+          title: 'Nova OS atribuída',
+          message: `A ordem de serviço "${serviceOrder.title}" (${serviceOrder.code}) foi atribuída a você`,
+          entityType: 'os',
+          entityId: serviceOrder.id,
+        });
+      }
+
+      return NextResponse.json(serviceOrder, { status: 201 });
+    });
   } catch (error) {
+    const rejection = relationError(error);
+    if (rejection) return rejection;
     console.error('[API OS] Erro ao criar:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }

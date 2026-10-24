@@ -1,0 +1,914 @@
+{
+  "referenceHead": "7a90a595f960c79ec5b2a4b449ccb5925eff0348",
+  "functionalCommit": "f2c4b71e19450098bfc5d7c16da4a97b2fa5196b",
+  "pending14Audit": {
+    "draft": true,
+    "state": "open",
+    "head": "17b11d901a30b78be8d84d1ba18ee1d22df175e7",
+    "headRef": "audit/block2-sanitized",
+    "base": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+    "baseRef": "review/block2-sanitized-base",
+    "pendingCommits": [
+      "a27316c299bd8b13b6891430eaf46cdccccc9b4b",
+      "061b7fe224b2c7fead8f6beee4e5c988f47f5d01",
+      "f0acc3efa7fa422ec32ed626fb7151fa1b1ed307",
+      "7d4bcf78793dca646a83d603d560dba652e4ddf1",
+      "786233c0a0d2324e5afe519588b15d63a7eabe66",
+      "46f8b7dcdec55bfa0f5d570d1765d9e9f0a15231",
+      "8c750bec402b98c946c0f454689c10136220118d",
+      "cb31230cbbcb85830648fc4b0f9ccf03b4f6b3d8",
+      "7bd515d1002b64c39947e8ae30277629c0a38426",
+      "17ffff8939759089df3d2605eb7575e16e41db3c",
+      "7c6400b40a8175bcbe1b2267fe38f5fbccaf83a2",
+      "f7871750de4dd3622a81746c1220c4966ff480f9",
+      "86be031e29ccfb246dd1fa703b45d57754dc73d1",
+      "7a90a595f960c79ec5b2a4b449ccb5925eff0348"
+    ]
+  },
+  "initialSecretAudit": {
+    "head": "7a90a595f960c79ec5b2a4b449ccb5925eff0348",
+    "objects": 2621,
+    "knownValueAuditAvailable": true,
+    "knownValueMatches": {
+      "DATABASE_URL": 0,
+      "NEXTAUTH_SECRET": 0,
+      "TOKENS_SECRET": 0,
+      "META_APP_SECRET": 0
+    },
+    "strongPatternMatches": {
+      "private-key": 0,
+      "github-token": 0,
+      "aws-access-key": 0,
+      "slack-token": 0
+    },
+    "valuesOrFingerprintsPrinted": false
+  },
+  "workflowAudit": {
+    "newJobOnlyExistingWorkflowPreserved": true,
+    "harnessAssertionsUnchangedSince7a90a59": true,
+    "applicationSchemaProvidersDependenciesUnchangedByCITask": true,
+    "service": "postgres:16 disposable",
+    "hostPort": "127.0.0.1:5432",
+    "hostVolumes": false,
+    "permissions": "contents:read",
+    "productionSecretsUsed": false
+  },
+  "localCI": {
+    "kind": "BLOCK2_CUTOVER_CI",
+    "head": "f2c4b71e19450098bfc5d7c16da4a97b2fa5196b",
+    "simulationChecks": 168,
+    "refusalChecks": 6,
+    "passed": true,
+    "productionAccess": false,
+    "sourceSha256": {
+      "scripts/block2-attachments-cutover-ci.mjs": "4eb45a17780d38fa067b1b25211b4e97d9cae095cb3b5d0007d1904f24f5caba",
+      "tests/attachments-legacy-cutover-http.mjs": "ea47012ed1e2e639c715eb4fbbbd5370e84cd173860ac1f1130d006d16bbf29c",
+      ".github/workflows/block2-postgres-concurrency.yml": "47a3665c4db5ef5fdc2b877b5c22c30d9624acb8d4ec68c271b11a5be3c3d92c"
+    },
+    "artifactDirectory": "/tmp/block2-cutover-ci-3ZJtsJ"
+  },
+  "refusals": [
+    {
+      "name": "missing-opt-in",
+      "exit": 1,
+      "rejectedAt": "explicit-opt-in",
+      "passed": true
+    },
+    {
+      "name": "external-host",
+      "exit": 1,
+      "rejectedAt": "disposable-database-only",
+      "passed": true
+    },
+    {
+      "name": "wrong-database",
+      "exit": 1,
+      "rejectedAt": "disposable-database-only",
+      "passed": true
+    },
+    {
+      "name": "schema-injection",
+      "exit": 1,
+      "rejectedAt": "disposable-database-only",
+      "passed": true
+    },
+    {
+      "name": "real-environment",
+      "exit": 1,
+      "rejectedAt": "no-real-environment-inherited",
+      "passed": true
+    },
+    {
+      "name": "external-directory",
+      "exit": 1,
+      "rejectedAt": "no-arguments-or-external-directory-input",
+      "passed": true
+    }
+  ],
+  "simulationResults": [
+    {
+      "name": "explicit-opt-in",
+      "passed": true
+    },
+    {
+      "name": "no-real-environment-inherited",
+      "passed": true
+    },
+    {
+      "name": "no-arguments-or-external-directory-input",
+      "passed": true
+    },
+    {
+      "name": "disposable-database-only",
+      "passed": true
+    },
+    {
+      "name": "repository-cwd",
+      "passed": true
+    },
+    {
+      "name": "candidate-manifest-empty",
+      "passed": true
+    },
+    {
+      "name": "isolated-selector-applied",
+      "passed": true
+    },
+    {
+      "name": "isolated-postgres-namespace",
+      "passed": true
+    },
+    {
+      "name": "external-fetch-denied-before-send",
+      "passed": true
+    },
+    {
+      "name": "external-socket-denied-before-send",
+      "passed": true
+    },
+    {
+      "name": "filesystem-orphan-classification",
+      "passed": true
+    },
+    {
+      "name": "inventory-classifies-branding-and-missing",
+      "passed": true,
+      "internal": 7,
+      "ambiguous": 1,
+      "missing": 1,
+      "orphan": 1
+    },
+    {
+      "name": "pre-cutover-static-exposure-reproduced",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "copy-hash-integrity-before-pointer-update",
+      "passed": true
+    },
+    {
+      "name": "destination-collision-preserves-source-and-pointer",
+      "passed": true
+    },
+    {
+      "name": "transaction-abort-restores-complete-pointer",
+      "passed": true
+    },
+    {
+      "name": "concurrent-pointer-change-not-overwritten",
+      "passed": true
+    },
+    {
+      "name": "concurrent-delete-not-resurrected",
+      "passed": true
+    },
+    {
+      "name": "concurrent-upload-and-migration",
+      "passed": true,
+      "status": 201
+    },
+    {
+      "name": "concurrent-upload-never-public",
+      "passed": true
+    },
+    {
+      "name": "pointer-update-preserves-identity-and-metadata",
+      "passed": true
+    },
+    {
+      "name": "repeat-old-cas-cannot-clobber-committed-pointer",
+      "passed": true
+    },
+    {
+      "name": "ambiguous-and-missing-pointers-untouched",
+      "passed": true
+    },
+    {
+      "name": "cutover-old-url-denied-sales.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-private-sales.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "cutover-old-url-denied-marketing.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-private-marketing.txt",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "cutover-old-url-denied-changed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-private-changed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "cutover-old-url-denied-failed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-private-failed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "cutover-old-url-denied-collision.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-private-collision.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "cutover-owner-sales",
+      "passed": true
+    },
+    {
+      "name": "cutover-owner-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "cutover-admin-sales",
+      "passed": true
+    },
+    {
+      "name": "cutover-admin-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "cutover-user-sales",
+      "passed": true
+    },
+    {
+      "name": "cutover-user-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "cutover-anonymous-denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "cutover-foreign-denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cutover-public-branding-preserved",
+      "passed": true
+    },
+    {
+      "name": "cutover-concurrent-upload-integrity",
+      "passed": true
+    },
+    {
+      "name": "cutover-anonymous-head-denied",
+      "passed": true
+    },
+    {
+      "name": "cutover-cache-range-authorized",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-sales.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-marketing.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-changed.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-deleted.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-failed.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-quarantine-integrity-collision.txt",
+      "passed": true
+    },
+    {
+      "name": "cutover-pointers-persist",
+      "passed": true
+    },
+    {
+      "name": "revocation-after-migration",
+      "passed": true
+    },
+    {
+      "name": "restart-old-url-denied-sales.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-private-sales.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "restart-old-url-denied-marketing.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-private-marketing.txt",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "restart-old-url-denied-changed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-private-changed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "restart-old-url-denied-failed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-private-failed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "restart-old-url-denied-collision.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-private-collision.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "restart-owner-sales",
+      "passed": true
+    },
+    {
+      "name": "restart-owner-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "restart-admin-sales",
+      "passed": true
+    },
+    {
+      "name": "restart-admin-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "restart-user-sales",
+      "passed": true
+    },
+    {
+      "name": "restart-user-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "restart-anonymous-denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "restart-foreign-denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "restart-public-branding-preserved",
+      "passed": true
+    },
+    {
+      "name": "restart-concurrent-upload-integrity",
+      "passed": true
+    },
+    {
+      "name": "restart-anonymous-head-denied",
+      "passed": true
+    },
+    {
+      "name": "restart-cache-range-authorized",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-sales.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-marketing.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-changed.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-deleted.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-failed.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-quarantine-integrity-collision.txt",
+      "passed": true
+    },
+    {
+      "name": "restart-pointers-persist",
+      "passed": true
+    },
+    {
+      "name": "rebuild-old-url-denied-sales.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-private-sales.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rebuild-old-url-denied-marketing.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-private-marketing.txt",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "rebuild-old-url-denied-changed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-private-changed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rebuild-old-url-denied-failed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-private-failed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rebuild-old-url-denied-collision.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-private-collision.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rebuild-owner-sales",
+      "passed": true
+    },
+    {
+      "name": "rebuild-owner-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rebuild-admin-sales",
+      "passed": true
+    },
+    {
+      "name": "rebuild-admin-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rebuild-user-sales",
+      "passed": true
+    },
+    {
+      "name": "rebuild-user-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rebuild-anonymous-denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "rebuild-foreign-denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rebuild-public-branding-preserved",
+      "passed": true
+    },
+    {
+      "name": "rebuild-concurrent-upload-integrity",
+      "passed": true
+    },
+    {
+      "name": "rebuild-anonymous-head-denied",
+      "passed": true
+    },
+    {
+      "name": "rebuild-cache-range-authorized",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-sales.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-marketing.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-changed.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-deleted.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-failed.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-quarantine-integrity-collision.txt",
+      "passed": true
+    },
+    {
+      "name": "rebuild-pointers-persist",
+      "passed": true
+    },
+    {
+      "name": "rollback-failed-copy-returns-no-bytes",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-restores-from-private-quarantine",
+      "passed": true
+    },
+    {
+      "name": "rollback-old-url-denied-sales.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-private-sales.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rollback-old-url-denied-marketing.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-private-marketing.txt",
+      "passed": true,
+      "status": 403
+    },
+    {
+      "name": "rollback-old-url-denied-changed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-private-changed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rollback-old-url-denied-failed.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-private-failed.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rollback-old-url-denied-collision.txt",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-private-collision.txt",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "rollback-owner-sales",
+      "passed": true
+    },
+    {
+      "name": "rollback-owner-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rollback-admin-sales",
+      "passed": true
+    },
+    {
+      "name": "rollback-admin-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rollback-user-sales",
+      "passed": true
+    },
+    {
+      "name": "rollback-user-marketing-denied",
+      "passed": true
+    },
+    {
+      "name": "rollback-anonymous-denied",
+      "passed": true,
+      "status": 401
+    },
+    {
+      "name": "rollback-foreign-denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "rollback-public-branding-preserved",
+      "passed": true
+    },
+    {
+      "name": "rollback-concurrent-upload-integrity",
+      "passed": true
+    },
+    {
+      "name": "rollback-anonymous-head-denied",
+      "passed": true
+    },
+    {
+      "name": "rollback-cache-range-authorized",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-sales.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-marketing.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-changed.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-deleted.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-failed.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-quarantine-integrity-collision.txt",
+      "passed": true
+    },
+    {
+      "name": "rollback-pointers-persist",
+      "passed": true
+    },
+    {
+      "name": "private-file-not-reintroduced-sales.txt",
+      "passed": true
+    },
+    {
+      "name": "private-file-not-reintroduced-marketing.txt",
+      "passed": true
+    },
+    {
+      "name": "private-file-not-reintroduced-changed.txt",
+      "passed": true
+    },
+    {
+      "name": "private-file-not-reintroduced-failed.txt",
+      "passed": true
+    },
+    {
+      "name": "private-file-not-reintroduced-collision.txt",
+      "passed": true
+    },
+    {
+      "name": "unknown-orphan-preserved",
+      "passed": true
+    },
+    {
+      "name": "inventory-no-implicit-global-certification",
+      "passed": true
+    },
+    {
+      "name": "cleanup-backup-before-delete",
+      "passed": true
+    },
+    {
+      "name": "cleanup-unclassified-provider-linked-record-denied",
+      "passed": true
+    },
+    {
+      "name": "cleanup-provider-link-overrides-test-label",
+      "passed": true
+    },
+    {
+      "name": "cleanup-protected-dependent-blocks-parent",
+      "passed": true
+    },
+    {
+      "name": "cleanup-mid-transaction-failure-restores-all-tables",
+      "passed": true
+    },
+    {
+      "name": "cleanup-only-approved-rows-removed",
+      "passed": true,
+      "removed": 8,
+      "protectedModels": 32
+    },
+    {
+      "name": "cleanup-file-quarantined-not-destroyed",
+      "passed": true
+    },
+    {
+      "name": "cleanup-old-public-url-denied",
+      "passed": true,
+      "status": 404
+    },
+    {
+      "name": "cleanup-deleted-attachment-api-denied",
+      "passed": true
+    },
+    {
+      "name": "cleanup-retained-private-download-integrity",
+      "passed": true
+    },
+    {
+      "name": "cleanup-branding-preserved",
+      "passed": true
+    },
+    {
+      "name": "cleanup-preservation-after-restart",
+      "passed": true
+    },
+    {
+      "name": "cleanup-no-public-reappearance-after-restart",
+      "passed": true
+    },
+    {
+      "name": "cleanup-recovery-preserves-all-records-except-safe-file-pointer",
+      "passed": true
+    },
+    {
+      "name": "cleanup-recovered-private-download",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "name": "cleanup-recovery-never-restores-public-url",
+      "passed": true
+    },
+    {
+      "name": "cleanup-protected-config-credentials-oauth-receipts-unchanged",
+      "passed": true
+    },
+    {
+      "name": "candidate-policy-byte-identical",
+      "passed": true
+    },
+    {
+      "name": "candidate-working-tree-unchanged",
+      "passed": true
+    }
+  ],
+  "nodePostgres": {
+    "pass": 155,
+    "fail": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "typescript": {
+    "pass": 387,
+    "fail": 0
+  },
+  "commentsHttp": {
+    "delete": 62,
+    "getPost": 53,
+    "passed": true
+  },
+  "c0c5Http": {
+    "head": "f2c4b71e19450098bfc5d7c16da4a97b2fa5196b",
+    "runtime": "v22.21.1",
+    "results": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      }
+    ]
+  },
+  "build": "PASS",
+  "typecheck": "PASS",
+  "actionlint": "PASS; shellcheck/pyflakes disabled because unavailable",
+  "changedSourceLint": {
+    "files": 71,
+    "errors": 0,
+    "inheritedWarnings": 8,
+    "newScriptWarnings": 0
+  },
+  "realGitHubJobExecuted": false,
+  "harnessAssertionsChanged": false,
+  "globalMode": "observe_only",
+  "approvedEnforcements": [],
+  "productionAccess": false,
+  "pushPerformed": false,
+  "gatesApproved": [],
+  "risks": [
+    "Remote workflow/container networking/artifact upload not yet executed",
+    "Legacy production URLs not cut; storage/backup/events not verified",
+    "Remaining55 API files and4 layouts; commercial enforcement not activated",
+    "Review independent of implementation still required on final SHA"
+  ]
+}
