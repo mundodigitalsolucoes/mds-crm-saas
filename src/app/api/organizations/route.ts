@@ -68,6 +68,17 @@ export async function PATCH(request: NextRequest) {
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
+    // A marca contratada é administrada exclusivamente pela MDS.
+    // Não altera o comportamento legado das organizações sem White-Label.
+    const currentOrg = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, plan: true, features: true },
+    });
+    if (!currentOrg) return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
+    if (resolveCommercialEntitlements(currentOrg).capabilities.includes('white_label')) {
+      return NextResponse.json({ error: 'A identidade White-Label é administrada pela MDS' }, { status: 403 });
+    }
+
     // Montar apenas os campos enviados (patch parcial)
     const updateData: typeof data = {};
     if (data.name           !== undefined) updateData.name           = data.name;
