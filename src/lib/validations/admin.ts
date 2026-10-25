@@ -2,6 +2,7 @@
 // Schemas Zod para APIs do SuperAdmin — MDS CRM
 import { z } from 'zod';
 import { planFeaturesWriteSchema, serializedPlanFeaturesSchema } from './plan-features';
+import { brandingUpdateSchema } from './branding';
 
 // ============================================
 // HELPERS
@@ -68,6 +69,7 @@ export type AdminOrgCreateInput = z.infer<typeof adminOrgCreateSchema>;
 
 export const adminOrgUpdateSchema = z.object({
   whiteLabel: z.boolean().optional(),
+  branding: brandingUpdateSchema.optional(),
   name: z
     .string()
     .min(1, 'Nome não pode ser vazio')
