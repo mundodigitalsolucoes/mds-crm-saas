@@ -4,7 +4,7 @@ import { DEFAULT_BRANDING, brandingValues, type OrgBranding } from './branding-v
 export { DEFAULT_BRANDING, brandingCssVars } from './branding-values';
 export type { OrgBranding } from './branding-values';
 
-/** Caller must validate membership first. No shared tenant cache, no provider fetch. */
+/** Caller must validate membership or an active verified public hostname first. No shared tenant cache, no provider fetch. */
 export async function getOrgBranding(organizationId: string): Promise<OrgBranding> {
   try {
     const org = await prisma.organization.findFirst({

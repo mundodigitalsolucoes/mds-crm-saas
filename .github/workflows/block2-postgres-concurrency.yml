@@ -75,6 +75,16 @@ jobs:
         run: npx next build
       - name: Run real NextAuth HTTP regressions C0-C5 on disposable PostgreSQL
         run: node scripts/block2-c6-ci.mjs http
+      - name: Verify real custom-host sessions, recovery and explicit activation on disposable PostgreSQL
+        run: node scripts/block2-domain-ci.mjs
+      - name: Preserve synthetic custom-domain evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: block2-custom-domain-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ${{ runner.temp }}/block2-custom-domain-http/*.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Preserve fixture-only HTTP evidence
         if: always()
         uses: actions/upload-artifact@v4

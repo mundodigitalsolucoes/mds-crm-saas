@@ -1,5 +1,6 @@
 'use client';
 import OrganizationWhiteLabelControl from '@/components/OrganizationWhiteLabelControl';
+import OrganizationDomainEditor from '@/components/OrganizationDomainEditor';
 import OrganizationBrandingEditor from '@/components/OrganizationBrandingEditor';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -445,7 +446,7 @@ export default function AdminOrganizationsPage() {
 
             <div className="p-5 space-y-4">
               {editingOrg && <OrganizationWhiteLabelControl key={editingOrg.id} organizationId={editingOrg.id} />}
-              {editingOrg && <OrganizationBrandingEditor key={editingOrg.id} organizationId={editingOrg.id} />}
+              {editingOrg && <><OrganizationBrandingEditor key={editingOrg.id} organizationId={editingOrg.id} /><OrganizationDomainEditor organizationId={editingOrg.id} /></>}
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
                   Nome *

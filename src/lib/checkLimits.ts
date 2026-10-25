@@ -369,6 +369,7 @@ export async function checkPlanActive(
 }
 
 export async function syncPlanLimits(organizationId: string, planName: string) {
+  const { domainCapabilityPatch, domainCapabilityAudit } = await import('./domains/commercial-change');
   const plan = await prisma.plan.findUnique({
     where: { name: planName },
     select: {
@@ -387,18 +388,26 @@ export async function syncPlanLimits(organizationId: string, planName: string) {
     return null;
   }
 
-  return prisma.organization.update({
-    where: { id: organizationId },
-    data: {
-      plan: planName,
-      maxUsers: plan.maxUsers,
-      maxLeads: plan.maxLeads,
-      maxProjects: plan.maxProjects,
-      maxOs: plan.maxOs,
-      maxGoals: plan.maxGoals,
-      maxWhatsappInstances: plan.maxWhatsappInstances,
-      features: plan.features,
-    },
+  return prisma.$transaction(async tx => {
+    const previous = await tx.organization.findUniqueOrThrow({ where: { id: organizationId } });
+    const domainPatch = domainCapabilityPatch(previous, plan.features);
+    const changed = await tx.organization.updateMany({
+      where: { id: organizationId, ...(domainPatch.settings ? { settings: previous.settings, features: previous.features } : {}) },
+      data: {
+        plan: planName,
+        maxUsers: plan.maxUsers,
+        maxLeads: plan.maxLeads,
+        maxProjects: plan.maxProjects,
+        maxOs: plan.maxOs,
+        maxGoals: plan.maxGoals,
+        maxWhatsappInstances: plan.maxWhatsappInstances,
+        features: plan.features,
+        ...domainPatch,
+      },
+    });
+    if (changed.count !== 1) throw new Error('CONCURRENT_PLAN_SYNC');
+    if (domainPatch.settings) await tx.activity.create({ data: domainCapabilityAudit(organizationId) });
+    return tx.organization.findUniqueOrThrow({ where: { id: organizationId } });
   });
 }
 

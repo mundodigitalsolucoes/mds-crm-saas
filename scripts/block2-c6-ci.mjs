@@ -50,6 +50,8 @@ async function http() {
   env.NEXT_TELEMETRY_DISABLED = '1';
   const directory = resolve(env.BLOCK2_C6_REPORT_DIR || env.RUNNER_TEMP || '/tmp', 'block2-c6-http');
   mkdirSync(directory, { recursive: true, mode: 0o700 });
+  env.CRM_ATTACHMENTS_PRIVATE_ROOT = resolve(directory, 'private-attachments');
+  mkdirSync(env.CRM_ATTACHMENTS_PRIVATE_ROOT, { recursive: true, mode: 0o700 });
   // Do not accidentally test a stale build/server occupying the same port.
   const { createServer } = await import('node:net');
   const portCheck = createServer();
@@ -70,7 +72,7 @@ async function http() {
       await new Promise(accept => setTimeout(accept, 250));
     }
     if (!ready) throw Error('Local test server readiness timeout');
-    for (const script of ['dashboard-c0-http', 'commercial-dashboard-http', 'branding-white-label-http', 'c5-cross-tenant-http', 'c5-direct-access-http', 'c5-task-os-regression-http']) {
+    for (const script of ['dashboard-c0-http', 'commercial-dashboard-http', 'branding-white-label-http', 'c5-cross-tenant-http', 'c5-direct-access-http', 'c5-task-os-regression-http', 'comments-tenant-http', 'comments-delete-http', 'attachments-upload-http', 'custom-domain-disabled-http']) {
       const result = spawnSync(process.execPath, [`tests/${script}.mjs`], { env, encoding: 'utf8', timeout: 180000, maxBuffer: 4 * 1024 * 1024 });
       // Only these fixture-only JSON outputs are eligible for CI artifacts. Server/stderr
       // logs remain private; no cookies, environment dumps or credentials are published.

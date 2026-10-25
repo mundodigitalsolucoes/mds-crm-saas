@@ -43,7 +43,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     'src/app/api/webhooks', ':(exclude)src/app/api/webhooks/whatsapp-cloud/route.ts',
     ':(exclude)src/app/api/webhooks/chatwoot/route.ts',
     ':(exclude)src/app/api/webhooks/asaas/route.ts', 'src/lib/integrations', 'src/lib/atendimento',
-    'src/lib/checkLimits.ts',
+    // Domain V1 changes only syncPlanLimits; its other functions remain pinned below.
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     ':(exclude)src/lib/atendimento/widget-inbox-store.ts',
@@ -116,7 +116,7 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
     ':(exclude)src/lib/authorization/operation-data.ts', ':(exclude)src/lib/authorization/server.ts',
     // C1 adds a presentation adapter; all pre-existing engine files stay protected.
     ':(exclude)src/lib/authorization/application-context.ts',
-    'src/lib/entitlements', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
+    'src/lib/entitlements', ':(exclude)src/lib/entitlements/catalog.ts', ':(exclude)src/lib/entitlements/channel-access.ts', 'src/lib/plans', 'src/lib/validations',
     ':(exclude)src/lib/validations/branding.ts', ':(exclude)src/lib/validations/admin.ts', ':(exclude)src/lib/validations/index.ts',
     'src/app/api/tags', 'src/app/api/tasks',
     // Explicit C5 SECURITY authorization: only the two vulnerable Task handlers.
@@ -222,4 +222,20 @@ export async function evaluateModuleAccess(request: ModuleAccessRequest, context
     .replace('readUser: (id) => prisma.user.findUnique', 'readUser: (id) => database.user.findUnique')
     .replace('return await prisma.marketingProject.count', 'return await database.marketingProject.count');
   assert.equal(readFileSync('src/lib/authorization/server.ts', 'utf8'), expected);
+});
+
+// Domain V1 adds one capability; every existing identifier remains byte-for-byte pinned.
+test('custom domain catalog addition does not modify any existing commercial contract', () => {
+  const previous = execFileSync('git', ['show', '1ea0a216792cfb7b1f850c318f6851f7de87e249:src/lib/entitlements/catalog.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/lib/entitlements/catalog.ts', 'utf8');
+  const addition = "  custom_domain: feature('capability', 'available', 'Domínio próprio', 'Hostname exclusivo, com posse e HTTPS verificados; não habilita módulos nem White-Label.'),\n";
+  assert.ok(current.includes(addition));
+  assert.equal(current.replace(addition, ''), previous);
+});
+
+test('domain invalidation preserves every legacy limit rule outside plan synchronization', () => {
+  const previous = execFileSync('git', ['show', '1ea0a216792cfb7b1f850c318f6851f7de87e249:src/lib/checkLimits.ts'], { encoding: 'utf8' });
+  const current = readFileSync('src/lib/checkLimits.ts', 'utf8').replace("import { domainCapabilityPatch, domainCapabilityAudit } from './domains/commercial-change';\n", '');
+  const stripSync = (value: string) => value.replace(/export async function syncPlanLimits\([\s\S]*?(?=export async function getOrganizationUsage)/, '');
+  assert.equal(stripSync(current), stripSync(previous));
 });

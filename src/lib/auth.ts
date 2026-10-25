@@ -18,6 +18,7 @@ type AuthorizedUserPayload = {
   plan: string;
   planStatus: string;
   trialEndsAt: string | null;
+  domainOrigin?: string;
 };
 
 type SessionWithFlags = Session & {
@@ -27,6 +28,8 @@ type SessionWithFlags = Session & {
 };
 
 export const authOptions: NextAuthOptions = {
+  // Custom domains require HTTPS. Keep NextAuth's host-only cookie defaults.
+  useSecureCookies: process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true' ? true : undefined,
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -34,11 +37,20 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Senha', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const email = credentials?.email?.trim().toLowerCase();
         const password = credentials?.password;
 
         if (!email || !password) return null;
+        let domainOrigin: string | undefined;
+        let domainOrganization: string | undefined;
+        if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true') {
+          const { resolveRequestDomain } = await import('./domains/request');
+          const context = await resolveRequestDomain(request.headers || {});
+          if (context.kind === 'denied' || context.kind === 'custom' && !context.active) return null;
+          domainOrigin = context.origin;
+          if (context.kind === 'custom') domainOrganization = context.organizationId;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -64,11 +76,13 @@ export const authOptions: NextAuthOptions = {
 
         if (!user || user.deletedAt || user.organization.deletedAt) return null;
 
+        if (domainOrganization && user.organizationId !== domainOrganization) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
         return {
           id: user.id,
+          domainOrigin,
           email: user.email,
           name: user.name,
           organizationId: user.organizationId,
@@ -89,6 +103,8 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         const authUser = user as AuthorizedUserPayload;
 
+        token.domainOrigin = authUser.domainOrigin;
+        token.domainOrganizationId = authUser.domainOrigin ? authUser.organizationId : undefined;
         token.id = authUser.id;
         token.organizationId = authUser.organizationId;
         token.role = authUser.role;
@@ -144,6 +160,12 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       const sessionWithFlags = session as SessionWithFlags;
+      if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true' || token.domainOrigin) {
+        const { requestDomain, sessionMatchesDomain } = await import('./domains/request');
+        if (!sessionMatchesDomain(token, await requestDomain())) {
+          return { expires: session.expires, banned: true } as SessionWithFlags;
+        }
+      }
 
       if (sessionWithFlags.user) {
         sessionWithFlags.user.id = token.id as string;

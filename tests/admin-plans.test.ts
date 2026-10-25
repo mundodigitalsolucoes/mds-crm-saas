@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
 import * as validation from '../src/lib/validations';
+import * as domainChange from '../src/lib/domains/commercial-change';
 import * as featureValidation from '../src/lib/validations/plan-features';
 import { resolveCommercialEntitlements } from '../src/lib/entitlements/resolver';
 import { loadServerModule } from './helpers/load-server-module';
@@ -38,16 +39,19 @@ function fixture(features = '["vendas"]', role: string | null = 'superadmin') {
       },
       delete: async () => { throw new Error('Unexpected delete in plan regression'); },
     },
+    $transaction: async (callback: (tx: unknown) => unknown) => callback(prisma),
     organization: {
+      findMany: async () => [1,2,3].map(id => ({ id: 'org-'+id, plan: 'custom', features, settings: '{}' })),
       count: async () => 3,
       updateMany: async (args: { data: Record<string, unknown>; where: { plan: string } }) => {
         writes.push({ target: 'organization.updateMany', args });
-        return { count: 3 };
+        return { count: 1 };
       },
     },
   };
   const imports = {
     '@/lib/prisma': { prisma },
+    '@/lib/domains/commercial-change': domainChange,
     '@/lib/admin-auth': { verifyAdminToken: async () => role ? { role } : null },
     '@/lib/validations': validation,
     '@/lib/validations/plan-features': featureValidation,
@@ -177,11 +181,15 @@ test('PUT explicit propagation targets the old plan name and preserves -1 and le
   assert.equal(response.status, 200);
   const result = await response.json();
   assert.equal(result._propagatedCount, 3);
-  assert.deepEqual(context.writes.map((write) => write.target), ['plan.update', 'organization.updateMany']);
+  assert.deepEqual(context.writes.map((write) => write.target), ['plan.update', 'organization.updateMany', 'organization.updateMany', 'organization.updateMany']);
   assert.equal(context.writes[1].args.where?.plan, 'custom');
   assert.equal(context.writes[1].args.data.plan, 'renamed');
   assert.equal(context.writes[1].args.data.features, features);
   assert.equal(context.writes[1].args.data.maxWhatsappInstances, -1);
+  for (const write of context.writes.slice(1)) {
+    assert.equal(write.args.where?.plan, 'custom'); assert.equal(write.args.data.plan, 'renamed');
+    assert.equal(write.args.data.features, features); assert.equal(write.args.data.maxWhatsappInstances, -1);
+  }
 });
 
 test('PUT refuses propagating an invalid stored snapshot before updating the plan or tenants', async () => {

@@ -1,3 +1,4 @@
+import { domainCapabilityPatch, domainCapabilityAudit } from '@/lib/domains/commercial-change';
 // src/app/api/admin/plans/[id]/route.ts
 // API Admin — Atualização e Exclusão de Plano
 import { NextRequest, NextResponse } from 'next/server';
@@ -53,17 +54,27 @@ export async function PUT(
     let propagatedCount = 0;
 
     if (propagateToOrgs) {
-      const result = await prisma.organization.updateMany({
-        where: { plan: currentPlan.name },
-        data: {
-          ...(data.name && data.name !== currentPlan.name ? { plan: data.name } : {}),
-          maxUsers: plan.maxUsers,
-          maxLeads: plan.maxLeads,
-          maxProjects: plan.maxProjects,
-          maxOs: plan.maxOs,
-          maxWhatsappInstances: plan.maxWhatsappInstances,
-          features: plan.features,
-        },
+      const result = await prisma.$transaction(async tx => {
+        const organizations = await tx.organization.findMany({ where: { plan: currentPlan.name } });
+        for (const organization of organizations) {
+          const domainPatch = domainCapabilityPatch(organization, plan.features);
+          const changed = await tx.organization.updateMany({
+            where: { id: organization.id, plan: currentPlan.name, ...(domainPatch.settings ? { features: organization.features, settings: organization.settings } : {}) },
+            data: {
+              ...(data.name && data.name !== currentPlan.name ? { plan: data.name } : {}),
+              maxUsers: plan.maxUsers,
+              maxLeads: plan.maxLeads,
+              maxProjects: plan.maxProjects,
+              maxOs: plan.maxOs,
+              maxWhatsappInstances: plan.maxWhatsappInstances,
+              features: plan.features,
+              ...domainPatch,
+            },
+          });
+          if (changed.count !== 1) throw new Error('CONCURRENT_PLAN_PROPAGATION');
+          if (domainPatch.settings) await tx.activity.create({ data: domainCapabilityAudit(organization.id) });
+        }
+        return { count: organizations.length };
       });
 
       propagatedCount = result.count;

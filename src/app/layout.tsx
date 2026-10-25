@@ -18,6 +18,11 @@ const defaultMetadata: Metadata = {
 // Root also owns the 404 metadata. Resolve only a validated existing session;
 // anonymous login never accepts a tenant identifier from the URL or cookies.
 export async function generateMetadata(): Promise<Metadata> {
+  if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true') {
+    const { publicDomainBranding } = await import('@/lib/domains/request');
+    const brand = await publicDomainBranding();
+    if (brand) return { ...defaultMetadata, title: brand.name, icons: { icon: brand.favicon!, shortcut: brand.favicon! } };
+  }
   const auth = await checkAuth();
   if (!auth.authenticated || !auth.session) return defaultMetadata;
   const brand = await getOrgBranding(auth.session.user.organizationId);
