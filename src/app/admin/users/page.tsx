@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Search, Pencil, Trash2, Shield, X, Building2 } from 'lucide-react';
+import { Users, Search, Pencil, Trash2, Shield, X, Building2, Plus } from 'lucide-react';
 
 interface User {
   id: string;
@@ -37,6 +37,13 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editRole, setEditRole] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [newUserOpen, setNewUserOpen] = useState(false);
+  const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
+  const [newUser, setNewUser] = useState({ organizationId: '', name: '', email: '', password: '', role: 'owner' });
+  const [formError, setFormError] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -63,6 +70,32 @@ export default function UsersPage() {
     return () => clearTimeout(timer);
   }, [fetchUsers]);
 
+  const openCreate = async () => {
+    setFormError('');
+    try {
+      const res = await fetch('/api/admin/organizations?limit=50');
+      if (!res.ok) throw Error('Erro ao carregar organizações');
+      const data = await res.json();
+      const options = data.organizations.map((o: { id: string; name: string }) => ({ id: o.id, name: o.name }));
+      setOrganizations(options);
+      setNewUser({ organizationId: options[0]?.id || '', name: '', email: '', password: '', role: 'owner' });
+      setNewUserOpen(true);
+    } catch (e) { setFormError(e instanceof Error ? e.message : 'Erro ao carregar organizações'); }
+  };
+
+  const createUser = async () => {
+    if (busy) return;
+    setBusy(true); setFormError('');
+    try {
+      const res = await fetch('/api/admin/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newUser) });
+      const data = await res.json();
+      if (!res.ok) throw Error(data.error || 'Erro ao criar usuário');
+      setNewUserOpen(false);
+      await fetchUsers();
+    } catch (e) { setFormError(e instanceof Error ? e.message : 'Erro ao criar usuário'); }
+    finally { setBusy(false); }
+  };
+
   const handleUpdateRole = async () => {
     if (!editingUser) return;
 
@@ -70,7 +103,7 @@ export default function UsersPage() {
       const res = await fetch(`/api/admin/users/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: editRole }),
+        body: JSON.stringify({ role: editRole, name: editName, email: editEmail }),
       });
 
       if (res.ok) {
@@ -120,6 +153,8 @@ export default function UsersPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Usuários</h1>
         <p className="text-gray-400 mt-1">Todos os usuários do sistema ({users.length})</p>
+        <button onClick={openCreate} className="mt-3 flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm text-white"><Plus size={16}/> Novo Usuário</button>
+        {formError && !newUserOpen && !editingUser && <p role="alert" className="mt-2 text-red-400">{formError}</p>}
       </div>
 
       {/* Busca */}
@@ -193,6 +228,9 @@ export default function UsersPage() {
                           onClick={() => {
                             setEditingUser(user);
                             setEditRole(user.role);
+            setEditName(user.name);
+            setEditEmail(user.email);
+            setFormError('');
                           }}
                           className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
                           title="Alterar role"
@@ -216,6 +254,38 @@ export default function UsersPage() {
         </div>
       )}
 
+      {newUserOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md space-y-4 rounded-xl border border-gray-700 bg-gray-800 p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-white">Novo Usuário</h2>
+              <button onClick={() => setNewUserOpen(false)} aria-label="Fechar"><X className="text-gray-300"/></button>
+            </div>
+            <label className="block text-sm text-gray-300">Organização
+              <select className="mt-1 w-full rounded bg-gray-900 p-2 text-white" value={newUser.organizationId} onChange={e => setNewUser(v => ({ ...v, organizationId: e.target.value }))}>
+                {organizations.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+              </select>
+            </label>
+            {([
+              ['name','Nome','text'],['email','E-mail','email'],['password','Senha inicial (mínimo 12 caracteres)','password'],
+            ] as const).map(([key,label,type]) => (
+              <label key={key} className="block text-sm text-gray-300">{label}
+                <input type={type} autoComplete="off" className="mt-1 w-full rounded bg-gray-900 p-2 text-white"
+                  value={newUser[key]} onChange={e => setNewUser(v => ({ ...v, [key]: e.target.value }))}/>
+              </label>
+            ))}
+            <label className="block text-sm text-gray-300">Perfil
+              <select className="mt-1 w-full rounded bg-gray-900 p-2 text-white" value={newUser.role} onChange={e => setNewUser(v => ({ ...v, role: e.target.value }))}>
+                <option value="owner">Proprietário</option><option value="admin">Administrador</option>
+                <option value="manager">Gerente</option><option value="user">Usuário</option>
+              </select>
+            </label>
+            <p className="text-xs text-gray-400">A senha inicial deve ser comunicada por canal seguro; este cadastro não envia e-mail automaticamente.</p>
+            {formError && <p role="alert" className="text-sm text-red-400">{formError}</p>}
+            <button disabled={busy || !newUser.organizationId} onClick={createUser} className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">{busy ? 'Salvando...' : 'Criar usuário'}</button>
+          </div>
+        </div>
+      )}
       {/* Modal Editar Role */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -239,6 +309,8 @@ export default function UsersPage() {
                 <p className="text-sm text-gray-400">{editingUser.email}</p>
               </div>
 
+              <label className="block text-sm text-gray-300">Nome<input className="mt-1 w-full rounded bg-gray-900 p-2 text-white" value={editName} onChange={e => setEditName(e.target.value)}/></label>
+              <label className="block text-sm text-gray-300">E-mail<input type="email" className="mt-1 w-full rounded bg-gray-900 p-2 text-white" value={editEmail} onChange={e => setEditEmail(e.target.value)}/></label>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">Role</label>
                 <select
