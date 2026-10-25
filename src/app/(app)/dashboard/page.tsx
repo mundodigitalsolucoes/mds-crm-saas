@@ -221,7 +221,7 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <div className="flex items-center gap-3">
           {organization && (
-            <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-medium uppercase">
+            <span className="brand-badge text-xs px-2.5 py-1 rounded-full font-medium uppercase">
               Plano {organization.plan}
             </span>
           )}

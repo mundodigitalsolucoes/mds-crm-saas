@@ -105,9 +105,13 @@ export async function PUT(
         return NextResponse.json({ error: 'Nenhuma alteração de branding' }, { status: 400 });
       }
       const updated = await prisma.$transaction(async tx => {
-        const org = await tx.organization.update({
+        // A revogação concorrente do adicional ou desativação invalida a edição.
+        const changed = await tx.organization.updateMany({
+          where: { id, deletedAt: null, features: existing.features }, data: branding,
+        });
+        if (changed.count !== 1) return null;
+        const org = await tx.organization.findUnique({
           where: { id },
-          data: branding,
           select: { id: true, name: true, logo: true, favicon: true, primaryColor: true, secondaryColor: true },
         });
         await tx.activity.create({ data: {
@@ -117,7 +121,8 @@ export async function PUT(
         } });
         return org;
       });
-      return NextResponse.json(updated);
+      if (!updated) return NextResponse.json({ error: 'Organização ou contrato alterado; recarregue antes de salvar' }, { status: 409 });
+      return NextResponse.json(updated, { headers: { 'Cache-Control': 'private, no-store' } });
     }
 
     if (data.whiteLabel !== undefined) {

@@ -60,3 +60,36 @@ test('White-Label preserves modules and opaque legacy fields; audit has a separa
   await db.organization.update({ where: { id: org.id }, data: { deletedAt: new Date() } });
   assert.equal((await handler(db, actorId).PUT(request(), { params: Promise.resolve({ id: org.id }) })).status, 409);
 });
+
+function brandingRequest(id, branding = { name: 'Updated fixture', logo: '/images/logo-mds.svg', favicon: '/images/favicon.png', primaryColor: '#ffaa00', secondaryColor: '#123456' }) {
+  return new NextRequest(`http://localhost/api/admin/organizations/${id}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ branding }) });
+}
+test('Super Admin identity edit preserves commercial fields and records audit atomically', async () => {
+  const org = await fixture();
+  await db.organization.update({ where: { id: org.id }, data: { features: '["vendas","white_label"]' } });
+  const before = await db.organization.findUnique({ where: { id: org.id } });
+  const response = await handler(db, randomUUID()).PUT(brandingRequest(org.id), { params: Promise.resolve({ id: org.id }) });
+  assert.equal(response.status, 200);
+  const after = await db.organization.findUnique({ where: { id: org.id } });
+  for (const key of ['features', 'plan', 'maxUsers', 'maxLeads', 'chatwootAccountId', 'chatwootUrl']) assert.equal(after[key], before[key]);
+  assert.equal(after.name, 'Updated fixture');
+  assert.equal(await db.activity.count({ where: { entityId: org.id } }), 1);
+  const failing = { organization: db.organization, $transaction: callback => db.$transaction(tx => callback({ organization: tx.organization, activity: { create: async () => { throw Error('Audit failed'); } } })) };
+  const denied = await handler(failing, randomUUID()).PUT(brandingRequest(org.id, { name: 'Must rollback' }), { params: Promise.resolve({ id: org.id }) });
+  assert.equal(denied.status, 500);
+  assert.equal((await db.organization.findUnique({ where: { id: org.id } })).name, 'Updated fixture');
+});
+test('concurrent White-Label revocation or tenant deactivation prevents branding save with no partial audit', async () => {
+  for (const data of [{ features: '["vendas"]' }, { deletedAt: new Date() }]) {
+    const org = await fixture();
+    await db.organization.update({ where: { id: org.id }, data: { features: '["vendas","white_label"]' } });
+    const racing = { organization: db.organization, $transaction: async callback => {
+      await db.organization.update({ where: { id: org.id }, data });
+      return db.$transaction(callback);
+    } };
+    const response = await handler(racing, randomUUID()).PUT(brandingRequest(org.id), { params: Promise.resolve({ id: org.id }) });
+    assert.equal(response.status, 409);
+    assert.equal((await db.organization.findUnique({ where: { id: org.id } })).name, org.name);
+    assert.equal(await db.activity.count({ where: { entityId: org.id } }), 0);
+  }
+});

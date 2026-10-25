@@ -1,6 +1,6 @@
 // src/app/api/organizations/route.ts
 // GET: carrega dados da organização atual
-// PATCH: atualiza branding (owner/admin apenas)
+// PATCH: identidade comercial reservada ao Super Admin (endpoint próprio).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
@@ -60,63 +60,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const organizationId = session!.user.organizationId;
     const body = await request.json();
 
     // ✅ Validação Zod centralizada
     const parsed = parseBody(brandingUpdateSchema, body);
     if (!parsed.success) return parsed.response;
-    const data = parsed.data;
 
-    // A marca contratada é administrada exclusivamente pela MDS.
-    // Não altera o comportamento legado das organizações sem White-Label.
-    const currentOrg = await prisma.organization.findUnique({
-      where: { id: organizationId },
-      select: { id: true, plan: true, features: true },
-    });
-    if (!currentOrg) return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
-    if (resolveCommercialEntitlements(currentOrg).capabilities.includes('white_label')) {
-      return NextResponse.json({ error: 'A identidade White-Label é administrada pela MDS' }, { status: 403 });
-    }
+    // Este endpoint só aceita identidade visual. Configurações operacionais
+    // continuam nos respectivos handlers; a governança comercial pertence à MDS.
+    return NextResponse.json({ error: 'A identidade visual é administrada pela MDS' }, { status: 403 });
 
-    // Montar apenas os campos enviados (patch parcial)
-    const updateData: typeof data = {};
-    if (data.name           !== undefined) updateData.name           = data.name;
-    if (data.logo           !== undefined) updateData.logo           = data.logo;
-    if (data.favicon        !== undefined) updateData.favicon        = data.favicon;
-    if (data.primaryColor   !== undefined) updateData.primaryColor   = data.primaryColor;
-    if (data.secondaryColor !== undefined) updateData.secondaryColor = data.secondaryColor;
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 });
-    }
-
-    const org = await prisma.organization.update({
-      where: { id: organizationId },
-      data: updateData,
-      select: {
-        id:             true,
-        name:           true,
-        slug:           true,
-        logo:           true,
-        favicon:        true,
-        primaryColor:   true,
-        secondaryColor: true,
-      },
-    });
-
-    // Registrar atividade
-    await prisma.activity.create({
-      data: {
-        entityType:  'organization',
-        entityId:    organizationId,
-        action:      'updated',
-        description: 'Configurações de branding atualizadas',
-        userId:      session!.user.id,
-      },
-    });
-
-    return NextResponse.json(org);
   } catch (error) {
     console.error('Erro ao atualizar organização:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

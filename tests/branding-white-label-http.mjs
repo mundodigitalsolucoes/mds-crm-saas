@@ -48,13 +48,14 @@ try {
       commercialDenials.push({ role, tenant, status: forbidden.status, destination: forbidden.status === 307 ? '/admin/login' : null });
       rejectedClientChanges++;
       if (role !== 'user') {
-        assert.equal((await client.json('/api/organizations', 'PATCH', brand)).status, 200, 'Existing tenant edit preserved'); persistedUpdates++;
+        assert.equal((await client.json('/api/organizations', 'PATCH', brand)).status, 403, 'Commercial identity belongs to MDS for all customers');
         assert.equal((await client.json('/api/organizations', 'PATCH', { whiteLabel: true })).status, 400);
         assert.equal((await client.json('/api/organizations', 'PATCH', { features: '["white_label"]' })).status, 400);
         assert.equal((await client.json('/api/organizations', 'PATCH', { organizationId: 'foreign', name: 'Attempt' })).status, 400);
         assert.equal((await client.json('/api/organizations', 'PATCH', { logo: 'https://user:pass@example.invalid/logo.png' })).status, 400);
       } else assert.equal((await client.json('/api/organizations', 'PATCH', brand)).status, 403);
     }
+    await db.organization.update({ where: { id: org.id }, data: brand }); // Synthetic fixture setup, not a customer edit.
     const persisted = await db.organization.findUnique({ where: { id: org.id } });
     for (const [key, value] of Object.entries(brand)) assert.equal(persisted[key], value);
     assert.equal((await fetch(base + brand.logo)).status, 200);
@@ -66,12 +67,16 @@ try {
     await db.organization.update({ where: { id: fixture.org.id }, data: { features: JSON.stringify(contracted) } });
     const toggle = await mds.json(`/api/admin/organizations/${fixture.org.id}`, 'PUT', { whiteLabel });
     assert.equal(toggle.status, 200);
+    if (whiteLabel) {
+      const saved = await mds.json(`/api/admin/organizations/${fixture.org.id}`, 'PUT', { branding: fixture.brand });
+      assert.equal(saved.status, 200, 'MDS branding editor persists identity separately'); persistedUpdates++;
+    }
     const persisted = await db.organization.findUnique({ where: { id: fixture.org.id } });
     assert.deepEqual(JSON.parse(persisted.features), [...contracted, ...(whiteLabel ? ['white_label'] : [])]);
     for (const { role, client } of fixture.clients) {
       const dashboard = await client.request('/dashboard'); assert.equal(dashboard.status, 200);
       const expectedColor = whiteLabel ? fixture.brand.primaryColor : '#2f3453';
-      const expectedIcon = whiteLabel ? fixture.brand.favicon : '/favicon.ico';
+      const expectedIcon = whiteLabel ? fixture.brand.favicon : '/images/favicon.png';
       const expectedLogo = whiteLabel ? fixture.brand.logo : '/images/logo-fundo-escuro.png';
       assert.ok(dashboard.body.includes('--color-primary: ' + expectedColor));
       assert.ok(dashboard.body.includes(`href="${expectedIcon}"`), 'Rendered favicon');
@@ -83,6 +88,10 @@ try {
       assert.equal(dashboard.body.includes('Projetos Ativos'), contracted.includes('marketing'));
       const settings = await client.request('/api/organizations'); assert.equal(settings.status, 200);
       assert.equal(JSON.parse(settings.body).whiteLabelActive, whiteLabel);
+      assert.equal((await client.json('/api/organizations', 'PATCH', { name: 'Must not change' })).status, 403, 'All customer roles denied commercial identity edits');
+      const otherOrg = fixtures.find(item => item !== fixture);
+      const forbiddenBrand = await client.json(`/api/admin/organizations/${otherOrg.org.id}`, 'PUT', { branding: { name: 'Cross-tenant attempt' } });
+      assert.ok([401, 403, 307].includes(forbiddenBrand.status), 'No customer may edit another tenant identity');
       scenarios.push({ mask, modules: contracted, whiteLabel, role, tenant: fixtures.indexOf(fixture), passed: true });
     }
   }
@@ -98,7 +107,7 @@ try {
   const audits = await db.activity.findMany({ where: { entityId: { in: fixtures.map(item => item.org.id) }, description: 'Capacidade White-Label atualizada pela MDS' } });
   assert.equal(audits.length, 29);
   for (const audit of audits) { assert.equal(audit.userId, null); assert.equal(JSON.parse(audit.metadata).actorId, admin.id); }
-  console.log(JSON.stringify({ referenceHead: 'd626bff', scenarios, persistedUpdates, rejectedClientChanges, commercialDenials, auditedCommercialUpdates: audits.length, assetRetrievals: 4, passed: true }, null, 2));
+  console.log(JSON.stringify({ referenceHead: 'fc123488eab556f29241312af8abbe5b9e0e462b', scenarios, persistedUpdates, rejectedClientChanges, commercialDenials, auditedCommercialUpdates: audits.length, assetRetrievals: 4, passed: true }, null, 2));
 } catch (error) {
   console.error(error instanceof assert.AssertionError ? error.message : JSON.stringify({ name: error.name, code: error.code || null })); process.exitCode = 1;
 } finally {

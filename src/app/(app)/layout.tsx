@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const branding = await getOrgBranding(auth.session.user.organizationId);
   return {
     title: { default: branding.name, template: `%s | ${branding.name}` },
-    icons: { icon: branding.favicon ?? '/favicon.ico', shortcut: branding.favicon ?? '/favicon.ico' },
+    icons: { icon: branding.favicon ?? '/images/favicon.png', shortcut: branding.favicon ?? '/images/favicon.png' },
   };
 }
 
@@ -36,7 +36,7 @@ export default async function AppLayout({
     context.organizationId !== auth.session.user.organizationId) redirect('/auth/login');
   const branding = await getOrgBranding(auth.session.user.organizationId);
 
-  const favicon = branding?.favicon ?? '/favicon.ico';
+  const favicon = branding?.favicon ?? '/images/favicon.png';
 
   const cssVars = brandingCssVars(branding);
 
@@ -49,11 +49,12 @@ export default async function AppLayout({
         <PermissionSync />
         <WhatsAppStatusBanner />
 
-        <div className="flex h-screen overflow-hidden bg-[#f6f8fc]">
+        <div data-crm-brand={context.organizationId} className="crm-brand flex h-screen overflow-hidden bg-[#f6f8fc]">
           <Sidebar access={context} branding={branding} />
 
           <div className="flex min-w-0 min-h-0 flex-1 flex-col bg-[#f6f8fc]">
-            <header className="sticky top-0 z-30 flex items-center justify-end border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+            <header className="crm-brand-header sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+              <span className="min-w-0 truncate pl-12 text-sm font-semibold lg:pl-0">{branding.name}</span>
               <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1 shadow-sm">
                 <NotificationBellWrapper />
               </div>

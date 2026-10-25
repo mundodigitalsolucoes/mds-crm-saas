@@ -24,6 +24,7 @@ for (let mask = 1; mask < 8; mask++) for (const whiteLabel of [false, true]) for
     const access: ApplicationContext = { userId: role + tenant, organizationId: tenant, mode: 'observe_only', modules: resolveCommercialEntitlements(snapshot).modules, views: { atendimento: true, leads: true, tasks: true, projects: true, os: true } };
     const { default: Sidebar } = loadServerModule<{ default: React.ComponentType<{ access: ApplicationContext; branding: values.OrgBranding }> }>(new URL('../src/components/Sidebar.tsx', import.meta.url), {
       '@/lib/branding-values': values,
+      '@/components/BrandLogo': loadServerModule(new URL('../src/components/BrandLogo.tsx', import.meta.url), { '@/lib/branding-values': values }),
       'next/link': { default: (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => React.createElement('a', props) },
       'next/navigation': { usePathname: () => '/dashboard' },
       'next-auth/react': { useSession: () => ({ data: { user: { id: access.userId, organizationId: tenant, role } } }), signOut: () => {} },

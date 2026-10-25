@@ -3,7 +3,7 @@
 // Menu recolhível no desktop
 // Blocos em acordeão
 // "Aparência" oculto da navegação
-// Branding fixo da MDS no menu (sem frase / sem nome textual)
+// Identidade resolvida no servidor por organização e contrato White-Label.
 
 'use client';
 
@@ -36,7 +36,8 @@ import {
 import { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { usePermission } from '@/hooks/usePermission';
 import dynamic from 'next/dynamic';
-import { DEFAULT_BRANDING, brandingValues, type OrgBranding } from '@/lib/branding-values';
+import { DEFAULT_BRANDING, brandingValues, brandForeground, type OrgBranding } from '@/lib/branding-values';
+import BrandLogo from '@/components/BrandLogo';
 import type { ApplicationContext } from '@/lib/authorization/application-context';
 import type { CommercialModuleId } from '@/lib/entitlements/catalog';
 import type { PermissionModule } from '@/types/permissions';
@@ -63,11 +64,12 @@ interface MenuSection {
 }
 
 function makePalette(brand: OrgBranding) {
+  const text = brandForeground(brand.primaryColor);
   return {
-    bg: brand.primaryColor, bgDark: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#28304c' : brand.primaryColor, bgDarker: brand.primaryColor === DEFAULT_BRANDING.primaryColor ? '#252c45' : 'rgba(0,0,0,0.12)',
-    active: brand.secondaryColor,
-    hover: 'rgba(255,255,255,0.08)', hoverSoft: 'rgba(255,255,255,0.05)',
-    border: 'rgba(255,255,255,0.10)', textMuted: 'rgba(255,255,255,0.78)', textLabel: 'rgba(255,255,255,0.42)',
+    bg: brand.primaryColor, bgDark: brand.primaryColor, bgDarker: 'var(--brand-hover)',
+    active: brand.secondaryColor, activeText: brandForeground(brand.secondaryColor), text,
+    hover: 'var(--brand-hover)', hoverSoft: 'var(--brand-hover)',
+    border: 'currentColor', textMuted: text, textLabel: text,
   };
 }
 
@@ -260,7 +262,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="fixed left-4 top-4 z-50 rounded-xl p-2 text-white shadow-lg transition-opacity hover:opacity-80 lg:hidden"
-        style={{ backgroundColor: brand.primaryColor }}
+        style={{ backgroundColor: brand.primaryColor, color: palette.text }}
         aria-label={isMobileOpen ? 'Fechar menu' : 'Abrir menu'}
       >
         {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -281,7 +283,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
           ${isDesktopCollapsed ? 'lg:w-[88px]' : 'lg:w-72'}
           lg:static
         `}
-        style={{ backgroundColor: palette.bg }}
+        style={{ backgroundColor: palette.bg, color: palette.text }}
       >
         <div
           className={`border-b transition-all duration-300 ${isDesktopCollapsed ? 'p-3' : 'p-5'}`}
@@ -292,12 +294,8 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
               isDesktopCollapsed ? 'flex-col items-center gap-3' : 'items-center justify-between gap-3'
             }`}
           >
-            <div className="flex items-center justify-center">
-              <img
-                src={brand.logo ?? DEFAULT_BRANDING.logo!}
-                alt={brand.name}
-                className={`${isDesktopCollapsed ? 'h-10 w-10' : 'h-11 w-11'} object-contain`}
-              />
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <BrandLogo key={brand.logo + ':' + brand.favicon} branding={brand} compact={isDesktopCollapsed} documentIcon />
             </div>
 
             <button
@@ -307,7 +305,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
               style={{
                 borderColor: palette.border,
                 backgroundColor: palette.hover,
-                color: '#ffffff',
+                color: palette.text,
               }}
               aria-label={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
               title={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
@@ -335,7 +333,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
                       : 'transparent',
                   color:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
-                      ? '#ffffff'
+                      ? palette.activeText
                       : palette.textMuted,
                   fontWeight:
                     pathname === dashboardItem.path || pathname?.startsWith(dashboardItem.path + '/')
@@ -372,7 +370,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
                       }`}
                       style={{
                         backgroundColor: hasActiveItem && !isOpen ? palette.hover : 'transparent',
-                        color: '#ffffff',
+                        color: palette.text,
                       }}
                       title={isDesktopCollapsed ? section.title : undefined}
                     >
@@ -406,7 +404,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
                                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
                                 style={{
                                   backgroundColor: isActive ? palette.active : 'transparent',
-                                  color: isActive ? '#ffffff' : palette.textMuted,
+                                  color: isActive ? palette.activeText : palette.textMuted,
                                   fontWeight: isActive ? 600 : 500,
                                 }}
                                 onMouseEnter={(e) => {
@@ -445,7 +443,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
             <div className={`flex items-center ${isDesktopCollapsed ? 'justify-center' : 'gap-3'}`}>
               <div
                 className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ backgroundColor: palette.active }}
+                style={{ backgroundColor: palette.active, color: palette.activeText }}
                 title={userName}
               >
                 {userInitial}
@@ -453,7 +451,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
 
               {!isDesktopCollapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{userName}</p>
+                  <p className="truncate text-sm font-medium" style={{ color: palette.text }}>{userName}</p>
                   <p className="text-xs" style={{ color: palette.textMuted }}>
                     {ROLE_DISPLAY[userRole] || userRole}
                   </p>
