@@ -52,10 +52,13 @@ export async function PUT(
 
     const existing = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, role: true, email: true, deletedAt: true, organization: { select: { deletedAt: true } } },
+      select: { id: true, role: true, email: true, chatwootUserId: true, deletedAt: true, organization: { select: { deletedAt: true } } },
     });
     if (!existing || existing.deletedAt || existing.organization.deletedAt) {
       return NextResponse.json({ error: 'Usuário não encontrado ou inativo' }, { status: 404 });
+    }
+    if (data.email && data.email !== existing.email && existing.chatwootUserId) {
+      return NextResponse.json({ error: 'E-mail vinculado ao Atendimento. Atualização requer sincronização do usuário Chatwoot.' }, { status: 409 });
     }
     if (data.email && data.email !== existing.email) {
       const duplicate = await prisma.user.findUnique({ where: { email: data.email }, select: { id: true } });
