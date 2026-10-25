@@ -52,14 +52,12 @@ interface Pagination {
   totalPages: number;
 }
 
-const planOptions = [
-  { value: 'trial', label: 'Trial', color: 'text-cyan-300 bg-cyan-500/10' },
-  { value: 'starter', label: 'Starter', color: 'text-blue-300 bg-blue-500/10' },
-  { value: 'professional', label: 'Professional', color: 'text-violet-300 bg-violet-500/10' },
-  { value: 'enterprise', label: 'Enterprise', color: 'text-amber-300 bg-amber-500/10' },
-];
+interface PlanOption {
+  value: string;
+  label: string;
+}
 
-function getPlanBadge(plan: string | null) {
+function getPlanBadge(plan: string | null, planOptions: PlanOption[]) {
   const found = planOptions.find((item) => item.value === plan);
 
   if (!found) {
@@ -71,7 +69,7 @@ function getPlanBadge(plan: string | null) {
   }
 
   return (
-    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${found.color}`}>
+    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full text-blue-300 bg-blue-500/10">
       {found.label}
     </span>
   );
@@ -79,6 +77,8 @@ function getPlanBadge(plan: string | null) {
 
 export default function AdminOrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [planOptions, setPlanOptions] = useState<PlanOption[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     page: 1,
@@ -100,6 +100,24 @@ export default function AdminOrganizationsPage() {
     slug: '',
     plan: 'trial',
   });
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/admin/plans')
+      .then(async res => {
+        if (!res.ok) throw new Error('Erro ao carregar planos');
+        const data: unknown = await res.json();
+        if (!Array.isArray(data)) throw new Error('Resposta de planos inválida');
+        const options: PlanOption[] = data
+          .filter((p): p is { name: string; displayName?: string } =>
+            !!p && typeof p === 'object' && typeof p.name === 'string' && p.name.length > 0)
+          .map(p => ({ value: p.name, label: p.displayName || p.name }));
+        if (active) { setPlanOptions(options); setError(''); }
+      })
+      .catch(() => { if (active) setError('Não foi possível carregar os planos disponíveis'); })
+      .finally(() => { if (active) setPlansLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const fetchOrganizations = useCallback(async (page = 1): Promise<{ organizations: Organization[]; pagination: Pagination }> => {
     const params = new URLSearchParams({ page: String(page), limit: '10' });
@@ -128,7 +146,7 @@ export default function AdminOrganizationsPage() {
     setFormData({
       name: '',
       slug: '',
-      plan: 'trial',
+      plan: planOptions.find(p => p.value === 'trial')?.value || planOptions[0]?.value || '',
     });
     setShowModal(true);
   };
@@ -138,13 +156,13 @@ export default function AdminOrganizationsPage() {
     setFormData({
       name: org.name,
       slug: org.slug,
-      plan: org.plan || 'trial',
+      plan: org.plan || '',
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.slug.trim()) return;
+    if (!formData.name.trim() || !formData.slug.trim() || !formData.plan || !planOptions.some(p => p.value === formData.plan)) return;
 
     setSaving(true);
 
@@ -307,7 +325,7 @@ export default function AdminOrganizationsPage() {
                     </td>
 
                     <td className="px-4 py-3 text-center">
-                      {getPlanBadge(org.plan)}
+                      {getPlanBadge(org.plan, planOptions)}
                     </td>
 
                     <td className="px-4 py-3 text-center">
@@ -465,6 +483,9 @@ export default function AdminOrganizationsPage() {
                   }
                   className="w-full px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
                 >
+                  {editingOrg && formData.plan && !planOptions.some(p => p.value === formData.plan) && (
+                    <option value={formData.plan}>{formData.plan} (plano legado)</option>
+                  )}
                   {planOptions.map((p) => (
                     <option key={p.value} value={p.value}>
                       {p.label}
@@ -491,7 +512,7 @@ export default function AdminOrganizationsPage() {
 
               <button
                 onClick={handleSave}
-                disabled={saving || !formData.name.trim() || !formData.slug.trim()}
+                disabled={saving || plansLoading || !formData.name.trim() || !formData.slug.trim() || !planOptions.some(p => p.value === formData.plan)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
