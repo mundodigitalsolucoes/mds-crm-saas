@@ -99,7 +99,17 @@ export type AdminOrgUpdateInput = z.infer<typeof adminOrgUpdateSchema>;
 // USERS — PUT /api/admin/users/[id]
 // ============================================
 
+export const adminUserCreateSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2).max(255),
+  email: z.string().trim().toLowerCase().email().max(255),
+  password: z.string().min(12).max(128),
+  role: z.enum(['owner', 'admin', 'manager', 'user']),
+}).strict();
+
 export const adminUserUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(255).optional(),
+  email: z.string().trim().toLowerCase().email().max(255).optional(),
   role: z.enum(['owner', 'admin', 'manager', 'user'], {
     errorMap: () => ({ message: 'Cargo inválido. Use: owner, admin, manager ou user' }),
   }),
