@@ -91,6 +91,35 @@ export async function PUT(
       return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
     }
 
+    if (data.branding !== undefined) {
+      if (Object.keys(body).some(key => key !== 'branding')) {
+        return NextResponse.json({ error: 'Altere a identidade visual separadamente' }, { status: 400 });
+      }
+      if (existing.deletedAt) return NextResponse.json({ error: 'Organização inativa' }, { status: 409 });
+      const parsedFeatures = parseCommercialFeatures(existing.features);
+      if (parsedFeatures.status !== 'valid' || !parsedFeatures.features.includes('white_label')) {
+        return NextResponse.json({ error: 'White-Label não habilitado para a organização' }, { status: 403 });
+      }
+      const { branding } = data;
+      if (Object.keys(branding).length === 0) {
+        return NextResponse.json({ error: 'Nenhuma alteração de branding' }, { status: 400 });
+      }
+      const updated = await prisma.$transaction(async tx => {
+        const org = await tx.organization.update({
+          where: { id },
+          data: branding,
+          select: { id: true, name: true, logo: true, favicon: true, primaryColor: true, secondaryColor: true },
+        });
+        await tx.activity.create({ data: {
+          entityType: 'organization', entityId: id, action: 'updated', userId: null,
+          description: 'Identidade comercial atualizada pela MDS',
+          metadata: JSON.stringify({ actorType: 'superadmin', actorId: admin.id, fields: Object.keys(branding) }),
+        } });
+        return org;
+      });
+      return NextResponse.json(updated);
+    }
+
     if (data.whiteLabel !== undefined) {
       // A capability change is explicit and cannot accidentally sync a whole plan.
       if (Object.keys(body).some(key => key !== 'whiteLabel')) {
