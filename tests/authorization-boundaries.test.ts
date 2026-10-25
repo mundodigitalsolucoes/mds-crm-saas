@@ -136,7 +136,17 @@ test('C4 preserves existing admin validation except White-Label and validated br
   assert.equal(current
     .replace("import { brandingUpdateSchema } from './branding';\n", '')
     .replace('  whiteLabel: z.boolean().optional(),\n', '')
-    .replace('  branding: brandingUpdateSchema.optional(),\n', ''), original);
+    .replace('  branding: brandingUpdateSchema.optional(),\n', '')
+    .replace(`export const adminUserCreateSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2).max(255),
+  email: z.string().trim().toLowerCase().email().max(255),
+  password: z.string().min(12).max(128),
+  role: z.enum(['owner', 'admin', 'manager', 'user']),
+}).strict();
+
+`, '')
+    .replace("  name: z.string().trim().min(2).max(255).optional(),\n  email: z.string().trim().toLowerCase().email().max(255).optional(),\n  role: z.enum(['owner', 'admin', 'manager', 'user'], {", "  role: z.enum(['owner', 'admin', 'manager', 'user'], {"), original);
 });
 
 test('C4 leaves the organization DELETE/provider lifecycle byte-for-byte unchanged', () => {
