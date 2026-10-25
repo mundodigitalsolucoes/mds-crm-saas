@@ -1,6 +1,7 @@
 // src/app/api/admin/users/[id]/route.ts
 // API Admin — Atualização e Exclusão de Usuário
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { parseBody, adminUserUpdateSchema } from '@/lib/validations';
@@ -49,22 +50,37 @@ export async function PUT(
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
 
-    const user = await prisma.user.update({
+    const existing = await prisma.user.findUnique({
       where: { id },
-      data: { role: data.role },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        organization: {
-          select: { id: true, name: true },
-        },
-      },
+      select: { id: true, role: true, email: true, deletedAt: true, organization: { select: { deletedAt: true } } },
+    });
+    if (!existing || existing.deletedAt || existing.organization.deletedAt) {
+      return NextResponse.json({ error: 'Usuário não encontrado ou inativo' }, { status: 404 });
+    }
+    if (data.email && data.email !== existing.email) {
+      const duplicate = await prisma.user.findUnique({ where: { email: data.email }, select: { id: true } });
+      if (duplicate) return NextResponse.json({ error: 'E-mail já cadastrado' }, { status: 409 });
+    }
+    const user = await prisma.$transaction(async tx => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: { name: data.name, email: data.email, role: data.role },
+        select: { id: true, name: true, email: true, role: true,
+          organization: { select: { id: true, name: true } } },
+      });
+      await tx.activity.create({ data: {
+        entityType: 'user', entityId: id, action: 'updated', userId: null,
+        description: 'Dados de usuário atualizados pelo Super Admin',
+        metadata: JSON.stringify({ actorType: 'superadmin', actorId: admin.id, fields: Object.keys(data) }),
+      } });
+      return updated;
     });
 
     return NextResponse.json(user);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'E-mail já cadastrado' }, { status: 409 });
+    }
     console.error('[ADMIN USERS] Erro ao atualizar usuário:', error);
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
