@@ -287,7 +287,7 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
       >
         <div
           className={`border-b transition-all duration-300 ${isDesktopCollapsed ? 'p-3' : 'p-5'}`}
-          style={{ borderColor: palette.border }}
+          style={{ backgroundColor: '#F8F7F4', borderColor: '#E7E3DC', color: '#242424' }}
         >
           <div
             className={`flex ${
@@ -303,9 +303,9 @@ export default function Sidebar({ access, branding = DEFAULT_BRANDING }: { acces
               onClick={toggleCollapsed}
               className="hidden h-10 w-10 items-center justify-center rounded-xl border transition-colors lg:inline-flex"
               style={{
-                borderColor: palette.border,
-                backgroundColor: palette.hover,
-                color: palette.text,
+                borderColor: '#D1CCC3',
+                backgroundColor: '#F0EDE7',
+                color: '#242424',
               }}
               aria-label={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
               title={isDesktopCollapsed ? 'Expandir menu' : 'Recolher menu'}
