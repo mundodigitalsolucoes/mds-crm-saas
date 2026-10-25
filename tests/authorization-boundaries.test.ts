@@ -128,11 +128,15 @@ test('Vendas integration preserves Marketing, the existing authorization engine 
   assert.equal(diff, '');
 });
 
-// C4 permits exactly one optional capability field; other existing validation remains frozen.
-test('C4 preserves existing admin validation except the explicit White-Label boolean', () => {
+// C4 and the scoped branding editor permit only their explicit optional fields;
+// all other pre-existing validation stays byte-for-byte frozen.
+test('C4 preserves existing admin validation except White-Label and validated branding', () => {
   const original = execFileSync('git', ['show', 'd626bff:src/lib/validations/admin.ts'], { encoding: 'utf8' });
   const current = readFileSync(new URL('../src/lib/validations/admin.ts', import.meta.url), 'utf8');
-  assert.equal(current.replace('  whiteLabel: z.boolean().optional(),\n', ''), original);
+  assert.equal(current
+    .replace("import { brandingUpdateSchema } from './branding';\n", '')
+    .replace('  whiteLabel: z.boolean().optional(),\n', '')
+    .replace('  branding: brandingUpdateSchema.optional(),\n', ''), original);
 });
 
 test('C4 leaves the organization DELETE/provider lifecycle byte-for-byte unchanged', () => {
