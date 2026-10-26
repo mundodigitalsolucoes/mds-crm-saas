@@ -1,3 +1,6 @@
+// Register verification regressions in the same serial file: PostgreSQL SSI scans
+// over organizations must not race a second independently scheduled domain suite.
+import './helpers/domain-verification-regressions.mjs';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
