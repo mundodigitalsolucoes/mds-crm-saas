@@ -1,6 +1,7 @@
 // Register verification regressions in the same serial file: PostgreSQL SSI scans
 // over organizations must not race a second independently scheduled domain suite.
 import './helpers/domain-verification-regressions.mjs';
+import './helpers/domain-persistent-activation-regressions.mjs';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -72,18 +73,18 @@ test('audit failure and stale settings do not partially change domain or overwri
  await assert.rejects(racing(org.id,actor,{action:'configure',hostname:host}),e=>e.status===409);
  assert.equal((await db.organization.findUnique({where:{id:org.id}})).settings,'{"providerSentinel":{"inbox":999}}');assert.equal(await db.activity.count({where:{entityId:org.id}}),0);
 });
-test('revocation, expiration, verification failure, replacement and removal fail closed',async()=>{
+test('revocation, transient monitoring failure, legacy activation, replacement and removal preserve the V1.1 policy',async()=>{
  const a=await fixture(),host=await active(a);
  await manager(a.id,actor,{action:'grant',enabled:false});assert.equal((await resolveRequestDomain(headers(host))).kind,'denied');
  await manager(a.id,actor,{action:'grant',enabled:true});assert.equal((await resolveRequestDomain(headers(host))).active,false);
  await assert.rejects(manager(a.id,actor,{action:'activate'}),e=>e.status===409);
  await manager(a.id,actor,{action:'verify'});await manager(a.id,actor,{action:'activate'});
- const failed=createDomainManager(db,async()=>({ok:false,status:'awaiting_https',error:'https_unavailable'}));await failed(a.id,actor,{action:'verify'});assert.equal((await resolveRequestDomain(headers(host))).active,false);
+ const failed=createDomainManager(db,async()=>({ok:false,status:'awaiting_https',error:'https_unavailable'}));await failed(a.id,actor,{action:'verify'});assert.equal((await resolveRequestDomain(headers(host))).active,true,'A transient HTTPS failure does not revoke activation');
  await manager(a.id,actor,{action:'verify'});await manager(a.id,actor,{action:'activate'});
- const row=await db.organization.findUnique({where:{id:a.id}}),settings=JSON.parse(row.settings);settings.customDomainV1.verifiedUntil=new Date(0).toISOString();await db.organization.update({where:{id:a.id},data:{settings:JSON.stringify(settings)}});
- assert.equal((await resolveRequestDomain(headers(host))).active,false);
- assert.equal((await manager(a.id,actor,{action:'verify'})).status,'verified','Expired verification needs explicit reactivation');
- assert.equal((await resolveRequestDomain(headers(host))).active,false);
+ const row=await db.organization.findUnique({where:{id:a.id}}),settings=JSON.parse(row.settings);settings.customDomainV1.checkedAt=new Date(Date.now()-3*86400000).toISOString();settings.customDomainV1.verifiedAt=settings.customDomainV1.checkedAt;settings.customDomainV1.verifiedUntil=new Date(Date.now()-2*86400000).toISOString();await db.organization.update({where:{id:a.id},data:{settings:JSON.stringify(settings)}});
+ assert.equal((await resolveRequestDomain(headers(host))).active,true,'Activated domains do not inherit the old 24h lease');
+ assert.equal((await manager(a.id,actor,{action:'verify'})).status,'active','Successful monitoring preserves administrative activation');
+ assert.equal((await resolveRequestDomain(headers(host))).active,true);
  const replacement=hostname();await manager(a.id,actor,{action:'configure',hostname:replacement});assert.equal((await resolveRequestDomain(headers(host))).kind,'denied');assert.equal((await resolveRequestDomain(headers(replacement))).active,false);
  assert.notEqual(readDomainState((await db.organization.findUnique({where:{id:a.id}})).settings).challenge,settings.customDomainV1.challenge);
  await manager(a.id,actor,{action:'remove'});assert.equal((await db.organization.findUnique({where:{id:a.id}})).domain,null);

@@ -10,6 +10,10 @@ export const domainStateSchema = z.object({
   verifiedUntil: z.string().datetime().optional(),
   certificateExpiresAt: z.string().datetime().optional(),
   checkedAt: z.string().datetime().optional(),
+  verifiedAt: z.string().datetime().optional(),
+  activatedAt: z.string().datetime().optional(),
+  activationRevision: z.string().uuid().optional(),
+  activationHostname: z.string().refine(value => { try { return normalizeDomain(value) === value; } catch { return false; } }).optional(),
   error: z.enum(['dns_unavailable', 'ownership_missing', 'pointing_mismatch', 'https_unavailable', 'routing_mismatch', 'configuration_missing']).optional(),
 }).strict();
 export type DomainState = z.infer<typeof domainStateSchema>;
@@ -29,10 +33,22 @@ export function readDomainState(raw: string): DomainState | null {
   try { const result = domainStateSchema.safeParse(readSettings(raw)[DOMAIN_SETTINGS_KEY]); return result.success ? result.data : null; }
   catch { return null; }
 }
-export function domainIsActive(raw: string, now = Date.now()): boolean {
+/** Proof timestamps describe an observed validation, not the lifetime of activation. */
+export function hasDomainVerification(state: DomainState, now = Date.now()): boolean {
+  const verified = Date.parse(state.verifiedAt || state.checkedAt || '');
+  const certificate = Date.parse(state.certificateExpiresAt || '');
+  const validity = Date.parse(state.verifiedUntil || '');
+  return Number.isFinite(verified) && verified <= now && Number.isFinite(certificate) && certificate > verified
+    && Number.isFinite(validity) && validity > verified;
+}
+export function domainIsActive(raw: string, now = Date.now(), hostname?: string): boolean {
   const state = readDomainState(raw);
-  return state?.status === 'active' && !!state.verifiedUntil && Date.parse(state.verifiedUntil) > now
-    && !!state.certificateExpiresAt && Date.parse(state.certificateExpiresAt) > now;
+  if (!state || state.status !== 'active' || !hasDomainVerification(state, now)) return false;
+  const stamped = !!(state.activatedAt || state.activationRevision || state.activationHostname);
+  if (!stamped) return true; // V1: already activated, with evidence of its initial verification.
+  return !!state.activatedAt && Date.parse(state.activatedAt) <= now
+    && state.activationRevision === state.revision && !!state.activationHostname
+    && (!hostname || state.activationHostname === hostname);
 }
 export const domainCommandSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('grant'), enabled: z.boolean() }).strict(),

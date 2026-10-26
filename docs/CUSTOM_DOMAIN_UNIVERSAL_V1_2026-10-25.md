@@ -1,4 +1,6 @@
-# Domínio Próprio Universal V1 — implementação e homologação
+# Domínio Próprio Universal — contrato operacional atualizado para V1.1
+
+Atualização de 26/10/2026: ativação persistente. Ver `CUSTOM_DOMAIN_UNIVERSAL_V1_1_2026-10-26.md` para política vigente e novos testes. Resultados de 25/10 abaixo são históricos, não execuções da V1.1.
 
 Base auditada: `1ea0a216792cfb7b1f850c318f6851f7de87e249`, branch local `audit/block2-sanitized`.
 Data: 25/10/2026. Nenhuma alteração em DNS, Coolify, certificados reais, produção ou dados de clientes. Nenhum push/merge/deploy desta implementação.
@@ -22,7 +24,7 @@ Hostname é normalizado em ASCII/IDNA, minúsculas e sem ponto terminal; URLs, c
 
 O hostname vem de `Host`, não de `X-Forwarded-Host`. Para hosts personalizados, o aplicativo exige uma origem de proxy autenticada: `X-CRM-Proxy-Key` deve ser sobrescrito pelo proxy com um segredo dedicado e `X-Forwarded-Proto` precisa indicar HTTPS. `X-Forwarded-Host`, quando presente, deve ser coerente após normalização; não escolhe tenant. O backend direto não deve ficar exposto à internet. Segredo não é enviado ao navegador nem pelo verificador HTTPS público.
 
-O recurso fica desativado por padrão. Host desconhecido/pendente/inativo/expirado é recusado com 421, sem dados. O canônico é preservado; não se redireciona um visitante de hostname arbitrário ao CRM. Mesmo com o recurso desativado, hosts não canônicos são recusados. Requisições sem autoridade são recusadas (400/421 conforme a camada HTTP).
+O recurso fica desativado por padrão. Host desconhecido/pendente/inativo ou com ativação inválida é recusado com 421, sem dados. O canônico é preservado; não se redireciona um visitante de hostname arbitrário ao CRM. Mesmo com o recurso desativado, hosts não canônicos são recusados. Requisições sem autoridade são recusadas (400/421 conforme a camada HTTP).
 
 A configuração existente do NextAuth foi adaptada, não substituída:
 
@@ -46,9 +48,9 @@ Hosts customizados não publicam `/uploads` legados; o otimizador de imagem não
 4. DNS tem timeout e tentativas limitados. Private/loopback/link-local/metadata/multicast e IPs não autorizados não recebem conexão HTTPS.
 5. HTTPS usa porta 443, IP previamente validado e fixado no lookup, SNI do hostname e validação TLS normal. Não segue redirect, não desabilita certificados e limita resposta a 4 KiB/timeout de 5 segundos.
 6. `/.well-known/mds-crm-domain-check` responde a nonce fresco com HMAC vinculado a hostname/desafio/nonce. Isso confirma que a rota chega ao CRM com o proxy autenticado, além de possuir certificado válido. Endpoint não retorna usuário, configuração ou chave.
-7. Uma verificação bem-sucedida fica válida por no máximo 24h e nunca além do certificado. Ativação inicial é explícita. Renovar enquanto ainda ativo preserva a ativação; verificar depois de expirar exige ativar novamente. Falha de revalidação suspende o acesso customizado, preservando o fallback canônico.
+7. A prova inicial continua recente (até 24h, limitada pelo certificado) para permitir a primeira ativação explícita. **Essa janela nunca expira a ativação já concedida.** Domínio ativo permanece assim após 24h e reinícios. Falha isolada de monitoramento é auditada sem renovar a prova ou suspender automaticamente; perda de controle confirmada deve ser suspensa pela MDS com `deactivate`. Revogação comercial bloqueia imediatamente.
 
-**Não há worker/cron automático de revalidação nesta V1.** A MDS precisa verificar antes do vencimento, por operação administrativa. Essa condição de disponibilidade deve ser aceita antes de ativar um cliente real. Renovação ACME do proxy não substitui revalidação de posse/roteamento na aplicação.
+**Não há worker/cron automático habilitado.** Monitoramento posterior é opcional e reutiliza `verify`, sem obrigação de intervenção diária. HTTPS válido e renovação ACME continuam obrigatórios no proxy; `certificateExpiresAt` é a última observação, não um interruptor de acesso que ignora renovações reais. Ver a política de incidentes V1.1.
 
 ## Configuração futura na infraestrutura existente — não executada
 
@@ -107,7 +109,7 @@ Hostname pretendido: `crm.oticasaopaulorp.com.br` — usado somente neste checkl
 5. Verificar pela aplicação: posse, apontamento, TLS e prova do CRM precisam passar. Status **verificado** ainda não é ativo.
 6. Acionar **Ativar domínio verificado**. Validar login anônimo com marca da ótica, login/logout/recuperação, owner/admin/comum e rejeição de sessão de outra origem.
 7. Conferir MDS canônico, cliente B, Leads/Kanban/Atendimento e ausência de dados cruzados. Canais/OAuth continuam com seu procedimento canônico; não alterar Chatwoot/Evolution/Meta por causa do domínio.
-8. Confirmar operações diárias de revalidação e monitoramento de certificado. Revalidar antes de 24h; documentar responsável.
+8. Confirmar renovação ACME e responsável por alertas/incidentes. Monitoramento periódico é opcional; nenhuma revalidação manual diária é exigida para manter o domínio ativo.
 9. Respeitar os bloqueios existentes de anexos legados e rollout comercial. `observe_only` e `APPROVED_ENFORCEMENTS=[]` foram preservados; esta frente não autoriza enforcement de Marketing, piloto ou produção.
 
 ## Rollback seguro
@@ -131,7 +133,7 @@ Ver `docs/evidence/CUSTOM_DOMAIN_UNIVERSAL_V1_2026-10-25.json` para resultados e
 - Job `scripts/block2-c6-ci.mjs http`: 10 probes legados/de rollback, incluindo comentários e upload/download, sem enfraquecer as asserções originais. O novo workflow mantém PostgreSQL descartável e permissões de token somente leitura.
 - Build de produção Next/Webpack, typecheck, lint dos arquivos alterados (zero erros/avisos) e `prisma validate` aprovados; manifesto compilado confirmou `/_middleware` com runtime Node e matcher global. Dockerfile/startup/dependências/schema não foram modificados; build Docker completo não é certificado por esta frente.
 - CI remota do commit novo: pendente de autorização de envio. Não reutilizar resultados remotos de `2db12b4`/`1ea0a21` como prova desta implementação.
-- Limitações de infraestrutura, revalidação manual, IPv4/AAAA, canais canônicos e roteamento dinâmico acima são condições reais, não automações concluídas.
+- Limitações de infraestrutura, monitoramento opcional, IPv4/AAAA, canais canônicos e roteamento dinâmico acima são condições reais, não automações concluídas.
 
 ### Falhas encontradas e corrigidas na validação
 

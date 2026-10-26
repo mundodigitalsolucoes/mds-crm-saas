@@ -78,6 +78,15 @@ try{
  assert.equal(JSON.parse((await ca.request('/api/auth/session')).body).user.id,a.user.id);
  await cb.login(b.user);await mc.login(c.user);
  for(const [client,f] of [[ca,a],[cb,b],[mc,c]]){const r=await client.request('/api/leads');assert.equal(r.status,200);assert.ok(r.body.includes(f.lead.id));for(const other of fixtures.filter(x=>x!==f))assert.ok(!r.body.includes(other.lead.id));passed('authorized tenant data '+f.key);}
+ // V1.1: persisted active legacy records keep backend access after their old 24h lease.
+ for(const f of [a,b]){
+  const row=await db.organization.findUniqueOrThrow({where:{id:f.org.id}}),settings=JSON.parse(row.settings),state=settings.customDomainV1;
+  state.checkedAt=state.verifiedAt=new Date(Date.now()-3*86400000).toISOString();state.verifiedUntil=new Date(Date.now()-2*86400000).toISOString();
+  delete state.activatedAt;delete state.activationRevision;delete state.activationHostname;
+  await db.organization.update({where:{id:f.org.id},data:{settings:JSON.stringify(settings)}});
+ }
+ assert.equal((await ca.request('/api/leads')).status,200);assert.equal((await cb.request('/api/leads')).status,200);passed('legacy active domains remain authorized after 24 hours');
+ const monitored=await mds.json(endpoint(a),'PATCH',{action:'verify'});assert.equal(monitored.status,200);assert.equal(JSON.parse(monitored.body).status,'active');assert.equal(JSON.parse(monitored.body).error,'configuration_missing');assert.equal((await ca.request('/api/leads')).status,200);passed('failed monitoring does not revoke a persistent activation');
  const copied=new Client(b.host);copied.cookies=new Map(ca.cookies);await deny('copied session cannot read another host',copied,'/api/leads',401);
  const session=await copied.request('/api/auth/session');assert.ok(!JSON.parse(session.body).user?.id);passed('session endpoint suppresses foreign user');
  const wrongLogin=new Client(a.host);await wrongLogin.login(b.user);assert.ok(!JSON.parse((await wrongLogin.request('/api/auth/session')).body).user?.id);passed('foreign user credentials cannot sign into tenant A');

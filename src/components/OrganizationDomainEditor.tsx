@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-interface View { hostname: string | null; eligible: boolean; status: string; error: string | null; verifiedUntil: string | null; dns: { txtName: string; txtValue: string; cnameTarget: string } | null }
+interface View { hostname: string | null; eligible: boolean; status: string; error: string | null; verifiedUntil: string | null; certificateExpiresAt: string | null; activationPersistent: boolean; securityReviewRequired: boolean; checkedAt: string | null; dns: { txtName: string; txtValue: string; cnameTarget: string } | null }
 const labels: Record<string, string> = { unconfigured: 'Não configurado', awaiting_dns: 'Aguardando DNS', awaiting_https: 'Aguardando HTTPS', verified: 'Verificado', active: 'Ativo', disabled: 'Desativado', error: 'Erro' };
 export default function OrganizationDomainEditor({ organizationId }: { organizationId: string }) {
   return <Editor key={organizationId} organizationId={organizationId} />;
@@ -38,7 +38,10 @@ function Editor({ organizationId }: { organizationId: string }) {
         <p>Configure o proxy HTTPS e o encaminhamento confiável antes de verificar. A concessão comercial não ativa o domínio.</p>
       </div>}
       <div className="flex flex-wrap gap-2">{(['verify', 'activate', 'deactivate', 'remove'] as const).map((action, index) => <button key={action} type="button" disabled={busy || !view.hostname} onClick={() => command(action)} className="rounded border px-3 py-2">{['Verificar DNS / HTTPS', 'Ativar domínio verificado', 'Desativar', 'Remover configuração'][index]}</button>)}</div>
-      {view.verifiedUntil && <p className="text-xs">Verificação válida até {new Date(view.verifiedUntil).toLocaleString('pt-BR')}. Revalidação periódica obrigatória.</p>}
+      {view.activationPersistent ? <p className="text-xs">Ativação persistente. Não exige revalidação diária; a MDS pode desativar ou revogar o domínio.</p> : view.verifiedUntil && <p className="text-xs">Prova inicial válida para ativação até {new Date(view.verifiedUntil).toLocaleString('pt-BR')}.</p>}
+      {view.checkedAt && <p className="text-xs">Última verificação: {new Date(view.checkedAt).toLocaleString('pt-BR')}.</p>}
+      {view.certificateExpiresAt && <p className="text-xs">Certificado observado até {new Date(view.certificateExpiresAt).toLocaleString('pt-BR')}. A renovação HTTPS é responsabilidade do proxy.</p>}
+      {view.activationPersistent && view.error && <p role="alert">A última verificação falhou. {view.securityReviewRequired ? 'Revisão de segurança necessária; confirme o diagnóstico e desative se houver perda de controle.' : 'Verifique a disponibilidade e tente novamente. A ativação foi preservada.'}</p>}
     </>}
     <p role="status" className="text-xs">{status || (!view ? 'Carregando...' : '')}</p>
   </section>;

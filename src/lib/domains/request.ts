@@ -44,7 +44,7 @@ export async function resolveRequestDomain(input: HeaderInput): Promise<DomainCo
   if (matches.length !== 1) return { kind: 'denied' };
   const org = matches[0];
   if (org.deletedAt || !resolveCommercialEntitlements(org).capabilities.includes('custom_domain') || !readDomainState(org.settings)) return { kind: 'denied' };
-  return { kind: 'custom', origin: 'https://' + hostname, hostname, organizationId: org.id, active: domainIsActive(org.settings) };
+  return { kind: 'custom', origin: 'https://' + hostname, hostname, organizationId: org.id, active: domainIsActive(org.settings, Date.now(), hostname) };
 }
 export async function requestDomain(): Promise<DomainContext> {
   try { return await resolveRequestDomain(await headers()); } catch { return { kind: 'denied' }; }

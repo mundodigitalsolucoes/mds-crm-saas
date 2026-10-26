@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { resolveCommercialEntitlements } from '../entitlements/resolver';
 import { parseCommercialFeatures } from '../entitlements/features';
-import { DOMAIN_SETTINGS_KEY, readSettings, readDomainState, domainIsActive, normalizeDomain, type DomainCommand, type DomainState } from './model';
+import { DOMAIN_SETTINGS_KEY, readSettings, readDomainState, domainIsActive, hasDomainVerification, normalizeDomain, type DomainCommand, type DomainState } from './model';
 import { verifyDomainNetwork, type ProbeResult } from './network';
 
 export class DomainError extends Error {
@@ -11,11 +11,14 @@ export class DomainError extends Error {
 export function domainView(org: { domain: string | null; features: string; settings: string; id: string; plan: string }) {
   const state = readDomainState(org.settings);
   const eligible = resolveCommercialEntitlements(org).capabilities.includes('custom_domain');
-  const expired = !!state?.verifiedUntil && Date.parse(state.verifiedUntil) <= Date.now();
-  return { hostname: org.domain, eligible, status: !org.domain ? 'unconfigured' : !eligible ? 'disabled' : expired && ['active', 'verified'].includes(state?.status || '') ? 'awaiting_https' : state?.status || 'error',
+  const active = eligible && !!org.domain && domainIsActive(org.settings, Date.now(), org.domain);
+  const expired = !active && !!state?.verifiedUntil && Date.parse(state.verifiedUntil) <= Date.now();
+  return { hostname: org.domain, eligible, status: !org.domain ? 'unconfigured' : !eligible ? 'disabled' : (state?.status === 'active' && !active || expired && state?.status === 'verified') ? 'awaiting_https' : state?.status || 'error',
     challenge: state?.challenge ?? null, error: state?.error ?? null,
     verifiedUntil: state?.verifiedUntil ?? null, certificateExpiresAt: state?.certificateExpiresAt ?? null,
-    verificationExpired: !!state?.verifiedUntil && Date.parse(state.verifiedUntil) <= Date.now(),
+    verificationExpired: expired, activationPersistent: active, activatedAt: state?.activatedAt ?? null,
+    checkedAt: state?.checkedAt ?? null, verifiedAt: state?.verifiedAt ?? state?.checkedAt ?? null,
+    securityReviewRequired: active && !!state?.error && ['ownership_missing', 'pointing_mismatch', 'routing_mismatch'].includes(state.error),
     dns: org.domain && state ? { txtName: '_mds-crm-verification.' + org.domain, txtValue: 'mds-crm=' + state.challenge,
       cnameTarget: new URL(process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br').hostname } : null };
 }
@@ -44,17 +47,35 @@ export function createDomainManager(db: PrismaClient, probe: (hostname: string, 
         if (!domain || !state) throw new DomainError(409, 'DOMAIN_NOT_CONFIGURED');
         if (command.action === 'deactivate') state = { ...state, status: 'disabled' };
         if (command.action === 'verify') {
+          const wasActive = domainIsActive(org.settings, Date.now(), domain);
           const result = await probe(domain, state.challenge);
           const checkedAt = new Date().toISOString();
-          state = result.ok ? { ...state, status: domainIsActive(org.settings) ? 'active' : 'verified', error: undefined, checkedAt,
-            certificateExpiresAt: result.certificateExpiresAt,
-            verifiedUntil: new Date(Math.min(Date.parse(result.certificateExpiresAt), Date.now() + 86400000)).toISOString() }
-            : { ...state, status: result.status, error: result.error, checkedAt, verifiedUntil: undefined, certificateExpiresAt: undefined };
+          if (result.ok) {
+            // Preserve freshness for the initial administrative activation only.
+            // Once active, these dates are monitoring metadata, never a daily lease.
+            if (!Number.isFinite(Date.parse(result.certificateExpiresAt)) || Date.parse(result.certificateExpiresAt) <= Date.now()) throw new DomainError(409, 'DOMAIN_NOT_VERIFIED');
+            state = { ...state, status: wasActive ? 'active' : 'verified', error: undefined,
+              checkedAt, verifiedAt: checkedAt, certificateExpiresAt: result.certificateExpiresAt,
+              verifiedUntil: new Date(Math.min(Date.parse(result.certificateExpiresAt), Date.now() + 86400000)).toISOString() };
+          } else if (wasActive) {
+            // A single probe cannot confirm loss of control. Record it without renewing
+            // proof or removing an administrative activation; MDS can suspend immediately.
+            state = { ...state, status: 'active', error: result.error, checkedAt,
+              verifiedAt: state.verifiedAt || state.checkedAt };
+          } else {
+            state = { ...state, status: result.status, error: result.error, checkedAt,
+              verifiedAt: undefined, verifiedUntil: undefined, certificateExpiresAt: undefined,
+              activatedAt: undefined, activationRevision: undefined, activationHostname: undefined };
+          }
         }
         if (command.action === 'activate') {
-          if (!['verified', 'active'].includes(state.status) || !state.verifiedUntil || Date.parse(state.verifiedUntil) <= Date.now()
-            || !state.certificateExpiresAt || Date.parse(state.certificateExpiresAt) <= Date.now()) throw new DomainError(409, 'DOMAIN_NOT_VERIFIED');
-          state = { ...state, status: 'active' };
+          if (!domainIsActive(org.settings, Date.now(), domain)) {
+            if (state.status !== 'verified' || !hasDomainVerification(state)
+              || Date.parse(state.verifiedUntil || '') <= Date.now()
+              || Date.parse(state.certificateExpiresAt || '') <= Date.now()) throw new DomainError(409, 'DOMAIN_NOT_VERIFIED');
+            state = { ...state, status: 'active', activatedAt: new Date().toISOString(),
+              activationRevision: state.revision, activationHostname: domain };
+          }
         }
       }
     }
@@ -71,7 +92,7 @@ export function createDomainManager(db: PrismaClient, probe: (hostname: string, 
         if (changed.count !== 1) throw new DomainError(409, 'CONCURRENT_CONFIGURATION_CHANGE');
         await tx.activity.create({ data: { entityType: 'organization', entityId: id, action: 'updated', userId: null,
           description: 'Domínio próprio administrado pela MDS', metadata: JSON.stringify({ actorType: 'superadmin', actorId,
-            action: command.action, previousHostname: org.domain, hostname: domain, status: state?.status ?? 'unconfigured' }) } });
+            action: command.action, previousHostname: org.domain, hostname: domain, status: state?.status ?? 'unconfigured', verificationResult: command.action === 'verify' ? state?.error ?? 'ok' : undefined }) } });
         return tx.organization.findUniqueOrThrow({ where: { id }, select: { id: true, domain: true, plan: true, features: true, settings: true } });
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       return domainView(updated);
