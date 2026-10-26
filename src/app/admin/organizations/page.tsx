@@ -431,7 +431,7 @@ export default function AdminOrganizationsPage() {
             onClick={() => !saving && setShowModal(false)}
           />
 
-          <div className="relative w-full max-w-md bg-gray-950 border border-blue-900/30 rounded-xl shadow-2xl">
+          <div className="relative flex w-full max-w-md max-h-[calc(100dvh-2rem)] flex-col overflow-hidden bg-gray-950 border border-blue-900/30 rounded-xl shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-800">
               <h3 className="text-lg font-semibold text-white">
                 {editingOrg ? 'Editar Organização' : 'Nova Organização'}
@@ -444,7 +444,7 @@ export default function AdminOrganizationsPage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
               {editingOrg && <OrganizationWhiteLabelControl key={editingOrg.id} organizationId={editingOrg.id} />}
               {editingOrg && <><OrganizationBrandingEditor key={editingOrg.id} organizationId={editingOrg.id} /><OrganizationDomainEditor organizationId={editingOrg.id} /></>}
               <div>
@@ -504,7 +504,7 @@ export default function AdminOrganizationsPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-800">
+            <div className="flex shrink-0 items-center justify-end gap-3 p-5 border-t border-gray-800">
               <button
                 onClick={() => setShowModal(false)}
                 disabled={saving}
