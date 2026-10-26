@@ -18,7 +18,7 @@ function adapter({status=200,authorized=true,body='{"proof":"fixture-proof"}',lo
 }
 test('HTTPS adapter pins lookup, validates TLS SNI and never sends cookies or ingress secrets',async()=>{
  const a=adapter();assert.equal((await a.probe('crm.customer.example.com','8.8.8.8','a'.repeat(64))).proof,'fixture-proof');
- const options=a.options();assert.equal(options.hostname,'crm.customer.example.com');assert.equal(options.servername,options.hostname);assert.equal(options.rejectUnauthorized,true);assert.equal(options.port,443);
+ const options=a.options();assert.equal(options.hostname,'crm.customer.example.com');assert.equal(options.servername,options.hostname);assert.equal(options.rejectUnauthorized,true);assert.equal(options.port,443);assert.equal(options.agent,false,'Each proof requires a fresh certificate-bearing TLS handshake');
  assert.deepEqual(Object.keys(options.headers),['User-Agent']);
  let address;options.lookup('attacker-changed-dns.example.com',{all:false},(_err,ip,family)=>{address=[ip,family];});assert.deepEqual(address,['8.8.8.8',4]);
  options.lookup('attacker-changed-dns.example.com',{all:true},(_err,ips)=>{address=ips;});assert.deepEqual(JSON.parse(JSON.stringify(address)),[{address:'8.8.8.8',family:4}]);

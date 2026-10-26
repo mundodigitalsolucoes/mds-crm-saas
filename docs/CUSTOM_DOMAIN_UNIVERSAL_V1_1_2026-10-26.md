@@ -77,3 +77,7 @@ Preferir desativar o recurso por flag global, manter o canônico e corrigir/repu
 Não há monitoramento ou suspensão automática em produção. O operador é responsável por confirmar alertas e suspender incidentes; auto-suspensão com quorum/retries exigiria política e autorização próprias. Roteamento dinâmico Traefik, TLS/ACME, backend privado e corte dos anexos legados mantêm suas condições operacionais anteriores. Nenhuma dessas infraestruturas foi alterada ou validada na VPS nesta rodada.
 
 Nenhum merge, push, deploy, migration de produção, alteração DNS/Coolify ou aprovação automática de G1–G6/piloto.
+
+## Correção complementar do transporte HTTPS
+
+Ver `CUSTOM_DOMAIN_HTTPS_SESSION_FIX_2026-10-26.md`: sessões TLS retomadas podem omitir a validade do peer certificate no Node 22.23.4. O patch usa agente de uso único por probe, preservando todos os controles iniciais e a ativação persistente descrita aqui. Não altera a política comercial nem reativa domínios automaticamente.

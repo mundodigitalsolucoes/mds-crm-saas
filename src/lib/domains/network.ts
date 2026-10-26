@@ -29,7 +29,9 @@ export interface NetworkDependencies {
 export function pinnedHttpsProbe(hostname: string, pinnedIp: string, nonce: string): ReturnType<NetworkDependencies['https']> {
   if (!publicIPv4(pinnedIp)) return Promise.reject(Error('UNSAFE_ADDRESS'));
   return new Promise((accept, reject) => {
-    const req = request({ hostname, port: 443, servername: hostname, method: 'GET',
+    // A fresh one-use agent prevents TLS session resumption from omitting the
+    // peer certificate needed for this verification's expiry observation.
+    const req = request({ hostname, port: 443, servername: hostname, method: 'GET', agent: false,
       path: '/.well-known/mds-crm-domain-check?nonce=' + nonce,
       lookup: (_host, options, callback) => options.all ? callback(null, [{ address: pinnedIp, family: 4 }]) : callback(null, pinnedIp, 4),
       rejectUnauthorized: true, timeout: 5000, headers: { 'User-Agent': 'MDS-Domain-Verification/1' },
