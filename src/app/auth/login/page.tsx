@@ -78,7 +78,7 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-6">
-          <div className="w-full max-w-xs rounded p-4" style={{ background: branding.primaryColor }}>
+          <div className="w-full max-w-xs rounded p-4" style={{ backgroundColor: '#F8F7F4' }}>
             <BrandLogo branding={branding} documentIcon />
           </div>
         </div>
