@@ -1,0 +1,134 @@
+{
+  "base": "671b44157e11da331fcd900b07fde6b33c506f41",
+  "branch": "audit/block2-sanitized",
+  "date": "2026-10-27",
+  "applicationDiff": {
+    "added": 2,
+    "removed": 1,
+    "onlyPostResponseExtractionChanged": true
+  },
+  "before": {
+    "regressionFailed": true,
+    "reason": "Created webhook but rejected nested payload.webhook"
+  },
+  "after": {
+    "tests": 667,
+    "pass": 667,
+    "fail": 0,
+    "skipped": 0,
+    "onboardingPostgres": 39,
+    "newRegressionCases": 9,
+    "httpMode": "Next dev --webpack, isolated temporary launcher adaptation restored",
+    "http": {
+      "passed": true,
+      "scenarios": [
+        {
+          "name": "Super Admin creates organization, owner and ready Chatwoot without secrets",
+          "passed": true
+        },
+        {
+          "name": "Chatwoot failure preserves CRM organization and owner with recovery",
+          "passed": true
+        },
+        {
+          "name": "recovery resumes known account without duplication",
+          "passed": true
+        },
+        {
+          "name": "already provisioned integration is reused without overwrite",
+          "passed": true
+        },
+        {
+          "name": "force overwrite rejected",
+          "passed": true
+        },
+        {
+          "name": "failed remote validation persists through a separate real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "positive remote revalidation restores ready through real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "unknown webhook outcome with GET 405 blocks another POST over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "existing remote webhook reconciles without recreation over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped a",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped b",
+          "passed": true
+        },
+        {
+          "name": "anonymous onboarding has no effects",
+          "passed": true
+        },
+        {
+          "name": "public signup still calls the same official Platform API provisioner",
+          "passed": true
+        },
+        {
+          "name": "both entrypoints work while global account list returns 500, without duplicate accounts",
+          "passed": true
+        }
+      ],
+      "productionAccess": false,
+      "provider": "synthetic loopback only"
+    },
+    "typegenExit": 0,
+    "typecheckExit": 0,
+    "prismaValidateExit": 0,
+    "lintExit": 0,
+    "diffCheckExit": 0,
+    "productionBuildExit": 1,
+    "productionBuildBlocker": "Google Fonts Inter unavailable: proxy CONNECT HTTP403; curl exit56",
+    "productionStartHttpValidated": false
+  },
+  "fixtureContracts": {
+    "get": "payload.webhooks",
+    "post": "payload.webhook",
+    "fields": [
+      "id",
+      "name",
+      "url",
+      "account_id",
+      "subscriptions",
+      "secret"
+    ],
+    "secret": "Synthetic sentinel only, not a real credential"
+  },
+  "preserved": [
+    "GET response parser",
+    "owner CAS",
+    "durable webhook intent",
+    "unknown outcome no replay",
+    "tenant isolation",
+    "activation order",
+    "shared official service for signup and Super Admin",
+    "CORE and operational providers",
+    "observe_only and APPROVED_ENFORCEMENTS=[]"
+  ],
+  "protectedAccountsTouched": false,
+  "realChatwootAccess": false,
+  "productionHomologated": false,
+  "pushMergeDeploy": false,
+  "sourceSha256": {
+    "src/lib/integrations/chatwoot-provision.ts": "1e4b69bab94054704191612ba063dc63f5fc748d9647656d8f898330b3cb1202",
+    "tests/chatwoot-onboarding-postgres.test.mjs": "d9884ddb1f10c70e29eed712124983e8a5dc4d3c281e2475ef4e8822e628a029",
+    "tests/helpers/synthetic-chatwoot.mjs": "12169423cf7e0b8cb7b11e0018d169c8bf4552a71136c6a9ce7f453c45bf95e8"
+  },
+  "security": {
+    "files": 5,
+    "knownValuesCompared": 4,
+    "knownValueMatches": 0,
+    "strongPatternMatches": 0,
+    "secretValuesOrSecretHashesPrinted": false
+  }
+}

@@ -221,3 +221,33 @@ test('4.17 compatibility: global list outage never bypasses scoped tenant owners
  const f=await fixture();remote.state.failMembershipOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const account=remote.state.accounts.find(a=>a.custom_attributes.crmOrganizationId===f.org.id);account.custom_attributes={...account.custom_attributes,crmOrganizationId:randomUUID()};remote.state.accountListStatus=500;t.after(()=>{remote.state.accountListStatus=200;});const writes=remote.state.calls.filter(c=>c.method==='POST').length;
  assert.equal((await service.provisionChatwootForOrg(f.input)).error,'account_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST').length,writes);assert.equal((await binding(f)).isActive,false);assert.equal((await db.user.findUniqueOrThrow({where:{id:f.owner.id}})).chatwootUserId,null);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false);
 });
+
+
+test('4.17 webhook templates: payload.webhook POST and payload.webhooks GET persist one remote ID without leaking secret',async()=>{
+ const f=await fixture(),begin=remote.state.calls.length;const result=await service.provisionChatwootForOrg(f.input);assert.equal(result.success,true,result.error);
+ const stored=await binding(f),data=JSON.parse(stored.data),webhooks=remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId);assert.equal(webhooks.length,1);assert.equal(data.provisioning.webhook.id,webhooks[0].id);assert.equal(data.provisioning.webhook.attempted,true);assert.equal(stored.isActive,true);
+ const calls=remote.state.calls.slice(begin);assert.equal(calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,1);
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.calls.slice(begin).filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,1);
+ assert.ok(providerLogs.every(line=>!line.includes('synthetic-response-secret-only')));assert.ok(!stored.data.includes('synthetic-response-secret-only'));assert.ok(!JSON.stringify(await service.getChatwootProvisionStatus(f.org.id)).includes('synthetic-response-secret-only'));
+});
+
+
+test('4.17 webhook templates: lost response reconciles payload.webhooks without another POST',async()=>{
+ const f=await fixture();remote.state.dropWebhookResponseOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');const data=JSON.parse((await binding(f)).data),posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
+ assert.equal(data.provisioning.webhook.attempted,true);assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);assert.equal(remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId).length,1);
+});
+
+for(const kind of ['zero-id','negative-id','invalid-id','wrong-url','missing-webhook','missing-payload','root-lookalike'])test('4.17 webhook templates: '+kind+' never activates or replays POST',async()=>{
+ const f=await fixture(),logs=[],env={CHATWOOT_API_URL:remote.base,CHATWOOT_PLATFORM_TOKEN:remote.platformToken,CHATWOOT_WEBHOOK_SECRET:'synthetic-webhook-only',NEXTAUTH_URL:'http://127.0.0.1:3100'};
+ const guarded=loadHandler('src/lib/integrations/chatwoot-provision.ts',{'@/lib/prisma':{prisma:db},'@/lib/integrations/crypto':{encryptToken,decryptToken}},{process:{env},console:{info(...v){logs.push(v.join(' '));},warn(...v){logs.push(v.join(' '));},error(...v){logs.push(v.join(' '));}},fetch:async(url,options)=>{
+  const response=await remote.fetch(url,options);if(options?.method!=='POST'||!new URL(url).pathname.endsWith('/webhooks')||!response.ok)return response;
+  let body=await response.json();assert.deepEqual(Object.keys(body.payload.webhook).sort(),['id','name','url','account_id','subscriptions','secret'].sort());
+  if(kind==='zero-id')body.payload.webhook.id=0;if(kind==='negative-id')body.payload.webhook.id=-1;if(kind==='invalid-id')body.payload.webhook.id='invalid';if(kind==='wrong-url')body.payload.webhook.url='https://wrong.example.invalid/api/webhooks/chatwoot';if(kind==='missing-webhook')body.payload={};if(kind==='missing-payload')body={};if(kind==='root-lookalike')body=body.payload.webhook;
+  return new Response(JSON.stringify(body),{status:200,headers:{'content-type':'application/json'}});
+ }});
+ assert.equal((await guarded.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');const data=JSON.parse((await binding(f)).data),posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
+ assert.equal((await binding(f)).isActive,false);assert.equal(data.provisioning.webhook.attempted,true);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false);assert.equal(remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId).length,1);
+ remote.state.hideWebhooks=true;try{assert.equal((await guarded.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');}finally{remote.state.hideWebhooks=false;}
+ assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);assert.ok(logs.every(line=>!line.includes('synthetic-response-secret-only')));assert.ok(!(await binding(f)).data.includes('synthetic-response-secret-only'));
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true,'A later conclusive GET can reconcile the existing webhook');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);
+});

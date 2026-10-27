@@ -226,7 +226,8 @@ export async function ensureChatwootWebhookForAccount(params: {
       signal: AbortSignal.timeout(15_000),
     })
     if (!createRes.ok) { await readSanitizedResponse(createRes); throw Error('webhook_requires_review') }
-    const created: unknown = await createRes.json()
+    const response: unknown = await createRes.json()
+    const created = isRecord(response) && isRecord(response.payload) ? response.payload.webhook : null
     if (!isRecord(created) || !toPositiveInt(created.id) ||
       typeof (created.url ?? created.webhook_url) !== 'string' ||
       !webhookMatches((created.url ?? created.webhook_url) as string, webhookUrlWithSecret)) throw Error('webhook_requires_review')

@@ -37,10 +37,11 @@ export async function syntheticChatwoot(){
   const webhookMatch=path.match(/^\/api\/v1\/accounts\/(\d+)\/webhooks$/);
   if(webhookMatch){
    const account=state.accounts.find(x=>x.id===+webhookMatch[1]);if(!user||!account?.members.includes(user.id)){send(403,{});return;}
-   if(method==='GET'){send(state.webhookListStatus,state.webhookListBody===undefined?(state.hideWebhooks?[]:state.webhooks.filter(w=>w.accountId===account.id)):state.webhookListBody);return;}
+   const serializeWebhook=w=>({id:w.id,name:w.name,url:w.url,account_id:w.accountId,subscriptions:w.subscriptions,secret:'synthetic-response-secret-only'});
+   if(method==='GET'){send(state.webhookListStatus,state.webhookListBody===undefined?{payload:{webhooks:(state.hideWebhooks?[]:state.webhooks.filter(w=>w.accountId===account.id)).map(serializeWebhook)}}:state.webhookListBody);return;}
    if(method==='POST'){
     if(state.failWebhookOnce){state.failWebhookOnce=false;send(503,{error:'synthetic_webhook_unavailable '+token});return;}
-    if(state.holdWebhook)await state.holdWebhook();const w={id:state.webhooks.length+1,accountId:account.id,...body};state.webhooks.push(w);if(state.dropWebhookResponseOnce){state.dropWebhookResponseOnce=false;res.destroy();return;}send(200,w);return;
+    if(state.holdWebhook)await state.holdWebhook();const w={id:state.webhooks.length+1,accountId:account.id,...body};state.webhooks.push(w);if(state.dropWebhookResponseOnce){state.dropWebhookResponseOnce=false;res.destroy();return;}send(200,{payload:{webhook:serializeWebhook(w)}});return;
    }
   }
   send(404,{error:'unsupported_fixture_endpoint'});
