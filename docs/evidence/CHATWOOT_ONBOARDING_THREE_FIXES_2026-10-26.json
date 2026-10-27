@@ -1,0 +1,201 @@
+{
+  "baseCommit": "c4d0db7ac28d799887316f9926b793a6873ca324",
+  "branch": "audit/block2-sanitized",
+  "date": "2026-10-26",
+  "node": "22.21.1",
+  "database": "PostgreSQL 16 disposable loopback only",
+  "productionAccess": false,
+  "before": {
+    "source": "c4d0db7",
+    "sameRegressionAssertions": true,
+    "tests": 3,
+    "failed": 3,
+    "owner": "Returned success and overwrote concurrent ID",
+    "webhook": "Returned success and created a second webhook after lost response and GET405",
+    "status": "GET returned provisioned:true after negative validation"
+  },
+  "after": {
+    "tests": 654,
+    "pass": 654,
+    "fail": 0,
+    "skipped": 0,
+    "onboardingPostgres": 26,
+    "newRegressionCases": 12,
+    "onboardingHttp": {
+      "passed": true,
+      "scenarios": [
+        {
+          "name": "Super Admin creates organization, owner and ready Chatwoot without secrets",
+          "passed": true
+        },
+        {
+          "name": "Chatwoot failure preserves CRM organization and owner with recovery",
+          "passed": true
+        },
+        {
+          "name": "recovery resumes known account without duplication",
+          "passed": true
+        },
+        {
+          "name": "already provisioned integration is reused without overwrite",
+          "passed": true
+        },
+        {
+          "name": "force overwrite rejected",
+          "passed": true
+        },
+        {
+          "name": "failed remote validation persists through a separate real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "positive remote revalidation restores ready through real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "unknown webhook outcome with GET 405 blocks another POST over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "existing remote webhook reconciles without recreation over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped a",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped b",
+          "passed": true
+        },
+        {
+          "name": "anonymous onboarding has no effects",
+          "passed": true
+        },
+        {
+          "name": "public signup still calls the same official Platform API provisioner",
+          "passed": true
+        }
+      ],
+      "productionAccess": false,
+      "provider": "synthetic loopback only"
+    },
+    "domainHttp": {
+      "passed": true,
+      "scenarios": 52,
+      "realRestartPassed": true,
+      "productionAccess": false,
+      "liveDnsOrCertificatesValidated": false
+    },
+    "c0c5Http": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-delete-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "attachments-upload-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "custom-domain-disabled-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "nextWebpackBuildExit": 0,
+    "typecheckExit": 0,
+    "changedFilesLintExit": 0,
+    "prismaValidateExit": 0,
+    "gitDiffCheckExit": 0
+  },
+  "review": {
+    "agent": "/root/review_three_chatwoot_fixes",
+    "verdict": "APROVADO COM RESSALVAS para publicação/CI; não autoriza deploy",
+    "ownTests": "16/16 authorization boundary tests",
+    "correctedIntermediateFindings": [
+      "Preserve unrelated active integration errors",
+      "Preserve legacy webhook attempt evidence before membership phase transition"
+    ],
+    "limitations": [
+      "Synthetic Platform API only",
+      "Unknown webhook outcome without conclusive remote evidence remains blocked for administrative review"
+    ],
+    "finalEvidenceChecked": [
+      "654/654 Node/TypeScript/PostgreSQL tests, 26 onboarding",
+      "13 onboarding HTTP scenarios",
+      "52 domain scenarios and real restart",
+      "10 C0–C5 HTTP probes",
+      "Build/typecheck/lint/Prisma validation logs"
+    ]
+  },
+  "security": {
+    "scope": "all 10 staged files vs c4d0db7",
+    "files": 10,
+    "knownExposedValuesAvailableForComparison": 4,
+    "knownValueMatches": {
+      "DATABASE_URL": 0,
+      "NEXTAUTH_SECRET": 0,
+      "TOKENS_SECRET": 0,
+      "META_APP_SECRET": 0
+    },
+    "strongPatternMatches": 0,
+    "sensitivePaths": [],
+    "secretValuesOrFingerprintsPrinted": false
+  },
+  "unchanged": [
+    "Prisma schema/migrations",
+    "Dockerfile/dependencies",
+    "Chatwoot CORE and unused Rails strategy",
+    "Evolution/Cloud/Instagram/email/widget and operational webhooks",
+    "Authentication/sessions",
+    "Domain V1.1",
+    "Commercial authorization and entitlements observe_only / APPROVED_ENFORCEMENTS=[]"
+  ],
+  "sourceSha256": {
+    "src/components/OrganizationChatwootOnboarding.tsx": "69c91e0e1cbc8136c258c2909e3832188c657665a678099711fe787abdc1be31",
+    "src/lib/integrations/chatwoot-provision.ts": "91fa7cccd83b33c3d4eb9d0d6629e4a0bd30980a5ff3578729571da07def7839",
+    "tests/authorization-boundaries.test.ts": "b48a64646f47f80497851a787678fb7280b925a8a82462cfebb4d909667a9c22",
+    "tests/chatwoot-onboarding-http.mjs": "2def96e48f27172cfeef2afa8aad9ea2751e454423a5140a7e2f856996d876c2",
+    "tests/chatwoot-onboarding-postgres.test.mjs": "87c7e67b3300a2f1bcd789da5c7798eb30594c5a06af601409e7dabdc282280c",
+    "tests/helpers/synthetic-chatwoot.mjs": "558108d5dfd3677b85427db65cbe3ad8196e12ba3e45677ed31646dd64678119"
+  },
+  "remoteCi": "Not run: push not authorized",
+  "gatesOrPilotApproved": false
+}

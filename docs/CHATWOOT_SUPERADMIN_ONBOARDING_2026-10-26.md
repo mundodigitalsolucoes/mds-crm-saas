@@ -61,7 +61,7 @@ Risco principal: efeitos remotos não são atomicamente confirmados pelo Postgre
 - Somente após conferir perfil, membership administrativa, confirmação de identidade, endpoint SSO e registro do webhook a transação final marca ready e vincula owner/organização/CA.
 - Integração ativa válida é reutilizada sem modificar dados, token ou updatedAt. Force foi removido como modo de sobrescrita.
 - Criptografia usa `TOKENS_SECRET` existente. Senha Chatwoot independente é gerada pelo servidor; senha CRM nunca é transmitida ao Chatwoot. Credenciais não vão a responses administrativas, artefatos ou logs.
-- Logs do registro de webhook preservam apenas status HTTP, sem texto remoto que possa refletir tokens. Payload/URL/subscriptions e comportamento operacional do registro permaneceram iguais.
+- Correção posterior dos três bloqueadores: o registro de webhook mantém URL/subscriptions, mas exige listagem conclusiva e intenção persistida antes do POST; resultados desconhecidos impedem repetição automática. Não são registrados corpos remotos nem segredos. Ver [relatório das correções](CHATWOOT_ONBOARDING_THREE_FIXES_2026-10-26.md).
 
 ### Recuperação, signup e limites
 
@@ -91,7 +91,7 @@ Risco principal: efeitos remotos não são atomicamente confirmados pelo Postgre
 | Autorização | Anônimo e cliente negados antes de efeitos; shared Super Admin; force rejeitado |
 | Integridade de fonte | Todos os providers protegidos continuam pinados; exceção só ao provisionador oficial + logs sem corpos externos |
 
-**Resultados locais finais:** 642/642 testes Node/TypeScript/PostgreSQL (14 cenários funcionais novos de provisionamento); 9 cenários HTTP de onboarding com NextAuth/credenciais reais e provider sintético; 52 cenários HTTP de domínio próprio com reinício real; 10/10 probes C0–C5; `npm run build -- --webpack`, typecheck, `prisma validate`, lint dos arquivos alterados e diff check aprovados.
+**Resultados históricos do commit `c4d0db7` (não certificam a correção posterior):** 642/642 testes Node/TypeScript/PostgreSQL (14 cenários funcionais novos de provisionamento); 9 cenários HTTP de onboarding com NextAuth/credenciais reais e provider sintético; 52 cenários HTTP de domínio próprio com reinício real; 10/10 probes C0–C5; `npm run build -- --webpack`, typecheck, `prisma validate`, lint dos arquivos alterados e diff check aprovados.
 
 Resultados finais e hashes de arquivos em `docs/evidence/CHATWOOT_SUPERADMIN_ONBOARDING_2026-10-26.json`. Logs privados locais fora do Git em `mds-crm-onboarding-evidence/chatwoot-onboarding-2026-10-26/`.
 

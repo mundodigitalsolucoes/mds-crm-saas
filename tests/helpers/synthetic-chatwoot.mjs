@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 export async function syntheticChatwoot(){
- const state={accounts:[],users:[],webhooks:[],calls:[],nextAccount:100,nextUser:500,failListOnce:false,failMembershipOnce:false,failWebhookOnce:false,holdAccount:null};
+ const state={accounts:[],users:[],webhooks:[],calls:[],nextAccount:100,nextUser:500,failListOnce:false,failMembershipOnce:false,failWebhookOnce:false,holdAccount:null,holdWebhook:null,dropWebhookResponseOnce:false,webhookListStatus:200,webhookListBody:undefined,hideWebhooks:false};
  const platformToken='synthetic-platform-only',server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://127.0.0.1').pathname,method=req.method;
   const chunks=[];for await(const c of req)chunks.push(c);let body={};try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}');}catch{res.writeHead(400).end();return;}
@@ -35,10 +35,10 @@ export async function syntheticChatwoot(){
   const webhookMatch=path.match(/^\/api\/v1\/accounts\/(\d+)\/webhooks$/);
   if(webhookMatch){
    const account=state.accounts.find(x=>x.id===+webhookMatch[1]);if(!user||!account?.members.includes(user.id)){send(403,{});return;}
-   if(method==='GET'){send(200,state.webhooks.filter(w=>w.accountId===account.id));return;}
+   if(method==='GET'){send(state.webhookListStatus,state.webhookListBody===undefined?(state.hideWebhooks?[]:state.webhooks.filter(w=>w.accountId===account.id)):state.webhookListBody);return;}
    if(method==='POST'){
     if(state.failWebhookOnce){state.failWebhookOnce=false;send(503,{error:'synthetic_webhook_unavailable '+token});return;}
-    const w={id:state.webhooks.length+1,accountId:account.id,...body};state.webhooks.push(w);send(200,w);return;
+    if(state.holdWebhook)await state.holdWebhook();const w={id:state.webhooks.length+1,accountId:account.id,...body};state.webhooks.push(w);if(state.dropWebhookResponseOnce){state.dropWebhookResponseOnce=false;res.destroy();return;}send(200,w);return;
    }
   }
   send(404,{error:'unsupported_fixture_endpoint'});

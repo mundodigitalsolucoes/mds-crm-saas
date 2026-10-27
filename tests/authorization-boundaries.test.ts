@@ -240,19 +240,16 @@ test('domain invalidation preserves every legacy limit rule outside plan synchro
   assert.equal(stripSync(current), stripSync(previous));
 });
 
-// Super Admin onboarding may change only the official provisioner; operational
-// webhook registration and the unused Docker/Rails implementation stay pinned.
-test('Chatwoot onboarding preserves webhook registration and never adopts the legacy Rails strategy', () => {
+// The security fix changes only webhook reconciliation in the shared preamble;
+// URL normalization, subscriptions, error sanitization and the Rails strategy stay pinned.
+test('Chatwoot onboarding preserves unrelated helpers and never adopts the legacy Rails strategy', () => {
   const path = 'src/lib/integrations/chatwoot-provision.ts';
-  const original = execFileSync('git', ['show', '77f4eeb:' + path], {encoding:'utf8'});
+  const original = execFileSync('git', ['show', 'c4d0db7:' + path], {encoding:'utf8'});
   const current = readFileSync(path, 'utf8');
-  const start = 'function normalizeBaseUrl', end = 'function parseStoredChatwootData';
-  const redacted = original.slice(original.indexOf(start), original.indexOf(end))
-    .replace('const message = await readSanitizedResponse(listRes)', 'await readSanitizedResponse(listRes)')
-    .replace('const message = await readSanitizedResponse(createRes)', 'await readSanitizedResponse(createRes)')
-    .replace('HTTP ${listRes.status} - ${message}', 'HTTP ${listRes.status}')
-    .replace('HTTP ${createRes.status} - ${message}', 'HTTP ${createRes.status}');
-  assert.equal(current.slice(current.indexOf(start), current.indexOf(end)), redacted);
+  const preamble = (source: string) => source.slice(source.indexOf('function normalizeBaseUrl'), source.indexOf('function parseStoredChatwootData'))
+    .replace(/function normalizeChatwootWebhooksResponse[\s\S]*?(?=function resolveCrmPublicUrl)/, '')
+    .replace(/export async function ensureChatwootWebhookForAccount[\s\S]*/, '');
+  assert.equal(preamble(current), preamble(original));
   assert.doesNotMatch(current, /execSync|docker exec|rails runner|connectedAccount\.upsert/);
   assert.equal(readFileSync('src/lib/integrations/chatwootOnboarding.ts','utf8'), execFileSync('git',['show','77f4eeb:src/lib/integrations/chatwootOnboarding.ts'],{encoding:'utf8'}));
 });

@@ -44,6 +44,18 @@ try{
  const binding=await db.connectedAccount.findUniqueOrThrow({where:{provider_organizationId:{provider:'chatwoot',organizationId:a.id}}});
  assert.equal((await client.json(endpoint(a.id),'POST',{force:false})).status,200);assert.equal(mock.state.accounts.length,before);assert.equal(JSON.stringify(await db.connectedAccount.findUniqueOrThrow({where:{id:binding.id}})),JSON.stringify(binding));passed('already provisioned integration is reused without overwrite');
  assert.equal((await client.json(endpoint(a.id),'POST',{force:true})).status,400);passed('force overwrite rejected');
+ const activeData=JSON.parse(binding.data),foreign={id:mock.state.nextAccount++,name:'Synthetic foreign membership',custom_attributes:{},members:[activeData.chatwootUserId]};mock.state.accounts.push(foreign);
+ const writes=mock.state.calls.filter(c=>c.method==='POST').length;
+ const invalid=await client.json(endpoint(a.id),'POST',{force:false});assert.equal(invalid.status,409);assert.equal(JSON.parse(invalid.body).error,'binding_requires_review');
+ const failedGet=await client.request(endpoint(a.id));assert.equal(failedGet.status,200);assert.equal(JSON.parse(failedGet.body).provisioned,false);assert.equal(JSON.parse(failedGet.body).lastError,'binding_requires_review');assert.equal(mock.state.calls.filter(c=>c.method==='POST').length,writes);passed('failed remote validation persists through a separate real HTTP GET');
+ mock.state.accounts.splice(mock.state.accounts.indexOf(foreign),1);assert.equal((await client.json(endpoint(a.id),'POST',{force:false})).status,200);assert.equal(JSON.parse((await client.request(endpoint(a.id))).body).provisioned,true);passed('positive remote revalidation restores ready through real HTTP GET');
+ const pendingBinding=await db.connectedAccount.findUniqueOrThrow({where:{provider_organizationId:{provider:'chatwoot',organizationId:b.id}}}),pendingData=JSON.parse(pendingBinding.data),remoteWebhook=mock.state.webhooks.find(w=>w.accountId===pendingData.chatwootAccountId);
+ // Synthetic checkpoint models a lost POST response with its durable intent.
+ pendingData.provisioning={...pendingData.provisioning,phase:'webhook',webhook:{attempted:true},runId:undefined,leaseUntil:undefined};await db.connectedAccount.update({where:{id:pendingBinding.id},data:{isActive:false,data:JSON.stringify(pendingData)}});
+ const webhookPosts=mock.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;mock.state.webhookListStatus=405;
+ assert.equal((await client.json(endpoint(b.id),'POST',{force:false})).status,409);assert.equal(JSON.parse((await client.request(endpoint(b.id))).body).provisioned,false);assert.equal(mock.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,webhookPosts);assert.ok(remoteWebhook);passed('unknown webhook outcome with GET 405 blocks another POST over real HTTP');
+ mock.state.webhookListStatus=200;assert.equal((await client.json(endpoint(b.id),'POST',{force:false})).status,200);assert.equal(mock.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,webhookPosts);passed('existing remote webhook reconciles without recreation over real HTTP');
+
  for(const org of [a,b]){
   const owner=await db.user.findUniqueOrThrow({where:{id:org.owner.id}}),session=new Client();await session.login(owner);
   const credentials=await session.request('/api/integrations/chatwoot/credentials?organizationId='+([a,b].find(x=>x.id!==org.id).id));assert.equal(credentials.status,200);const dto=JSON.parse(credentials.body),saved=await db.organization.findUniqueOrThrow({where:{id:org.id}});

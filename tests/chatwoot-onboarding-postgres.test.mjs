@@ -44,9 +44,9 @@ test('lost account response is reconciled by exact durable operation marker, wit
 });
 
 for(const failure of ['failMembershipOnce','failWebhookOnce'])test('resume '+failure+' without duplicate account/user and without replacing provider data',async()=>{
- const f=await fixture(),before=creations(),users=remote.state.users.length;remote.state[failure]=true;
+ const f=await fixture(),before=creations(),users=remote.state.users.length,webhookPosts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;remote.state[failure]=true;
  assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const partial=await binding(f);assert.equal(partial.isActive,false);
- assert.equal((await service.provisionChatwootForOrg({...f.input,allowCreate:false})).success,true);assert.equal(creations(),before+1);assert.equal(remote.state.users.length,users+1);assert.ok(providerLogs.every(line=>!remote.state.users.some(user=>line.includes(user.access_token))),'Upstream token echoes never enter logs');assert.equal((await db.organization.findUniqueOrThrow({where:{id:f.org.id}})).settings,f.org.settings);
+ const resumed=await service.provisionChatwootForOrg({...f.input,allowCreate:false});assert.equal(resumed.success,failure!=='failWebhookOnce');if(failure==='failWebhookOnce'){assert.equal(resumed.error,'webhook_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,webhookPosts+1,'An unknown creation is never replayed');}assert.equal(creations(),before+1);assert.equal(remote.state.users.length,users+1);assert.ok(providerLogs.every(line=>!remote.state.users.some(user=>line.includes(user.access_token))),'Upstream token echoes never enter logs');assert.equal((await db.organization.findUniqueOrThrow({where:{id:f.org.id}})).settings,f.org.settings);
 });
 
 test('concurrent requests reserve one operation and never create a second account',async()=>{
@@ -89,7 +89,7 @@ test('manual recovery requires shared Super Admin auth and rejects force before 
  const req=body=>new Request('http://127.0.0.1/api/test',{method:'POST',body:JSON.stringify(body)}),params={params:Promise.resolve({orgId:f.org.id})};
  const before=remote.state.calls.length;assert.equal((await route.POST(req({force:true}),params)).status,400);assert.equal((await route.POST(req({force:false}),params)).status,409);assert.equal(remote.state.calls.length,before);
  assert.equal((await route.POST(req({force:false,inspectionAcknowledged:true}),params)).status,200);
- const prior=JSON.stringify(await binding(f)),data=JSON.parse((await binding(f)).data),other={id:remote.state.nextAccount++,name:'Foreign membership fixture',custom_attributes:{},members:[data.chatwootUserId]};remote.state.accounts.push(other);const writes=remote.state.calls.filter(c=>c.method==='POST').length;const rejected=await route.POST(req({force:false}),params);assert.equal(rejected.status,409);assert.equal((await rejected.json()).onboarding.provisioned,false,'Failed remote validation cannot echo a ready local status');assert.equal(JSON.stringify(await binding(f)),prior,'An active integration is never overwritten on ambiguity');assert.equal(remote.state.calls.filter(c=>c.method==='POST').length,writes);
+ const prior=await binding(f),data=JSON.parse(prior.data),other={id:remote.state.nextAccount++,name:'Foreign membership fixture',custom_attributes:{},members:[data.chatwootUserId]};remote.state.accounts.push(other);const writes=remote.state.calls.filter(c=>c.method==='POST').length;const rejected=await route.POST(req({force:false}),params);assert.equal(rejected.status,409);assert.equal((await rejected.json()).onboarding.provisioned,false,'Failed remote validation cannot echo a ready local status');const warned=await binding(f);assert.equal(warned.data,prior.data);assert.equal(warned.accessTokenEnc,prior.accessTokenEnc);assert.equal(warned.isActive,true);assert.equal(warned.lastError,'binding_requires_review');assert.equal((await (await route.GET(null,params)).json()).provisioned,false,'A later GET retains remote failure');assert.equal(remote.state.calls.filter(c=>c.method==='POST').length,writes);
 });
 
 test('failed final CRM commit leaves durable checkpoints and retries without another external creation',async()=>{
@@ -112,4 +112,89 @@ test('two explicitly identified organizations may share a display name without s
  const a=await fixture(),b=await fixture();assert.equal((await service.provisionChatwootForOrg(a.input)).success,true);
  await db.organization.update({where:{id:b.org.id},data:{name:a.org.name}});assert.equal((await service.provisionChatwootForOrg(b.input)).success,true);
  const left=JSON.parse((await binding(a)).data),right=JSON.parse((await binding(b)).data);assert.notEqual(left.chatwootAccountId,right.chatwootAccountId);assert.notEqual(left.chatwootUserId,right.chatwootUserId);assert.notEqual((await binding(a)).accessTokenEnc,(await binding(b)).accessTokenEnc);
+});
+
+
+test('P1 owner: a concurrent Chatwoot identity assignment is preserved and blocks success',async(t)=>{
+ const f=await fixture(),other=await fixture();const untouched=await db.user.findUniqueOrThrow({where:{id:other.owner.id}});
+ remote.state.holdWebhook=async()=>{await db.user.update({where:{id:f.owner.id},data:{chatwootUserId:999}});};t.after(()=>{remote.state.holdWebhook=null;});
+ const result=await service.provisionChatwootForOrg(f.input);assert.equal(result.success,false,'Concurrent owner binding must prevent ready');
+ assert.equal((await db.user.findUniqueOrThrow({where:{id:f.owner.id}})).chatwootUserId,999);assert.equal((await binding(f)).isActive,false);
+ assert.equal(JSON.stringify(await db.user.findUniqueOrThrow({where:{id:other.owner.id}})),JSON.stringify(untouched));
+});
+
+test('P1 webhook: lost POST response followed by GET 405 never creates a second webhook',async(t)=>{
+ const f=await fixture();remote.state.dropWebhookResponseOnce=true;t.after(()=>{remote.state.webhookListStatus=200;remote.state.hideWebhooks=false;});
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const id=JSON.parse((await binding(f)).data).chatwootAccountId;
+ assert.equal(remote.state.webhooks.filter(w=>w.accountId===id).length,1);remote.state.webhookListStatus=405;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,false,'Inconclusive lookup cannot authorize another creation');assert.equal(remote.state.webhooks.filter(w=>w.accountId===id).length,1);
+});
+
+test('P2 ready: negative validation persists across GET and a new positive validation recovers it',async()=>{
+ const f=await fixture();assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);const before=await binding(f),data=JSON.parse(before.data);
+ const foreign={id:remote.state.nextAccount++,name:'Foreign validation fixture',custom_attributes:{},members:[data.chatwootUserId]};remote.state.accounts.push(foreign);
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false,'GET must retain the failed validation');
+ const failed=await binding(f);assert.equal(failed.data,before.data);assert.equal(failed.accessTokenEnc,before.accessTokenEnc);assert.equal(failed.isActive,true);
+ remote.state.accounts.splice(remote.state.accounts.indexOf(foreign),1);
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,true);
+});
+
+test('P1 owner: final transaction CAS independently rejects a changed owner identity',async()=>{
+ const f=await fixture();let changed=false;
+ const proxy=new Proxy(db,{get(target,key){if(key==='$transaction')return(callback,options)=>db.$transaction(tx=>callback(new Proxy(tx,{get(inner,field){if(field==='$queryRaw')return async(...args)=>{const result=await inner.$queryRaw(...args);if(!changed){changed=true;await db.user.update({where:{id:f.owner.id},data:{chatwootUserId:998}});}return result;};return Reflect.get(inner,field);}})),options);return Reflect.get(target,key);}});
+ const env={CHATWOOT_API_URL:remote.base,CHATWOOT_PLATFORM_TOKEN:remote.platformToken,CHATWOOT_WEBHOOK_SECRET:'synthetic-webhook-only',NEXTAUTH_URL:'http://127.0.0.1:3100'};
+ const guarded=loadHandler('src/lib/integrations/chatwoot-provision.ts',{'@/lib/prisma':{prisma:proxy},'@/lib/integrations/crypto':{encryptToken,decryptToken}},{process:{env},fetch:remote.fetch});
+ const result=await guarded.provisionChatwootForOrg(f.input);assert.equal(result.error,'owner_binding_requires_review');assert.equal(changed,true);assert.equal((await db.user.findUniqueOrThrow({where:{id:f.owner.id}})).chatwootUserId,998);
+ assert.equal((await binding(f)).isActive,false);assert.equal((await binding(f)).lastError,'owner_binding_requires_review');assert.equal((await db.organization.findUniqueOrThrow({where:{id:f.org.id}})).chatwootAccountId,null);assert.equal(await db.activity.count({where:{entityId:f.org.id}}),0);
+});
+
+test('P1 webhook: unknown POST outcome is fenced through unavailable and inconclusive lists, then reconciled by remote evidence',async(t)=>{
+ const f=await fixture();remote.state.dropWebhookResponseOnce=true;t.after(()=>{remote.state.webhookListStatus=200;remote.state.webhookListBody=undefined;remote.state.hideWebhooks=false;});
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');const pending=await binding(f),data=JSON.parse(pending.data),postCount=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
+ assert.equal(data.provisioning.webhook.attempted,true);assert.equal(remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId).length,1);
+ for(const status of [404,405,500]){remote.state.webhookListStatus=status;assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');}
+ remote.state.webhookListStatus=200;
+ for(const body of [{unexpected:[]},null,[{}]]){remote.state.webhookListBody=body;assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');}
+ remote.state.webhookListBody=undefined;remote.state.hideWebhooks=true;assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review','Even a later empty list cannot replay an unknown POST');
+ remote.state.hideWebhooks=false;assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,postCount);assert.equal((await binding(f)).isActive,true);assert.equal(JSON.parse((await binding(f)).data).provisioning.webhook.id,remote.state.webhooks.find(w=>w.accountId===data.chatwootAccountId).id);
+});
+
+for(const kind of ['405','timeout','invalid-json'])test('P1 webhook: fresh '+kind+' lookup never permits creation',async()=>{
+ const f=await fixture(),env={CHATWOOT_API_URL:remote.base,CHATWOOT_PLATFORM_TOKEN:remote.platformToken,CHATWOOT_WEBHOOK_SECRET:'synthetic-webhook-only',NEXTAUTH_URL:'http://127.0.0.1:3100'};
+ const guarded=loadHandler('src/lib/integrations/chatwoot-provision.ts',{'@/lib/prisma':{prisma:db},'@/lib/integrations/crypto':{encryptToken,decryptToken}},{process:{env},fetch:async(url,options)=>{if(options?.method==='GET'&&new URL(url).pathname.endsWith('/webhooks')){if(kind==='timeout')throw new DOMException('Synthetic timeout','TimeoutError');return new Response(kind==='invalid-json'?'invalid':'{}',{status:kind==='405'?405:200});}return remote.fetch(url,options);}});
+ const posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;assert.equal((await guarded.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);assert.equal((await binding(f)).isActive,false);
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true,'A failed lookup before any POST can recover after a conclusive list');
+});
+
+test('P1 webhook: durable intent fences concurrent retries and an expired lease while the first POST is still running',async(t)=>{
+ const f=await fixture();let release,entered;const gate=new Promise(r=>{entered=r;});remote.state.holdWebhook=async()=>{const data=JSON.parse((await binding(f)).data);assert.equal(data.provisioning.webhook.attempted,true,'Intent must commit before POST effect');entered();await new Promise(r=>{release=r;});};t.after(()=>{remote.state.holdWebhook=null;release?.();});
+ const pending=service.provisionChatwootForOrg(f.input);await gate;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'provisioning_in_progress');
+ const stored=await binding(f),data=JSON.parse(stored.data);data.provisioning.leaseUntil=new Date(0).toISOString();await db.connectedAccount.update({where:{id:stored.id},data:{data:JSON.stringify(data)}});
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review','A takeover cannot replay an in-flight POST even when its list is empty');
+ remote.state.holdWebhook=null;release();assert.equal((await pending).success,false,'Stale runner cannot commit ready');
+ const accountId=JSON.parse((await binding(f)).data).chatwootAccountId;assert.equal(remote.state.webhooks.filter(w=>w.accountId===accountId).length,1);
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.webhooks.filter(w=>w.accountId===accountId).length,1);
+});
+
+test('P1 webhook: legacy phase without mutation intent is ambiguous and never replayed',async(t)=>{
+ const f=await fixture();remote.state.dropWebhookResponseOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const prior=await binding(f),data=JSON.parse(prior.data);delete data.provisioning.webhook;await db.connectedAccount.update({where:{id:prior.id},data:{data:JSON.stringify(data)}});remote.state.hideWebhooks=true;t.after(()=>{remote.state.hideWebhooks=false;});const posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);
+ remote.state.hideWebhooks=false;assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);
+});
+
+
+test('P2 ready: retries never reclassify or clear an unrelated active integration error',async()=>{
+ const f=await fixture();assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);
+ await db.connectedAccount.update({where:{id:(await binding(f)).id},data:{lastError:'webhook_delivery_failed'}});const snapshot=JSON.stringify(await binding(f)),calls=remote.state.calls.length;
+ for(let i=0;i<2;i++){assert.equal((await service.provisionChatwootForOrg(f.input)).error,'binding_requires_review');assert.equal(JSON.stringify(await binding(f)),snapshot);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false);}
+ assert.equal(remote.state.calls.length,calls);
+});
+
+
+test('P1 webhook: legacy attempt evidence survives membership recovery before webhook reconciliation',async(t)=>{
+ const f=await fixture();remote.state.dropWebhookResponseOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const prior=await binding(f),data=JSON.parse(prior.data);delete data.provisioning.webhook;await db.connectedAccount.update({where:{id:prior.id},data:{data:JSON.stringify(data)}});
+ const account=remote.state.accounts.find(a=>a.id===data.chatwootAccountId);account.members=[];remote.state.hideWebhooks=true;t.after(()=>{remote.state.hideWebhooks=false;});const posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);assert.equal(JSON.parse((await binding(f)).data).provisioning.webhook.attempted,true);assert.equal((await binding(f)).isActive,false);
+ remote.state.hideWebhooks=false;assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId).length,1);
 });

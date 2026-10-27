@@ -83,13 +83,13 @@ function isChatwootWebhookArray(value: unknown): value is ChatwootWebhook[] {
 
 function normalizeChatwootWebhooksResponse(
   body: ChatwootWebhooksResponse
-): ChatwootWebhook[] {
+): ChatwootWebhook[] | null {
   if (isChatwootWebhookArray(body)) {
     return body
   }
 
   if (!isRecord(body)) {
-    return []
+    return null
   }
 
   const candidates = [
@@ -104,7 +104,7 @@ function normalizeChatwootWebhooksResponse(
     isRecord(body.webhooks) ? body.webhooks.data : undefined,
   ]
 
-  return candidates.find(isChatwootWebhookArray) ?? []
+  return candidates.find(isChatwootWebhookArray) ?? null
 }
 
 function resolveCrmPublicUrl(): string | null {
@@ -171,7 +171,8 @@ export async function ensureChatwootWebhookForAccount(params: {
   chatwootUrl: string
   accountApiToken: string
   chatwootAccountId: number
-}): Promise<void> {
+  creation: { attempted: boolean; expectedId?: number; beforeCreate: () => Promise<void> }
+}): Promise<number> {
   const { chatwootUrl, accountApiToken, chatwootAccountId } = params
   const chatwootBaseUrl = normalizeChatwootBaseUrl(chatwootUrl)
   const crmPublicUrl = resolveCrmPublicUrl()
@@ -198,58 +199,42 @@ export async function ensureChatwootWebhookForAccount(params: {
     api_access_token: accountApiToken,
   }
 
-  const listRes = await fetch(webhooksEndpoint, {
-    method: 'GET',
-    headers,
-    signal: AbortSignal.timeout(15_000),
-  })
-
-  if (listRes.ok) {
-    const body = (await listRes
-      .json()
-      .catch(() => null)) as ChatwootWebhooksResponse
-    const webhooks = normalizeChatwootWebhooksResponse(body)
-
-    if (
-      webhooks.some((webhook) =>
-        webhookMatches(webhook.url ?? webhook.webhook_url, webhookUrlWithSecret)
-      )
-    ) {
-      console.info(
-        `[CHATWOOT PROVISION] Webhook já existente para Account #${chatwootAccountId}`
-      )
-      return
+  // Absence is evidence only from a conclusive successful list. A durable
+  // intent is written before POST; unknown outcomes must never be replayed.
+  try {
+    const listRes = await fetch(webhooksEndpoint, {
+      method: 'GET', headers, redirect: 'error', cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!listRes.ok) { await readSanitizedResponse(listRes); throw Error('webhook_requires_review') }
+    const webhooks = normalizeChatwootWebhooksResponse(await listRes.json())
+    if (!webhooks || webhooks.some(w => !toPositiveInt(w.id) ||
+      typeof (w.url ?? w.webhook_url) !== 'string' ||
+      !getWebhookUrlWithoutSecret((w.url ?? w.webhook_url)!))) throw Error('webhook_requires_review')
+    const matches = webhooks.filter(w => webhookMatches(w.url ?? w.webhook_url, webhookUrlWithSecret))
+    if (matches.length > 1) throw Error('webhook_requires_review')
+    if (matches.length === 1) {
+      const id = toPositiveInt(matches[0].id)!
+      if (params.creation.expectedId && params.creation.expectedId !== id) throw Error('webhook_requires_review')
+      return id
     }
-  } else if (listRes.status !== 404 && listRes.status !== 405) {
-    await readSanitizedResponse(listRes)
-    console.warn(
-      `[CHATWOOT PROVISION] Falha ao verificar webhook para Account #${chatwootAccountId}: HTTP ${listRes.status}`
-    )
-    throw new Error('webhook_lookup_failed')
+    if (params.creation.attempted || params.creation.expectedId) throw Error('webhook_requires_review')
+    await params.creation.beforeCreate()
+    const createRes = await fetch(webhooksEndpoint, {
+      method: 'POST', headers, redirect: 'error',
+      body: JSON.stringify({ name: 'MDS CRM', url: webhookUrlWithSecret, subscriptions: CHATWOOT_WEBHOOK_SUBSCRIPTIONS }),
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (!createRes.ok) { await readSanitizedResponse(createRes); throw Error('webhook_requires_review') }
+    const created: unknown = await createRes.json()
+    if (!isRecord(created) || !toPositiveInt(created.id) ||
+      typeof (created.url ?? created.webhook_url) !== 'string' ||
+      !webhookMatches((created.url ?? created.webhook_url) as string, webhookUrlWithSecret)) throw Error('webhook_requires_review')
+    return toPositiveInt(created.id)!
+  } catch {
+    // Never return upstream bodies, URLs or tokens to logs or the administrator.
+    throw Error('webhook_requires_review')
   }
-
-  const createRes = await fetch(webhooksEndpoint, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      name: 'MDS CRM',
-      url: webhookUrlWithSecret,
-      subscriptions: CHATWOOT_WEBHOOK_SUBSCRIPTIONS,
-    }),
-    signal: AbortSignal.timeout(15_000),
-  })
-
-  if (!createRes.ok) {
-    await readSanitizedResponse(createRes)
-    console.warn(
-      `[CHATWOOT PROVISION] Falha ao criar webhook para Account #${chatwootAccountId}: HTTP ${createRes.status}`
-    )
-    throw new Error('webhook_creation_failed')
-  }
-
-  console.info(
-    `[CHATWOOT PROVISION] Webhook criado para Account #${chatwootAccountId}`
-  )
 }
 
 function parseStoredChatwootData(raw: string): StoredChatwootData | null {
@@ -306,7 +291,8 @@ function isReusableBinding(params: {
 // Durable checkpoints live in the existing, tenant-unique ConnectedAccount.
 // Pending external mutations are reconciled, never replayed as fresh creations.
 type Phase = 'preflight' | 'account_creating' | 'account_ready' | 'user_creating' | 'user_ready' | 'membership' | 'webhook' | 'ready'
-type Progress = { version: 1; operationId: string; phase: Phase; runId?: string; leaseUntil?: string; error?: string }
+type WebhookProgress = { attempted: boolean; id?: number }
+type Progress = { webhook?: WebhookProgress; version: 1; operationId: string; phase: Phase; runId?: string; leaseUntil?: string; error?: string }
 type ProvisionData = StoredChatwootData & { ownerUserId?: string; provisioning?: Progress }
 const safeError = (value: unknown) => typeof value === 'string' && /^[a-z_]{1,80}$/.test(value) ? value : 'provisioning_unavailable'
 const failed = (error: string): ProvisionResult => ({ success: false, error })
@@ -317,12 +303,12 @@ function progressOf(data: ProvisionData | null): Progress | null {
 
 /** A public administrative DTO, never credentials, raw data or upstream errors. */
 export async function getChatwootProvisionStatus(organizationId: string) {
-  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, deletedAt: true, chatwootAccountId: true, users: { where: { role: 'owner', deletedAt: null }, select: { id: true, email: true }, take: 2 } } })
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, deletedAt: true, chatwootAccountId: true, users: { where: { role: 'owner', deletedAt: null }, select: { id: true, email: true, chatwootUserId: true }, take: 2 } } })
   if (!org || org.deletedAt) return null
   const account = await prisma.connectedAccount.findUnique({ where: { provider_organizationId: { provider: 'chatwoot', organizationId } } })
   const data = account ? parseStoredChatwootData(account.data) as ProvisionData | null : null
   const p = progressOf(data), owner = org.users.length === 1 ? org.users[0] : null
-  const ready = !!owner && !!account?.isActive && !!account.accessTokenEnc && (!p || p.phase === 'ready') && !account.lastError && isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: account.isActive, connectedAccountData: data, ownerEmail: owner.email }) && org.chatwootAccountId === toPositiveInt(data?.chatwootAccountId)
+  const ready = !!owner && owner.chatwootUserId === toPositiveInt(data?.chatwootUserId) && !!account?.isActive && !!account.accessTokenEnc && (!p || p.phase === 'ready') && !account.lastError && isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: account.isActive, connectedAccountData: data, ownerEmail: owner.email }) && org.chatwootAccountId === toPositiveInt(data?.chatwootAccountId)
   const running = !!p?.runId && Date.parse(p.leaseUntil || '') > Date.now()
   return { orgId: organizationId, provisioned: ready, status: ready ? 'ready' : !owner ? 'awaiting_owner' : running ? 'provisioning' : account || org.chatwootAccountId ? 'recovery_required' : 'awaiting_provisioning',
     phase: p?.phase ?? null, chatwootAccountId: org.chatwootAccountId, lastSync: account?.lastSyncAt ?? null,
@@ -343,10 +329,21 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
   if (!org || org.deletedAt) return failed('organization_inactive')
   if (org.users.length !== 1 || org.users[0].id !== input.ownerUserId || org.users[0].email.toLowerCase() !== input.ownerEmail.trim().toLowerCase()) return failed('owner_requires_review')
   const owner = org.users[0]
-  if (org.chatwootUrl && normalizeChatwootBaseUrl(org.chatwootUrl) !== base) return failed('binding_requires_review')
   let binding = await prisma.connectedAccount.findUnique({ where: { provider_organizationId: { provider: 'chatwoot', organizationId: org.id } } })
   let data = binding ? parseStoredChatwootData(binding.data) as ProvisionData | null : null
-  if (org.chatwootAccountId !== null && org.chatwootAccountId !== toPositiveInt(data?.chatwootAccountId) || owner.chatwootUserId !== null && owner.chatwootUserId !== toPositiveInt(data?.chatwootUserId)) return failed('binding_requires_review')
+  // A failed remote inspection is durable metadata, not permission to replace
+  // an active integration. Recovery may clear it only after positive validation.
+  const markBindingReview = async () => {
+    if (binding?.isActive) {
+      // A validation retry cannot reclassify or erase unrelated operational errors.
+      if (binding.lastError && binding.lastError !== 'binding_requires_review') return failed('binding_requires_review')
+      const changed = await prisma.connectedAccount.updateMany({ where: { id: binding.id, organizationId: org.id, isActive: true, data: binding.data, accessTokenEnc: binding.accessTokenEnc, updatedAt: binding.updatedAt }, data: { lastError: 'binding_requires_review' } })
+      if (changed.count !== 1) return failed('concurrent_provisioning_change')
+    }
+    return failed('binding_requires_review')
+  }
+  if (org.chatwootUrl && normalizeChatwootBaseUrl(org.chatwootUrl) !== base) return markBindingReview()
+  if (org.chatwootAccountId !== null && org.chatwootAccountId !== toPositiveInt(data?.chatwootAccountId) || owner.chatwootUserId !== null && owner.chatwootUserId !== toPositiveInt(data?.chatwootUserId)) return markBindingReview()
   const readRemote = async (path: string, token = platformToken): Promise<unknown> => {
     const res = await fetch(base + path, { headers: { api_access_token: token }, signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error' })
     if (!res.ok) throw Error('remote_inspection_unavailable')
@@ -382,11 +379,15 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
   }
   // Never overwrite a live or unrecognized legacy integration, even with force=true.
   if (binding?.isActive) {
-    if (!data || !isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: true, connectedAccountData: data, ownerEmail: owner.email }) || org.chatwootAccountId !== toPositiveInt(data.chatwootAccountId) || normalizeChatwootBaseUrl(data.chatwootUrl) !== base || binding.lastError) return failed('binding_requires_review')
+    if (!data || !isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: true, connectedAccountData: data, ownerEmail: owner.email }) || org.chatwootAccountId !== toPositiveInt(data.chatwootAccountId) || normalizeChatwootBaseUrl(data.chatwootUrl) !== base || binding.lastError && binding.lastError !== 'binding_requires_review') return markBindingReview()
     try {
       await checkRemoteIdentity(toPositiveInt(data.chatwootAccountId)!, toPositiveInt(data.chatwootUserId)!, decryptToken(binding.accessTokenEnc))
+      if (binding.lastError) {
+        const cleared = await prisma.connectedAccount.updateMany({ where: { id: binding.id, organizationId: org.id, isActive: true, data: binding.data, accessTokenEnc: binding.accessTokenEnc, updatedAt: binding.updatedAt, lastError: 'binding_requires_review' }, data: { lastError: null, lastSyncAt: new Date() } })
+        if (cleared.count !== 1) return failed('concurrent_provisioning_change')
+      }
       return { success: true, chatwootAccountId: toPositiveInt(data.chatwootAccountId)!, chatwootUserId: toPositiveInt(data.chatwootUserId)! }
-    } catch { return failed('binding_requires_review') }
+    } catch { return markBindingReview() }
   }
   if (binding && (!data || !progressOf(data) || data.ownerUserId !== owner.id || data.ownerEmail !== owner.email || normalizeChatwootBaseUrl(data.chatwootUrl) !== base)) return failed('binding_requires_review')
   if (!binding && (org.chatwootAccountId || !input.allowCreate)) return failed('inspection_required')
@@ -400,19 +401,22 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
   }
   data = parseStoredChatwootData(binding.data) as ProvisionData
   let progress = progressOf(data)!
+  // Normalize legacy mutation evidence before membership recovery can change phase.
+  if (progress.phase === 'webhook' && !progress.webhook) progress = { ...progress, webhook: { attempted: true } }
   if (progress.runId && Date.parse(progress.leaseUntil || '') > Date.now()) return failed('provisioning_in_progress')
-  const save = async (next: ProvisionData, token = binding!.accessTokenEnc) => {
+  const save = async (next: ProvisionData, token = binding!.accessTokenEnc, failureOnly = false) => {
     const current = binding!
     const updated = await prisma.$transaction(async tx => {
-      const live = await tx.user.findFirst({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null, organization: { deletedAt: null } }, select: { id: true } })
-      if (!live) throw Error('organization_inactive')
+      const live = await tx.user.findFirst({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null, organization: { deletedAt: null } }, select: { id: true, chatwootUserId: true } })
+      if (!failureOnly && !live) throw Error('organization_inactive')
+      if (!failureOnly && live!.chatwootUserId !== owner.chatwootUserId) throw Error('owner_binding_requires_review')
       const changed = await tx.connectedAccount.updateMany({ where: { id: current.id, organizationId: org.id, isActive: false, data: current.data, accessTokenEnc: current.accessTokenEnc, updatedAt: current.updatedAt }, data: { data: JSON.stringify(next), accessTokenEnc: token, lastError: next.provisioning?.error ?? null } })
       if (changed.count !== 1) throw Error('concurrent_provisioning_change')
       return tx.connectedAccount.findUniqueOrThrow({ where: { id: current.id } })
     })
     binding = updated; data = next; progress = next.provisioning!
   }
-  const checkpoint = async (phase: Phase, patch: Partial<ProvisionData> = {}, token?: string) => save({ ...data!, ...patch, provisioning: { ...progress, phase, runId, leaseUntil: new Date(Date.now() + 120000).toISOString(), error: undefined } }, token)
+  const checkpoint = async (phase: Phase, patch: Partial<ProvisionData> = {}, token?: string, webhook = progress.webhook) => save({ ...data!, ...patch, provisioning: { ...progress, webhook, phase, runId, leaseUntil: new Date(Date.now() + 120000).toISOString(), error: undefined } }, token)
   const post = async (path: string, body: unknown) => {
     const res = await fetch(base + '/platform/api/v1' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', api_access_token: platformToken }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000), redirect: 'error' })
     if (!res.ok) throw Error('remote_creation_requires_review')
@@ -453,13 +457,18 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
     if (profile.accounts.some(a => !isRecord(a) || toPositiveInt(a.id) !== accountId)) throw Error('identity_requires_review')
     if (!profile.accounts.length) { await checkpoint('membership'); await post('/accounts/' + accountId + '/account_users', { user_id: userId, role: 'administrator' }) }
     await checkRemoteIdentity(accountId, userId, token)
-    await checkpoint('webhook')
-    await ensureChatwootWebhookForAccount({ chatwootUrl: base, accountApiToken: token, chatwootAccountId: accountId })
+    // Old phase=webhook checkpoints predate mutation intents and are ambiguous.
+    const webhook = progress.webhook ?? { attempted: progress.phase === 'webhook' }
+    await checkpoint('webhook', {}, undefined, webhook)
+    const webhookId = await ensureChatwootWebhookForAccount({ chatwootUrl: base, accountApiToken: token, chatwootAccountId: accountId,
+      creation: { attempted: webhook.attempted, expectedId: webhook.id, beforeCreate: () => checkpoint('webhook', {}, undefined, { attempted: true }) } })
+    await checkpoint('webhook', {}, undefined, { attempted: true, id: webhookId })
     await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${'chatwoot-account:' + accountId}, 0))`
       if (await tx.organization.findFirst({ where: { id: { not: org.id }, chatwootAccountId: accountId }, select: { id: true } })) throw Error('binding_requires_review')
       if (await tx.user.findFirst({ where: { organizationId: { not: org.id }, chatwootUserId: userId }, select: { id: true } })) throw Error('binding_requires_review')
-      const user = await tx.user.updateMany({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null }, data: { chatwootUserId: userId, isChatwootAgent: true } })
+      const user = await tx.user.updateMany({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null, chatwootUserId: owner.chatwootUserId }, data: { chatwootUserId: userId, isChatwootAgent: true } })
+      if (user.count !== 1) throw Error('owner_binding_requires_review')
       const organization = await tx.organization.updateMany({ where: { id: org.id, deletedAt: null, OR: [{ chatwootAccountId: null }, { chatwootAccountId: accountId }] }, data: { chatwootAccountId: accountId, chatwootUrl: base } })
       const ready = { ...data!, provisioning: { ...progress, phase: 'ready', runId: undefined, leaseUntil: undefined, error: undefined } }
       const connection = await tx.connectedAccount.updateMany({ where: { id: binding!.id, organizationId: org.id, isActive: false, data: binding!.data, accessTokenEnc: binding!.accessTokenEnc, updatedAt: binding!.updatedAt }, data: { data: JSON.stringify(ready), isActive: true, lastError: null, lastSyncAt: new Date() } })
@@ -470,7 +479,7 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
   } catch (error) {
     const code = safeError(error instanceof Error ? error.message : null)
     if (binding && !binding.isActive && progress.runId === runId) {
-      try { await save({ ...data!, provisioning: { ...progress, runId: undefined, leaseUntil: undefined, error: code } }) } catch { /* Preserve the existing checkpoint when another actor changed it. */ }
+      try { await save({ ...data!, provisioning: { ...progress, runId: undefined, leaseUntil: undefined, error: code } }, binding.accessTokenEnc, true) } catch { /* Preserve the existing checkpoint when another actor changed it. */ }
     }
     return failed(code)
   }
