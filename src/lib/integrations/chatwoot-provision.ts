@@ -1,4 +1,5 @@
 // src/lib/integrations/chatwoot-provision.ts
+import { randomBytes, randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { decryptToken, encryptToken } from '@/lib/integrations/crypto'
 
@@ -9,7 +10,9 @@ interface ProvisionInput {
   ownerUserId: string
   ownerName: string
   ownerEmail: string
-  ownerPassword: string
+  ownerPassword?: string
+  allowCreate?: boolean
+  actorId?: string
 }
 
 interface ProvisionResult {
@@ -218,9 +221,9 @@ export async function ensureChatwootWebhookForAccount(params: {
       return
     }
   } else if (listRes.status !== 404 && listRes.status !== 405) {
-    const message = await readSanitizedResponse(listRes)
+    await readSanitizedResponse(listRes)
     console.warn(
-      `[CHATWOOT PROVISION] Falha ao verificar webhook para Account #${chatwootAccountId}: HTTP ${listRes.status} - ${message}`
+      `[CHATWOOT PROVISION] Falha ao verificar webhook para Account #${chatwootAccountId}: HTTP ${listRes.status}`
     )
     throw new Error('webhook_lookup_failed')
   }
@@ -237,9 +240,9 @@ export async function ensureChatwootWebhookForAccount(params: {
   })
 
   if (!createRes.ok) {
-    const message = await readSanitizedResponse(createRes)
+    await readSanitizedResponse(createRes)
     console.warn(
-      `[CHATWOOT PROVISION] Falha ao criar webhook para Account #${chatwootAccountId}: HTTP ${createRes.status} - ${message}`
+      `[CHATWOOT PROVISION] Falha ao criar webhook para Account #${chatwootAccountId}: HTTP ${createRes.status}`
     )
     throw new Error('webhook_creation_failed')
   }
@@ -300,380 +303,175 @@ function isReusableBinding(params: {
   return true
 }
 
-async function updateChatwootProvisionStatus(
-  organizationId: string,
-  data: { lastError: string | null; lastSyncAt?: Date }
-): Promise<void> {
-  await prisma.connectedAccount.updateMany({
-    where: { provider: 'chatwoot', organizationId },
-    data,
-  })
+// Durable checkpoints live in the existing, tenant-unique ConnectedAccount.
+// Pending external mutations are reconciled, never replayed as fresh creations.
+type Phase = 'preflight' | 'account_creating' | 'account_ready' | 'user_creating' | 'user_ready' | 'membership' | 'webhook' | 'ready'
+type Progress = { version: 1; operationId: string; phase: Phase; runId?: string; leaseUntil?: string; error?: string }
+type ProvisionData = StoredChatwootData & { ownerUserId?: string; provisioning?: Progress }
+const safeError = (value: unknown) => typeof value === 'string' && /^[a-z_]{1,80}$/.test(value) ? value : 'provisioning_unavailable'
+const failed = (error: string): ProvisionResult => ({ success: false, error })
+function progressOf(data: ProvisionData | null): Progress | null {
+  const p = data?.provisioning
+  return p?.version === 1 && typeof p.operationId === 'string' && ['preflight','account_creating','account_ready','user_creating','user_ready','membership','webhook','ready'].includes(p.phase) ? p : null
 }
 
-async function ensureWebhookOrRecordError(params: {
-  organizationId: string
-  chatwootUrl: string
-  accountApiToken: string
-  chatwootAccountId: number
-}): Promise<ProvisionResult | null> {
-  try {
-    await ensureChatwootWebhookForAccount(params)
-    return null
-  } catch (err) {
-    const error = err instanceof Error ? err.message : 'webhook_creation_failed'
-    await updateChatwootProvisionStatus(params.organizationId, {
-      lastError: error,
-    })
-    return {
-      success: false,
-      chatwootAccountId: params.chatwootAccountId,
-      error,
-    }
-  }
+/** A public administrative DTO, never credentials, raw data or upstream errors. */
+export async function getChatwootProvisionStatus(organizationId: string) {
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, deletedAt: true, chatwootAccountId: true, users: { where: { role: 'owner', deletedAt: null }, select: { id: true, email: true }, take: 2 } } })
+  if (!org || org.deletedAt) return null
+  const account = await prisma.connectedAccount.findUnique({ where: { provider_organizationId: { provider: 'chatwoot', organizationId } } })
+  const data = account ? parseStoredChatwootData(account.data) as ProvisionData | null : null
+  const p = progressOf(data), owner = org.users.length === 1 ? org.users[0] : null
+  const ready = !!owner && !!account?.isActive && !!account.accessTokenEnc && (!p || p.phase === 'ready') && !account.lastError && isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: account.isActive, connectedAccountData: data, ownerEmail: owner.email }) && org.chatwootAccountId === toPositiveInt(data?.chatwootAccountId)
+  const running = !!p?.runId && Date.parse(p.leaseUntil || '') > Date.now()
+  return { orgId: organizationId, provisioned: ready, status: ready ? 'ready' : !owner ? 'awaiting_owner' : running ? 'provisioning' : account || org.chatwootAccountId ? 'recovery_required' : 'awaiting_provisioning',
+    phase: p?.phase ?? null, chatwootAccountId: org.chatwootAccountId, lastSync: account?.lastSyncAt ?? null,
+    lastError: account?.lastError ? safeError(account.lastError) : null,
+    inspectionRequired: !ready && !p, recoveryAvailable: !!owner && !running }
 }
 
-/**
- * Confirma o usuário via endpoint SSO customizado.
- */
-async function confirmChatwootUser(baseUrl: string, email: string): Promise<void> {
-  const secret = process.env.CHATWOOT_SUPER_ADMIN_TOKEN
-
-  if (!secret) {
-    console.warn('[CHATWOOT PROVISION] CHATWOOT_SUPER_ADMIN_TOKEN não configurado')
-    return
-  }
-
-  try {
-    const res = await fetch(
-      `${baseUrl}/sso/confirm-user?email=${encodeURIComponent(email)}&secret=${encodeURIComponent(secret)}`,
-      { signal: AbortSignal.timeout(10_000) }
-    )
-
-    if (res.ok) {
-      const json = await res.json()
-      console.info(`[CHATWOOT PROVISION] ✅ Usuário ${email} confirmado — ID #${json.user_id}`)
-    } else {
-      console.warn(`[CHATWOOT PROVISION] Confirmação retornou ${res.status}`)
-    }
-  } catch {
-    console.warn('[CHATWOOT PROVISION] Falha ao confirmar usuário')
-  }
-}
-
-/**
- * Provisiona account + usuário no Chatwoot via Platform API.
- * Requer CHATWOOT_PLATFORM_TOKEN (gerado em Super Admin → Aplicativos de plataforma).
- */
-export async function provisionChatwootForOrg(
-  input: ProvisionInput,
-): Promise<ProvisionResult> {
-  const chatwootUrl =
-    normalizeChatwootBaseUrl(process.env.CHATWOOT_API_URL) ||
-    normalizeChatwootBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
-
+/** Official Platform API provisioner used by signup and Super Admin. No Docker/Rails. */
+export async function provisionChatwootForOrg(input: ProvisionInput): Promise<ProvisionResult> {
+  const base = normalizeChatwootBaseUrl(process.env.CHATWOOT_API_URL) || normalizeChatwootBaseUrl(process.env.NEXT_PUBLIC_CHATWOOT_URL)
   const platformToken = process.env.CHATWOOT_PLATFORM_TOKEN
-
-  if (!chatwootUrl) {
-    console.warn('[CHATWOOT PROVISION] URL não configurada')
-    return { success: false, error: 'super_admin_not_configured' }
+  if (!base) return failed('super_admin_not_configured')
+  if (!platformToken) return failed('platform_token_not_configured')
+  if (!process.env.CHATWOOT_WEBHOOK_SECRET?.trim() || !resolveCrmPublicUrl()) return failed('webhook_not_configured')
+  // Detect encryption misconfiguration before creating a remote resource.
+  try { encryptToken('synthetic-key-validation') } catch { return failed('encryption_not_configured') }
+  const org = await prisma.organization.findUnique({ where: { id: input.organizationId }, include: { users: { where: { role: 'owner', deletedAt: null }, take: 2 } } })
+  if (!org || org.deletedAt) return failed('organization_inactive')
+  if (org.users.length !== 1 || org.users[0].id !== input.ownerUserId || org.users[0].email.toLowerCase() !== input.ownerEmail.trim().toLowerCase()) return failed('owner_requires_review')
+  const owner = org.users[0]
+  if (org.chatwootUrl && normalizeChatwootBaseUrl(org.chatwootUrl) !== base) return failed('binding_requires_review')
+  let binding = await prisma.connectedAccount.findUnique({ where: { provider_organizationId: { provider: 'chatwoot', organizationId: org.id } } })
+  let data = binding ? parseStoredChatwootData(binding.data) as ProvisionData | null : null
+  if (org.chatwootAccountId !== null && org.chatwootAccountId !== toPositiveInt(data?.chatwootAccountId) || owner.chatwootUserId !== null && owner.chatwootUserId !== toPositiveInt(data?.chatwootUserId)) return failed('binding_requires_review')
+  const readRemote = async (path: string, token = platformToken): Promise<unknown> => {
+    const res = await fetch(base + path, { headers: { api_access_token: token }, signal: AbortSignal.timeout(15000), cache: 'no-store', redirect: 'error' })
+    if (!res.ok) throw Error('remote_inspection_unavailable')
+    return res.json()
   }
-
-  if (!platformToken) {
-    console.warn('[CHATWOOT PROVISION] CHATWOOT_PLATFORM_TOKEN não configurado')
-    return { success: false, error: 'platform_token_not_configured' }
+  const record = (value: unknown): Record<string, unknown> => {
+    if (!isRecord(value)) throw Error('platform_response_invalid')
+    return value
   }
-
+  const accountList = async () => {
+    const body = await readRemote('/platform/api/v1/accounts')
+    if (!Array.isArray(body) || !body.every(isRecord)) throw Error('remote_inspection_unavailable')
+    return body
+  }
+  const assertLocalExclusive = async (accountId: number, userId?: number) => {
+    const others = await prisma.organization.findFirst({ where: { id: { not: org.id }, chatwootAccountId: accountId }, select: { id: true } })
+    if (others) throw Error('binding_requires_review')
+    const connections = await prisma.connectedAccount.findMany({ where: { provider: 'chatwoot', organizationId: { not: org.id } }, select: { data: true } })
+    if (connections.some(c => { const d = parseStoredChatwootData(c.data); return normalizeChatwootBaseUrl(d?.chatwootUrl) === base && (toPositiveInt(d?.chatwootAccountId) === accountId || userId && toPositiveInt(d?.chatwootUserId) === userId) })) throw Error('binding_requires_review')
+    if (userId && await prisma.user.findFirst({ where: { organizationId: { not: org.id }, chatwootUserId: userId }, select: { id: true } })) throw Error('binding_requires_review')
+  }
+  const checkRemoteIdentity = async (accountId: number, userId: number, token: string) => {
+    await assertLocalExclusive(accountId, userId)
+    const remoteUser = record(await readRemote('/platform/api/v1/users/' + userId))
+    if (toPositiveInt(remoteUser.id) !== userId || remoteUser.email !== owner.email || remoteUser.confirmed !== true) throw Error('identity_requires_review')
+    if (progressOf(data) && (!isRecord(remoteUser.custom_attributes) || remoteUser.custom_attributes.crmUserId !== owner.id || remoteUser.custom_attributes.organizationId !== org.id || remoteUser.custom_attributes.crmProvisionOperationId !== data?.provisioning?.operationId)) throw Error('identity_requires_review')
+    const profile = record(await readRemote('/api/v1/profile', token))
+    if (toPositiveInt(profile.id) !== userId || profile.email !== owner.email || !Array.isArray(profile.accounts) || profile.accounts.length !== 1) throw Error('identity_requires_review')
+    const membership = record(profile.accounts[0])
+    if (toPositiveInt(membership.id) !== accountId || membership.role !== 'administrator') throw Error('membership_requires_review')
+    const login = record(await readRemote('/platform/api/v1/users/' + userId + '/login'))
+    if (typeof login.url !== 'string' || new URL(login.url, base).origin !== new URL(base).origin) throw Error('sso_unavailable')
+  }
+  // Never overwrite a live or unrecognized legacy integration, even with force=true.
+  if (binding?.isActive) {
+    if (!data || !isReusableBinding({ orgDeletedAt: org.deletedAt, organizationChatwootAccountId: org.chatwootAccountId, connectedAccountIsActive: true, connectedAccountData: data, ownerEmail: owner.email }) || org.chatwootAccountId !== toPositiveInt(data.chatwootAccountId) || normalizeChatwootBaseUrl(data.chatwootUrl) !== base || binding.lastError) return failed('binding_requires_review')
+    try {
+      await checkRemoteIdentity(toPositiveInt(data.chatwootAccountId)!, toPositiveInt(data.chatwootUserId)!, decryptToken(binding.accessTokenEnc))
+      return { success: true, chatwootAccountId: toPositiveInt(data.chatwootAccountId)!, chatwootUserId: toPositiveInt(data.chatwootUserId)! }
+    } catch { return failed('binding_requires_review') }
+  }
+  if (binding && (!data || !progressOf(data) || data.ownerUserId !== owner.id || data.ownerEmail !== owner.email || normalizeChatwootBaseUrl(data.chatwootUrl) !== base)) return failed('binding_requires_review')
+  if (!binding && (org.chatwootAccountId || !input.allowCreate)) return failed('inspection_required')
+  const runId = randomUUID()
+  if (!binding) {
+    data = { chatwootUrl: base, ownerEmail: owner.email, ownerUserId: owner.id,
+      ownerPasswordEnc: encryptToken('Cw@' + randomBytes(32).toString('base64url') + '!'),
+      provisioning: { version: 1, operationId: randomUUID(), phase: 'preflight' } }
+    try { binding = await prisma.connectedAccount.create({ data: { provider: 'chatwoot', organizationId: org.id, connectedById: owner.id, accessTokenEnc: '', isActive: false, data: JSON.stringify(data) } }) }
+    catch (error) { return failed(error && typeof error === 'object' && 'code' in error && error.code === 'P2002' ? 'provisioning_in_progress' : 'provisioning_unavailable') }
+  }
+  data = parseStoredChatwootData(binding.data) as ProvisionData
+  let progress = progressOf(data)!
+  if (progress.runId && Date.parse(progress.leaseUntil || '') > Date.now()) return failed('provisioning_in_progress')
+  const save = async (next: ProvisionData, token = binding!.accessTokenEnc) => {
+    const current = binding!
+    const updated = await prisma.$transaction(async tx => {
+      const live = await tx.user.findFirst({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null, organization: { deletedAt: null } }, select: { id: true } })
+      if (!live) throw Error('organization_inactive')
+      const changed = await tx.connectedAccount.updateMany({ where: { id: current.id, organizationId: org.id, isActive: false, data: current.data, accessTokenEnc: current.accessTokenEnc, updatedAt: current.updatedAt }, data: { data: JSON.stringify(next), accessTokenEnc: token, lastError: next.provisioning?.error ?? null } })
+      if (changed.count !== 1) throw Error('concurrent_provisioning_change')
+      return tx.connectedAccount.findUniqueOrThrow({ where: { id: current.id } })
+    })
+    binding = updated; data = next; progress = next.provisioning!
+  }
+  const checkpoint = async (phase: Phase, patch: Partial<ProvisionData> = {}, token?: string) => save({ ...data!, ...patch, provisioning: { ...progress, phase, runId, leaseUntil: new Date(Date.now() + 120000).toISOString(), error: undefined } }, token)
+  const post = async (path: string, body: unknown) => {
+    const res = await fetch(base + '/platform/api/v1' + path, { method: 'POST', headers: { 'Content-Type': 'application/json', api_access_token: platformToken }, body: JSON.stringify(body), signal: AbortSignal.timeout(15000), redirect: 'error' })
+    if (!res.ok) throw Error('remote_creation_requires_review')
+    return record(await res.json())
+  }
   try {
-    const existing = await prisma.organization.findUnique({
-      where: { id: input.organizationId },
-      select: {
-        id: true,
-        slug: true,
-        deletedAt: true,
-        chatwootAccountId: true,
-        chatwootUrl: true,
-        connectedAccounts: {
-          where: { provider: 'chatwoot' },
-          select: {
-            id: true,
-            isActive: true,
-            accessTokenEnc: true,
-            data: true,
-            updatedAt: true,
-          },
-          take: 1,
-        },
-      },
-    })
-
-    if (!existing || existing.deletedAt) {
-      console.warn('[CHATWOOT PROVISION] Organização inexistente ou inativa')
-      return { success: false, error: 'organization_inactive' }
-    }
-
-    const currentBinding = existing.connectedAccounts[0] ?? null
-    const currentData = currentBinding ? parseStoredChatwootData(currentBinding.data) : null
-
-    const reusable = isReusableBinding({
-      orgDeletedAt: existing.deletedAt,
-      organizationChatwootAccountId: existing.chatwootAccountId ?? null,
-      connectedAccountIsActive: currentBinding?.isActive ?? false,
-      connectedAccountData: currentData,
-      ownerEmail: input.ownerEmail,
-    })
-
-    if (reusable && currentData) {
-      const currentAccountId = toPositiveInt(currentData.chatwootAccountId)
-      const currentUserId = toPositiveInt(currentData.chatwootUserId)
-
-      if (currentAccountId && currentUserId) {
-        console.info(
-          `[CHATWOOT PROVISION] Reutilizando vínculo consistente da org ${input.orgSlug} → Account #${currentAccountId}`
-        )
-
-        await prisma.organization.update({
-          where: { id: input.organizationId },
-          data: {
-            chatwootAccountId: currentAccountId,
-            chatwootUrl,
-          },
-        })
-
-        let currentAccountApiToken: string | null = null
-
-        try {
-          currentAccountApiToken = currentBinding?.accessTokenEnc
-            ? decryptToken(currentBinding.accessTokenEnc)
-            : null
-        } catch {
-          currentAccountApiToken = null
-        }
-
-        if (!currentAccountApiToken) {
-          await updateChatwootProvisionStatus(input.organizationId, {
-            lastError: 'chatwoot_account_api_token_not_available',
-          })
-          return {
-            success: false,
-            chatwootAccountId: currentAccountId,
-            chatwootUserId: currentUserId,
-            error: 'chatwoot_account_api_token_not_available',
-          }
-        }
-
-        const webhookError = await ensureWebhookOrRecordError({
-          organizationId: input.organizationId,
-          chatwootUrl,
-          accountApiToken: currentAccountApiToken,
-          chatwootAccountId: currentAccountId,
-        })
-
-        if (webhookError) {
-          return { ...webhookError, chatwootUserId: currentUserId }
-        }
-
-        await updateChatwootProvisionStatus(input.organizationId, {
-          lastError: null,
-          lastSyncAt: new Date(),
-        })
-
-        return {
-          success: true,
-          chatwootAccountId: currentAccountId,
-          chatwootUserId: currentUserId,
-        }
-      }
-    }
-
-    if (currentBinding) {
-      console.warn(
-        `[CHATWOOT PROVISION] Vínculo inconsistente detectado para org ${input.orgSlug}. ` +
-        `Será reprovisionado com nova account própria.`
-      )
-    }
-
-    // ── 1. Cria Account via Platform API ──────────────────────────────────
-    const accountRes = await fetch(`${chatwootUrl}/platform/api/v1/accounts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api_access_token': platformToken,
-      },
-      body: JSON.stringify({
-        name: input.orgName,
-        locale: 'pt_BR',
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-
-    if (!accountRes.ok) {
-      const errText = sanitizeChatwootError(await accountRes.text())
-      console.warn(
-        '[CHATWOOT PROVISION] Falha criar account:',
-        accountRes.status,
-        errText
-      )
-      return { success: false, error: 'account_creation_failed' }
-    }
-
-    const accountJson = await accountRes.json()
-    const chatwootAccountId = accountJson?.id as number
-
-    if (!chatwootAccountId) {
-      console.warn(
-        '[CHATWOOT PROVISION] Resposta inesperada ao criar account:',
-        JSON.stringify(accountJson)
-      )
-      return { success: false, error: 'account_creation_failed' }
-    }
-
-    console.info(`[CHATWOOT PROVISION] ✅ Account #${chatwootAccountId} criada`)
-
-    // ── 2. Cria Usuário via Platform API ──────────────────────────────────
-    const userRes = await fetch(`${chatwootUrl}/platform/api/v1/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api_access_token': platformToken,
-      },
-      body: JSON.stringify({
-        name: input.ownerName,
-        email: input.ownerEmail,
-        password: input.ownerPassword,
-        password_confirmation: input.ownerPassword,
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-
-    if (!userRes.ok) {
-      const errText = sanitizeChatwootError(await userRes.text())
-      console.warn(
-        '[CHATWOOT PROVISION] Falha criar usuário:',
-        userRes.status,
-        errText
-      )
-      return { success: false, error: 'user_creation_failed' }
-    }
-
-    const userJson = await userRes.json()
-    const chatwootUserId = userJson?.id as number
-    const accessToken = userJson?.access_token as string
-
-    if (!chatwootUserId || !accessToken) {
-      console.warn(
-        '[CHATWOOT PROVISION] Resposta inesperada ao criar usuário:',
-        JSON.stringify({
-          ...userJson,
-          access_token: accessToken ? '[REDACTED]' : null,
-        })
-      )
-      return { success: false, error: 'user_creation_failed' }
-    }
-
-    console.info(`[CHATWOOT PROVISION] ✅ Usuário #${chatwootUserId} criado`)
-
-    // ── 3. Vincula usuário à account ──────────────────────────────────────
-    const memberRes = await fetch(
-      `${chatwootUrl}/platform/api/v1/accounts/${chatwootAccountId}/account_users`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'api_access_token': platformToken,
-        },
-        body: JSON.stringify({
-          user_id: chatwootUserId,
-          role: 'administrator',
-        }),
-        signal: AbortSignal.timeout(15_000),
-      }
-    )
-
-    if (!memberRes.ok) {
-      const errText = sanitizeChatwootError(await memberRes.text())
-      console.warn(
-        '[CHATWOOT PROVISION] Falha vincular usuário à account:',
-        memberRes.status,
-        errText
-      )
+    await checkpoint(progress.phase)
+    const accounts = await accountList()
+    let accountId = toPositiveInt(data.chatwootAccountId), userId = toPositiveInt(data.chatwootUserId)
+    const marked = accounts.filter(a => isRecord(a.custom_attributes) && a.custom_attributes.crmOrganizationId === org.id && a.custom_attributes.crmProvisionOperationId === progress.operationId)
+    if (marked.length > 1 || accountId && marked.length === 1 && toPositiveInt(marked[0].id) !== accountId) throw Error('account_requires_review')
+    if (!accountId && marked.length === 1) { accountId = toPositiveInt(marked[0].id); if (!accountId) throw Error('platform_response_invalid'); await checkpoint('account_ready', { chatwootAccountId: accountId }) }
+    if (!accountId) {
+      if (progress.phase !== 'preflight' || marked.length || accounts.some(a => a.name === org.name && (!isRecord(a.custom_attributes) || typeof a.custom_attributes.crmOrganizationId !== 'string') || isRecord(a.custom_attributes) && a.custom_attributes.crmOrganizationId === org.id)) throw Error('account_requires_review')
+      await checkpoint('account_creating')
+      const account = await post('/accounts', { name: org.name, locale: 'pt_BR', custom_attributes: { crmOrganizationId: org.id, crmProvisionOperationId: progress.operationId } })
+      accountId = toPositiveInt(account.id)
+      if (!accountId) throw Error('account_requires_review')
+      await checkpoint('account_ready', { chatwootAccountId: accountId })
+      if (!isRecord(account.custom_attributes) || account.custom_attributes.crmOrganizationId !== org.id || account.custom_attributes.crmProvisionOperationId !== progress.operationId) throw Error('account_requires_review')
     } else {
-      console.info(`[CHATWOOT PROVISION] ✅ Usuário #${chatwootUserId} vinculado à account #${chatwootAccountId}`)
+      const remote = record(await readRemote('/platform/api/v1/accounts/' + accountId))
+      if (!isRecord(remote.custom_attributes) || remote.custom_attributes.crmOrganizationId !== org.id || remote.custom_attributes.crmProvisionOperationId !== progress.operationId) throw Error('account_requires_review')
     }
-
-    // ── 4. Confirma usuário via SSO ───────────────────────────────────────
-    await confirmChatwootUser(chatwootUrl, input.ownerEmail)
-
-    // ── 5. Salva no banco do CRM ──────────────────────────────────────────
-    const encToken = encryptToken(accessToken || '')
-    const encPassword = encryptToken(input.ownerPassword)
-
-    await prisma.$transaction([
-      prisma.connectedAccount.upsert({
-        where: {
-          provider_organizationId: {
-            provider: 'chatwoot',
-            organizationId: input.organizationId,
-          },
-        },
-        create: {
-          provider: 'chatwoot',
-          organizationId: input.organizationId,
-          connectedById: input.ownerUserId,
-          accessTokenEnc: encToken,
-          isActive: true,
-          data: JSON.stringify({
-            chatwootUrl,
-            chatwootAccountId,
-            ownerEmail: input.ownerEmail,
-            ownerPasswordEnc: encPassword,
-            chatwootUserId,
-          }),
-        },
-        update: {
-          accessTokenEnc: encToken,
-          isActive: true,
-          lastError: null,
-          lastSyncAt: new Date(),
-          data: JSON.stringify({
-            chatwootUrl,
-            chatwootAccountId,
-            ownerEmail: input.ownerEmail,
-            ownerPasswordEnc: encPassword,
-            chatwootUserId,
-          }),
-        },
-      }),
-
-      prisma.organization.update({
-        where: { id: input.organizationId },
-        data: {
-          chatwootAccountId,
-          chatwootUrl,
-        },
-      }),
-    ])
-
-    const webhookError = await ensureWebhookOrRecordError({
-      organizationId: input.organizationId,
-      chatwootUrl,
-      accountApiToken: accessToken,
-      chatwootAccountId,
+    await assertLocalExclusive(accountId, userId ?? undefined)
+    if (!userId) {
+      if (progress.phase !== 'account_ready') throw Error('identity_requires_review')
+      await checkpoint('user_creating')
+      const user = await post('/users', { name: owner.name, email: owner.email, password: decryptToken(data.ownerPasswordEnc!), custom_attributes: { crmUserId: owner.id, organizationId: org.id, crmProvisionOperationId: progress.operationId, source: 'mds-crm' } })
+      userId = toPositiveInt(user.id)
+      if (!userId || user.email !== owner.email || !isRecord(user.custom_attributes) || user.custom_attributes.crmUserId !== owner.id || user.custom_attributes.organizationId !== org.id || user.custom_attributes.crmProvisionOperationId !== progress.operationId || typeof user.access_token !== 'string' || !user.access_token) throw Error('identity_requires_review')
+      if (Array.isArray(user.accounts) && user.accounts.some(a => !isRecord(a) || toPositiveInt(a.id) !== accountId)) throw Error('identity_requires_review')
+      await checkpoint('user_ready', { chatwootUserId: userId }, encryptToken(user.access_token))
+    }
+    const token = decryptToken(binding.accessTokenEnc)
+    const profile = record(await readRemote('/api/v1/profile', token))
+    if (toPositiveInt(profile.id) !== userId || profile.email !== owner.email || !Array.isArray(profile.accounts)) throw Error('identity_requires_review')
+    if (profile.accounts.some(a => !isRecord(a) || toPositiveInt(a.id) !== accountId)) throw Error('identity_requires_review')
+    if (!profile.accounts.length) { await checkpoint('membership'); await post('/accounts/' + accountId + '/account_users', { user_id: userId, role: 'administrator' }) }
+    await checkRemoteIdentity(accountId, userId, token)
+    await checkpoint('webhook')
+    await ensureChatwootWebhookForAccount({ chatwootUrl: base, accountApiToken: token, chatwootAccountId: accountId })
+    await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtextextended(${'chatwoot-account:' + accountId}, 0))`
+      if (await tx.organization.findFirst({ where: { id: { not: org.id }, chatwootAccountId: accountId }, select: { id: true } })) throw Error('binding_requires_review')
+      if (await tx.user.findFirst({ where: { organizationId: { not: org.id }, chatwootUserId: userId }, select: { id: true } })) throw Error('binding_requires_review')
+      const user = await tx.user.updateMany({ where: { id: owner.id, organizationId: org.id, role: 'owner', email: owner.email, deletedAt: null }, data: { chatwootUserId: userId, isChatwootAgent: true } })
+      const organization = await tx.organization.updateMany({ where: { id: org.id, deletedAt: null, OR: [{ chatwootAccountId: null }, { chatwootAccountId: accountId }] }, data: { chatwootAccountId: accountId, chatwootUrl: base } })
+      const ready = { ...data!, provisioning: { ...progress, phase: 'ready', runId: undefined, leaseUntil: undefined, error: undefined } }
+      const connection = await tx.connectedAccount.updateMany({ where: { id: binding!.id, organizationId: org.id, isActive: false, data: binding!.data, accessTokenEnc: binding!.accessTokenEnc, updatedAt: binding!.updatedAt }, data: { data: JSON.stringify(ready), isActive: true, lastError: null, lastSyncAt: new Date() } })
+      if (user.count !== 1 || organization.count !== 1 || connection.count !== 1) throw Error('concurrent_provisioning_change')
+      await tx.activity.create({ data: { entityType: 'organization', entityId: org.id, action: 'updated', userId: null, description: 'Provisionamento Chatwoot concluído', metadata: JSON.stringify({ actorId: input.actorId ?? owner.id, accountId, userId, source: input.actorId ? 'superadmin' : 'signup' }) } })
     })
-
-    if (webhookError) return { ...webhookError, chatwootUserId }
-
-    await updateChatwootProvisionStatus(input.organizationId, {
-      lastError: null,
-      lastSyncAt: new Date(),
-    })
-
-    console.info(
-      `[CHATWOOT PROVISION] ✅ Org ${input.orgSlug} → Account #${chatwootAccountId} provisionada com sucesso`
-    )
-
-    return { success: true, chatwootAccountId, chatwootUserId }
-  } catch (err) {
-    console.error('[CHATWOOT PROVISION] Erro inesperado:', err)
-    return { success: false, error: 'unexpected_error' }
+    return { success: true, chatwootAccountId: accountId, chatwootUserId: userId }
+  } catch (error) {
+    const code = safeError(error instanceof Error ? error.message : null)
+    if (binding && !binding.isActive && progress.runId === runId) {
+      try { await save({ ...data!, provisioning: { ...progress, runId: undefined, leaseUntil: undefined, error: code } }) } catch { /* Preserve the existing checkpoint when another actor changed it. */ }
+    }
+    return failed(code)
   }
 }

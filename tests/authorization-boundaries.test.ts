@@ -47,7 +47,7 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     ':(exclude)src/lib/atendimento/widget-inbox-store.ts',
-    'src/lib/chatwoot.ts', // C5-04 permission parsing is pinned separately below.
+    'src/lib/chatwoot.ts', ':(exclude)src/lib/integrations/chatwoot-provision.ts', // C5-04 permission parsing is pinned separately below.
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma', ':(exclude)prisma/schema.prisma',
     ':(exclude)prisma/migrations/20261020230000_instagram_security_storage/migration.sql',
@@ -238,4 +238,21 @@ test('domain invalidation preserves every legacy limit rule outside plan synchro
   const current = readFileSync('src/lib/checkLimits.ts', 'utf8').replace("import { domainCapabilityPatch, domainCapabilityAudit } from './domains/commercial-change';\n", '');
   const stripSync = (value: string) => value.replace(/export async function syncPlanLimits\([\s\S]*?(?=export async function getOrganizationUsage)/, '');
   assert.equal(stripSync(current), stripSync(previous));
+});
+
+// Super Admin onboarding may change only the official provisioner; operational
+// webhook registration and the unused Docker/Rails implementation stay pinned.
+test('Chatwoot onboarding preserves webhook registration and never adopts the legacy Rails strategy', () => {
+  const path = 'src/lib/integrations/chatwoot-provision.ts';
+  const original = execFileSync('git', ['show', '77f4eeb:' + path], {encoding:'utf8'});
+  const current = readFileSync(path, 'utf8');
+  const start = 'function normalizeBaseUrl', end = 'function parseStoredChatwootData';
+  const redacted = original.slice(original.indexOf(start), original.indexOf(end))
+    .replace('const message = await readSanitizedResponse(listRes)', 'await readSanitizedResponse(listRes)')
+    .replace('const message = await readSanitizedResponse(createRes)', 'await readSanitizedResponse(createRes)')
+    .replace('HTTP ${listRes.status} - ${message}', 'HTTP ${listRes.status}')
+    .replace('HTTP ${createRes.status} - ${message}', 'HTTP ${createRes.status}');
+  assert.equal(current.slice(current.indexOf(start), current.indexOf(end)), redacted);
+  assert.doesNotMatch(current, /execSync|docker exec|rails runner|connectedAccount\.upsert/);
+  assert.equal(readFileSync('src/lib/integrations/chatwootOnboarding.ts','utf8'), execFileSync('git',['show','77f4eeb:src/lib/integrations/chatwootOnboarding.ts'],{encoding:'utf8'}));
 });

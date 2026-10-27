@@ -1,9 +1,12 @@
 // src/app/api/admin/organizations/route.ts
+import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
+import { provisionChatwootForOrg, getChatwootProvisionStatus } from '@/lib/integrations/chatwoot-provision';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
 import { syncPlanLimits } from '@/lib/checkLimits';
-import { parseBody, adminOrgCreateSchema } from '@/lib/validations';
+import { parseBody, adminOrgCreateSchema, adminUserCreateSchema } from '@/lib/validations';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,7 +21,7 @@ export async function GET(req: NextRequest) {
     const showInactive = searchParams.get('inactive') === 'true';
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.OrganizationWhereInput = {
       // Por padrão só mostra orgs ativas (deletedAt = null)
       // Se ?inactive=true mostra as inativas também
       deletedAt: showInactive ? { not: null } : null,
@@ -102,58 +105,47 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const organizationOnboardingSchema = adminOrgCreateSchema.extend({
+  // Preserve the legacy organization-only API; the Super Admin UI requires owner.
+  owner: adminUserCreateSchema.pick({ name: true, email: true, password: true }).optional(),
+});
 export async function POST(req: NextRequest) {
   try {
     const admin = await verifyAdminToken();
     if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-
-    const body   = await req.json();
-    const parsed = parseBody(adminOrgCreateSchema, body);
+    const parsed = parseBody(organizationOnboardingSchema, await req.json());
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
-
-    // Verifica slug duplicado (incluindo orgs inativas)
-    const existing = await prisma.organization.findUnique({ where: { slug: data.slug } });
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Já existe uma organização com este slug' },
-        { status: 409 }
-      );
-    }
-
-    const org = await prisma.organization.create({
-      data: {
-        name:        data.name,
-        slug:        data.slug,
-        plan:        data.plan,
-        planStatus:  'active',
-        trialEndsAt: data.plan === 'trial'
-          ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-          : null,
-        maxUsers:    data.maxUsers,
-        maxLeads:    data.maxLeads,
-        maxProjects: data.maxProjects,
-        maxOs:       data.maxOs,
-      },
+    if (!data.name || !data.slug) return NextResponse.json({error:'Nome e identificador são obrigatórios'}, {status:400});
+    if (await prisma.organization.findUnique({ where: { slug: data.slug } })) return NextResponse.json({ error: 'Já existe uma organização com este slug' }, { status: 409 });
+    if (data.syncFromPlan && !await prisma.plan.findUnique({ where: { name: data.plan } })) return NextResponse.json({ error: 'Plano selecionado indisponível' }, { status: 400 });
+    if (data.owner && await prisma.user.findUnique({ where: { email: data.owner.email }, select: { id: true } })) return NextResponse.json({ error: 'Email do proprietário indisponível' }, { status: 409 });
+    const hash = data.owner ? await bcrypt.hash(data.owner.password, 10) : null;
+    const created = await prisma.$transaction(async tx => {
+      const org = await tx.organization.create({ data: { name: data.name, slug: data.slug, plan: data.plan, planStatus: 'active',
+        trialEndsAt: data.plan === 'trial' ? new Date(Date.now() + 14 * 86400000) : null,
+        maxUsers: data.maxUsers, maxLeads: data.maxLeads, maxProjects: data.maxProjects, maxOs: data.maxOs } });
+      const owner = data.owner && hash ? await tx.user.create({ data: { organizationId: org.id, name: data.owner.name, email: data.owner.email, passwordHash: hash, role: 'owner' }, select: { id: true, name: true, email: true } }) : null;
+      await tx.activity.create({ data: { entityType: 'organization', entityId: org.id, action: 'created', userId: null,
+        description: 'Organização criada pelo Super Admin', metadata: JSON.stringify({ actorId: admin.id, ownerCreated: !!owner }) } });
+      return { org, owner };
     });
-
+    let org = created.org, synced = false;
     if (data.syncFromPlan) {
-      const synced = await syncPlanLimits(org.id, data.plan);
-      if (synced) {
-        return NextResponse.json(
-          { ...synced, _syncedFromPlan: true, message: `Organização criada com limites do plano "${data.plan}"` },
-          { status: 201 }
-        );
-      }
-      console.warn(`[ADMIN ORGS] Plano "${data.plan}" não encontrado. Limites manuais mantidos.`);
+      const planOrg = await syncPlanLimits(org.id, data.plan);
+      if (!planOrg) return NextResponse.json({ ...org, owner: created.owner, onboarding: { success: false, error: 'plan_sync_required' }, message: 'Organização preservada; revisar sincronização do plano antes do Atendimento' }, { status: 201 });
+      org = planOrg; synced = true;
     }
-
-    return NextResponse.json(
-      { ...org, _syncedFromPlan: false, message: 'Organização criada com limites customizados' },
-      { status: 201 }
-    );
+    const result = created.owner ? await provisionChatwootForOrg({ organizationId: org.id, orgName: org.name, orgSlug: org.slug,
+      ownerUserId: created.owner.id, ownerName: created.owner.name, ownerEmail: created.owner.email, allowCreate: true, actorId: admin.id }) : null;
+    const status = await getChatwootProvisionStatus(org.id);
+    return NextResponse.json({ ...org, chatwootAccountId: status?.chatwootAccountId ?? org.chatwootAccountId, _syncedFromPlan: synced, owner: created.owner,
+      onboarding: { ...status, success: result?.success ?? false, error: result?.error ?? null },
+      message: result?.success ? 'Organização e proprietário criados; Atendimento configurado para cadastrar inboxes' : 'Organização criada; Atendimento pendente de configuração ou recuperação' },
+      { status: 201, headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
-    console.error('[ADMIN ORGS] Erro ao criar:', error);
-    return NextResponse.json({ error: 'Erro interno no servidor' }, { status: 500 });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') return NextResponse.json({ error: 'Organização ou email já cadastrado' }, { status: 409 });
+    // Never log the request body, passwords, provider responses or credentials.
+    return NextResponse.json({ error: 'Não foi possível concluir a criação; confira a lista antes de repetir' }, { status: 500 });
   }
 }

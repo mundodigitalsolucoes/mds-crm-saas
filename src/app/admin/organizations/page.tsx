@@ -1,4 +1,5 @@
 'use client';
+import OrganizationChatwootOnboarding from '@/components/OrganizationChatwootOnboarding';
 import OrganizationWhiteLabelControl from '@/components/OrganizationWhiteLabelControl';
 import OrganizationDomainEditor from '@/components/OrganizationDomainEditor';
 import OrganizationBrandingEditor from '@/components/OrganizationBrandingEditor';
@@ -96,6 +97,8 @@ export default function AdminOrganizationsPage() {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [owner, setOwner] = useState({name:'',email:'',password:''});
+  const [onboardingNotice, setOnboardingNotice] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -145,6 +148,7 @@ export default function AdminOrganizationsPage() {
 
   const handleCreate = () => {
     setEditingOrg(null);
+    setOwner({name:'',email:'',password:''}); setOnboardingNotice('');
     setFormData({
       name: '',
       slug: '',
@@ -155,6 +159,7 @@ export default function AdminOrganizationsPage() {
 
   const handleEdit = (org: Organization) => {
     setEditingOrg(org);
+    setOwner({name:'',email:'',password:''}); setOnboardingNotice('');
     setFormData({
       name: org.name,
       slug: org.slug,
@@ -166,7 +171,9 @@ export default function AdminOrganizationsPage() {
   const handleSave = async () => {
     if (!formData.name.trim() || !formData.slug.trim() || !formData.plan || !planOptions.some(p => p.value === formData.plan)) return;
 
+    if (!editingOrg && (!owner.name.trim() || !owner.email.trim() || owner.password.length < 12)) { setError('Informe nome, email e senha de pelo menos 12 caracteres do proprietário'); return; }
     setSaving(true);
+    if (!editingOrg) setOnboardingNotice('Criando organização e proprietário; provisionando Atendimento…');
 
     try {
       const url = editingOrg
@@ -179,6 +186,7 @@ export default function AdminOrganizationsPage() {
         body: JSON.stringify({
           ...formData,
           syncFromPlan: true,
+          ...(!editingOrg ? {owner} : {}),
         }),
       });
 
@@ -187,10 +195,17 @@ export default function AdminOrganizationsPage() {
         throw new Error(data.error || 'Erro ao salvar');
       }
 
-      setShowModal(false);
-      await refreshOrganizations(pagination.page);
+      const result = await res.json();
+      setOwner({name:'',email:'',password:''});
+      if (!editingOrg) {
+        const listed = await fetchOrganizations(1); setOrganizations(listed.organizations); setPagination(listed.pagination);
+        const created = listed.organizations.find(org=>org.id===result.id) || {id:result.id,name:result.name,slug:result.slug,plan:result.plan,planStatus:result.planStatus,trialEndsAt:result.trialEndsAt,deletedAt:null,limits:{maxUsers:result.maxUsers,maxLeads:result.maxLeads,maxProjects:result.maxProjects,maxOs:result.maxOs},usage:{users:result.owner?1:0,leads:0,projects:0,tasks:0,serviceOrders:0},createdAt:result.createdAt,updatedAt:result.updatedAt};
+        if (created) { setEditingOrg(created); setFormData({name:created.name,slug:created.slug,plan:created.plan||''}); }
+        setOnboardingNotice((result.message || 'Organização criada; confira o estado do Atendimento') + (result.onboarding?.error ? ` — ${result.onboarding.error}` : ''));
+      } else { setShowModal(false); await refreshOrganizations(pagination.page); }
     } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : '') || 'Erro ao salvar organização');
+      const message = (err instanceof Error ? err.message : '') || 'Erro ao salvar organização';
+      setError(message); setOnboardingNotice(message + ' — confira a lista antes de repetir a criação.');
     } finally {
       setSaving(false);
     }
@@ -445,6 +460,13 @@ export default function AdminOrganizationsPage() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
+              {onboardingNotice && <p role="status" className="text-sm text-blue-200">{onboardingNotice}</p>}
+              {editingOrg && <OrganizationChatwootOnboarding key={editingOrg.id+'-chatwoot'} organizationId={editingOrg.id}/>}
+              {!editingOrg && <fieldset className="space-y-2 rounded border border-gray-700 p-3"><legend className="text-sm text-gray-200">Proprietário da organização</legend>
+                <label className="block text-xs text-gray-300">Nome<input className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.name} onChange={e=>setOwner({...owner,name:e.target.value})} autoComplete="name"/></label>
+                <label className="block text-xs text-gray-300">Email<input type="email" className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.email} onChange={e=>setOwner({...owner,email:e.target.value})} autoComplete="off"/></label>
+                <label className="block text-xs text-gray-300">Senha inicial CRM (mínimo 12 caracteres)<input type="password" className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.password} onChange={e=>setOwner({...owner,password:e.target.value})} autoComplete="new-password"/></label>
+              </fieldset>}
               {editingOrg && <OrganizationWhiteLabelControl key={editingOrg.id} organizationId={editingOrg.id} />}
               {editingOrg && <><OrganizationBrandingEditor key={editingOrg.id} organizationId={editingOrg.id} /><OrganizationDomainEditor organizationId={editingOrg.id} /></>}
               <div>

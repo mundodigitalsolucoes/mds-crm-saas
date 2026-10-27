@@ -1,160 +1,30 @@
-// src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts
-//
-// Rota de provisionamento MANUAL pelo Super Admin do CRM.
-// Usada como fallback quando:
-//   - CHATWOOT_SUPER_ADMIN_EMAIL não estava configurado no signup
-//   - O provisionamento automático falhou (log no console)
-//   - O admin quer re-provisionar uma org existente
-//
-// Acesso: apenas SuperAdmin (cookie admin-token) ou via script CLI
-//
-// Uso:
-//   curl -X POST https://crm.mundodigitalsolucoes.com.br/api/admin/orgs/ORG_ID/provision-chatwoot \
-//     -H "Cookie: admin-token=SEU_TOKEN" \
-//     -H "Content-Type: application/json" \
-//     -d '{"force": false}'
-//
-// Com force=true sobrescreve um ConnectedAccount já existente.
-
+// Official recovery route. No force overwrite or provider-specific alternative.
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAdminToken } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import { provisionChatwootForOrg } from '@/lib/integrations/chatwoot-provision'
-
-// ─── POST /api/admin/orgs/[orgId]/provision-chatwoot ────────────────────────
-
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ orgId: string }> },
-) {
-  if (!(await verifyAdminToken())) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
-
+import { provisionChatwootForOrg, getChatwootProvisionStatus } from '@/lib/integrations/chatwoot-provision'
+const headers = { 'Cache-Control': 'private, no-store' }
+export async function POST(req: NextRequest, { params }: { params: Promise<{ orgId: string }> }) {
+  const admin = await verifyAdminToken()
+  if (!admin) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+  let body: { force?: unknown; inspectionAcknowledged?: unknown }
+  try { body = await req.json() } catch { return NextResponse.json({ error: 'JSON inválido' }, { status: 400 }) }
+  if (!body || typeof body !== 'object' || Array.isArray(body) || body.force !== undefined && body.force !== false || body.inspectionAcknowledged !== undefined && typeof body.inspectionAcknowledged !== 'boolean' || Object.keys(body).some(key => !['force','inspectionAcknowledged'].includes(key))) return NextResponse.json({ error: 'Sobrescrita forçada não permitida' }, { status: 400 })
   const { orgId } = await params
-  const body  = await req.json().catch(() => ({}))
-  const force = Boolean(body?.force)
-
-  // Buscar org + owner
-  const org = await prisma.organization.findUnique({
-    where:   { id: orgId },
-    include: {
-      users: {
-        where:  { role: 'owner' },
-        take:   1,
-        select: { id: true, name: true, email: true },
-      },
-    },
-  })
-
-  if (!org) {
-    return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 })
-  }
-
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, include: { users: { where: { role: 'owner', deletedAt: null }, take: 2, select: { id: true, name: true, email: true } } } })
+  if (!org || org.deletedAt) return NextResponse.json({ error: 'Organização indisponível' }, { status: 404 })
+  if (org.users.length !== 1) return NextResponse.json({ error: 'Revisar proprietário da organização' }, { status: 422 })
+  const before = await getChatwootProvisionStatus(orgId)
+  if (before?.inspectionRequired && body.inspectionAcknowledged !== true) return NextResponse.json({ error: 'inspection_required', hint: 'Inspecione os vínculos CRM e Chatwoot antes de autorizar criação ou recuperação' }, { status: 409, headers })
   const owner = org.users[0]
-  if (!owner) {
-    return NextResponse.json({ error: 'Nenhum owner encontrado para esta org' }, { status: 422 })
-  }
-
-  // Verificar se já existe ConnectedAccount ativo (a menos que force=true)
-  if (!force) {
-    const existing = await prisma.connectedAccount.findUnique({
-      where: {
-        provider_organizationId: { provider: 'chatwoot', organizationId: orgId },
-      },
-    })
-    if (existing?.isActive) {
-      return NextResponse.json({
-        error: 'Atendimento já configurado para esta organização. Use force=true para configurar novamente.',
-        chatwootAccountId: org.chatwootAccountId,
-      }, { status: 409 })
-    }
-  }
-
-  // ── Provisionar ─────────────────────────────────────────────────────────────
-  const tempPassword = `Tmp@${crypto.randomUUID().slice(0, 8)}!`
-
-  const result = await provisionChatwootForOrg({
-    organizationId: orgId,
-    orgName:        org.name,
-    orgSlug:        org.slug,
-    ownerUserId:    owner.id,
-    ownerName:      owner.name,
-    ownerEmail:     owner.email,
-    ownerPassword:  tempPassword,
-  })
-
-  if (!result.success) {
-    return NextResponse.json({
-      error:   'Falha no provisionamento',
-      details: result.error,
-      hint:    getErrorHint(result.error),
-    }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    success:           true,
-    orgId,
-    orgSlug:           org.slug,
-    chatwootAccountId: result.chatwootAccountId,
-    chatwootUserId:    result.chatwootUserId,
-    message:           `Atendimento configurado para ${org.name}`,
-  })
+  const result = await provisionChatwootForOrg({ organizationId: orgId, orgName: org.name, orgSlug: org.slug, ownerUserId: owner.id, ownerName: owner.name, ownerEmail: owner.email, allowCreate: body.inspectionAcknowledged === true, actorId: admin.id })
+  const local = await getChatwootProvisionStatus(orgId)
+  const onboarding = !result.success && local ? { ...local, provisioned: false, status: result.error === 'provisioning_in_progress' ? 'provisioning' : 'recovery_required', lastError: result.error } : local
+  return NextResponse.json({ ...result, onboarding }, { status: result.success ? 200 : result.error === 'provisioning_in_progress' ? 202 : 409, headers })
 }
-
-// ─── GET: status de provisionamento ─────────────────────────────────────────
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ orgId: string }> },
-) {
-  if (!(await verifyAdminToken())) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
-
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ orgId: string }> }) {
+  if (!(await verifyAdminToken())) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   const { orgId } = await params
-
-  const org = await prisma.organization.findUnique({
-    where:  { id: orgId },
-    select: { id: true, name: true, slug: true, chatwootAccountId: true },
-  })
-
-  if (!org) {
-    return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 })
-  }
-
-  const connected = await prisma.connectedAccount.findUnique({
-    where: {
-      provider_organizationId: { provider: 'chatwoot', organizationId: orgId },
-    },
-    select: { isActive: true, lastSyncAt: true, lastError: true, createdAt: true },
-  })
-
-  return NextResponse.json({
-    orgId:             org.id,
-    orgName:           org.name,
-    provisioned:       !!connected?.isActive,
-    chatwootAccountId: org.chatwootAccountId,
-    connectedAt:       connected?.createdAt ?? null,
-    lastSync:          connected?.lastSyncAt ?? null,
-    lastError:         connected?.lastError ?? null,
-  })
-}
-
-// ─── Dicas de erro para o admin ─────────────────────────────────────────────
-
-function getErrorHint(error?: string): string {
-  const hints: Record<string, string> = {
-    super_admin_not_configured:
-      'Defina CHATWOOT_SUPER_ADMIN_EMAIL e CHATWOOT_SUPER_ADMIN_PASSWORD no Coolify.',
-    super_admin_auth_failed:
-      'Credenciais do super administrador incorretas. Verifique a configuração interna do Atendimento.',
-    account_creation_failed:
-      'Falha ao criar a conta do Atendimento. Verifique se o serviço está saudável.',
-    user_creation_failed:
-      'Falha ao criar usuário. O e-mail pode já estar em uso em outra conta do Atendimento.',
-    unexpected_error:
-      'Erro inesperado. Consulte os logs do servidor.',
-  }
-  return hints[error ?? ''] ?? 'Sem dica disponível.'
+  const status = await getChatwootProvisionStatus(orgId)
+  return NextResponse.json(status ?? { error: 'Organização indisponível' }, { status: status ? 200 : 404, headers })
 }

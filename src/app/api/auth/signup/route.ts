@@ -109,6 +109,7 @@ export async function POST(request: Request) {
 
     provisionChatwootForOrg({
       organizationId: result.organization.id,
+      allowCreate: true,
       orgName: result.organization.name,
       orgSlug: result.organization.slug,
       ownerUserId: result.user.id,

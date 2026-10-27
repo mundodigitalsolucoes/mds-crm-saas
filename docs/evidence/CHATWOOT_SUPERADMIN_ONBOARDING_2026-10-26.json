@@ -1,0 +1,210 @@
+{
+  "date": "2026-10-26",
+  "branch": "audit/block2-sanitized",
+  "base": "77f4eeb79427a1b949b8192b64dec50557a5402d",
+  "productionAccess": false,
+  "externalProviderAccess": "none; synthetic HTTP provider bound to loopback only",
+  "pushMergeDeployOrRealDataChanges": false,
+  "officialProvisioner": "src/lib/integrations/chatwoot-provision.ts",
+  "legacyRailsProvisioner": "unchanged and unused",
+  "storage": "existing tenant-unique ConnectedAccount; no schema/migration/dependency",
+  "node": {
+    "runtime": "v22.21.1",
+    "tests": 642,
+    "passed": 642,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "newFunctionalProvisioningCases": 14
+  },
+  "http": {
+    "onboarding": {
+      "passed": true,
+      "scenarios": [
+        {
+          "name": "Super Admin creates organization, owner and ready Chatwoot without secrets",
+          "passed": true
+        },
+        {
+          "name": "Chatwoot failure preserves CRM organization and owner with recovery",
+          "passed": true
+        },
+        {
+          "name": "recovery resumes known account without duplication",
+          "passed": true
+        },
+        {
+          "name": "already provisioned integration is reused without overwrite",
+          "passed": true
+        },
+        {
+          "name": "force overwrite rejected",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped a",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped b",
+          "passed": true
+        },
+        {
+          "name": "anonymous onboarding has no effects",
+          "passed": true
+        },
+        {
+          "name": "public signup still calls the same official Platform API provisioner",
+          "passed": true
+        }
+      ],
+      "productionAccess": false,
+      "provider": "synthetic loopback only"
+    },
+    "domainScenariosPassed": 52,
+    "realRestart": {
+      "before": {
+        "passed": true,
+        "olderThan24Hours": true,
+        "login": 200,
+        "authorizedData": 200
+      },
+      "after": {
+        "passed": true,
+        "olderThan24Hours": true,
+        "login": 200,
+        "authorizedData": 200
+      },
+      "serverProcessRestarted": true
+    },
+    "c0c5Regressions": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-delete-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "attachments-upload-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "custom-domain-disabled-http",
+        "exit": 0,
+        "signal": null
+      }
+    ]
+  },
+  "checks": {
+    "npmRunBuildWebpack": "passed",
+    "typecheck": "passed",
+    "prismaValidate": "passed without migrations",
+    "lintChangedFiles": "passed zero errors/warnings",
+    "diffCheck": "passed",
+    "yaml": "parsed; contents read; no deploy step",
+    "newSecretPatternOrSensitivePathFindings": 0,
+    "protectedSurfacesChanged": [],
+    "remoteCI": "new code not pushed; new job prepared and executed locally",
+    "docker": "not built in this scope; known Alpine access limitations remain separate",
+    "finalSourceMatchesTestedCopy": true
+  },
+  "commands": [
+    "node node_modules/tsx/dist/cli.mjs --test tests/*.test.ts tests/*.test.mjs",
+    "npm run build -- --webpack",
+    "node node_modules/typescript/bin/tsc --noEmit",
+    "node node_modules/prisma/build/index.js validate",
+    "CI=true BLOCK2_CI_DISPOSABLE=true node --import tsx tests/chatwoot-onboarding-http.mjs",
+    "node scripts/block2-domain-ci.mjs",
+    "node scripts/block2-c6-ci.mjs http"
+  ],
+  "limits": [
+    "Installed real Chatwoot Platform API version/permissions not checked; public source contracts consulted only",
+    "No real pilot organization or provider resource was inspected or created",
+    "Ambiguous legacy identity/account adoption remains blocked pending read-only review and explicit reconciliation",
+    "Interrupted user creation without known ID requires review rather than replay",
+    "SSO endpoint tested via real protected credentials handler; real browser iframe and messages require operational homologation",
+    "No gates or pilot auto-approved",
+    "Upstream user upsert can confirm an existing user/grant Platform App permission before the CRM rejects its foreign binding; inspect known external email conflicts before rollout/recovery"
+  ],
+  "sourceFingerprints": [
+    {
+      "path": ".github/workflows/block2-postgres-concurrency.yml",
+      "sha256": "a438cf2405546ab668f19442bd80dc044db603952fb1488e5a400c2ee501dc6a"
+    },
+    {
+      "path": "src/app/admin/organizations/page.tsx",
+      "sha256": "a5d362c8af50d98b3db28d8885a0e4cc646ccf45b1a5b07b9f41ca37b77c3f12"
+    },
+    {
+      "path": "src/app/api/admin/organizations/route.ts",
+      "sha256": "7ffda750c5b197a5903ca24dbb247880652c8eaf4a840e7897fd20632cf804d1"
+    },
+    {
+      "path": "src/app/api/admin/orgs/[orgId]/provision-chatwoot/route.ts",
+      "sha256": "0d621605ca46505245d5adb2734c1a27e9f3bb6a1ddabe63fe8a5e87b5dabe97"
+    },
+    {
+      "path": "src/app/api/auth/signup/route.ts",
+      "sha256": "7af066ff2ae5ec10dfb0e0796d57420cbb902efecb3ee05da6bd9010b70f8836"
+    },
+    {
+      "path": "src/components/OrganizationChatwootOnboarding.tsx",
+      "sha256": "b0dd50114c2f395b4627c289d3b2ccf9af0faa155f41cc9202b1f3778fe53524"
+    },
+    {
+      "path": "src/lib/integrations/chatwoot-provision.ts",
+      "sha256": "3502a7b3709c203caf436123392b4a70cce8a72e9dc99ffa79f859f9a8fc1741"
+    },
+    {
+      "path": "tests/authorization-boundaries.test.ts",
+      "sha256": "a96c5cf3d1d58657f77141950c85222dee8576715993b3ba111793db32aac621"
+    },
+    {
+      "path": "tests/chatwoot-onboarding-http.mjs",
+      "sha256": "d908ec2bb06facda976d651addae1a7e337b16807b0f2165d73a9fd6204861f7"
+    },
+    {
+      "path": "tests/chatwoot-onboarding-postgres.test.mjs",
+      "sha256": "27df003cff15a5ff014e43f4512dea9181367727ec60ef39bcc0d2a638dc7b18"
+    },
+    {
+      "path": "tests/helpers/synthetic-chatwoot.mjs",
+      "sha256": "a1d07e7df4462beb863bb4e8645dee7ea9300afcd4ed1b218a222d91210ba636"
+    }
+  ]
+}
