@@ -14,7 +14,7 @@ assert.ok(!readdirSync('.').some(name=>name.startsWith('.env')&&name!=='.env.exa
 const safe=disposableEnvironment(process.env),db=new PrismaClient({datasources:{db:{url:safe.DATABASE_URL}}}),ids=[],plans=[],cases=[];
 const directory=mkdtempSync(resolve(process.env.RUNNER_TEMP||'/tmp','block2-chatwoot-http-'));
 const log=openSync(resolve(directory,'server-private.log'),'w',0o600);
-const mock=await syntheticChatwoot(),base='http://127.0.0.1:3100';let server,admin;
+const mock=await syntheticChatwoot();mock.state.accountListStatus=500;const base='http://127.0.0.1:3100';let server,admin;
 const password=randomBytes(24).toString('hex'),tokensKey=randomBytes(32).toString('base64');
 const env={PATH:process.env.PATH,HOME:'/tmp',DATABASE_URL:safe.DATABASE_URL,NEXTAUTH_URL:base,NEXTAUTH_SECRET:randomBytes(48).toString('hex'),ADMIN_JWT_SECRET:randomBytes(48).toString('hex'),TOKENS_SECRET:tokensKey,NEXT_TELEMETRY_DISABLED:'1',CHATWOOT_API_URL:mock.base,CHATWOOT_PLATFORM_TOKEN:mock.platformToken,CHATWOOT_WEBHOOK_SECRET:'synthetic-http-webhook-only',ATENDIMENTO_USER_SSO_ENABLED:'true'};
 class Client{
@@ -65,6 +65,7 @@ try{
  const anonymous=new Client();assert.ok([401,403,307].includes((await anonymous.json('/api/admin/organizations','POST',{name:'Denied'})).status));passed('anonymous onboarding has no effects');
  const signup=new Client(),email='signup-'+suffix+'@example.invalid';const signed=await signup.json('/api/auth/signup','POST',{companyName:'Signup fixture '+suffix,name:'Public owner fixture',email,password,consent:true});assert.equal(signed.status,200);const signedOrg=JSON.parse(signed.body).organization;ids.push(signedOrg.id);
  let connected;for(let i=0;i<150;i++){connected=await db.connectedAccount.findUnique({where:{provider_organizationId:{provider:'chatwoot',organizationId:signedOrg.id}}});if(connected?.isActive)break;await new Promise(r=>setTimeout(r,100));}assert.equal(connected?.isActive,true);passed('public signup still calls the same official Platform API provisioner');
+ assert.equal(mock.state.calls.filter(c=>c.method==='POST'&&c.path==='/platform/api/v1/accounts').length,3,'Two Super Admin organizations and signup each create exactly one account');passed('both entrypoints work while global account list returns 500, without duplicate accounts');
  writeFileSync(resolve(directory,'acceptance.json'),JSON.stringify({passed:true,productionAccess:false,scenarios:cases},null,2));console.log(JSON.stringify({passed:true,scenarios:cases,productionAccess:false,provider:'synthetic loopback only'}));
 }catch(error){console.error(JSON.stringify({passed:false,error:error instanceof assert.AssertionError?error.message:'HTTP_ACCEPTANCE_FAILED',name:error.name,code:error.code||null,at:(error.stack||'').split('\n').filter(line=>line.includes('chatwoot-onboarding-http.mjs')).map(line=>line.trim()),completed:cases.map(item=>item.name)}));process.exitCode=1;}
 finally{

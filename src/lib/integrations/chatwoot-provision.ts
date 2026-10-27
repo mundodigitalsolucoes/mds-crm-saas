@@ -424,8 +424,12 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
   }
   try {
     await checkpoint(progress.phase)
-    const accounts = await accountList()
     let accountId = toPositiveInt(data.chatwootAccountId), userId = toPositiveInt(data.chatwootUserId)
+    // Fresh preflight has no prior POST: keep the original direct-create contract.
+    // A known ID is proved by its scoped GET below; global listing is optional.
+    // Unknown POST outcomes still require conclusive reconciliation, never replay.
+    const accounts = !accountId && progress.phase === 'preflight' ? []
+      : accountId ? await accountList().catch(() => []) : await accountList()
     const marked = accounts.filter(a => isRecord(a.custom_attributes) && a.custom_attributes.crmOrganizationId === org.id && a.custom_attributes.crmProvisionOperationId === progress.operationId)
     if (marked.length > 1 || accountId && marked.length === 1 && toPositiveInt(marked[0].id) !== accountId) throw Error('account_requires_review')
     if (!accountId && marked.length === 1) { accountId = toPositiveInt(marked[0].id); if (!accountId) throw Error('platform_response_invalid'); await checkpoint('account_ready', { chatwootAccountId: accountId }) }
@@ -445,7 +449,7 @@ export async function provisionChatwootForOrg(input: ProvisionInput): Promise<Pr
     if (!userId) {
       if (progress.phase !== 'account_ready') throw Error('identity_requires_review')
       await checkpoint('user_creating')
-      const user = await post('/users', { name: owner.name, email: owner.email, password: decryptToken(data.ownerPasswordEnc!), custom_attributes: { crmUserId: owner.id, organizationId: org.id, crmProvisionOperationId: progress.operationId, source: 'mds-crm' } })
+      const user = await post('/users', { name: owner.name, email: owner.email, password: decryptToken(data.ownerPasswordEnc!), password_confirmation: decryptToken(data.ownerPasswordEnc!), custom_attributes: { crmUserId: owner.id, organizationId: org.id, crmProvisionOperationId: progress.operationId, source: 'mds-crm' } })
       userId = toPositiveInt(user.id)
       if (!userId || user.email !== owner.email || !isRecord(user.custom_attributes) || user.custom_attributes.crmUserId !== owner.id || user.custom_attributes.organizationId !== org.id || user.custom_attributes.crmProvisionOperationId !== progress.operationId || typeof user.access_token !== 'string' || !user.access_token) throw Error('identity_requires_review')
       if (Array.isArray(user.accounts) && user.accounts.some(a => !isRecord(a) || toPositiveInt(a.id) !== accountId)) throw Error('identity_requires_review')

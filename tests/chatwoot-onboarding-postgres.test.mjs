@@ -32,10 +32,10 @@ test('official provisioner creates one account, owner membership and webhook; st
  const before=creations(),saved=JSON.stringify(account);assert.equal((await service.provisionChatwootForOrg({...f.input,allowCreate:false})).success,true);assert.equal(creations(),before);assert.equal(JSON.stringify(await binding(f)),saved,'Never overwrite an active integration');
 });
 
-test('unavailable Chatwoot preserves organization, owner and recoverable checkpoint',async()=>{
- const f=await fixture(),before=creations();remote.state.failListOnce=true;
- assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);assert.equal(creations(),before);assert.ok(await db.user.findUnique({where:{id:f.owner.id}}));assert.equal((await binding(f)).isActive,false);
- assert.equal((await service.provisionChatwootForOrg({...f.input,allowCreate:false})).success,true);
+test('failed account POST preserves organization and owner, and cannot be replayed without remote evidence',async()=>{
+ const f=await fixture(),before=creations();remote.state.failAccountOnce=true;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);assert.equal(creations(),before+1);assert.ok(await db.user.findUnique({where:{id:f.owner.id}}));assert.equal((await binding(f)).isActive,false);
+ assert.equal((await service.provisionChatwootForOrg({...f.input,allowCreate:false})).error,'account_requires_review');assert.equal(creations(),before+1);
 });
 
 test('lost account response is reconciled by exact durable operation marker, without another account POST',async()=>{
@@ -57,7 +57,7 @@ test('concurrent requests reserve one operation and never create a second accoun
 });
 
 test('ambiguous remote account is stopped before resource creation and no force path exists',async()=>{
- const f=await fixture();remote.state.accounts.push({id:remote.state.nextAccount++,name:f.org.name,custom_attributes:{},members:[]});const before=creations();
+ const f=await fixture();dropResponse=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const remoteAccount=remote.state.accounts.find(a=>a.custom_attributes.crmOrganizationId===f.org.id);remoteAccount.custom_attributes={};const before=creations();
  const result=await service.provisionChatwootForOrg(f.input);assert.equal(result.error,'account_requires_review');assert.equal(creations(),before);assert.equal((await binding(f)).isActive,false);
  const known=await fixture();remote.state.failMembershipOnce=true;assert.equal((await service.provisionChatwootForOrg(known.input)).success,false);const existing=remote.state.accounts.find(a=>a.custom_attributes.crmOrganizationId===known.org.id);remote.state.accounts.push({...existing,id:remote.state.nextAccount++,members:[]});const writes=remote.state.calls.filter(c=>c.method==='POST').length;assert.equal((await service.provisionChatwootForOrg(known.input)).error,'account_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST').length,writes,'Duplicate durable markers require review before any more writes');
 });
@@ -197,4 +197,27 @@ test('P1 webhook: legacy attempt evidence survives membership recovery before we
  const account=remote.state.accounts.find(a=>a.id===data.chatwootAccountId);account.members=[];remote.state.hideWebhooks=true;t.after(()=>{remote.state.hideWebhooks=false;});const posts=remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length;
  assert.equal((await service.provisionChatwootForOrg(f.input)).error,'webhook_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST'&&c.path.endsWith('/webhooks')).length,posts);assert.equal(JSON.parse((await binding(f)).data).provisioning.webhook.attempted,true);assert.equal((await binding(f)).isActive,false);
  remote.state.hideWebhooks=false;assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(remote.state.webhooks.filter(w=>w.accountId===data.chatwootAccountId).length,1);
+});
+
+
+test('4.17 compatibility: new account uses direct POST even when global GET returns 500',async(t)=>{
+ const f=await fixture();remote.state.accountListStatus=500;t.after(()=>{remote.state.accountListStatus=200;});const begin=remote.state.calls.length;
+ const result=await service.provisionChatwootForOrg(f.input);assert.equal(result.success,true,result.error);const calls=remote.state.calls.slice(begin);assert.equal(calls.some(c=>c.method==='GET'&&c.path==='/platform/api/v1/accounts'),false);assert.equal(calls.filter(c=>c.method==='POST'&&c.path==='/platform/api/v1/accounts').length,1);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,true);
+});
+
+test('4.17 compatibility: known account resumes through scoped proof when global GET is broken',async(t)=>{
+ const f=await fixture();remote.state.failMembershipOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const created=creations();remote.state.accountListStatus=500;t.after(()=>{remote.state.accountListStatus=200;});
+ assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(creations(),created);
+});
+
+test('4.17 compatibility: unknown account POST outcome never replays while global GET is unavailable',async(t)=>{
+ const f=await fixture();dropResponse=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const created=creations();remote.state.accountListStatus=500;t.after(()=>{remote.state.accountListStatus=200;});
+ for(let i=0;i<2;i++){assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);assert.equal(creations(),created);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false);}
+ remote.state.accountListStatus=200;assert.equal((await service.provisionChatwootForOrg(f.input)).success,true);assert.equal(creations(),created);
+});
+
+
+test('4.17 compatibility: global list outage never bypasses scoped tenant ownership proof',async(t)=>{
+ const f=await fixture();remote.state.failMembershipOnce=true;assert.equal((await service.provisionChatwootForOrg(f.input)).success,false);const account=remote.state.accounts.find(a=>a.custom_attributes.crmOrganizationId===f.org.id);account.custom_attributes={...account.custom_attributes,crmOrganizationId:randomUUID()};remote.state.accountListStatus=500;t.after(()=>{remote.state.accountListStatus=200;});const writes=remote.state.calls.filter(c=>c.method==='POST').length;
+ assert.equal((await service.provisionChatwootForOrg(f.input)).error,'account_requires_review');assert.equal(remote.state.calls.filter(c=>c.method==='POST').length,writes);assert.equal((await binding(f)).isActive,false);assert.equal((await db.user.findUniqueOrThrow({where:{id:f.owner.id}})).chatwootUserId,null);assert.equal((await service.getChatwootProvisionStatus(f.org.id)).provisioned,false);
 });

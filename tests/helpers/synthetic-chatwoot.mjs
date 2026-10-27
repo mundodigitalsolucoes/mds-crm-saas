@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 export async function syntheticChatwoot(){
- const state={accounts:[],users:[],webhooks:[],calls:[],nextAccount:100,nextUser:500,failListOnce:false,failMembershipOnce:false,failWebhookOnce:false,holdAccount:null,holdWebhook:null,dropWebhookResponseOnce:false,webhookListStatus:200,webhookListBody:undefined,hideWebhooks:false};
+ const state={accounts:[],users:[],webhooks:[],calls:[],nextAccount:100,nextUser:500,failListOnce:false,failAccountOnce:false,accountListStatus:200,failMembershipOnce:false,failWebhookOnce:false,holdAccount:null,holdWebhook:null,dropWebhookResponseOnce:false,webhookListStatus:200,webhookListBody:undefined,hideWebhooks:false};
  const platformToken='synthetic-platform-only',server=createServer(async(req,res)=>{
   const path=new URL(req.url,'http://127.0.0.1').pathname,method=req.method;
   const chunks=[];for await(const c of req)chunks.push(c);let body={};try{body=JSON.parse(Buffer.concat(chunks).toString()||'{}');}catch{res.writeHead(400).end();return;}
@@ -10,14 +10,16 @@ export async function syntheticChatwoot(){
   if(path.startsWith('/platform/')&&token!==platformToken){send(401,{error:'fixture_unauthorized'});return;}
   const view=u=>({...u,accounts:state.accounts.filter(a=>a.members.includes(u.id)).map(a=>({id:a.id,role:'administrator'}))});
   if(path==='/platform/api/v1/accounts'&&method==='GET'){
-   if(state.failListOnce){state.failListOnce=false;send(503,{error:'synthetic_unavailable'});}else send(200,state.accounts.map(a=>({id:a.id,name:a.name,custom_attributes:a.custom_attributes})));return;
+   if(state.failListOnce){state.failListOnce=false;send(503,{error:'synthetic_unavailable'});}else send(state.accountListStatus,state.accounts.map(a=>({id:a.id,name:a.name,custom_attributes:a.custom_attributes})));return;
   }
   if(path==='/platform/api/v1/accounts'&&method==='POST'){
+   if(state.failAccountOnce){state.failAccountOnce=false;send(503,{error:'synthetic_account_unavailable'});return;}
    const a={id:state.nextAccount++,...body,members:[]};state.accounts.push(a);if(state.holdAccount)await state.holdAccount();send(200,a);return;
   }
   const accountMatch=path.match(/^\/platform\/api\/v1\/accounts\/(\d+)$/);
   if(accountMatch&&method==='GET'){const a=state.accounts.find(x=>x.id===+accountMatch[1]);send(a?200:404,a||{});return;}
   if(path==='/platform/api/v1/users'&&method==='POST'){
+   assert.equal(body.password_confirmation,body.password,'Original Platform API password confirmation contract');
    // Match the public Platform API's by-email reuse, preserving the old identity.
    let u=state.users.find(x=>x.email===body.email);
    if(!u){u={id:state.nextUser++,name:body.name,email:body.email,confirmed:true,custom_attributes:body.custom_attributes,access_token:'synthetic-user-token-'+state.nextUser};state.users.push(u);}
