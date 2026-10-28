@@ -47,6 +47,8 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
     ':(exclude)src/lib/atendimento/instagram-oauth-state.ts',
     ':(exclude)src/lib/atendimento/instagram-security-store.ts',
     ':(exclude)src/lib/atendimento/widget-inbox-store.ts',
+    // This additive SSO helper is pinned byte-for-byte to its approved commit below.
+    ':(exclude)src/lib/integrations/chatwoot-sso-origin.ts',
     'src/lib/chatwoot.ts', ':(exclude)src/lib/integrations/chatwoot-provision.ts', // C5-04 permission parsing is pinned separately below.
     'src/app/(app)/leads/page.tsx', 'src/app/(app)/kanban/page.tsx', 'src/store/leadsStore.ts',
     'prisma', ':(exclude)prisma/schema.prisma',
@@ -57,6 +59,10 @@ test('provider lifecycle and legacy operational guards remain unchanged from the
   // The four Atendimento endpoints above only switch to the observe-only commercial guard.
   // All other integration and provider files remain protected by this historical diff.
   assert.equal(diff, '');
+  const approvedSsoHelper = execFileSync('git', ['show',
+    '4ed43940e0b7f63d7a5ee14ae80981b20c146096:src/lib/integrations/chatwoot-sso-origin.ts',
+  ], { encoding: 'utf8' });
+  assert.equal(readFileSync('src/lib/integrations/chatwoot-sso-origin.ts', 'utf8'), approvedSsoHelper);
 });
 
 test('legacy permission guard only refreshes the role from verified database membership', () => {
