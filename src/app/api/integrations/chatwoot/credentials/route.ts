@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { checkModulePermission } from '@/lib/authorization/guards'
 import { prisma } from '@/lib/prisma'
+import { selectChatwootSsoUrl } from '@/lib/integrations/chatwoot-sso-origin'
 
 type ChatwootAccountData = {
   chatwootAccountId?: number | string
@@ -278,6 +279,17 @@ export async function GET() {
         { status: 409, headers: buildNoStoreHeaders() }
       )
     }
+  }
+
+  try {
+    ssoUrl = selectChatwootSsoUrl(
+      ssoUrl, chatwootUrl, organizationId, process.env.CHATWOOT_SSO_ORIGINS
+    )
+  } catch {
+    return NextResponse.json(
+      { error: 'invalid_chatwoot_sso_destination' },
+      { status: 409, headers: buildNoStoreHeaders() }
+    )
   }
 
   return NextResponse.json(

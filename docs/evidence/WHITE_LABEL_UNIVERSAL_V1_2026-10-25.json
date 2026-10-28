@@ -1,0 +1,1017 @@
+{
+  "reference": "fc123488eab556f29241312af8abbe5b9e0e462b",
+  "branch": "audit/block2-sanitized",
+  "execution": "local only",
+  "runtime": "Node 22.21.1 / PostgreSQL 16 / Chromium",
+  "nodePostgres": {
+    "passed": 567,
+    "failed": 0,
+    "skipped": 0
+  },
+  "http": [
+    {
+      "name": "dashboard-c0-http",
+      "status": 0
+    },
+    {
+      "name": "commercial-dashboard-http",
+      "status": 0
+    },
+    {
+      "name": "branding-white-label-http",
+      "status": 0
+    },
+    {
+      "name": "c5-cross-tenant-http",
+      "status": 0
+    },
+    {
+      "name": "c5-direct-access-http",
+      "status": 0
+    },
+    {
+      "name": "c5-task-os-regression-http",
+      "status": 0
+    },
+    {
+      "name": "comments-tenant-http",
+      "status": 0
+    },
+    {
+      "name": "comments-delete-http",
+      "status": 0
+    },
+    {
+      "name": "attachments-upload-http",
+      "status": 0
+    }
+  ],
+  "brandingMatrix": {
+    "scenarios": 84,
+    "superAdminIdentitySaves": 14,
+    "capabilityAuditEvents": 29,
+    "customerOwnAndForeignEditsDenied": true
+  },
+  "browser": {
+    "completed": true,
+    "checks": 174,
+    "passed": 174,
+    "screenshots": 50,
+    "uncaughtErrors": 0,
+    "checksEvidence": [
+      {
+        "name": "desktop anonymous default",
+        "passed": true
+      },
+      {
+        "name": "desktopa title",
+        "passed": true
+      },
+      {
+        "name": "desktopa favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "desktopa scope",
+        "passed": true
+      },
+      {
+        "name": "desktopa primary",
+        "passed": true
+      },
+      {
+        "name": "desktopa no foreign b",
+        "passed": true
+      },
+      {
+        "name": "desktopa no foreign c",
+        "passed": true
+      },
+      {
+        "name": "desktopa favicon",
+        "passed": true
+      },
+      {
+        "name": "desktopa logo loaded",
+        "passed": true
+      },
+      {
+        "name": "desktopa horizontal width",
+        "passed": true
+      },
+      {
+        "name": "desktopa marketing absent",
+        "passed": true
+      },
+      {
+        "name": "a compact",
+        "passed": true
+      },
+      {
+        "name": "desktopa/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "desktopa/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopa/leads http",
+        "passed": true
+      },
+      {
+        "name": "desktopa/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopa/kanban http",
+        "passed": true
+      },
+      {
+        "name": "desktopa/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopa/agenda http",
+        "passed": true
+      },
+      {
+        "name": "desktopa/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopa/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "desktopa/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopa scoped 404",
+        "passed": true
+      },
+      {
+        "name": "desktopa 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "desktopa 404 identity",
+        "passed": true
+      },
+      {
+        "name": "desktopa admin denied",
+        "passed": true
+      },
+      {
+        "name": "desktopa self edit denied",
+        "passed": true
+      },
+      {
+        "name": "desktopb title",
+        "passed": true
+      },
+      {
+        "name": "desktopb favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "desktopb scope",
+        "passed": true
+      },
+      {
+        "name": "desktopb primary",
+        "passed": true
+      },
+      {
+        "name": "desktopb no foreign a",
+        "passed": true
+      },
+      {
+        "name": "desktopb no foreign c",
+        "passed": true
+      },
+      {
+        "name": "desktopb favicon",
+        "passed": true
+      },
+      {
+        "name": "desktopb logo loaded",
+        "passed": true
+      },
+      {
+        "name": "desktopb horizontal width",
+        "passed": true
+      },
+      {
+        "name": "desktopb marketing absent",
+        "passed": true
+      },
+      {
+        "name": "b compact",
+        "passed": true
+      },
+      {
+        "name": "desktopb/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "desktopb/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopb/leads http",
+        "passed": true
+      },
+      {
+        "name": "desktopb/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopb/kanban http",
+        "passed": true
+      },
+      {
+        "name": "desktopb/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopb/agenda http",
+        "passed": true
+      },
+      {
+        "name": "desktopb/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopb/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "desktopb/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopb scoped 404",
+        "passed": true
+      },
+      {
+        "name": "desktopb 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "desktopb 404 identity",
+        "passed": true
+      },
+      {
+        "name": "desktopb admin denied",
+        "passed": true
+      },
+      {
+        "name": "desktopb self edit denied",
+        "passed": true
+      },
+      {
+        "name": "desktopc title",
+        "passed": true
+      },
+      {
+        "name": "desktopc favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "desktopc scope",
+        "passed": true
+      },
+      {
+        "name": "desktopc primary",
+        "passed": true
+      },
+      {
+        "name": "desktopc no foreign a",
+        "passed": true
+      },
+      {
+        "name": "desktopc no foreign b",
+        "passed": true
+      },
+      {
+        "name": "desktopc favicon",
+        "passed": true
+      },
+      {
+        "name": "desktopc logo loaded",
+        "passed": true
+      },
+      {
+        "name": "desktopc horizontal width",
+        "passed": true
+      },
+      {
+        "name": "desktopc marketing absent",
+        "passed": true
+      },
+      {
+        "name": "c compact",
+        "passed": true
+      },
+      {
+        "name": "desktopc/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "desktopc/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopc/leads http",
+        "passed": true
+      },
+      {
+        "name": "desktopc/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopc/kanban http",
+        "passed": true
+      },
+      {
+        "name": "desktopc/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopc/agenda http",
+        "passed": true
+      },
+      {
+        "name": "desktopc/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopc/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "desktopc/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "desktopc scoped 404",
+        "passed": true
+      },
+      {
+        "name": "desktopc 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "desktopc 404 identity",
+        "passed": true
+      },
+      {
+        "name": "desktop switch back A",
+        "passed": true
+      },
+      {
+        "name": "desktop logout session removed",
+        "passed": true
+      },
+      {
+        "name": "desktop logout no retained identity",
+        "passed": true
+      },
+      {
+        "name": "mobile anonymous default",
+        "passed": true
+      },
+      {
+        "name": "mobilea title",
+        "passed": true
+      },
+      {
+        "name": "mobilea favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "mobilea scope",
+        "passed": true
+      },
+      {
+        "name": "mobilea primary",
+        "passed": true
+      },
+      {
+        "name": "mobilea no foreign b",
+        "passed": true
+      },
+      {
+        "name": "mobilea no foreign c",
+        "passed": true
+      },
+      {
+        "name": "mobilea favicon",
+        "passed": true
+      },
+      {
+        "name": "mobilea logo loaded",
+        "passed": true
+      },
+      {
+        "name": "mobilea horizontal width",
+        "passed": true
+      },
+      {
+        "name": "mobilea marketing absent",
+        "passed": true
+      },
+      {
+        "name": "mobilea/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "mobilea/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilea/leads http",
+        "passed": true
+      },
+      {
+        "name": "mobilea/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilea/kanban http",
+        "passed": true
+      },
+      {
+        "name": "mobilea/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilea/agenda http",
+        "passed": true
+      },
+      {
+        "name": "mobilea/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilea/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "mobilea/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilea scoped 404",
+        "passed": true
+      },
+      {
+        "name": "mobilea 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "mobilea 404 identity",
+        "passed": true
+      },
+      {
+        "name": "mobilea admin denied",
+        "passed": true
+      },
+      {
+        "name": "mobilea self edit denied",
+        "passed": true
+      },
+      {
+        "name": "mobileb title",
+        "passed": true
+      },
+      {
+        "name": "mobileb favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "mobileb scope",
+        "passed": true
+      },
+      {
+        "name": "mobileb primary",
+        "passed": true
+      },
+      {
+        "name": "mobileb no foreign a",
+        "passed": true
+      },
+      {
+        "name": "mobileb no foreign c",
+        "passed": true
+      },
+      {
+        "name": "mobileb favicon",
+        "passed": true
+      },
+      {
+        "name": "mobileb logo loaded",
+        "passed": true
+      },
+      {
+        "name": "mobileb horizontal width",
+        "passed": true
+      },
+      {
+        "name": "mobileb marketing absent",
+        "passed": true
+      },
+      {
+        "name": "mobileb/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "mobileb/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "mobileb/leads http",
+        "passed": true
+      },
+      {
+        "name": "mobileb/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "mobileb/kanban http",
+        "passed": true
+      },
+      {
+        "name": "mobileb/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "mobileb/agenda http",
+        "passed": true
+      },
+      {
+        "name": "mobileb/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "mobileb/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "mobileb/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "mobileb scoped 404",
+        "passed": true
+      },
+      {
+        "name": "mobileb 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "mobileb 404 identity",
+        "passed": true
+      },
+      {
+        "name": "mobileb admin denied",
+        "passed": true
+      },
+      {
+        "name": "mobileb self edit denied",
+        "passed": true
+      },
+      {
+        "name": "mobilec title",
+        "passed": true
+      },
+      {
+        "name": "mobilec favicon bytes",
+        "passed": true
+      },
+      {
+        "name": "mobilec scope",
+        "passed": true
+      },
+      {
+        "name": "mobilec primary",
+        "passed": true
+      },
+      {
+        "name": "mobilec no foreign a",
+        "passed": true
+      },
+      {
+        "name": "mobilec no foreign b",
+        "passed": true
+      },
+      {
+        "name": "mobilec favicon",
+        "passed": true
+      },
+      {
+        "name": "mobilec logo loaded",
+        "passed": true
+      },
+      {
+        "name": "mobilec horizontal width",
+        "passed": true
+      },
+      {
+        "name": "mobilec marketing absent",
+        "passed": true
+      },
+      {
+        "name": "mobilec/dashboard http",
+        "passed": true
+      },
+      {
+        "name": "mobilec/dashboard overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilec/leads http",
+        "passed": true
+      },
+      {
+        "name": "mobilec/leads overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilec/kanban http",
+        "passed": true
+      },
+      {
+        "name": "mobilec/kanban overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilec/agenda http",
+        "passed": true
+      },
+      {
+        "name": "mobilec/agenda overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilec/settings/branding http",
+        "passed": true
+      },
+      {
+        "name": "mobilec/settings/branding overflow",
+        "passed": true
+      },
+      {
+        "name": "mobilec scoped 404",
+        "passed": true
+      },
+      {
+        "name": "mobilec 404 private cache",
+        "passed": true
+      },
+      {
+        "name": "mobilec 404 identity",
+        "passed": true
+      },
+      {
+        "name": "mobile switch back A",
+        "passed": true
+      },
+      {
+        "name": "mobile logout session removed",
+        "passed": true
+      },
+      {
+        "name": "mobile logout no retained identity",
+        "passed": true
+      },
+      {
+        "name": "Super Admin login",
+        "passed": true
+      },
+      {
+        "name": "MDS UI save",
+        "passed": true
+      },
+      {
+        "name": "MDS UI persistence",
+        "passed": true
+      },
+      {
+        "name": "MDS UI reset",
+        "passed": true
+      },
+      {
+        "name": "MDS reset persistence",
+        "passed": true
+      },
+      {
+        "name": "onboarding plan created",
+        "passed": true
+      },
+      {
+        "name": "onboarding organization created",
+        "passed": true
+      },
+      {
+        "name": "onboarding contract inherited",
+        "passed": true
+      },
+      {
+        "name": "onboarding branding saved",
+        "passed": true
+      },
+      {
+        "name": "onboarding owner created",
+        "passed": true
+      },
+      {
+        "name": "onboarding branded login",
+        "passed": true
+      },
+      {
+        "name": "onboarding no marketing menu",
+        "passed": true
+      },
+      {
+        "name": "MDS update persisted HTTP 200",
+        "passed": true
+      },
+      {
+        "name": "provider fields intact",
+        "passed": true
+      },
+      {
+        "name": "missing logo local fallback",
+        "passed": true
+      },
+      {
+        "name": "missing favicon local fallback",
+        "passed": true
+      },
+      {
+        "name": "no uncaught browser errors",
+        "passed": true
+      }
+    ],
+    "screenshotsManifest": [
+      {
+        "file": "desktop-login.png",
+        "sha256": "809c200cf2e6eab4150c2b53c5b15c9a22221f418164f6c65fed7ad167fc7a8c"
+      },
+      {
+        "file": "desktop-a-navigation.png",
+        "sha256": "63cd92d8cb1a55c313089e59721f57b2fa189d2071822241ff158aad9a1fc6f9"
+      },
+      {
+        "file": "desktop-a-compact.png",
+        "sha256": "d2f6b5f50ddb416643677ab7e7ba2770bcbd7bcb3b35de85d79d148a807de331"
+      },
+      {
+        "file": "desktop-a-dashboard.png",
+        "sha256": "e361547051afed0fbb25dd1a2f2057bdfbc2b66fcd0a3c850f70c0e5aca5ea55"
+      },
+      {
+        "file": "desktop-a-leads.png",
+        "sha256": "11141d4a73d980edbbc4aec5daf0812e85384be8aab5a22a8bb0389d2e86e470"
+      },
+      {
+        "file": "desktop-a-kanban.png",
+        "sha256": "18e6e2c0c3a4d815b4a557938ae1e382e5006d721fe4011924140c749513753c"
+      },
+      {
+        "file": "desktop-a-agenda.png",
+        "sha256": "bf5f10383bd4f95c2f86ab50310e6e3d06612357b695c6417a3e15502a4cca12"
+      },
+      {
+        "file": "desktop-a-branding.png",
+        "sha256": "d7dca6d8e72c82a4a6ed971d57049bf193bdeb778593c99fbc5da324f5b90999"
+      },
+      {
+        "file": "desktop-a-404.png",
+        "sha256": "2a711840484149ca935e6dd1658fa98f4e7393a2ec3329bb0a548f8167cf284d"
+      },
+      {
+        "file": "desktop-b-navigation.png",
+        "sha256": "e26bfdf50d434c8849e1dc46ea21fad6f1b79e94fb0681a2e7520e542a89e77c"
+      },
+      {
+        "file": "desktop-b-compact.png",
+        "sha256": "ae0aa2636505c4395529e58243b640f424c02912a6141f06e59ad6963bbdbd16"
+      },
+      {
+        "file": "desktop-b-dashboard.png",
+        "sha256": "c90d82495ebc607dd785d1e147836adac105abacfc675509d39ed4ea9b085df1"
+      },
+      {
+        "file": "desktop-b-leads.png",
+        "sha256": "1ff2b6b49140d0030289f21d25ef60c18faeec0d8c546c9b08720708b89133f2"
+      },
+      {
+        "file": "desktop-b-kanban.png",
+        "sha256": "62a9a1ed53fd743408a36890e61de599120b0f8121ddf7c5baec5249ad8ca42f"
+      },
+      {
+        "file": "desktop-b-agenda.png",
+        "sha256": "2e3906e8b6a2ad108994268918fac3679b2e3936ec0482f9f403f49177688435"
+      },
+      {
+        "file": "desktop-b-branding.png",
+        "sha256": "7f4a0de39ed6fcf29f8d7956f8eb0f65ac6264bed1e83046b1e87f02bd1bb2b3"
+      },
+      {
+        "file": "desktop-b-404.png",
+        "sha256": "9ee18ccc11b50a7c35f2b914d316d0bffab915a6dce629158565c6a9373fd7ab"
+      },
+      {
+        "file": "desktop-c-navigation.png",
+        "sha256": "a6626b6f73bd4d9ad666e88e7d750b26b1ee311a67ac5f134a8a157de43ff122"
+      },
+      {
+        "file": "desktop-c-compact.png",
+        "sha256": "049b20a49e0676c21029b69cfae6a988662d69a1a2745adccb089f419fb6d51d"
+      },
+      {
+        "file": "desktop-c-dashboard.png",
+        "sha256": "a6626b6f73bd4d9ad666e88e7d750b26b1ee311a67ac5f134a8a157de43ff122"
+      },
+      {
+        "file": "desktop-c-leads.png",
+        "sha256": "32d98d3be42cc2b5d285c49e1f7871bcea9f2459da9d285d40c9d5c8d6cbc689"
+      },
+      {
+        "file": "desktop-c-kanban.png",
+        "sha256": "8df42eb066d29a1b460aeec8c5fdc4d6ffff1553e65e230ea06278c3c4a393d1"
+      },
+      {
+        "file": "desktop-c-agenda.png",
+        "sha256": "3b06a377450caa1acb09a13860588abf0683666b98bc4850c68a5a7eb0a5a572"
+      },
+      {
+        "file": "desktop-c-branding.png",
+        "sha256": "8df977978fcd261dec84fd75ac4f4f14ab618a5ced82b2aa52cc324575b1d30d"
+      },
+      {
+        "file": "desktop-c-404.png",
+        "sha256": "2a4daf214554fd9241f3a393d24dc0108a4c13e660aa79a2d54f0d671bc62844"
+      },
+      {
+        "file": "mobile-login.png",
+        "sha256": "e117511789b0305cec78110be0849a9ce2498519da6394504dd40e2bf1c46332"
+      },
+      {
+        "file": "mobile-a-navigation.png",
+        "sha256": "1ba051abb030c30576fc2cd96322ef22e78e5ec020a76f5e1e4e91d291b2b78c"
+      },
+      {
+        "file": "mobile-a-dashboard.png",
+        "sha256": "8d5bb57a08f3389e797faf4b2944919436e4d7f64e40d4dd9f8cc0524fde22fd"
+      },
+      {
+        "file": "mobile-a-leads.png",
+        "sha256": "ac7bd38b5a909bac4c63a5ca7503cce9f0b4add38b4da227ca2a9b56b893aa59"
+      },
+      {
+        "file": "mobile-a-kanban.png",
+        "sha256": "5d78e174a73c5d6c8a989ff812c070f614caa690f0cbb710729f5855adf6839d"
+      },
+      {
+        "file": "mobile-a-agenda.png",
+        "sha256": "73ec889964a92ccde48afc05da201609a93095eff5e29da5c06ea92e4e625bd4"
+      },
+      {
+        "file": "mobile-a-branding.png",
+        "sha256": "e9daf0bb49529ed619f55930f4100cc063950603b2d392591b5c333027321662"
+      },
+      {
+        "file": "mobile-a-404.png",
+        "sha256": "256ffa06d4f37a4443d8540336ea6a90c804cf317a29734f7fd063b44557e079"
+      },
+      {
+        "file": "mobile-b-navigation.png",
+        "sha256": "0ce9a24abcb6b725b5102dc0b447870c503c7950443d5eea6cb145aabe0af2c4"
+      },
+      {
+        "file": "mobile-b-dashboard.png",
+        "sha256": "376e6c5b5f4a5ef7c6da91b372dd408f6f2fd65f9b4f316b824d886c8e0989e5"
+      },
+      {
+        "file": "mobile-b-leads.png",
+        "sha256": "d0b9d13cd408a652913293c54483fdb881781436dc36e2a13a712916a5295ade"
+      },
+      {
+        "file": "mobile-b-kanban.png",
+        "sha256": "5384d4a4348022fe3445e9cdf8f6bf51e13bc1838169680b07233d02b0107255"
+      },
+      {
+        "file": "mobile-b-agenda.png",
+        "sha256": "cfc7d2ed99d1cc6baaf10db2ec97cbc5511ad705381963ef0f3cb2485a34fd47"
+      },
+      {
+        "file": "mobile-b-branding.png",
+        "sha256": "d89733fc976dd936b422d183f39a6a763b98f68b5212a8a0ad55af5d328c1be1"
+      },
+      {
+        "file": "mobile-b-404.png",
+        "sha256": "b1e51cc3d07be6365a283c5411361600926b679bc4533e76dafb7702344d72d3"
+      },
+      {
+        "file": "mobile-c-navigation.png",
+        "sha256": "28cad32e705bfa8ac3d81332d70f4289703bb137831a2bf6bb4dbcea22a1c062"
+      },
+      {
+        "file": "mobile-c-dashboard.png",
+        "sha256": "26114cd35dacec867122d710aa03d55102345dadca9614666af57f21a16fa1a0"
+      },
+      {
+        "file": "mobile-c-leads.png",
+        "sha256": "33e8473612a5d8f270caa981d228ccf0a3e027f5f701a8bd61569a7b9c3afb91"
+      },
+      {
+        "file": "mobile-c-kanban.png",
+        "sha256": "bc5019503da04e7eb39b2d17646874c8ac7882b304fb12bddd7a64cda21798c4"
+      },
+      {
+        "file": "mobile-c-agenda.png",
+        "sha256": "05a24dfda086a2ec5ab12f41c5df5c621a04beba79ab2a04b9173d7f32faef1b"
+      },
+      {
+        "file": "mobile-c-branding.png",
+        "sha256": "75909ceb2569c148c186e324ed50246011443a39b2cc513754da17855b461fb6"
+      },
+      {
+        "file": "mobile-c-404.png",
+        "sha256": "bd85b2e3ca723028ab3d15b4154a7f8ac05ca83bca45f95314463af6cae67794"
+      },
+      {
+        "file": "admin-organizations.png",
+        "sha256": "3083258bae4df182bd719d303c4587f80e022981c77a0f8ee7a56091cb9df2b0"
+      },
+      {
+        "file": "onboarding-new-customer.png",
+        "sha256": "fb5ee886f664af6e523fea6d66c8173247d4bc28bd9200304543e2b54307b77a"
+      },
+      {
+        "file": "missing-assets-fallback.png",
+        "sha256": "c11445ab0130622f61482aab0e000486fcb7e194275fe0869d9d445f4f20ce35"
+      }
+    ]
+  },
+  "build": {
+    "nextWebpack": true,
+    "docker": "not executed"
+  },
+  "typecheck": true,
+  "prismaValidate": true,
+  "lint": {
+    "errors": 0,
+    "warnings": 6,
+    "inheritedWarnings": 5,
+    "newNativeImageWarning": 1
+  },
+  "unsafeBrowserConfigurations": [
+    {
+      "case": "no_opt_in",
+      "refused": true,
+      "exit": 1
+    },
+    {
+      "case": "non_temporary_checkout",
+      "refused": true,
+      "exit": 1
+    },
+    {
+      "case": "external_database",
+      "refused": true,
+      "exit": 1
+    }
+  ],
+  "protected": {
+    "reference": "fc123488eab556f29241312af8abbe5b9e0e462b",
+    "protectedPathsUnchanged": [
+      "prisma/schema.prisma",
+      "prisma/migrations",
+      "src/lib/atendimento",
+      "src/lib/chatwoot.ts",
+      "src/lib/auth.ts",
+      "src/app/api/webhooks",
+      "src/app/api/integrations",
+      "src/lib/entitlements",
+      "src/lib/plans",
+      "Dockerfile",
+      "package.json",
+      "package-lock.json"
+    ],
+    "productionAccess": false
+  },
+  "commercial": {
+    "globalMode": "observe_only",
+    "approvedEnforcementsEmpty": true
+  },
+  "productionChanged": false,
+  "remoteUpdated": false,
+  "gatesApproved": false,
+  "pilotApproved": false
+}

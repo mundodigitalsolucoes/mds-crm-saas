@@ -1,0 +1,188 @@
+{
+  "base": "4e6993949f314b30a6961eacccf9a10701e84161",
+  "comparisonContract": "77f4eeb79427a1b949b8192b64dec50557a5402d",
+  "branch": "audit/block2-sanitized",
+  "date": "2026-10-27",
+  "originalAccountCreation": {
+    "method": "POST",
+    "path": "/platform/api/v1/accounts",
+    "bodyFields": [
+      "name",
+      "locale"
+    ],
+    "newSafetyMarkersPreserved": true
+  },
+  "passwordConfirmationContractRestored": true,
+  "before": {
+    "tests": 3,
+    "fail": 2,
+    "pass": 1,
+    "realChatwootAccess": false
+  },
+  "after": {
+    "tests": 658,
+    "pass": 658,
+    "fail": 0,
+    "skipped": 0,
+    "onboardingPostgres": 30,
+    "newCompatibilityCases": 4,
+    "onboardingHttp": {
+      "passed": true,
+      "scenarios": [
+        {
+          "name": "Super Admin creates organization, owner and ready Chatwoot without secrets",
+          "passed": true
+        },
+        {
+          "name": "Chatwoot failure preserves CRM organization and owner with recovery",
+          "passed": true
+        },
+        {
+          "name": "recovery resumes known account without duplication",
+          "passed": true
+        },
+        {
+          "name": "already provisioned integration is reused without overwrite",
+          "passed": true
+        },
+        {
+          "name": "force overwrite rejected",
+          "passed": true
+        },
+        {
+          "name": "failed remote validation persists through a separate real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "positive remote revalidation restores ready through real HTTP GET",
+          "passed": true
+        },
+        {
+          "name": "unknown webhook outcome with GET 405 blocks another POST over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "existing remote webhook reconciles without recreation over real HTTP",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped a",
+          "passed": true
+        },
+        {
+          "name": "real NextAuth and protected automatic SSO remain tenant-scoped b",
+          "passed": true
+        },
+        {
+          "name": "anonymous onboarding has no effects",
+          "passed": true
+        },
+        {
+          "name": "public signup still calls the same official Platform API provisioner",
+          "passed": true
+        },
+        {
+          "name": "both entrypoints work while global account list returns 500, without duplicate accounts",
+          "passed": true
+        }
+      ],
+      "productionAccess": false,
+      "provider": "synthetic loopback only"
+    },
+    "domainHttp": {
+      "passed": true,
+      "scenarios": 52,
+      "realRestartPassed": true,
+      "productionAccess": false,
+      "liveDnsOrCertificatesValidated": false
+    },
+    "c0c5Http": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-delete-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "attachments-upload-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "custom-domain-disabled-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "buildExit": 0,
+    "typecheckExit": 0,
+    "lintExit": 0,
+    "prismaValidateExit": 0,
+    "diffCheckExit": 0
+  },
+  "sourceSha256": {
+    "src/lib/integrations/chatwoot-provision.ts": "1ab505a587c9f2d0edeeb8e40e2b1fb826f8ea0d2a3bac51edee89f828c8d731",
+    "tests/chatwoot-onboarding-http.mjs": "16df78568d3876457cd8569b86d6daf6e896535ad567c642a58250dcefd80ce4",
+    "tests/chatwoot-onboarding-postgres.test.mjs": "9a2ee18d5d19489d167fbfb121014bb4d22ac22a36c2ed289c0139b9e1d59f39",
+    "tests/helpers/synthetic-chatwoot.mjs": "77bf30886556cbba0a4ad5feaa1787aacb2129e409dfe60660c232f786460a63"
+  },
+  "safety": {
+    "freshCreationRequiresGlobalList": false,
+    "unknownPostOutcomeCanReplay": false,
+    "knownIdRequiresScopedProof": true,
+    "ownerCasPreserved": true,
+    "webhookIntentPreserved": true,
+    "negativeValidationPersists": true,
+    "bothEntrypointsUseSameOfficialService": true,
+    "observeOnlyUnchanged": true,
+    "approvedEnforcementsEmpty": true
+  },
+  "productionAccess": false,
+  "realChatwootValidated": false,
+  "publicationApproved": false,
+  "blocker": "Specific authorization and real Chatwoot 4.17.0 end-to-end acceptance still required",
+  "push": false,
+  "merge": false,
+  "deploy": false,
+  "security": {
+    "files": 6,
+    "knownValuesCompared": 4,
+    "knownValueMatches": 0,
+    "strongPatternMatches": 0,
+    "secretsOrSecretHashesPrinted": false
+  }
+}

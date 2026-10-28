@@ -43,6 +43,30 @@ function buildLoginRedirect(req: NextRequest) {
 
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (process.env.CRM_CUSTOM_DOMAINS_ENABLED !== 'true') {
+    const authority = req.headers.get('host');
+    if (!authority) return new NextResponse(null, { status: 421 });
+    if (authority) {
+      try {
+        if (/[\s\\/@?#%,]/.test(authority)) return new NextResponse(null, { status: 421 });
+        const primary = new URL(process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br');
+        const incoming = new URL(primary.protocol + '//' + authority);
+        if (incoming.hostname.replace(/\.$/, '').toLowerCase() !== primary.hostname.toLowerCase() || incoming.port !== primary.port) return new NextResponse(null, { status: 421 });
+      } catch { return new NextResponse(null, { status: 421 }); }
+    }
+  }
+  if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true') {
+    const { domainIngress } = await import('./src/lib/domains/middleware');
+    const denied = await domainIngress(req);
+    if (denied) return denied;
+  }
+  // The extra matcher below validates hostnames, not operational permissions.
+  // Preserve exactly which paths the existing middleware authenticated before.
+  const legacyProtected = config.matcher.slice(0, -1).some(pattern => {
+    const prefix = pattern.replace('/:path*', '');
+    return pathname === prefix || pathname.startsWith(prefix + '/');
+  });
+  if (!legacyProtected) return NextResponse.next();
 
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (
@@ -74,7 +98,7 @@ export default async function middleware(req: NextRequest) {
     }
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET, ...(process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true' ? { secureCookie: true } : {}) });
 
   if (!token) {
     return buildLoginRedirect(req);
@@ -124,6 +148,7 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
+  runtime: 'nodejs',
   matcher: [
     '/dashboard/:path*',
     '/leads/:path*',
@@ -141,5 +166,6 @@ export const config = {
     '/settings/:path*',
     '/admin/:path*',
     '/api/admin/:path*',
+    '/((?!_next/static).*)',
   ],
 };

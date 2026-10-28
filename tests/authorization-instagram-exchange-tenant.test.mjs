@@ -1,10 +1,12 @@
+import { fileURLToPath } from 'node:url'
+const fixtureDirectory = fileURLToPath(new URL('.', import.meta.url))
 // Source regression for the legacy Instagram token-exchange endpoint.
 // This supplements (but does not replace) authenticated multi-tenant tests.
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
-const { join } = require('node:path')
-const route = readFileSync(join(__dirname, '../src/app/api/atendimento/instagram/exchange-token/route.ts'), 'utf8')
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+const route = readFileSync(join(fixtureDirectory, '../src/app/api/atendimento/instagram/exchange-token/route.ts'), 'utf8')
 
 test('legacy Instagram token exchange binds body tenant to authenticated session', () => {
   assert.match(route, /checkPermission\('integrations', 'edit'\)/)

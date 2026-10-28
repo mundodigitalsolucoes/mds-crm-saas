@@ -8,6 +8,13 @@ import { parseBody, resetPasswordSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
+    let domainOrganization: string | undefined;
+    if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true') {
+      const { resolveRequestDomain } = await import('@/lib/domains/request');
+      const context = await resolveRequestDomain(request.headers);
+      if (context.kind === 'denied' || context.kind === 'custom' && !context.active) return new NextResponse(null, { status: 421 });
+      if (context.kind === 'custom') domainOrganization = context.organizationId;
+    }
     const body = await request.json();
 
     // ✅ Validação Zod centralizada
@@ -46,11 +53,13 @@ export async function POST(request: Request) {
     const user = await prisma.user.findFirst({
       where: {
         email: resetToken.email,
+        ...(domainOrganization ? { organizationId: domainOrganization } : {}),
         deletedAt: null,
         organization: { deletedAt: null },
       },
     });
 
+    if (!user && domainOrganization) return NextResponse.json({ error: 'Token inválido ou expirado.' }, { status: 400 });
     if (!user) {
       return NextResponse.json(
         { error: 'Usuário não encontrado.' },
@@ -71,6 +80,7 @@ export async function POST(request: Request) {
       const updated = await tx.user.updateMany({
         where: {
           id: user.id,
+          ...(domainOrganization ? { organizationId: domainOrganization } : {}),
           deletedAt: null,
           organization: { deletedAt: null },
         },

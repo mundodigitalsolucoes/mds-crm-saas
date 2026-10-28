@@ -1,4 +1,8 @@
 'use client';
+import OrganizationChatwootOnboarding from '@/components/OrganizationChatwootOnboarding';
+import OrganizationWhiteLabelControl from '@/components/OrganizationWhiteLabelControl';
+import OrganizationDomainEditor from '@/components/OrganizationDomainEditor';
+import OrganizationBrandingEditor from '@/components/OrganizationBrandingEditor';
 
 import { useEffect, useState, useCallback } from 'react';
 import {
@@ -51,14 +55,12 @@ interface Pagination {
   totalPages: number;
 }
 
-const planOptions = [
-  { value: 'trial', label: 'Trial', color: 'text-cyan-300 bg-cyan-500/10' },
-  { value: 'starter', label: 'Starter', color: 'text-blue-300 bg-blue-500/10' },
-  { value: 'professional', label: 'Professional', color: 'text-violet-300 bg-violet-500/10' },
-  { value: 'enterprise', label: 'Enterprise', color: 'text-amber-300 bg-amber-500/10' },
-];
+interface PlanOption {
+  value: string;
+  label: string;
+}
 
-function getPlanBadge(plan: string | null) {
+function getPlanBadge(plan: string | null, planOptions: PlanOption[]) {
   const found = planOptions.find((item) => item.value === plan);
 
   if (!found) {
@@ -70,7 +72,7 @@ function getPlanBadge(plan: string | null) {
   }
 
   return (
-    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${found.color}`}>
+    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full text-blue-300 bg-blue-500/10">
       {found.label}
     </span>
   );
@@ -78,6 +80,8 @@ function getPlanBadge(plan: string | null) {
 
 export default function AdminOrganizationsPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [planOptions, setPlanOptions] = useState<PlanOption[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
     page: 1,
@@ -93,6 +97,8 @@ export default function AdminOrganizationsPage() {
   const [editingOrg, setEditingOrg] = useState<Organization | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [owner, setOwner] = useState({name:'',email:'',password:''});
+  const [onboardingNotice, setOnboardingNotice] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -100,61 +106,74 @@ export default function AdminOrganizationsPage() {
     plan: 'trial',
   });
 
-  const fetchOrganizations = useCallback(async (page = 1) => {
-    setLoading(true);
-    setError('');
+  useEffect(() => {
+    let active = true;
+    fetch('/api/admin/plans')
+      .then(async res => {
+        if (!res.ok) throw new Error('Erro ao carregar planos');
+        const data: unknown = await res.json();
+        if (!Array.isArray(data)) throw new Error('Resposta de planos inválida');
+        const options: PlanOption[] = data
+          .filter((p): p is { name: string; displayName?: string } =>
+            !!p && typeof p === 'object' && typeof p.name === 'string' && p.name.length > 0)
+          .map(p => ({ value: p.name, label: p.displayName || p.name }));
+        if (active) { setPlanOptions(options); setError(''); }
+      })
+      .catch(() => { if (active) setError('Não foi possível carregar os planos disponíveis'); })
+      .finally(() => { if (active) setPlansLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: '10',
-      });
-
-      if (search) params.set('search', search);
-      if (planFilter) params.set('plan', planFilter);
-
-      const res = await fetch(`/api/admin/organizations?${params}`);
-      if (!res.ok) throw new Error('Erro ao carregar organizações');
-
-      const data = await res.json();
-      setOrganizations(data.organizations);
-      setPagination(data.pagination);
-    } catch (err) {
-      console.error(err);
-      setError('Erro ao carregar organizações');
-    } finally {
-      setLoading(false);
-    }
+  const fetchOrganizations = useCallback(async (page = 1): Promise<{ organizations: Organization[]; pagination: Pagination }> => {
+    const params = new URLSearchParams({ page: String(page), limit: '10' });
+    if (search) params.set('search', search);
+    if (planFilter) params.set('plan', planFilter);
+    const res = await fetch(`/api/admin/organizations?${params}`);
+    if (!res.ok) throw Error('Erro ao carregar organizações');
+    return res.json();
   }, [search, planFilter]);
 
+  const refreshOrganizations = async (page: number) => {
+    const data = await fetchOrganizations(page);
+    setOrganizations(data.organizations); setPagination(data.pagination); setError('');
+  };
   useEffect(() => {
-    fetchOrganizations(1);
+    let active = true;
+    fetchOrganizations(1).then(data => {
+      if (active) { setOrganizations(data.organizations); setPagination(data.pagination); setError(''); }
+    }).catch(() => { if (active) setError('Erro ao carregar organizações'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [fetchOrganizations]);
 
   const handleCreate = () => {
     setEditingOrg(null);
+    setOwner({name:'',email:'',password:''}); setOnboardingNotice('');
     setFormData({
       name: '',
       slug: '',
-      plan: 'trial',
+      plan: planOptions.find(p => p.value === 'trial')?.value || planOptions[0]?.value || '',
     });
     setShowModal(true);
   };
 
   const handleEdit = (org: Organization) => {
     setEditingOrg(org);
+    setOwner({name:'',email:'',password:''}); setOnboardingNotice('');
     setFormData({
       name: org.name,
       slug: org.slug,
-      plan: org.plan || 'trial',
+      plan: org.plan || '',
     });
     setShowModal(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.slug.trim()) return;
+    if (!formData.name.trim() || !formData.slug.trim() || !formData.plan || !planOptions.some(p => p.value === formData.plan)) return;
 
+    if (!editingOrg && (!owner.name.trim() || !owner.email.trim() || owner.password.length < 12)) { setError('Informe nome, email e senha de pelo menos 12 caracteres do proprietário'); return; }
     setSaving(true);
+    if (!editingOrg) setOnboardingNotice('Criando organização e proprietário; provisionando Atendimento…');
 
     try {
       const url = editingOrg
@@ -167,6 +186,7 @@ export default function AdminOrganizationsPage() {
         body: JSON.stringify({
           ...formData,
           syncFromPlan: true,
+          ...(!editingOrg ? {owner} : {}),
         }),
       });
 
@@ -175,10 +195,17 @@ export default function AdminOrganizationsPage() {
         throw new Error(data.error || 'Erro ao salvar');
       }
 
-      setShowModal(false);
-      await fetchOrganizations(pagination.page);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao salvar organização');
+      const result = await res.json();
+      setOwner({name:'',email:'',password:''});
+      if (!editingOrg) {
+        const listed = await fetchOrganizations(1); setOrganizations(listed.organizations); setPagination(listed.pagination);
+        const created = listed.organizations.find(org=>org.id===result.id) || {id:result.id,name:result.name,slug:result.slug,plan:result.plan,planStatus:result.planStatus,trialEndsAt:result.trialEndsAt,deletedAt:null,limits:{maxUsers:result.maxUsers,maxLeads:result.maxLeads,maxProjects:result.maxProjects,maxOs:result.maxOs},usage:{users:result.owner?1:0,leads:0,projects:0,tasks:0,serviceOrders:0},createdAt:result.createdAt,updatedAt:result.updatedAt};
+        if (created) { setEditingOrg(created); setFormData({name:created.name,slug:created.slug,plan:created.plan||''}); }
+        setOnboardingNotice((result.message || 'Organização criada; confira o estado do Atendimento') + (result.onboarding?.error ? ` — ${result.onboarding.error}` : ''));
+      } else { setShowModal(false); await refreshOrganizations(pagination.page); }
+    } catch (err: unknown) {
+      const message = (err instanceof Error ? err.message : '') || 'Erro ao salvar organização';
+      setError(message); setOnboardingNotice(message + ' — confira a lista antes de repetir a criação.');
     } finally {
       setSaving(false);
     }
@@ -193,7 +220,7 @@ export default function AdminOrganizationsPage() {
       if (!res.ok) throw new Error('Erro ao deletar');
 
       setDeleteConfirm(null);
-      await fetchOrganizations(pagination.page);
+      await refreshOrganizations(pagination.page);
     } catch {
       setError('Erro ao deletar organização');
     }
@@ -315,7 +342,7 @@ export default function AdminOrganizationsPage() {
                     </td>
 
                     <td className="px-4 py-3 text-center">
-                      {getPlanBadge(org.plan)}
+                      {getPlanBadge(org.plan, planOptions)}
                     </td>
 
                     <td className="px-4 py-3 text-center">
@@ -393,7 +420,7 @@ export default function AdminOrganizationsPage() {
 
             <div className="flex gap-1">
               <button
-                onClick={() => fetchOrganizations(pagination.page - 1)}
+                onClick={() => { void refreshOrganizations(pagination.page - 1).catch(() => setError('Erro ao carregar organizações')); }}
                 disabled={pagination.page <= 1}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
@@ -401,7 +428,7 @@ export default function AdminOrganizationsPage() {
               </button>
 
               <button
-                onClick={() => fetchOrganizations(pagination.page + 1)}
+                onClick={() => { void refreshOrganizations(pagination.page + 1).catch(() => setError('Erro ao carregar organizações')); }}
                 disabled={pagination.page >= pagination.totalPages}
                 className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
@@ -419,7 +446,7 @@ export default function AdminOrganizationsPage() {
             onClick={() => !saving && setShowModal(false)}
           />
 
-          <div className="relative w-full max-w-md bg-gray-950 border border-blue-900/30 rounded-xl shadow-2xl">
+          <div className="relative flex w-full max-w-md max-h-[calc(100dvh-2rem)] flex-col overflow-hidden bg-gray-950 border border-blue-900/30 rounded-xl shadow-2xl">
             <div className="flex items-center justify-between p-5 border-b border-gray-800">
               <h3 className="text-lg font-semibold text-white">
                 {editingOrg ? 'Editar Organização' : 'Nova Organização'}
@@ -432,7 +459,16 @@ export default function AdminOrganizationsPage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 space-y-4">
+              {onboardingNotice && <p role="status" className="text-sm text-blue-200">{onboardingNotice}</p>}
+              {editingOrg && <OrganizationChatwootOnboarding key={editingOrg.id+'-chatwoot'} organizationId={editingOrg.id}/>}
+              {!editingOrg && <fieldset className="space-y-2 rounded border border-gray-700 p-3"><legend className="text-sm text-gray-200">Proprietário da organização</legend>
+                <label className="block text-xs text-gray-300">Nome<input className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.name} onChange={e=>setOwner({...owner,name:e.target.value})} autoComplete="name"/></label>
+                <label className="block text-xs text-gray-300">Email<input type="email" className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.email} onChange={e=>setOwner({...owner,email:e.target.value})} autoComplete="off"/></label>
+                <label className="block text-xs text-gray-300">Senha inicial CRM (mínimo 12 caracteres)<input type="password" className="mt-1 w-full rounded bg-gray-900 p-2" value={owner.password} onChange={e=>setOwner({...owner,password:e.target.value})} autoComplete="new-password"/></label>
+              </fieldset>}
+              {editingOrg && <OrganizationWhiteLabelControl key={editingOrg.id} organizationId={editingOrg.id} />}
+              {editingOrg && <><OrganizationBrandingEditor key={editingOrg.id} organizationId={editingOrg.id} /><OrganizationDomainEditor organizationId={editingOrg.id} /></>}
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
                   Nome *
@@ -472,6 +508,9 @@ export default function AdminOrganizationsPage() {
                   }
                   className="w-full px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500/50 transition-colors"
                 >
+                  {editingOrg && formData.plan && !planOptions.some(p => p.value === formData.plan) && (
+                    <option value={formData.plan}>{formData.plan} (plano legado)</option>
+                  )}
                   {planOptions.map((p) => (
                     <option key={p.value} value={p.value}>
                       {p.label}
@@ -487,7 +526,7 @@ export default function AdminOrganizationsPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-800">
+            <div className="flex shrink-0 items-center justify-end gap-3 p-5 border-t border-gray-800">
               <button
                 onClick={() => setShowModal(false)}
                 disabled={saving}
@@ -498,7 +537,7 @@ export default function AdminOrganizationsPage() {
 
               <button
                 onClick={handleSave}
-                disabled={saving || !formData.name.trim() || !formData.slug.trim()}
+                disabled={saving || plansLoading || !formData.name.trim() || !formData.slug.trim() || !planOptions.some(p => p.value === formData.plan)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}

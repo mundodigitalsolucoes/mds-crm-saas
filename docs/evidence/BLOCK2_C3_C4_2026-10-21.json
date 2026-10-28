@@ -1,0 +1,1131 @@
+{
+  "referenceHead": "d626bffe6596f455a598465c7027a606ba18fa50",
+  "c3Commit": "39facc04d9048468416e996237ca0b5f278e1f04",
+  "scope": "C3+C4, local only; no global module enforcement",
+  "runtime": "Node v24.19.0; built Next.js; actual local PostgreSQL; real tenant NextAuth and Super Admin authentication",
+  "results": {
+    "nodePostgres": {
+      "pass": 105,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "typescript": {
+      "pass": 368,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "brandingRenderedScenarios": 84,
+    "brandingHttpScenarios": 84,
+    "c1C2HttpScenarios": 42,
+    "directPagesFromC1C2Regression": 28,
+    "generalHttpRegression": 22,
+    "build": "pass",
+    "typecheck": "pass",
+    "scopedLint": {
+      "errors": 0,
+      "preexistingWarnings": 8
+    },
+    "protectedCoreDiffBytes": 0
+  },
+  "brandingHttpMatrix": {
+    "referenceHead": "d626bff",
+    "scenarios": [
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": false,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 0,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "owner",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "admin",
+        "tenant": 1,
+        "passed": true
+      },
+      {
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "whiteLabel": true,
+        "role": "user",
+        "tenant": 1,
+        "passed": true
+      }
+    ],
+    "persistedUpdates": 4,
+    "rejectedClientChanges": 6,
+    "commercialDenials": [
+      {
+        "role": "owner",
+        "tenant": "a",
+        "status": 307,
+        "destination": "/admin/login"
+      },
+      {
+        "role": "admin",
+        "tenant": "a",
+        "status": 307,
+        "destination": "/admin/login"
+      },
+      {
+        "role": "user",
+        "tenant": "a",
+        "status": 307,
+        "destination": "/admin/login"
+      },
+      {
+        "role": "owner",
+        "tenant": "b",
+        "status": 307,
+        "destination": "/admin/login"
+      },
+      {
+        "role": "admin",
+        "tenant": "b",
+        "status": 307,
+        "destination": "/admin/login"
+      },
+      {
+        "role": "user",
+        "tenant": "b",
+        "status": 307,
+        "destination": "/admin/login"
+      }
+    ],
+    "auditedCommercialUpdates": 29,
+    "assetRetrievals": 4,
+    "passed": true
+  },
+  "c0HttpRegression": {
+    "referenceHead": "be26c813231602e14e33c12866a9e1d9baba6781",
+    "candidate": "C0 working tree",
+    "transport": "Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only",
+    "active": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedUser": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "deletedOrganization": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "restrictedUser": {
+      "leadApiStatus": 403,
+      "dashboardStatus": 200,
+      "fixtureLeadInDashboard": false
+    },
+    "regression": {
+      "ownTask": true,
+      "ownFollowUp": true,
+      "foreignDataAbsent": true,
+      "restrictedLeadLinkedTaskAbsent": true,
+      "restrictedLeadIndicatorsAbsent": true
+    },
+    "expected": "Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only"
+  },
+  "cleanup": {
+    "organizations": 0,
+    "admins": 0,
+    "passed": true
+  },
+  "sourceFiles": [
+    {
+      "path": "src/lib/branding.ts",
+      "sha256": "5461d306ef16894f6f533a8081bf4eb09163c21df29bfde50becdcb18add66dc"
+    },
+    {
+      "path": "src/lib/branding-values.ts",
+      "sha256": "4e2c4e1ea83ce0f1b79f58c249f29aeae409e8f13c06282ed98dc9168d98e1df"
+    },
+    {
+      "path": "src/lib/validations/branding.ts",
+      "sha256": "30e30414cad54f1fc8ba57b0714f416ca0162dfa4b8a20d0931f5979b6b0ee75"
+    },
+    {
+      "path": "src/lib/validations/admin.ts",
+      "sha256": "c3b2f3991f965f4b2831a5e5550401e4d1c254a54bc350ad2341af329324e671"
+    },
+    {
+      "path": "src/app/(app)/layout.tsx",
+      "sha256": "8815928a2a09111a2fa9d73b5531163137fc28c388053059352dfba70d11d02f"
+    },
+    {
+      "path": "src/app/(app)/dashboard/page.tsx",
+      "sha256": "7ace9e85a6a58839b738cde38590b7f40efaa0f0b2c7068f563e5fff77a5e952"
+    },
+    {
+      "path": "src/app/(app)/settings/branding/page.tsx",
+      "sha256": "9e5d58af470e26931207494a65c7611b9d17406b6dbc3be20eea79c6949dc3b4"
+    },
+    {
+      "path": "src/components/Sidebar.tsx",
+      "sha256": "fd3c88e7b93d7f148929c381693c4c4867eb7bda47ba49cd1db3a0e4c3b1b43a"
+    },
+    {
+      "path": "src/components/OrganizationWhiteLabelControl.tsx",
+      "sha256": "226c59cb4f44b1aabb3ecfdf613183acdce02311dfd300810744211d2933c528"
+    },
+    {
+      "path": "src/app/api/organizations/route.ts",
+      "sha256": "c9afa176bd907e576867e1bd9f213facb72a463988392e1ea2288b5e79c8a266"
+    },
+    {
+      "path": "src/app/admin/organizations/page.tsx",
+      "sha256": "119e7971e9fa27bfb3b63fbc4586310aea4ceb04a229bc584d75a3b41a641b07"
+    },
+    {
+      "path": "src/app/api/admin/organizations/[id]/route.ts",
+      "sha256": "9ae6db7f23d9126a501e0a457b4bd14195a305ae3ac2e4370f1b3133e5286511"
+    },
+    {
+      "path": "src/lib/authorization/policy.ts",
+      "sha256": "00d645bcb7a64f412f0b0a6c6d00dce87f821a2ccfe2248fdba7bacc13a16a57"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/http-matrix-final.json",
+      "sha256": "e71c49dde478028750b4b87fb23ef3f0b81e528a80b98a61c0f6433e89bd387e"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/c0-http-final.json",
+      "sha256": "7f02c14aaa3d0e428a976557cde54d0a2412c18c27b8a248ae402cc607247941"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/commercial-http.json",
+      "sha256": "50303388bcbf17872d1887799aa4dd05ff6ce7acc616f3c3a02624cf90299284"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/http-regression.log",
+      "sha256": "7cbe51a76a3186c434890b4c1d30fc04f36675a354da3f260e44d2519d11c8c0"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/node-tests.tap",
+      "sha256": "ee40d37abf6257eddffec975106e79a0cb6a0e639da30ac0dfbd88cf211f2877"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/ts-tests-final.log",
+      "sha256": "f82f2e9b550b3b161818d5bfa3b1b7ad2257d2f79285c1fbf3af43ae10aaa43b"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/governance-postgres.log",
+      "sha256": "6ccbb27092b8be9f2eeb4491d4f94556c1134cc89ceea1f6a0af9e2e12a908a6"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/boundaries-final.log",
+      "sha256": "8f28673f53b1541274cbed3b31ad6bc3d2459857715ec2b86431b72a5ab72363"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/build-final.log",
+      "sha256": "069367fb4b18c66bd3b3cc8a136729b96a7c7895876e5b1a89cb480274139eb8"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/lint-final.log",
+      "sha256": "8149cd8c0223497f9fae344271df2ba39ba026d2336a1b14fec6c6838718c332"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/typecheck-final.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/protected-core.diff",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c3-c4/cleanup.json",
+      "sha256": "999e8c01335bd90a821062507b6109ba5c8c63f4c1026af173f67d7f0d7d3a19"
+    }
+  ],
+  "limitations": [
+    "No browser visual or cross-tab certification",
+    "Explicit Organization.features remains the subscription snapshot; no Plan fallback",
+    "Legacy organizations require inventory before publication",
+    "Existing plan synchronization may replace capability snapshots; MDS operator warning preserved",
+    "Static titles and styles of protected operational pages are outside this change",
+    "No remote CI or independent approval; G1-G6 not automatically approved"
+  ]
+}

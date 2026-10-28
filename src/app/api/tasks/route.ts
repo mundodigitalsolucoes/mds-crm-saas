@@ -1,10 +1,12 @@
+import { taskCommercialDenial } from '@/lib/authorization/guards';
 // src/app/api/tasks/route.ts
 // CRUD de tasks com permissões granulares e multi-tenant
+import { Prisma } from '@prisma/client';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resourceReadScope, validateResourceReferences, relationError, resourceNotification, taskAttachmentsScope, taskCommentsScope } from '@/lib/task-os-relations';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody, taskCreateSchema, taskFiltersSchema } from '@/lib/validations';
-import { createNotification } from '@/lib/notify';
 
 function parseLocalDate(dateString: string) {
   if (dateString.includes('T')) {
@@ -24,211 +26,213 @@ export async function GET(request: NextRequest) {
     if (!allowed) return errorResponse!;
 
     const organizationId = session!.user.organizationId;
-    const { searchParams } = new URL(request.url);
-    const params = taskFiltersSchema.parse(Object.fromEntries(searchParams));
+    const commercialDenied = await taskCommercialDenial(session!, 'view', { type: new URL(request.url).searchParams.get('type') || 'task' });
+    if (commercialDenied) return commercialDenied;
+    return await prisma.$transaction(async (tx) => {
+      const { searchParams } = new URL(request.url);
+      const params = taskFiltersSchema.parse(Object.fromEntries(searchParams));
 
-    // Paginação
-    const page = parseInt(params.page || '1');
-    const pageSize = parseInt(params.pageSize || '20');
-    const skip = (page - 1) * pageSize;
+      // Paginação
+      const page = parseInt(params.page || '1');
+      const pageSize = parseInt(params.pageSize || '20');
+      const skip = (page - 1) * pageSize;
 
-    // Construir where clause — SEMPRE filtrar por organização
-    const where: any = {
-      organizationId,
-    };
+      // Construir where clause — SEMPRE filtrar por organização
+      const where: Prisma.TaskWhereInput = await resourceReadScope(organizationId, 'task');
 
-        // Filtro por tipo: task ou follow_up
-    if (params.type) {
-      where.type = params.type;
-    }
-
-    // Filtro por status (pode ser múltiplo: "todo,in_progress")
-    if (params.status) {
-      const statuses = params.status.split(',');
-      where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
-    }
-
-    // Filtro por prioridade
-    if (params.priority) {
-      const priorities = params.priority.split(',');
-      where.priority = priorities.length === 1 ? priorities[0] : { in: priorities };
-    }
-
-    // Filtro por responsável
-    if (params.assignedToId) {
-      where.assignedToId = params.assignedToId;
-    }
-
-    // Filtro por projeto
-    if (params.projectId) {
-      where.projectId = params.projectId;
-    }
-
-    // Filtro por lead
-    if (params.leadId) {
-      where.leadId = params.leadId;
-    }
-
-    // Filtro por data
-    if (params.dueDateFrom || params.dueDateTo) {
-      where.dueDate = {};
-      if (params.dueDateFrom) {
-        where.dueDate.gte = new Date(params.dueDateFrom);
+          // Filtro por tipo: task ou follow_up
+      if (params.type) {
+        where.type = params.type;
       }
-      if (params.dueDateTo) {
-        where.dueDate.lte = new Date(params.dueDateTo);
+
+      // Filtro por status (pode ser múltiplo: "todo,in_progress")
+      if (params.status) {
+        const statuses = params.status.split(',');
+        where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
       }
-    }
 
-    // Filtro: tarefas atrasadas
-    if (params.isOverdue === 'true') {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+      // Filtro por prioridade
+      if (params.priority) {
+        const priorities = params.priority.split(',');
+        where.priority = priorities.length === 1 ? priorities[0] : { in: priorities };
+      }
 
-  where.dueDate = { lt: today };
-  where.status = { notIn: ['done', 'cancelled'] };
-}
+      // Filtro por responsável
+      if (params.assignedToId) {
+        where.assignedToId = params.assignedToId;
+      }
 
-        // Filtro: tarefas ativas hoje
-    // Regra:
-    // - tarefa com startDate e dueDate aparece enquanto hoje estiver dentro do período
-    // - tarefa sem startDate usa dueDate como data única
-    // - concluídas e canceladas não entram em Hoje
-    if (params.isToday === 'true') {
-      const now = new Date();
+      // Filtro por projeto
+      if (params.projectId) {
+        where.projectId = params.projectId;
+      }
 
-      const startOfToday = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
+      // Filtro por lead
+      if (params.leadId) {
+        where.leadId = params.leadId;
+      }
 
-      const endOfToday = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      // Filtro por data
+      if (params.dueDateFrom || params.dueDateTo) {
+        where.dueDate = {};
+        if (params.dueDateFrom) {
+          where.dueDate.gte = new Date(params.dueDateFrom);
+        }
+        if (params.dueDateTo) {
+          where.dueDate.lte = new Date(params.dueDateTo);
+        }
+      }
 
-      where.status = { notIn: ['done', 'cancelled'] };
+      // Filtro: tarefas atrasadas
+      if (params.isOverdue === 'true') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-      where.OR = [
-        {
-          startDate: { lte: endOfToday },
-          dueDate: { gte: startOfToday },
-        },
-        {
-          startDate: null,
-          dueDate: { gte: startOfToday, lte: endOfToday },
-        },
-      ];
-    }
+    where.dueDate = { lt: today };
+    where.status = { notIn: ['done', 'cancelled'] };
+  }
 
-    // Busca textual
-    if (params.search) {
-      where.OR = [
-        { title: { contains: params.search, mode: 'insensitive' } },
-        { description: { contains: params.search, mode: 'insensitive' } },
-      ];
-    }
+          // Filtro: tarefas ativas hoje
+      // Regra:
+      // - tarefa com startDate e dueDate aparece enquanto hoje estiver dentro do período
+      // - tarefa sem startDate usa dueDate como data única
+      // - concluídas e canceladas não entram em Hoje
+      if (params.isToday === 'true') {
+        const now = new Date();
 
-    // Buscar tasks
-    const [tasks, total] = await Promise.all([
-      prisma.task.findMany({
-        where,
-        include: {
-          project: {
-            select: { id: true, title: true },
+        const startOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          0,
+          0,
+          0,
+          0
+        );
+
+        const endOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          59,
+          999
+        );
+
+        where.status = { notIn: ['done', 'cancelled'] };
+
+        where.OR = [
+          {
+            startDate: { lte: endOfToday },
+            dueDate: { gte: startOfToday },
           },
-          lead: {
-            select: { id: true, name: true },
+          {
+            startDate: null,
+            dueDate: { gte: startOfToday, lte: endOfToday },
           },
-          assignedTo: {
-            select: { id: true, name: true, avatarUrl: true },
-          },
-          createdBy: {
-            select: { id: true, name: true },
-          },
-          subtasks: {
-            orderBy: { position: 'asc' },
-          },
-          _count: {
-            select: {
-              subtasks: true,
+        ];
+      }
+
+      // Busca textual
+      if (params.search) {
+        where.OR = [
+          { title: { contains: params.search, mode: 'insensitive' } },
+          { description: { contains: params.search, mode: 'insensitive' } },
+        ];
+      }
+
+      // Buscar tasks
+      const [tasks, total] = await Promise.all([
+        tx.task.findMany({
+          where,
+          include: {
+            project: {
+              select: { id: true, title: true },
+            },
+            lead: {
+              select: { id: true, name: true },
+            },
+            assignedTo: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
+            createdBy: {
+              select: { id: true, name: true },
+            },
+            subtasks: {
+              orderBy: { position: 'asc' },
+            },
+            _count: {
+              select: {
+                subtasks: true,
+              },
             },
           },
+          orderBy: [
+            { dueDate: 'asc' },
+            { priority: 'desc' },
+            { createdAt: 'desc' },
+          ],
+          skip,
+          take: pageSize,
+        }),
+        tx.task.count({ where }),
+      ]);
+
+      // Buscar contagem de attachments e comments separadamente
+      const taskIds = tasks.map(t => t.id);
+
+      const [attachmentCounts, commentCounts] = await Promise.all([
+        tx.attachment.groupBy({
+          by: ['entityId'],
+          where: { ...taskAttachmentsScope(organizationId), entityId: { in: taskIds } },
+          _count: true,
+        }),
+        tx.comment.groupBy({
+          by: ['entityId'],
+          where: { ...taskCommentsScope(organizationId), entityId: { in: taskIds } },
+          _count: true,
+        }),
+      ]);
+
+      // Mapear contagens
+      const attachmentMap = new Map(attachmentCounts.map(a => [a.entityId, a._count]));
+      const commentMap = new Map(commentCounts.map(c => [c.entityId, c._count]));
+
+      // Formatar resposta
+  const formattedTasks = tasks.map(task => ({
+    ...task,
+    dueDate: task.dueDate
+      ? task.dueDate.toISOString().replace('Z', '')
+      : null,
+    startDate: task.startDate
+      ? task.startDate.toISOString().replace('Z', '')
+      : null,
+    completedAt: task.completedAt
+      ? task.completedAt.toISOString().replace('Z', '')
+      : null,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+    subtasks: task.subtasks.map(st => ({
+      ...st,
+      completedAt: st.completedAt?.toISOString(),
+      createdAt: st.createdAt.toISOString(),
+    })),
+        _count: {
+          subtasks: task._count.subtasks,
+          attachments: attachmentMap.get(task.id) || 0,
+          comments: commentMap.get(task.id) || 0,
         },
-        orderBy: [
-          { dueDate: 'asc' },
-          { priority: 'desc' },
-          { createdAt: 'desc' },
-        ],
-        skip,
-        take: pageSize,
-      }),
-      prisma.task.count({ where }),
-    ]);
+      }));
 
-    // Buscar contagem de attachments e comments separadamente
-    const taskIds = tasks.map(t => t.id);
-
-    const [attachmentCounts, commentCounts] = await Promise.all([
-      prisma.attachment.groupBy({
-        by: ['entityId'],
-        where: { entityType: 'task', entityId: { in: taskIds } },
-        _count: true,
-      }),
-      prisma.comment.groupBy({
-        by: ['entityId'],
-        where: { entityType: 'task', entityId: { in: taskIds } },
-        _count: true,
-      }),
-    ]);
-
-    // Mapear contagens
-    const attachmentMap = new Map(attachmentCounts.map(a => [a.entityId, a._count]));
-    const commentMap = new Map(commentCounts.map(c => [c.entityId, c._count]));
-
-    // Formatar resposta
-const formattedTasks = tasks.map(task => ({
-  ...task,
-  dueDate: task.dueDate
-    ? task.dueDate.toISOString().replace('Z', '')
-    : null,
-  startDate: task.startDate
-    ? task.startDate.toISOString().replace('Z', '')
-    : null,
-  completedAt: task.completedAt
-    ? task.completedAt.toISOString().replace('Z', '')
-    : null,
-  createdAt: task.createdAt.toISOString(),
-  updatedAt: task.updatedAt.toISOString(),
-  subtasks: task.subtasks.map(st => ({
-    ...st,
-    completedAt: st.completedAt?.toISOString(),
-    createdAt: st.createdAt.toISOString(),
-  })),
-      _count: {
-        subtasks: task._count.subtasks,
-        attachments: attachmentMap.get(task.id) || 0,
-        comments: commentMap.get(task.id) || 0,
-      },
-    }));
-
-    return NextResponse.json({
-      tasks: formattedTasks,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
-    });
+      return NextResponse.json({
+        tasks: formattedTasks,
+        total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   } catch (error) {
     console.error('Erro ao buscar tasks:', error);
     return NextResponse.json(
@@ -253,90 +257,97 @@ export async function POST(request: NextRequest) {
     const parsed = parseBody(taskCreateSchema, body);
     if (!parsed.success) return parsed.response;
     const data = parsed.data;
+    const commercialDenied = await taskCommercialDenial(session!, 'create', data);
+    if (commercialDenied) return commercialDenied;
 
-    const task = await prisma.task.create({
-      data: {
-        title: data.title,
-        description: data.description,
-        type: data.type,
-        status: data.status,
-        priority: data.priority,
-        dueDate: data.dueDate ? parseLocalDate(data.dueDate) : null,
-        startDate: data.startDate ? parseLocalDate(data.startDate) : null,
-        isRecurring: data.isRecurring,
-        recurrenceRule: data.recurrenceRule,
-        estimatedMinutes: data.estimatedMinutes,
-        projectId: data.projectId || null,
-        leadId: data.leadId || null,
-        assignedToId: data.assignedToId || userId,
-        createdById: userId,
-        organizationId,
-      },
-      include: {
-        project: { select: { id: true, title: true } },
-        lead: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, name: true, avatarUrl: true } },
-        createdBy: { select: { id: true, name: true } },
-        subtasks: true,
-      },
-    });
-
-    // ✅ Notificar responsável atribuído (se diferente de quem criou)
-    if (data.assignedToId && data.assignedToId !== userId) {
-      await createNotification({
-        userId: data.assignedToId,
-        type: 'task_assigned',
-        title: 'Nova tarefa atribuída',
-        message: `Você foi atribuído à tarefa "${task.title}"`,
-        entityType: 'task',
-        entityId: task.id,
+    return await prisma.$transaction(async (tx) => {
+      await validateResourceReferences(tx, organizationId, userId, { ...data, assignedToId: data.assignedToId || userId, createdById: userId });
+      const task = await tx.task.create({
+        data: {
+          title: data.title,
+          description: data.description,
+          type: data.type,
+          status: data.status,
+          priority: data.priority,
+          dueDate: data.dueDate ? parseLocalDate(data.dueDate) : null,
+          startDate: data.startDate ? parseLocalDate(data.startDate) : null,
+          isRecurring: data.isRecurring,
+          recurrenceRule: data.recurrenceRule,
+          estimatedMinutes: data.estimatedMinutes,
+          projectId: data.projectId || null,
+          leadId: data.leadId || null,
+          assignedToId: data.assignedToId || userId,
+          createdById: userId,
+          organizationId,
+        },
+        include: {
+          project: { select: { id: true, title: true } },
+          lead: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true, avatarUrl: true } },
+          createdBy: { select: { id: true, name: true } },
+          subtasks: true,
+        },
       });
-    }
-    
-    if (task.dueDate) {
-  await createNotification({
-    userId: task.assignedToId || userId,
-    type: 'task_due',
-    title: 'Follow-up agendado',
-    message: `Follow-up "${task.title}" agendado para ${task.dueDate.toLocaleDateString('pt-BR')}`,
-    entityType: 'task',
-    entityId: task.id,
-  });
-}
 
-    // Registrar atividade
-    await prisma.activity.create({
-    data: {
-    entityType: 'task',
-    entityId: task.id,
-    action: 'created',
-    description: `Tarefa "${task.title}" criada`,
-    userId,
-    projectId: task.projectId,
-    leadId: task.leadId,
-  },
-});
+      // ✅ Notificar responsável atribuído (se diferente de quem criou)
+      if (data.assignedToId && data.assignedToId !== userId) {
+        await resourceNotification(tx, organizationId, task, {
+          userId: data.assignedToId,
+          type: 'task_assigned',
+          title: 'Nova tarefa atribuída',
+          message: `Você foi atribuído à tarefa "${task.title}"`,
+          entityType: 'task',
+          entityId: task.id,
+        });
+      }
 
-    // Formatar resposta
-    return NextResponse.json({
-      ...task,
-      dueDate: task.dueDate?.toISOString(),
-      startDate: task.startDate?.toISOString(),
-      completedAt: task.completedAt?.toISOString(),
-      createdAt: task.createdAt.toISOString(),
-      updatedAt: task.updatedAt.toISOString(),
-      subtasks: task.subtasks.map(st => ({
-        ...st,
-        completedAt: st.completedAt?.toISOString(),
-        createdAt: st.createdAt.toISOString(),
-      })),
-      _count: {
-        subtasks: 0,
-        attachments: 0,
-        comments: 0,
-      },
-    }, { status: 201 });
+      if (task.dueDate) {
+        await resourceNotification(tx, organizationId, task, {
+          userId: task.assignedToId || userId,
+          type: 'task_due',
+          title: 'Follow-up agendado',
+          message: `Follow-up "${task.title}" agendado para ${task.dueDate.toLocaleDateString('pt-BR')}`,
+          entityType: 'task',
+          entityId: task.id,
+        });
+      }
+
+      // Registrar atividade na mesma transação da tarefa e notificações.
+      await tx.activity.create({
+        data: {
+          entityType: 'task',
+          entityId: task.id,
+          action: 'created',
+          description: `Tarefa "${task.title}" criada`,
+          userId,
+          projectId: task.projectId,
+          leadId: task.leadId,
+        },
+      });
+
+      // Formatar resposta
+      return NextResponse.json({
+        ...task,
+        dueDate: task.dueDate?.toISOString(),
+        startDate: task.startDate?.toISOString(),
+        completedAt: task.completedAt?.toISOString(),
+        createdAt: task.createdAt.toISOString(),
+        updatedAt: task.updatedAt.toISOString(),
+        subtasks: task.subtasks.map(st => ({
+          ...st,
+          completedAt: st.completedAt?.toISOString(),
+          createdAt: st.createdAt.toISOString(),
+        })),
+        _count: {
+          subtasks: 0,
+          attachments: 0,
+          comments: 0,
+        },
+      }, { status: 201 });
+    });
   } catch (error) {
+    const rejection = relationError(error);
+    if (rejection) return rejection;
     console.error('Erro ao criar task:', error);
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

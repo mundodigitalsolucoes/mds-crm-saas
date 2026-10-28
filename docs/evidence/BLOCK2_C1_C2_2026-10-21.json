@@ -1,0 +1,686 @@
+{
+  "referenceHead": "192a110025a29e2a8cd4b5bce5595165e1bfca22",
+  "c1Commit": "7f02b382a2e71049f5a921557cc18d1ae7153899",
+  "scope": "C1+C2; contractual presentation only; no API enforcement",
+  "httpMatrix": {
+    "referenceHead": "192a110",
+    "scenarios": [
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 1,
+        "modules": [
+          "atendimento"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 2,
+        "modules": [
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 3,
+        "modules": [
+          "atendimento",
+          "vendas"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 4,
+        "modules": [
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 5,
+        "modules": [
+          "atendimento",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 6,
+        "modules": [
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 0,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      },
+      {
+        "directPages": {
+          "/leads": 200,
+          "/projects": 200
+        },
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "owner",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "admin",
+        "dashboard": 200,
+        "leadsApi": 200,
+        "passed": true
+      },
+      {
+        "directPages": {},
+        "mask": 7,
+        "modules": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "tenant": 1,
+        "role": "user",
+        "dashboard": 200,
+        "leadsApi": 403,
+        "passed": true
+      }
+    ],
+    "invalidConfigurations": 3,
+    "passed": true
+  },
+  "c0Regression": {
+    "referenceHead": "be26c813231602e14e33c12866a9e1d9baba6781",
+    "candidate": "C0 working tree",
+    "transport": "Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only",
+    "active": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedUser": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "deletedOrganization": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "restrictedUser": {
+      "leadApiStatus": 403,
+      "dashboardStatus": 200,
+      "fixtureLeadInDashboard": false
+    },
+    "regression": {
+      "ownTask": true,
+      "ownFollowUp": true,
+      "foreignDataAbsent": true,
+      "restrictedLeadLinkedTaskAbsent": true,
+      "restrictedLeadIndicatorsAbsent": true
+    },
+    "expected": "Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only"
+  },
+  "results": {
+    "nodePostgres": 102,
+    "typescript": 281,
+    "sidebarRenderedScenarios": 42,
+    "authenticatedContextScenarios": 42,
+    "dashboardHttpScenarios": 42,
+    "invalidContractHttpScenarios": 3,
+    "directPageRequests": 28,
+    "generalHttpRegression": 22,
+    "build": "pass",
+    "typecheck": "pass",
+    "scopedLint": {
+      "errors": 0,
+      "warnings": 1
+    }
+  },
+  "sourceFiles": [
+    {
+      "path": "src/lib/authorization/application-context.ts",
+      "sha256": "360fed58001f82305716b3450e3b13ea87d5a3d64731397b47c1d752a52521c7"
+    },
+    {
+      "path": "src/components/Sidebar.tsx",
+      "sha256": "00921564745233839e309139588a352fe8864ff7b4eb2289617184ced1d48747"
+    },
+    {
+      "path": "src/app/(app)/layout.tsx",
+      "sha256": "ad68da6bbec83bfedbc3539aa44d9664d242fb3a8e90452b024054df554913d5"
+    },
+    {
+      "path": "src/app/(app)/dashboard/page.tsx",
+      "sha256": "00fd779b8e9bb73bfd27c0179fe1742580769281035a2eac94729256a7f81e52"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/http-matrix-final.json",
+      "sha256": "50303388bcbf17872d1887799aa4dd05ff6ce7acc616f3c3a02624cf90299284"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/c0-http-final.json",
+      "sha256": "7f02c14aaa3d0e428a976557cde54d0a2412c18c27b8a248ae402cc607247941"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/http-regression-final.log",
+      "sha256": "81e80b0d848f60536c0f386b8197a39a12124d1ee056a81a98c5729243cf1f0c"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/node-tests.tap",
+      "sha256": "6ebb0efb21fa55009b4b320ccb0b98070f31f4ceee776c817732dbf1ca73d035"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/ts-tests-final.log",
+      "sha256": "2ef4f10cb056a7ff8a3b1bc1e6f14f246b9c29658ab0e0abfb61606fe2eb58c7"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/lint-final.log",
+      "sha256": "39dc2d68b8b5e30b4f2e4815c27269b7a916ed5f0b5bb8d25b0bcbf86ac9d933"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/build-final.log",
+      "sha256": "14fd44e904fb6d66b37b03a19dd72048a03fb618f469a77dcf847a3ba489a46d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c1-c2/typecheck-final.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    }
+  ]
+}

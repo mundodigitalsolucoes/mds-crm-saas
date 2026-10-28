@@ -61,20 +61,6 @@ export async function POST(request: Request) {
     // Avoid hashing an unaccepted password and keep new-account behavior unchanged.
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
-    let result: {
-      organization: {
-        id: string
-        name: string
-        slug: string
-        plan: string
-      }
-      user: {
-        id: string
-        name: string
-        email: string
-      }
-    }
-
     const baseSlug = slugify(data.companyName)
     let slug = baseSlug || `org-${crypto.randomUUID().slice(0, 8)}`
     let i = 1
@@ -83,7 +69,7 @@ export async function POST(request: Request) {
       slug = `${baseSlug}-${i++}`
     }
 
-    result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const organization = await tx.organization.create({
         data: {
           name: data.companyName,
@@ -123,6 +109,7 @@ export async function POST(request: Request) {
 
     provisionChatwootForOrg({
       organizationId: result.organization.id,
+      allowCreate: true,
       orgName: result.organization.name,
       orgSlug: result.organization.slug,
       ownerUserId: result.user.id,

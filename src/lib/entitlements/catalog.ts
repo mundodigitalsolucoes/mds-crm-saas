@@ -16,6 +16,7 @@ export const FEATURE_CATALOG = {
   financeiro: feature('module', 'planned', 'Financeiro', 'Módulo futuro, ainda indisponível.'),
   agentes_ia: feature('module', 'planned', 'Agentes de IA', 'Módulo futuro, ainda indisponível.'),
   white_label: feature('capability', 'available', 'White Label', 'Direito comercial à personalização; não aplica branding.'),
+  custom_domain: feature('capability', 'available', 'Domínio próprio', 'Hostname exclusivo, com posse e HTTPS verificados; não habilita módulos nem White-Label.'),
   advanced_reports: feature('capability', 'available', 'Relatórios Avançados', 'Capacidade opcional de relatórios.'),
   integrations: feature('capability', 'available', 'Integrações', 'Capacidade comercial; não concede permissão de usuário.'),
   ai_assistant: feature('capability', 'available', 'Assistente IA', 'Identificador legado, distinto do futuro módulo agentes_ia.'),

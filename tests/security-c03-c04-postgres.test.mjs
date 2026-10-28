@@ -1,8 +1,9 @@
+import { Client } from 'pg'
 // Executes the same advisory-lock SQL as forgot-password against disposable PostgreSQL.
 // No application tables, migrations or production credentials are required.
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const { PrismaClient } = require('@prisma/client')
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { PrismaClient } from '@prisma/client'
 
 test('Prisma decodes the per-email transaction advisory lock projection', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
@@ -44,7 +45,6 @@ test('same-email advisory locks serialize concurrent Prisma transactions', async
 
     // Observe the second connection waiting on the same PostgreSQL advisory
     // lock rather than relying only on an elapsed-time assertion.
-    const { Client } = require('pg')
     const observer = new Client({ connectionString: process.env.DATABASE_URL })
     await observer.connect()
     try {
@@ -101,7 +101,6 @@ test('different-email advisory locks do not block each other', async () => {
 
 test('PostgreSQL CAS permits only one concurrent inbox reservation per tenant', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const setup = new Client({ connectionString: process.env.DATABASE_URL })
   const first = new Client({ connectionString: process.env.DATABASE_URL })
   const second = new Client({ connectionString: process.env.DATABASE_URL })
@@ -128,7 +127,6 @@ test('PostgreSQL CAS permits only one concurrent inbox reservation per tenant', 
 
 test('Inbox reservation CAS cannot mutate another tenant or a deleted tenant', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const db = new Client({ connectionString: process.env.DATABASE_URL })
   await db.connect()
   try {
@@ -152,7 +150,6 @@ test('Inbox reservation CAS cannot mutate another tenant or a deleted tenant', a
 
 test('Remote inbox success followed by stale local completion cannot overwrite concurrent tenant changes', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const db = new Client({ connectionString: process.env.DATABASE_URL })
   await db.connect()
   try {
@@ -186,7 +183,6 @@ test('Remote inbox success followed by stale local completion cannot overwrite c
 
 test('Concurrent Widget reservation dispatches at most one simulated remote inbox POST', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const setup = new Client({ connectionString: process.env.DATABASE_URL })
   const a = new Client({ connectionString: process.env.DATABASE_URL })
   const b = new Client({ connectionString: process.env.DATABASE_URL })
@@ -222,7 +218,6 @@ test('Concurrent Widget reservation dispatches at most one simulated remote inbo
 
 test('Widget reconciliation state rejects subsequent creation after ambiguous remote result', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const db = new Client({ connectionString: process.env.DATABASE_URL })
   await db.connect()
   try {
@@ -251,7 +246,6 @@ test('Widget reconciliation state rejects subsequent creation after ambiguous re
 
 test('Widget stale error CAS can lose reconciliation marker if a writer replaces reserved settings', async () => {
   assert.ok(process.env.DATABASE_URL, 'DATABASE_URL must target disposable PostgreSQL')
-  const { Client } = require('pg')
   const db = new Client({ connectionString: process.env.DATABASE_URL })
   await db.connect()
   try {

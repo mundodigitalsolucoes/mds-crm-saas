@@ -9,6 +9,15 @@ import { parseBody, forgotPasswordSchema } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
+    let domainOrganization: string | undefined;
+    let recoveryOrigin = process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br';
+    if (process.env.CRM_CUSTOM_DOMAINS_ENABLED === 'true') {
+      const { resolveRequestDomain } = await import('@/lib/domains/request');
+      const context = await resolveRequestDomain(request.headers);
+      if (context.kind === 'denied' || context.kind === 'custom' && !context.active) return new NextResponse(null, { status: 421 });
+      recoveryOrigin = context.origin;
+      if (context.kind === 'custom') domainOrganization = context.organizationId;
+    }
     const body = await request.json();
 
     // ✅ Validação Zod centralizada (email já normalizado para lowercase)
@@ -20,6 +29,7 @@ export async function POST(request: Request) {
     const user = await prisma.user.findFirst({
       where: {
         email: data.email,
+        ...(domainOrganization ? { organizationId: domainOrganization } : {}),
         deletedAt: null,
         organization: { deletedAt: null },
       },
@@ -52,7 +62,7 @@ export async function POST(request: Request) {
     });
 
     // Monta o link de recuperação
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://crm.mundodigitalsolucoes.com.br';
+    const baseUrl = recoveryOrigin;
     const resetLink = `${baseUrl}/auth/reset-password?token=${token}`;
 
     // Envia o email

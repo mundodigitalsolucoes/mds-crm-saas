@@ -4,6 +4,7 @@ import { checkPermission } from '@/lib/checkPermission'
 import { observeChannelEntitlement } from '@/lib/authorization/channel-observation'
 import { prisma } from '@/lib/prisma'
 import { decryptToken } from '@/lib/integrations/crypto'
+import { reserveWidgetInbox, beginWidgetCreation, rememberWidgetInbox, retainUncertainWidgetCreation, cancelUnsentWidgetReservation, WidgetBindingMismatch } from '@/lib/atendimento/widget-inbox-store'
 
 type ChatwootAccountData = {
   chatwootAccountId?: number | string
@@ -133,8 +134,10 @@ function normalizeWebsiteUrl(input: string) {
 }
 
 function toPositiveInt(value: unknown): number | null {
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  if (typeof value === 'string' && !/^[1-9]\d*$/.test(value)) return null
   const num = Number(value)
-  if (!Number.isInteger(num) || num <= 0) return null
+  if (!Number.isSafeInteger(num) || num <= 0) return null
   return num
 }
 
@@ -435,8 +438,8 @@ function buildUpdatePayload(config: WidgetProvisionConfig) {
 async function chatwootRequest<T>(params: {
   url: string
   apiToken: string
-  method: 'POST' | 'PATCH'
-  body: Record<string, unknown>
+  method: 'GET' | 'POST' | 'PATCH'
+  body?: Record<string, unknown>
 }): Promise<T> {
   const response = await fetch(params.url, {
     method: params.method,
@@ -444,7 +447,7 @@ async function chatwootRequest<T>(params: {
       'Content-Type': 'application/json',
       api_access_token: params.apiToken,
     },
-    body: JSON.stringify(params.body),
+    body: params.body ? JSON.stringify(params.body) : undefined,
     cache: 'no-store',
     signal: AbortSignal.timeout(12_000),
   })
@@ -455,24 +458,11 @@ async function chatwootRequest<T>(params: {
     : null
 
   if (!response.ok) {
-    const detail =
-      (json &&
-      typeof json === 'object' &&
-      ('error' in json || 'message' in json)
-        ? String(
-            (json as { error?: string; message?: string }).error ||
-              (json as { error?: string; message?: string }).message ||
-              ''
-          )
-        : '') ||
-      text ||
-      `chatwoot_http_${response.status}`
-
     throw new WidgetProvisionError(
       'Falha ao ativar o canal do site no Atendimento.',
       response.status,
       'CHATWOOT_INBOX_REQUEST_FAILED',
-      detail
+      `chatwoot_http_${response.status}`
     )
   }
 
@@ -487,7 +477,7 @@ async function chatwootRequest<T>(params: {
 
 async function persistRuntimeError(params: {
   organizationId: string
-  expectedSettings: string | null
+  expectedSettings: string
   parsedSettings: Record<string, unknown>
   runtime: WidgetRuntimeData
   message: string
@@ -566,9 +556,12 @@ export async function POST() {
   const runtime = resolveWidgetRuntime(parsedSettings)
   let expectedSettings = organization.settings
   let remoteCreateAttempted = false
+  let operationId: string | undefined
+  let ownsReservation = false
 
   try {
-    if (['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))) {
+    const recorded = await prisma.widgetInboxOperation.findUnique({ where: { organizationId } })
+    if (['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus)) && !recorded?.inboxId) {
       throw new WidgetProvisionError('Inbox do Widget pendente de reconciliação. Verifique o Chatwoot antes de tentar novamente.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
     }
     validateProvisionConfig(config)
@@ -619,7 +612,6 @@ export async function POST() {
     const apiToken = decryptToken(chatwootAccount.accessTokenEnc)
     const apiBaseUrl =
       normalizeBaseUrl(process.env.CHATWOOT_INTERNAL_URL) ||
-      config.chatwootBaseUrl ||
       normalizeBaseUrl(organization.chatwootUrl) ||
       normalizeBaseUrl(chatwootData.chatwootUrl)
 
@@ -631,13 +623,34 @@ export async function POST() {
       )
     }
 
-    const existingInboxId = toPositiveInt(runtime.chatwootInboxId)
+    const legacyInboxId = toPositiveInt(runtime.chatwootInboxId)
+    const storedRuntime = parsedSettings.atendimentoWidgetRuntime as Record<string, unknown> | undefined
+    if (!recorded?.inboxId && storedRuntime?.chatwootInboxId != null && !legacyInboxId) {
+      throw new WidgetProvisionError('Referência da inbox inválida; reconciliação necessária.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+    }
+    const reservation = await reserveWidgetInbox({ organizationId, connectedAccountId: chatwootAccount.id, accountId: connectedAccountId, baseUrl: apiBaseUrl }, legacyInboxId)
+    operationId = reservation.operation.operationId
+    ownsReservation = reservation.created
+    const existingInboxId = reservation.operation.inboxId
+    if (!existingInboxId && !ownsReservation) {
+      throw new WidgetProvisionError('Operação durável pendente de reconciliação.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+    }
 
     let inboxResponse: ChatwootInboxResponse
     let action: 'created' | 'updated'
 
     if (existingInboxId) {
       try {
+        // Reconcile only the exact persisted inbox within its original account.
+        // Names, settings replacements and expired reservations never authorize POST.
+        const remote = await chatwootRequest<ChatwootInboxResponse>({
+          url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes/${existingInboxId}`,
+          apiToken,
+          method: 'GET',
+        })
+        if (toPositiveInt(remote.id) !== existingInboxId) {
+          throw new WidgetProvisionError('Inbox remota inconsistente.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+        }
         inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
           url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes/${existingInboxId}`,
           apiToken,
@@ -677,6 +690,7 @@ export async function POST() {
         throw new WidgetProvisionError('Configuração alterada durante a reserva da inbox.', 409, 'WIDGET_INBOX_RESERVATION_CONFLICT')
       }
       expectedSettings = pendingSettings
+      await beginWidgetCreation(operationId)
       remoteCreateAttempted = true
       inboxResponse = await chatwootRequest<ChatwootInboxResponse>({
         url: `${apiBaseUrl}/api/v1/accounts/${connectedAccountId}/inboxes`,
@@ -695,6 +709,11 @@ export async function POST() {
         'CHATWOOT_INBOX_ID_MISSING'
       )
     }
+    if (existingInboxId && inboxId !== existingInboxId) {
+      throw new WidgetProvisionError('Resposta de outra inbox.', 409, 'WIDGET_INBOX_RECONCILIATION_REQUIRED')
+    }
+    // Persist remote identity before touching the mutable settings projection.
+    await rememberWidgetInbox(operationId, inboxId)
 
     const channelId = toPositiveInt(inboxResponse.channel_id)
     const websiteToken =
@@ -737,6 +756,8 @@ export async function POST() {
       },
     }
 
+    const activeAccount = await prisma.connectedAccount.findFirst({ where: { id: chatwootAccount.id, organizationId, isActive: true, data: chatwootAccount.data } })
+    if (!activeAccount) throw new WidgetProvisionError('Integração alterada durante a operação.', 409, 'WIDGET_CONNECTION_CHANGED')
     const saved = await prisma.organization.updateMany({
       where: { id: organizationId, deletedAt: null, settings: expectedSettings },
       data: { settings: JSON.stringify(nextSettings) },
@@ -748,6 +769,7 @@ export async function POST() {
         'WIDGET_SETTINGS_CONFLICT'
       )
     }
+    await prisma.widgetInboxOperation.updateMany({ where: { operationId, inboxId }, data: { status: 'completed' } })
     const updatedOrganization = await prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
       select: { id: true, name: true, slug: true, plan: true, updatedAt: true },
@@ -781,20 +803,34 @@ export async function POST() {
       savedAt: updatedOrganization.updatedAt.toISOString(),
     })
   } catch (error) {
+    if (error instanceof WidgetBindingMismatch) {
+      return NextResponse.json({ error: 'WIDGET_OPERATION_BINDING_MISMATCH', message: 'A operação pertence a outro vínculo do Atendimento. Reconciliação necessária.' }, { status: 409 })
+    }
+    if (operationId) {
+      if (remoteCreateAttempted) await retainUncertainWidgetCreation(operationId).catch(() => {})
+      else if (ownsReservation) await cancelUnsentWidgetReservation(operationId).catch(() => {})
+    }
     const message =
       error instanceof WidgetProvisionError
         ? error.message
         : 'Erro inesperado ao ativar o widget do Atendimento.'
 
-    await persistRuntimeError({
-      organizationId,
-      expectedSettings,
-      parsedSettings,
-      runtime: remoteCreateAttempted || ['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))
-        ? { ...runtime, provisionStatus: 'reconciliation_required' }
-        : runtime,
-      message,
-    })
+    // A reconciliation response without ownership must not invalidate the
+    // snapshot of the request that owns the durable creation reservation.
+    const shouldPersistError = ownsReservation ||
+      !(error instanceof WidgetProvisionError) ||
+      error.code !== 'WIDGET_INBOX_RECONCILIATION_REQUIRED'
+    if (shouldPersistError) {
+      await persistRuntimeError({
+        organizationId,
+        expectedSettings,
+        parsedSettings,
+        runtime: remoteCreateAttempted || ['pending', 'reconciliation_required'].includes(String(runtime.provisionStatus))
+          ? { ...runtime, provisionStatus: 'reconciliation_required' }
+          : runtime,
+        message,
+      })
+    }
 
     if (error instanceof WidgetProvisionError) {
       return NextResponse.json(

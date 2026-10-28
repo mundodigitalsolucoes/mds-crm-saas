@@ -1,5 +1,7 @@
 'use client';
 
+import BrandLogo from '@/components/BrandLogo';
+import { usePublicBranding, usePublicDomain } from '@/components/PublicBrandingProvider';
 import { signIn } from 'next-auth/react';
 import { useMemo, useState, Suspense, type FormEvent, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -20,6 +22,8 @@ function getErrorMessage(error: string | null) {
 }
 
 function LoginForm() {
+  const branding = usePublicBranding();
+  const customDomain = usePublicDomain();
   const searchParams = useSearchParams();
   const registered = searchParams.get('registered') === 'true';
   const loginError = searchParams.get('error');
@@ -74,11 +78,9 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-6">
-          <img
-            src="/images/logo-mds.svg"
-            alt="MDS Logo"
-            className="h-32 w-auto"
-          />
+          <div className="w-full max-w-xs rounded p-4" style={{ backgroundColor: '#F8F7F4' }}>
+            <BrandLogo branding={branding} documentIcon />
+          </div>
         </div>
 
         {registered && (
@@ -94,14 +96,14 @@ function LoginForm() {
         )}
 
         <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-xl font-bold mb-4" style={{ color: '#2f3453' }}>
+          <h1 className="text-xl font-bold mb-4" style={{ color: 'var(--brand-link)' }}>
             Entrar
           </h1>
 
           <label className="block text-sm mb-1 text-gray-700">Email</label>
           <input
             className="w-full border rounded px-3 py-2 mb-3 focus:outline-none focus:ring-2"
-            style={{ '--tw-ring-color': '#2f3453' } as CSSProperties}
+            style={{ '--tw-ring-color': 'var(--brand-link)' } as CSSProperties}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
@@ -132,7 +134,7 @@ function LoginForm() {
             <Link
               href="/auth/forgot-password"
               className="text-sm hover:underline"
-              style={{ color: '#2f3453' }}
+              style={{ color: 'var(--brand-link)' }}
             >
               Esqueceu sua senha?
             </Link>
@@ -143,23 +145,25 @@ function LoginForm() {
           <button
             disabled={loading}
             className="w-full text-white rounded px-3 py-2 font-medium transition-opacity disabled:opacity-60"
-            style={{ backgroundColor: '#2f3453' }}
+            style={{ backgroundColor: 'var(--brand-primary)', color: 'var(--brand-primary-text)' }}
             type="submit"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
+        {!customDomain && (
         <p className="text-center text-sm mt-4 text-gray-600">
           Não tem uma conta?{' '}
           <Link
             href="/auth/signup"
             className="font-medium hover:underline"
-            style={{ color: '#2f3453' }}
+            style={{ color: 'var(--brand-link)' }}
           >
             Cadastre-se grátis
           </Link>
         </p>
+        )}
       </div>
     </div>
   );
@@ -172,7 +176,7 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center">
           <div
             className="animate-spin rounded-full h-8 w-8 border-b-2"
-            style={{ borderColor: '#2f3453' }}
+            style={{ borderColor: 'var(--brand-link)' }}
           />
         </div>
       }

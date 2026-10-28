@@ -1,12 +1,13 @@
 // src/app/(app)/dashboard/page.tsx
 import { Metadata } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkAuth, checkPermission } from '@/lib/checkPermission';
+import { getOrganizationEntitlements } from '@/lib/entitlements/organization';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
-  title: 'Dashboard | MDS CRM',
+  title: 'Dashboard',
   description: 'Painel principal do CRM com métricas em tempo real.',
 };
 
@@ -53,25 +54,37 @@ function UsageBar({
 // ============================================
 
 export default async function DashboardPage() {
-  // ─── Autenticação ───
-  const session = await getServerSession(authOptions);
+  // RSC pages can execute independently of their parent layout.
+  const auth = await checkAuth();
+  if (!auth.authenticated || !auth.session) redirect('/auth/login');
+  const orgId = auth.session.user.organizationId;
+  const modules = ['leads', 'projects', 'tasks', 'os', 'users'] as const;
+  const checks = await Promise.all(modules.map(module => checkPermission(module, 'view')));
+  if (checks.some(check => !check.session ||
+    check.session.user.id !== auth.session.user.id ||
+    check.session.user.organizationId !== orgId)) redirect('/auth/login');
+  const commercial = await getOrganizationEntitlements(orgId);
+  if (!commercial.ok) redirect('/auth/login');
+  const sales = commercial.entitlements.module('vendas').contracted;
+  const marketing = commercial.entitlements.module('marketing').contracted;
+  const [viewLeads, viewProjects, viewTasks, viewOS, canUsers] = checks.map(check => check.allowed);
+  const canLeads = sales && viewLeads;
+  const canProjects = marketing && viewProjects;
+  const canTasks = marketing && viewTasks;
+  const canFollowUps = sales && viewTasks;
+  const canOS = marketing && viewOS;
 
-  if (!session?.user?.organizationId) {
-    redirect('/auth/login');
-  }
-
-  const orgId = session.user.organizationId;
-
-     // ─── Filtros seguros para Tasks com isolamento multi-tenant ───
-  const operationalTaskFilter = {
+  // Linked resources must also belong to this tenant and be authorized.
+  const taskScope: Prisma.TaskWhereInput = {
     organizationId: orgId,
-    type: 'task',
+    AND: [
+      canLeads ? { OR: [{ leadId: null }, { lead: { organizationId: orgId } }] } : { leadId: null },
+      canProjects ? { OR: [{ projectId: null }, { project: { organizationId: orgId } }] } : { projectId: null },
+      { OR: [{ assignedToId: null }, { assignedTo: { organizationId: orgId, deletedAt: null } }] },
+    ],
   };
-
-  const followUpTaskFilter = {
-    organizationId: orgId,
-    type: 'follow_up',
-  };
+  const operationalTaskFilter = { ...taskScope, type: 'task' };
+  const followUpTaskFilter = { ...taskScope, type: 'follow_up' };
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -94,45 +107,32 @@ export default async function DashboardPage() {
     totalOS,
     totalUsers,
   ] = await Promise.all([
-    // 1. Total de Leads
-    prisma.lead.count({ where: { organizationId: orgId } }),
-
-    // 2. Projetos Ativos
-    prisma.marketingProject.count({
+    canLeads ? prisma.lead.count({ where: { organizationId: orgId } }) : 0,
+    canProjects ? prisma.marketingProject.count({
       where: { organizationId: orgId, status: 'active' },
-    }),
-
-            // 3. Tarefas Pendentes
-    prisma.task.count({
+    }) : 0,
+    canTasks ? prisma.task.count({
       where: {
         ...operationalTaskFilter,
         status: { notIn: ['done', 'cancelled'] },
       },
-    }),
-
-    // 4. Follow-ups Pendentes
-    prisma.task.count({
+    }) : 0,
+    canFollowUps ? prisma.task.count({
       where: {
         ...followUpTaskFilter,
         status: { notIn: ['done', 'cancelled'] },
       },
-    }),
-
-    // 5. Leads Ganhos
-    prisma.lead.count({
+    }) : 0,
+    canLeads ? prisma.lead.count({
       where: { organizationId: orgId, status: 'won' },
-    }),
-
-    // 5. Leads Recentes
-    prisma.lead.findMany({
+    }) : 0,
+    canLeads ? prisma.lead.findMany({
       where: { organizationId: orgId },
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: { id: true, name: true, company: true, status: true },
-    }),
-
-        // 6. Tarefas de Hoje
-    prisma.task.findMany({
+    }) : [],
+    canTasks ? prisma.task.findMany({
       where: {
         ...operationalTaskFilter,
         status: { notIn: ['done', 'cancelled'] },
@@ -149,10 +149,8 @@ export default async function DashboardPage() {
       },
       orderBy: { dueDate: 'asc' },
       include: { assignedTo: { select: { name: true } } },
-    }),
-
-    // 7. Follow-ups de Hoje
-    prisma.task.findMany({
+    }) : [],
+    canFollowUps ? prisma.task.findMany({
       where: {
         ...followUpTaskFilter,
         dueDate: {
@@ -167,11 +165,9 @@ export default async function DashboardPage() {
         assignedTo: { select: { name: true } },
         lead: { select: { name: true } },
       },
-    }),
-
-    // 8. ✅ Organização (limites do plano)
-    prisma.organization.findUnique({
-      where: { id: orgId },
+    }) : [],
+    prisma.organization.findFirst({
+      where: { id: orgId, deletedAt: null },
       select: {
         plan: true,
         planStatus: true,
@@ -181,15 +177,9 @@ export default async function DashboardPage() {
         maxOs: true,
       },
     }),
-
-    // 8. ✅ Total de projetos (para usage)
-    prisma.marketingProject.count({ where: { organizationId: orgId } }),
-
-    // 9. ✅ Total de OS (para usage)
-    prisma.serviceOrder.count({ where: { organizationId: orgId } }),
-
-    // 10. ✅ Total de usuários ativos (para usage)
-    prisma.user.count({ where: { organizationId: orgId, deletedAt: null } }),
+    canProjects ? prisma.marketingProject.count({ where: { organizationId: orgId } }) : 0,
+    canOS ? prisma.serviceOrder.count({ where: { organizationId: orgId } }) : 0,
+    canUsers ? prisma.user.count({ where: { organizationId: orgId, deletedAt: null } }) : 0,
   ]);
 
   // ─── Cálculos ───
@@ -231,7 +221,7 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <div className="flex items-center gap-3">
           {organization && (
-            <span className="text-xs bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full font-medium uppercase">
+            <span className="brand-badge text-xs px-2.5 py-1 rounded-full font-medium uppercase">
               Plano {organization.plan}
             </span>
           )}
@@ -242,7 +232,7 @@ export default async function DashboardPage() {
       {/* GRID DE CARDS PRINCIPAIS */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
         {/* Card Leads */}
-        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {canLeads && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -254,10 +244,10 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{totalLeadsCount}</p>
             </div>
           </div>
-        </div>
+        </div>)}
 
         {/* Card Projetos */}
-        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {canProjects && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 text-green-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,10 +259,10 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{activeProjectsCount}</p>
             </div>
           </div>
-        </div>
+        </div>)}
 
         {/* Card Tarefas */}
-        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {canTasks && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,10 +274,10 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{pendingTasksCount}</p>
             </div>
           </div>
-        </div>
+        </div>)}
 
-                {/* Card Follow-ups */}
-        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {/* Card Follow-ups */}
+        {canFollowUps && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-orange-100 text-orange-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,10 +289,10 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{pendingFollowUpsCount}</p>
             </div>
           </div>
-        </div>
+        </div>)}
 
         {/* Card Conversões */}
-        <div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
+        {canLeads && (<div className="bg-white rounded-lg shadow p-6 transition-transform hover:scale-105">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 text-purple-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -314,7 +304,7 @@ export default async function DashboardPage() {
               <p className="text-2xl font-bold text-gray-900">{conversionRate}%</p>
             </div>
           </div>
-        </div>
+        </div>)}
       </div>
 
       {/* ✅ USO DO PLANO */}
@@ -322,10 +312,10 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Uso do Plano</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <UsageBar label="Leads" current={totalLeadsCount} max={organization.maxLeads} />
-            <UsageBar label="Projetos" current={totalProjects} max={organization.maxProjects} />
-            <UsageBar label="Ordens de Serviço" current={totalOS} max={organization.maxOs} />
-            <UsageBar label="Usuários" current={totalUsers} max={organization.maxUsers} />
+            {canLeads && (<UsageBar label="Leads" current={totalLeadsCount} max={organization.maxLeads} />)}
+            {canProjects && (<UsageBar label="Projetos" current={totalProjects} max={organization.maxProjects} />)}
+            {canOS && (<UsageBar label="Ordens de Serviço" current={totalOS} max={organization.maxOs} />)}
+            {canUsers && (<UsageBar label="Usuários" current={totalUsers} max={organization.maxUsers} />)}
           </div>
         </div>
       )}
@@ -333,7 +323,7 @@ export default async function DashboardPage() {
       {/* ÁREA DE CONTEÚDO SECUNDÁRIO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Lista de Leads Recentes */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        {canLeads && (<div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Leads Recentes</h2>
           </div>
@@ -356,10 +346,10 @@ export default async function DashboardPage() {
               Nenhum lead cadastrado ainda.
             </div>
           )}
-        </div>
+        </div>)}
 
         {/* Lista de Tarefas de Hoje */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        {canTasks && (<div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Tarefas de Hoje</h2>
           </div>
@@ -396,10 +386,10 @@ export default async function DashboardPage() {
               Nenhuma tarefa pendente para hoje.
             </div>
           )}
-        </div>
+        </div>)}
 
         {/* Lista de Follow-ups de Hoje */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        {canFollowUps && (<div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Follow-ups de Hoje</h2>
           </div>
@@ -451,7 +441,7 @@ export default async function DashboardPage() {
               Nenhum follow-up pendente para hoje.
             </div>
           )}
-        </div>
+        </div>)}
       </div>
     </div>
   );

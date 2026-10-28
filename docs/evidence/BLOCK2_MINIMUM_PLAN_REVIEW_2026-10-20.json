@@ -1,0 +1,476 @@
+{
+  "sourceHead": "f1975c9b437b78600328bba5641062e997ae1c58",
+  "scope": "Critical evidence review and approval plan; no application changes; not a signed independent G6 opinion.",
+  "evidenceIntegrity": {
+    "head": "f1975c9b437b78600328bba5641062e997ae1c58",
+    "testedSourceTreeIdentical": true,
+    "artifacts": [
+      {
+        "artifact": "node-tests.tap",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "tsx-tests.log",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "build.log",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "typecheck.log",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "http-smoke-results.json",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "commercial-matrix.json",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "npm-audit.json",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "lint.json",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      },
+      {
+        "artifact": "block2-commercial-audit.bundle",
+        "exists": true,
+        "matchesRecordedArtifact": true
+      }
+    ],
+    "allArtifactsMatch": true,
+    "limits": "Local integrity verification, not a signature, independent reviewer opinion or remote CI."
+  },
+  "newDashboardProbe": {
+    "sourceHead": "f1975c9b437b78600328bba5641062e997ae1c58",
+    "transport": "Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only",
+    "active": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedUser": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedOrganization": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "restrictedUser": {
+      "leadApiStatus": 403,
+      "dashboardStatus": 200,
+      "fixtureLeadInDashboard": true
+    },
+    "expected": "Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only"
+  },
+  "commercialProbe": {
+    "sourceHead": "f1975c9b437b78600328bba5641062e997ae1c58",
+    "foundationScenarios": 14,
+    "pureAuthorizationChecks": 126,
+    "testsMeaning": "PASS applies to resolver and pure authorizer foundations, not commercial readiness or URL/API blocking. UI gaps reported without changing application.",
+    "rows": [
+      {
+        "contracted": [
+          "atendimento"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "vendas"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Vendas",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "vendas"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Vendas",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "vendas"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "vendas"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "marketing"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "marketing"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "marketing"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "marketing"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "vendas",
+          "marketing"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "vendas",
+          "marketing"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": false,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "identity": "mds",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": true,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      },
+      {
+        "contracted": [
+          "atendimento",
+          "vendas",
+          "marketing"
+        ],
+        "identity": "white_label",
+        "foundation": "PASS",
+        "expectedMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "actualOwnerSSRMenu": [
+          "Dashboard",
+          "Atendimento",
+          "Vendas",
+          "Marketing",
+          "Configurações",
+          "Ajuda"
+        ],
+        "navigationMatchesContract": true,
+        "mdsLogoStillRendered": true,
+        "limits": "Real Sidebar and permission hook with mocked session and no effects/browser; no providers/DB, no commercial enforcement, no tenant branding injected."
+      }
+    ]
+  },
+  "freshContractRegressions": {
+    "pass": 26,
+    "fail": 0,
+    "skip": 0,
+    "todo": 0
+  },
+  "remoteCandidateCI": {
+    "runs": []
+  },
+  "independentReviewerAvailable": false,
+  "reviewerSelectionEvidence": {
+    "collaborators": [
+      {
+        "login": "mundodigitalsolucoes",
+        "role_name": "admin",
+        "type": "User"
+      }
+    ],
+    "authenticatedActor": {
+      "login": "mundodigitalsolucoes"
+    }
+  },
+  "formalGateApprovals": [],
+  "newOperationalBlockers": [
+    "Removed user and removed tenant still receive HTTP200 with fixture lead through /dashboard.",
+    "User with leads.view=false receives403 from /api/leads but200 with the same fixture lead through /dashboard."
+  ],
+  "limits": [
+    "Fixtures and network are loopback/disposable only; no real provider or credentials.",
+    "SSR branding probe has no tenant branding injected, so seven MDS logos are not seven complete branding acceptance tests.",
+    "Existing 102/171/22 test results were integrity-verified, not rerun as a new full suite here.",
+    "No source, schema, dependency, enforcement, remote ref or production change."
+  ]
+}

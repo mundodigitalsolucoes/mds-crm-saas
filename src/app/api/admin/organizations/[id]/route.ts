@@ -1,4 +1,5 @@
 // src/app/api/admin/organizations/[id]/route.ts
+import { parseCommercialFeatures } from '@/lib/entitlements/features';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminToken } from '@/lib/admin-auth';
@@ -90,6 +91,70 @@ export async function PUT(
       return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
     }
 
+    if (data.branding !== undefined) {
+      if (Object.keys(body).some(key => key !== 'branding')) {
+        return NextResponse.json({ error: 'Altere a identidade visual separadamente' }, { status: 400 });
+      }
+      if (existing.deletedAt) return NextResponse.json({ error: 'Organização inativa' }, { status: 409 });
+      const parsedFeatures = parseCommercialFeatures(existing.features);
+      if (parsedFeatures.status !== 'valid' || !parsedFeatures.features.includes('white_label')) {
+        return NextResponse.json({ error: 'White-Label não habilitado para a organização' }, { status: 403 });
+      }
+      const { branding } = data;
+      if (Object.keys(branding).length === 0) {
+        return NextResponse.json({ error: 'Nenhuma alteração de branding' }, { status: 400 });
+      }
+      const updated = await prisma.$transaction(async tx => {
+        // A revogação concorrente do adicional ou desativação invalida a edição.
+        const changed = await tx.organization.updateMany({
+          where: { id, deletedAt: null, features: existing.features }, data: branding,
+        });
+        if (changed.count !== 1) return null;
+        const org = await tx.organization.findUnique({
+          where: { id },
+          select: { id: true, name: true, logo: true, favicon: true, primaryColor: true, secondaryColor: true },
+        });
+        await tx.activity.create({ data: {
+          entityType: 'organization', entityId: id, action: 'updated', userId: null,
+          description: 'Identidade comercial atualizada pela MDS',
+          metadata: JSON.stringify({ actorType: 'superadmin', actorId: admin.id, fields: Object.keys(branding) }),
+        } });
+        return org;
+      });
+      if (!updated) return NextResponse.json({ error: 'Organização ou contrato alterado; recarregue antes de salvar' }, { status: 409 });
+      return NextResponse.json(updated, { headers: { 'Cache-Control': 'private, no-store' } });
+    }
+
+    if (data.whiteLabel !== undefined) {
+      // A capability change is explicit and cannot accidentally sync a whole plan.
+      if (Object.keys(body).some(key => key !== 'whiteLabel')) {
+        return NextResponse.json({ error: 'Altere White-Label separadamente das configurações operacionais' }, { status: 400 });
+      }
+      if (existing.deletedAt) return NextResponse.json({ error: 'Organização inativa' }, { status: 409 });
+      const parsedFeatures = parseCommercialFeatures(existing.features);
+      if (parsedFeatures.status !== 'valid' && parsedFeatures.status !== 'empty') {
+        return NextResponse.json({ error: 'Contrato legado requer revisão antes de alterar White-Label' }, { status: 409 });
+      }
+      const previous = JSON.parse(existing.features) as string[];
+      const features = data.whiteLabel
+        ? (previous.includes('white_label') ? previous : [...previous, 'white_label'])
+        : previous.filter(feature => feature !== 'white_label');
+      const result = await prisma.$transaction(async tx => {
+        const changed = await tx.organization.updateMany({
+          where: { id, deletedAt: null, features: existing.features },
+          data: { features: JSON.stringify(features) },
+        });
+        if (changed.count !== 1) return null;
+        await tx.activity.create({ data: {
+          entityType: 'organization', entityId: id, action: 'updated', userId: null,
+          description: 'Capacidade White-Label atualizada pela MDS',
+          metadata: JSON.stringify({ actorType: 'superadmin', actorId: admin.id, fields: ['white_label'], enabled: data.whiteLabel }),
+        } });
+        return { id, whiteLabel: data.whiteLabel };
+      });
+      return result ? NextResponse.json(result) : NextResponse.json({ error: 'Contrato alterado concorrentemente; recarregue antes de tentar novamente' }, { status: 409 });
+    }
+
     if (data.slug && data.slug !== existing.slug) {
       const slugExists = await prisma.organization.findFirst({
         where: { slug: data.slug, NOT: { id } },
@@ -104,6 +169,7 @@ export async function PUT(
     }
 
     const { syncFromPlan, ...updateData } = data;
+    delete updateData.whiteLabel;
     const targetPlan = data.plan ?? existing.plan;
 
     /**

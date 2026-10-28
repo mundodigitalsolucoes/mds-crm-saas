@@ -1,0 +1,885 @@
+{
+  "referenceHead": "f4866f538f211cf253a1a8e08b800b4ef5fdf4a7",
+  "testedWorkingTreeSha256": {
+    "src/app/api/comments/route.ts": "d26c006922e7b8675b39b234e87e6fdd5b9dbe2da859027c20f7acb94a4376c6",
+    "tests/comments-tenant-http.mjs": "6f5794c25082344b4837914dc6410903c58aa3d541dc697726ee7515bc7b8347",
+    "tests/comments-tenant-postgres.test.mjs": "dc4ad630056507da417dd84769b86a9fdb036795664e99437da8a24f035b70b9"
+  },
+  "runtime": "Node v22.21.1",
+  "database": "Disposable PostgreSQL on loopback; synthetic fixtures only; no migrations",
+  "httpBefore": {
+    "kind": "COMMENTS_P1_HTTP_SECURITY_ACCEPTANCE",
+    "results": [
+      {
+        "case": "foreign-parent-write",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "foreign-reply-read",
+        "status": 200,
+        "foreignDataReturned": true,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "task",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "method": "GET",
+        "status": 200,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "method": "POST",
+        "status": 201,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "task",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "method": "GET",
+        "status": 200,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "method": "POST",
+        "status": 201,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "task",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "lead",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "goal",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "kanban_card",
+        "status": 201,
+        "persisted": 1,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "method": "GET",
+        "status": 200,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "method": "POST",
+        "status": 201,
+        "passed": false
+      }
+    ],
+    "notifications": 0,
+    "passed": false
+  },
+  "httpAfter": {
+    "kind": "COMMENTS_P1_HTTP_SECURITY_ACCEPTANCE",
+    "results": [
+      {
+        "case": "foreign-parent-write",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-reply-read",
+        "status": 200,
+        "foreignDataReturned": false,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "owner",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "method": "GET",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "method": "POST",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "admin",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "method": "GET",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "method": "POST",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "task",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "task",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "lead",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "lead",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "goal",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "goal",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-root-reply",
+        "role": "user",
+        "entityType": "kanban_card",
+        "statuses": [
+          201,
+          201,
+          200
+        ],
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "wrong-entity",
+        "role": "user",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "missing-parent",
+        "role": "user",
+        "entityType": "kanban_card",
+        "status": 400,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "method": "GET",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "method": "POST",
+        "status": 404,
+        "persisted": 0,
+        "passed": true
+      }
+    ],
+    "notifications": 0,
+    "passed": true
+  },
+  "nodePostgres": {
+    "passed": 129,
+    "failed": 0,
+    "finalStrengthenedCommentsSubsetPassed": 6
+  },
+  "typescriptTests": {
+    "passed": 383,
+    "failed": 0
+  },
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "scopedLint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "httpRegressions": [
+    {
+      "script": "dashboard-c0-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "commercial-dashboard-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "branding-white-label-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-cross-tenant-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-direct-access-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-task-os-regression-http",
+      "exit": 0,
+      "signal": null
+    }
+  ],
+  "commercialPolicyChanged": false,
+  "gatesApproved": false,
+  "remoteActions": false,
+  "note": "HTTP runner records the reference HEAD while testing the modified working tree; exact tested source is fingerprinted above. Before probe had 41 cases (29 failures); final probe extends it with 12 role-specific foreign-parent cases and stronger persistence assertions: 53/53 pass."
+}

@@ -1,0 +1,399 @@
+{
+  "date": "2026-10-26",
+  "branch": "audit/block2-sanitized",
+  "remoteBase": "5817b9ca40c2e5c8066d84ccf4eaf091d5f8ce6b",
+  "preservedDiagnosticCommit": "fa27b2f",
+  "productionAccess": false,
+  "pushMergeDeployDnsOrCoolifyChanges": false,
+  "node": {
+    "version": "22.21.1",
+    "postgres": "16 disposable loopback only",
+    "tests": 626,
+    "passed": 626,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "checks": {
+    "nextProductionWebpackBuild": "passed",
+    "typecheck": "passed",
+    "lintChangedFiles": "passed zero errors or warnings",
+    "diffCheck": "passed",
+    "newSecretsPatternScan": "no matches",
+    "schemaMigrationsDependenciesNetworkVerifierAuthProvidersChanged": false,
+    "remoteCi": "not run for unpushed V1.1 commit; existing CI job updated and executed locally",
+    "dockerBuild": "not executed in this scope"
+  },
+  "commands": [
+    "node node_modules/tsx/dist/cli.mjs --test tests/*.test.ts tests/*.test.mjs",
+    "node node_modules/next/dist/bin/next build --webpack",
+    "node node_modules/typescript/bin/tsc --noEmit",
+    "node node_modules/eslint/bin/eslint.js <changed source/script/test files>",
+    "CI=true BLOCK2_CI_DISPOSABLE=true node scripts/block2-domain-ci.mjs",
+    "node scripts/block2-c6-ci.mjs http"
+  ],
+  "http": {
+    "customDomainScenarios": [
+      {
+        "name": "pending domain a",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "pending routing attestation a",
+        "passed": true
+      },
+      {
+        "name": "incomplete proxy configuration fails verification a",
+        "passed": true
+      },
+      {
+        "name": "pending domain b",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "pending routing attestation b",
+        "passed": true
+      },
+      {
+        "name": "incomplete proxy configuration fails verification b",
+        "passed": true
+      },
+      {
+        "name": "anonymous branded login a",
+        "passed": true
+      },
+      {
+        "name": "anonymous branded login b",
+        "passed": true
+      },
+      {
+        "name": "untrusted direct Host",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "unknown hostname",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "forged forwarded host",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "forged ingress key",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "insecure forwarded scheme",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "custom administrative endpoint",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "encoded administrative path denied",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "case-variant administrative path denied",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "custom signup page is not offered",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "custom signup",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "public tenant-by-slug resources remain canonical",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "legacy static files are not exposed on customer hosts",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "image optimizer cannot bypass legacy file restriction",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "provider webhooks remain canonical",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "host-only Secure cookie and same-domain callback",
+        "passed": true
+      },
+      {
+        "name": "authorized tenant data a",
+        "passed": true
+      },
+      {
+        "name": "authorized tenant data b",
+        "passed": true
+      },
+      {
+        "name": "authorized tenant data c",
+        "passed": true
+      },
+      {
+        "name": "legacy active domains remain authorized after 24 hours",
+        "passed": true
+      },
+      {
+        "name": "failed monitoring does not revoke a persistent activation",
+        "passed": true
+      },
+      {
+        "name": "copied session cannot read another host",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "session endpoint suppresses foreign user",
+        "passed": true
+      },
+      {
+        "name": "foreign user credentials cannot sign into tenant A",
+        "passed": true
+      },
+      {
+        "name": "tenant session has no canonical Super Admin authority",
+        "passed": true
+      },
+      {
+        "name": "canonical session not transferred to custom host",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "custom session not transferred to canonical host",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "legacy primary session preserved",
+        "passed": true
+      },
+      {
+        "name": "legacy cookie denied on custom domain",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "customer admin cannot administer domain",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "operational permissions preserved admin",
+        "passed": true
+      },
+      {
+        "name": "customer user cannot administer domain",
+        "passed": true,
+        "status": 403
+      },
+      {
+        "name": "operational permissions preserved user",
+        "passed": true
+      },
+      {
+        "name": "plan regrant does not automatically reactivate domain",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "plan propagation preserves explicit activation requirement",
+        "passed": true
+      },
+      {
+        "name": "membership transfer cannot transfer origin-bound session",
+        "passed": true,
+        "status": 401
+      },
+      {
+        "name": "immutable login organization survives live membership refresh",
+        "passed": true
+      },
+      {
+        "name": "foreign recovery creates no token",
+        "passed": true
+      },
+      {
+        "name": "reset token cannot cross tenant domains",
+        "passed": true
+      },
+      {
+        "name": "legitimate domain recovery preserved",
+        "passed": true
+      },
+      {
+        "name": "logout remains in same custom origin",
+        "passed": true
+      },
+      {
+        "name": "deactivated host denied",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "old domain invalidated on replacement",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "replacement requires new verification",
+        "passed": true,
+        "status": 421
+      },
+      {
+        "name": "canonical fallback remains available",
+        "passed": true,
+        "status": 200
+      }
+    ],
+    "realProcessRestart": {
+      "before": {
+        "passed": true,
+        "olderThan24Hours": true,
+        "login": 200,
+        "authorizedData": 200
+      },
+      "after": {
+        "passed": true,
+        "olderThan24Hours": true,
+        "login": 200,
+        "authorizedData": 200
+      },
+      "serverProcessRestarted": true
+    },
+    "legacyRegressions": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-delete-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "attachments-upload-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "custom-domain-disabled-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "liveDnsOrCertificatesValidated": false,
+    "positiveTlsBoundary": "injected fixtures only; transport/TLS/SSRF regressions preserved"
+  },
+  "policy": {
+    "initialVerificationRequired": true,
+    "explicitSuperAdminActivationRequired": true,
+    "initialProofFreshnessRetained": true,
+    "activeAfter24Hours": true,
+    "legacyActiveWithoutDataMigration": true,
+    "singleMonitoringFailureRevokesActivation": false,
+    "failedMonitoringRenewsProof": false,
+    "securityIncidentSuspension": "explicit Super Admin deactivate after confirmation; no automatic suspension/cron",
+    "runtimeTlsAndRenewal": "trusted proxy responsibility; stored certificate date is an observation",
+    "observeOnlyPreserved": true,
+    "approvedEnforcementsEmpty": true
+  },
+  "files": [
+    {
+      "path": "scripts/block2-domain-ci.mjs",
+      "sha256": "372d101b33c4e64abec13f56eea0ad6d054f379f4bb1de28375cd86ca9c27336"
+    },
+    {
+      "path": "src/components/OrganizationDomainEditor.tsx",
+      "sha256": "fdb523759f213756f50b940173fa61c201ae3daab9b60b5807e53ee3c09e1ed0"
+    },
+    {
+      "path": "src/lib/domains/manager.ts",
+      "sha256": "1420f26fda751b73bf153e48557bd5723dbc3f8155df7a0ce264c5562eabdf81"
+    },
+    {
+      "path": "src/lib/domains/model.ts",
+      "sha256": "4aba218844efc8706cf3a26df7a526e888c6f8f2727984fdfc8d9625019c62b9"
+    },
+    {
+      "path": "src/lib/domains/request.ts",
+      "sha256": "dec7f20ff84b789536c79cb1fd8d0a09d57fd785afd61c1702ad2fdd175595e1"
+    },
+    {
+      "path": "tests/custom-domain-http.mjs",
+      "sha256": "bd8c60b4fd06e01922db123ca79b0c8f5d4ae8f925aee34af136d2d666b72a35"
+    },
+    {
+      "path": "tests/custom-domain-persistent.test.ts",
+      "sha256": "6732b864739d0bd042e32e5e7fbe0477fde8c1bd7de3762a719887939c8cedad"
+    },
+    {
+      "path": "tests/custom-domain-postgres.test.mjs",
+      "sha256": "844389826ff86507d1f5da78014d0a91c160f555b2bbf19e2eb406725f9c2e23"
+    },
+    {
+      "path": "tests/custom-domain-restart-http.mjs",
+      "sha256": "208dd815bcbff08ec8474cbd7bae9e2b1b700dda1b00830a4bf3047cefcfbc11"
+    },
+    {
+      "path": "tests/helpers/domain-persistent-activation-regressions.mjs",
+      "sha256": "578f489460b80570a083fb5bf26cf058970e1def26ece84f79d2ec303fcfa16e"
+    }
+  ]
+}

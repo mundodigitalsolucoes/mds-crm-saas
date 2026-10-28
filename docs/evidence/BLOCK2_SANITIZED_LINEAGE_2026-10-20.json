@@ -1,0 +1,31 @@
+{
+  "originalAuditHead": "59da966edfcc627c074b8c47a8bb50c314ad90a3",
+  "sanitizedCodeHead": "d4180eb194a57a270bc0cd7668e74565fcfe56d0",
+  "originalBase": "cb1884e413203baa123ca94dfb0a4c4635b6502a",
+  "sanitizedBase": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+  "removedPaths": [
+    ".env.backup",
+    "build.log",
+    "src/app/(app)/leads/page.tsx.backup"
+  ],
+  "mappedCommitsChecked": 783,
+  "functionalTreesPreservedExceptRemovedPaths": true,
+  "originalAuditUntouched": true,
+  "implementationCommitMap": {
+    "617cfd37ca9481d5a8f69f43723fcfa8fee18fab": "7c7fab92110294537ab62389e56cbeff23e9fe40",
+    "48c419079864fd95bae6ccc7f9ba3941772ca0f8": "8cfb5dc00bcdc661b5b1c42b59d15fc3d994ffec",
+    "d7ddde3d17439eb5f43904310b33a07ecacf7b67": "88d7a7f70dcc29215cdfbfeec9cd76d3d5dcec2f",
+    "fdbdb5c69830aeba6c8d668c54e51bc03c7a370a": "0809a5e238e2d4dd5220a4587d32207d67c41c5b",
+    "d5416229e3261a7c9f0a5ea56e1d6c72348e6606": "6d149b2f5b385d5ecf5f711415263387064f7733",
+    "c772fbbf7447ae9def6653daff1493a04a322a90": "986c9dda01f714f46b89e77790b9e0a708d3c308",
+    "23f158e0d79e5f1ffc296f0978ea5db4a595b9c3": "e73855f7cafd1cc843c59f9c08eea5d5894e679c",
+    "8ed774c2bef6d791eaec3f22e37e4b964dbf0cad": "ce9f176eab8cd8cd387c2c5897e399decfc6890c",
+    "3f4ef1bfeb60a104e4e17e116462d24f301a3050": "3a31bf56456d0bd0f7dac4b14e2062c0a83633cd",
+    "59da966edfcc627c074b8c47a8bb50c314ad90a3": "d4180eb194a57a270bc0cd7668e74565fcfe56d0"
+  },
+  "protectedBaselineMap": {
+    "f93c3435fff316a548255993d749ef545c9c7670": "7face2f24b7e171aa897abf72bea8f429692b2cf",
+    "d9ac1fe1b8e8406489c2158e5c26186580544ef7": "98663c6d4a5c0b1a661f90966d6edc81a386a523"
+  },
+  "limitations": "Only candidate ancestry sanitized; original local refs deliberately retained. Remote not modified; rewritten base requires future coordination."
+}

@@ -1,0 +1,3879 @@
+{
+  "candidateHead": "cf45f38edbef8c475c90d801b0d75423b1e1499d",
+  "base": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+  "scope": "sanitized candidate; original audit preserved separately; minimal Widget reservation loser correction and equivalent mapped baseline assertions",
+  "summary": {
+    "lint": {
+      "errors": 182,
+      "warnings": 77,
+      "requiresOriginReview": 0,
+      "securityBoundaryDiagnostics": 44,
+      "rules": {
+        "@next/next/no-assign-module-variable": {
+          "errors": 7,
+          "warnings": 0
+        },
+        "@next/next/no-img-element": {
+          "errors": 0,
+          "warnings": 6
+        },
+        "@typescript-eslint/no-empty-object-type": {
+          "errors": 1,
+          "warnings": 0
+        },
+        "@typescript-eslint/no-explicit-any": {
+          "errors": 125,
+          "warnings": 0
+        },
+        "@typescript-eslint/no-require-imports": {
+          "errors": 2,
+          "warnings": 0
+        },
+        "@typescript-eslint/no-unused-vars": {
+          "errors": 0,
+          "warnings": 62
+        },
+        "jsx-a11y/alt-text": {
+          "errors": 0,
+          "warnings": 2
+        },
+        "prefer-const": {
+          "errors": 2,
+          "warnings": 0
+        },
+        "react-hooks/exhaustive-deps": {
+          "errors": 0,
+          "warnings": 7
+        },
+        "react-hooks/immutability": {
+          "errors": 3,
+          "warnings": 0
+        },
+        "react-hooks/set-state-in-effect": {
+          "errors": 38,
+          "warnings": 0
+        },
+        "react/no-unescaped-entities": {
+          "errors": 4,
+          "warnings": 0
+        }
+      }
+    },
+    "historicalAudit": {
+      "info": 0,
+      "low": 1,
+      "moderate": 2,
+      "high": 14,
+      "critical": 0,
+      "total": 17
+    },
+    "currentAudit": {
+      "info": 0,
+      "low": 3,
+      "moderate": 3,
+      "high": 40,
+      "critical": 0,
+      "total": 46
+    },
+    "baseAuditSameSession": {
+      "info": 0,
+      "low": 2,
+      "moderate": 8,
+      "high": 37,
+      "critical": 2,
+      "total": 49
+    },
+    "newFlaggedPackages": []
+  },
+  "limitations": [
+    "Lint origin by exact trimmed source-line anchor, not semantic causality; boundary relevance does not prove exploitability.",
+    "Npm package entries include propagated metavulnerabilities; counts are not counts of independent exploits.",
+    "Current audit differs from previous snapshot for identical lock; do not replace real outcome with historical17.",
+    "No exploit or complete call graph reachability proof; no automatic dependency updates."
+  ],
+  "lint": [
+    {
+      "file": "scripts/hash.cjs",
+      "line": 2,
+      "column": 16,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-require-imports",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/agenda/page.tsx",
+      "line": 46,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/agenda/page.tsx",
+      "line": 77,
+      "column": 24,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/agenda/page.tsx",
+      "line": 78,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/atendimento/page.tsx",
+      "line": 64,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/atendimento/page.tsx",
+      "line": 193,
+      "column": 10,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/follow-ups/page.tsx",
+      "line": 15,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/follow-ups/page.tsx",
+      "line": 188,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/follow-ups/page.tsx",
+      "line": 206,
+      "column": 40,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/follow-ups/page.tsx",
+      "line": 217,
+      "column": 46,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/goals/page.tsx",
+      "line": 333,
+      "column": 59,
+      "severity": "error",
+      "rule": "react/no-unescaped-entities",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/goals/page.tsx",
+      "line": 333,
+      "column": 80,
+      "severity": "error",
+      "rule": "react/no-unescaped-entities",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 71,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 179,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 386,
+      "column": 42,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 389,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 423,
+      "column": 3,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/kanban/page.tsx",
+      "line": 455,
+      "column": 31,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/layout.tsx",
+      "line": 27,
+      "column": 37,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 58,
+      "column": 17,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 267,
+      "column": 22,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 632,
+      "column": 3,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 659,
+      "column": 50,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 702,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 724,
+      "column": 25,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 745,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 756,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 769,
+      "column": 4,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 837,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 945,
+      "column": 33,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/leads/page.tsx",
+      "line": 1085,
+      "column": 11,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/projects/page.tsx",
+      "line": 25,
+      "column": 58,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/projects/page.tsx",
+      "line": 64,
+      "column": 35,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/projects/page.tsx",
+      "line": 81,
+      "column": 46,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/projects/page.tsx",
+      "line": 143,
+      "column": 39,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/reports/page.tsx",
+      "line": 92,
+      "column": 18,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/account/page.tsx",
+      "line": 7,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/account/page.tsx",
+      "line": 19,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/account/page.tsx",
+      "line": 41,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/account/page.tsx",
+      "line": 59,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/equipes/page.tsx",
+      "line": 62,
+      "column": 32,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/equipes/page.tsx",
+      "line": 151,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 6,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 7,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 8,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 9,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 10,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 11,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 12,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 13,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 53,
+      "column": 6,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 59,
+      "column": 6,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 76,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 76,
+      "column": 18,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 77,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 80,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 81,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 116,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 133,
+      "column": 44,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 134,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 142,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 146,
+      "column": 36,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/atendimento/instagram/page.tsx",
+      "line": 188,
+      "column": 17,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 66,
+      "column": 21,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 102,
+      "column": 34,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 138,
+      "column": 21,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 151,
+      "column": 34,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 181,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 292,
+      "column": 15,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 320,
+      "column": 15,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/branding/page.tsx",
+      "line": 400,
+      "column": 11,
+      "severity": "warning",
+      "rule": "jsx-a11y/alt-text",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/settings/members/page.tsx",
+      "line": 180,
+      "column": 7,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 14,
+      "column": 18,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 14,
+      "column": 27,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 25,
+      "column": 35,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 50,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 155,
+      "column": 41,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 192,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 565,
+      "column": 55,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/(app)/tasks/page.tsx",
+      "line": 566,
+      "column": 57,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/coupons/page.tsx",
+      "line": 124,
+      "column": 21,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/coupons/page.tsx",
+      "line": 217,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/dashboard/page.tsx",
+      "line": 87,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/login/page.tsx",
+      "line": 41,
+      "column": 14,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/organizations/page.tsx",
+      "line": 131,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/organizations/page.tsx",
+      "line": 180,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/plans/page.tsx",
+      "line": 59,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/plans/page.tsx",
+      "line": 97,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/admin/plans/page.tsx",
+      "line": 151,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/api/admin/coupons/[id]/route.ts",
+      "line": 45,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/coupons/route.ts",
+      "line": 36,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/coupons/route.ts",
+      "line": 56,
+      "column": 32,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/[id]/route.ts",
+      "line": 119,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/[id]/route.ts",
+      "line": 120,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/[id]/route.ts",
+      "line": 121,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/[id]/route.ts",
+      "line": 122,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/[id]/route.ts",
+      "line": 123,
+      "column": 9,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/admin/organizations/route.ts",
+      "line": 21,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/agenda/[id]/route.ts",
+      "line": 131,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/agenda/route.ts",
+      "line": 28,
+      "column": 36,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/agenda/route.ts",
+      "line": 28,
+      "column": 42,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/agenda/route.ts",
+      "line": 77,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/atendimento/instagram/exchange-token/route.ts",
+      "line": 120,
+      "column": 12,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/attachments/[id]/route.ts",
+      "line": 37,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/attachments/route.ts",
+      "line": 35,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/attachments/route.ts",
+      "line": 98,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/comments/[id]/route.ts",
+      "line": 35,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/comments/[id]/route.ts",
+      "line": 96,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/comments/route.ts",
+      "line": 6,
+      "column": 42,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/comments/route.ts",
+      "line": 32,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/comments/route.ts",
+      "line": 111,
+      "column": 5,
+      "severity": "error",
+      "rule": "@next/next/no-assign-module-variable",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/goals/route.ts",
+      "line": 88,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/chatwoot/teams/[teamId]/route.ts",
+      "line": 36,
+      "column": 12,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "line": 36,
+      "column": 12,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/chatwoot/teams/route.ts",
+      "line": 73,
+      "column": 12,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/evolution/instances/route.ts",
+      "line": 46,
+      "column": 19,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/evolution/instances/route.ts",
+      "line": 47,
+      "column": 25,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/integrations/evolution/instances/route.ts",
+      "line": 48,
+      "column": 24,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/leads/[id]/route.ts",
+      "line": 4,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/leads/[id]/route.ts",
+      "line": 122,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/leads/[id]/route.ts",
+      "line": 179,
+      "column": 40,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/leads/bulk-update/route.ts",
+      "line": 73,
+      "column": 40,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "line": 33,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/organizations/route.ts",
+      "line": 78,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/os/[id]/route.ts",
+      "line": 96,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/os/route.ts",
+      "line": 54,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/projects/[id]/route.ts",
+      "line": 81,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/projects/route.ts",
+      "line": 26,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/public/briefings/[organizationSlug]/route.ts",
+      "line": 142,
+      "column": 32,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/tags/[id]/route.ts",
+      "line": 90,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/api/tasks/route.ts",
+      "line": 36,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/app/auth/forgot-password/page.tsx",
+      "line": 22,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/auth/login/page.tsx",
+      "line": 77,
+      "column": 11,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/auth/reset-password/page.tsx",
+      "line": 40,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/app/auth/signup/page.tsx",
+      "line": 65,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/AgendaEventModal.tsx",
+      "line": 33,
+      "column": 7,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/CSVImport.tsx",
+      "line": 8,
+      "column": 20,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/CSVImport.tsx",
+      "line": 24,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/CSVImport.tsx",
+      "line": 25,
+      "column": 48,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportCSV.tsx",
+      "line": 7,
+      "column": 20,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportCSV.tsx",
+      "line": 15,
+      "column": 42,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportCSV.tsx",
+      "line": 37,
+      "column": 36,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportCSV.tsx",
+      "line": 43,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportCSV.tsx",
+      "line": 176,
+      "column": 59,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportLeadsCSV.tsx",
+      "line": 17,
+      "column": 49,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportLeadsCSV.tsx",
+      "line": 60,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportLeadsCSV.tsx",
+      "line": 97,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/ImportLeadsCSV.tsx",
+      "line": 139,
+      "column": 25,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/LaunchTasksFromOSModal.tsx",
+      "line": 39,
+      "column": 7,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewLeadModal.tsx",
+      "line": 70,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewLeadModal.tsx",
+      "line": 71,
+      "column": 42,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewLeadModal.tsx",
+      "line": 82,
+      "column": 7,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewLeadModal.tsx",
+      "line": 197,
+      "column": 19,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewOSModal.tsx",
+      "line": 6,
+      "column": 19,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewOSModal.tsx",
+      "line": 28,
+      "column": 38,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewOSModal.tsx",
+      "line": 68,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewProjectModal.tsx",
+      "line": 12,
+      "column": 23,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewProjectModal.tsx",
+      "line": 13,
+      "column": 17,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/NewProjectModal.tsx",
+      "line": 47,
+      "column": 7,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/PermissionSync.tsx",
+      "line": 34,
+      "column": 47,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/PermissionSync.tsx",
+      "line": 35,
+      "column": 46,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/PomodoroTimer.tsx",
+      "line": 42,
+      "column": 17,
+      "severity": "error",
+      "rule": "react-hooks/immutability",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/PomodoroTimer.tsx",
+      "line": 63,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 162,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 182,
+      "column": 34,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 236,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 250,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 275,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/Sidebar.tsx",
+      "line": 325,
+      "column": 15,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/AtendimentoChannelsManagedPage.tsx",
+      "line": 208,
+      "column": 10,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/AtendimentoChannelsPage.tsx",
+      "line": 20,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/AtendimentoChannelsPage.tsx",
+      "line": 195,
+      "column": 39,
+      "severity": "error",
+      "rule": "react-hooks/immutability",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/AtendimentoChannelsPage.tsx",
+      "line": 525,
+      "column": 10,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/WhatsAppCloudSetupPage.tsx",
+      "line": 206,
+      "column": 10,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/WhatsAppProviderLabPage.tsx",
+      "line": 233,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/WhatsAppProviderSelectorModal.tsx",
+      "line": 6,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/WhatsAppProviderSelectorModal.tsx",
+      "line": 142,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/atendimento/WhatsAppProviderSelectorModal.tsx",
+      "line": 154,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/goals/GoalDetailModal.tsx",
+      "line": 39,
+      "column": 15,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/goals/NewGoalModal.tsx",
+      "line": 40,
+      "column": 57,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/integrations/WhatsAppStatusBanner.tsx",
+      "line": 62,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/leads/ImportCSVModal.tsx",
+      "line": 9,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/leads/ImportCSVModal.tsx",
+      "line": 14,
+      "column": 42,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/leads/ImportCSVModal.tsx",
+      "line": 51,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/settings/ChatwootTeamsTab.tsx",
+      "line": 14,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/settings/ChatwootTeamsTab.tsx",
+      "line": 78,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/settings/ChatwootTeamsTab.tsx",
+      "line": 315,
+      "column": 58,
+      "severity": "error",
+      "rule": "react/no-unescaped-entities",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/settings/ChatwootTeamsTab.tsx",
+      "line": 315,
+      "column": 68,
+      "severity": "error",
+      "rule": "react/no-unescaped-entities",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/AttachmentUpload.tsx",
+      "line": 14,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/AttachmentUpload.tsx",
+      "line": 33,
+      "column": 5,
+      "severity": "error",
+      "rule": "react-hooks/immutability",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/AttachmentUpload.tsx",
+      "line": 34,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/AttachmentUpload.tsx",
+      "line": 129,
+      "column": 47,
+      "severity": "warning",
+      "rule": "jsx-a11y/alt-text",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/AttachmentUpload.tsx",
+      "line": 208,
+      "column": 17,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/CommentSection.tsx",
+      "line": 6,
+      "column": 24,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/CommentSection.tsx",
+      "line": 29,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/CommentSection.tsx",
+      "line": 180,
+      "column": 13,
+      "severity": "warning",
+      "rule": "@next/next/no-img-element",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/SubtaskList.tsx",
+      "line": 6,
+      "column": 24,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskDetailModal.tsx",
+      "line": 11,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskDetailModal.tsx",
+      "line": 46,
+      "column": 62,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskDetailModal.tsx",
+      "line": 46,
+      "column": 94,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskDetailModal.tsx",
+      "line": 54,
+      "column": 6,
+      "severity": "warning",
+      "rule": "react-hooks/exhaustive-deps",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 5,
+      "column": 30,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 5,
+      "column": 42,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 5,
+      "column": 50,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 6,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 7,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 73,
+      "column": 9,
+      "severity": "error",
+      "rule": "react-hooks/set-state-in-effect",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 120,
+      "column": 33,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/components/tasks/TaskFormModal.tsx",
+      "line": 181,
+      "column": 37,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/lib/atendimento/providers/whatsapp-cloud.ts",
+      "line": 12,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/lib/integrations/chatwoot-cleanup.ts",
+      "line": 685,
+      "column": 31,
+      "severity": "error",
+      "rule": "prefer-const",
+      "origin": "preexisting_candidate",
+      "securityBoundary": true
+    },
+    {
+      "file": "src/lib/validations/goal.ts",
+      "line": 6,
+      "column": 3,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/agendaStore.ts",
+      "line": 97,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/agendaStore.ts",
+      "line": 112,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/agendaStore.ts",
+      "line": 138,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/agendaStore.ts",
+      "line": 162,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/agendaStore.ts",
+      "line": 188,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 192,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 233,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 265,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 300,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 329,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 363,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 405,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 436,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 465,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 496,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/leadsStore.ts",
+      "line": 521,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/notificationStore.ts",
+      "line": 27,
+      "column": 69,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/osStore.ts",
+      "line": 245,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/osStore.ts",
+      "line": 279,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/osStore.ts",
+      "line": 309,
+      "column": 13,
+      "severity": "error",
+      "rule": "prefer-const",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/osStore.ts",
+      "line": 329,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/osStore.ts",
+      "line": 361,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/projectStore.ts",
+      "line": 92,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/projectStore.ts",
+      "line": 119,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/projectStore.ts",
+      "line": 146,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/store/projectStore.ts",
+      "line": 170,
+      "column": 21,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/agenda.ts",
+      "line": 70,
+      "column": 18,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-empty-object-type",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/index.ts",
+      "line": 109,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/index.ts",
+      "line": 132,
+      "column": 9,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/next-auth.d.ts",
+      "line": 5,
+      "column": 10,
+      "severity": "warning",
+      "rule": "@typescript-eslint/no-unused-vars",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/os.ts",
+      "line": 295,
+      "column": 61,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "src/types/os.ts",
+      "line": 296,
+      "column": 30,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tailwind.config.js",
+      "line": 101,
+      "column": 13,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-require-imports",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 126,
+      "column": 30,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 127,
+      "column": 30,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 128,
+      "column": 30,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 129,
+      "column": 30,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 129,
+      "column": 57,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 131,
+      "column": 47,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/authorization-sales.test.ts",
+      "line": 273,
+      "column": 37,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 29,
+      "column": 38,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 29,
+      "column": 51,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 29,
+      "column": 71,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 30,
+      "column": 27,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 58,
+      "column": 67,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 60,
+      "column": 54,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    },
+    {
+      "file": "tests/helpers/sales-fixture.ts",
+      "line": 72,
+      "column": 32,
+      "severity": "error",
+      "rule": "@typescript-eslint/no-explicit-any",
+      "origin": "preexisting_candidate",
+      "securityBoundary": false
+    }
+  ],
+  "dependencies": [
+    {
+      "package": "@babel/core",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@babel/core",
+          "version": "7.29.7",
+          "baseVersion": "7.29.7",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@babel/helper-compilation-targets"
+        },
+        {
+          "package": "@babel/helper-module-transforms"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@babel/helper-compilation-targets",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@babel/helper-compilation-targets",
+          "version": "7.29.7",
+          "baseVersion": "7.29.7",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "browserslist"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@babel/helper-module-transforms",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@babel/helper-module-transforms",
+          "version": "7.29.7",
+          "baseVersion": "7.29.7",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@babel/core"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@eslint-community/eslint-utils",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@eslint-community/eslint-utils",
+          "version": "4.9.1",
+          "baseVersion": "4.9.1",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@eslint/config-array",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@eslint/config-array",
+          "version": "0.21.2",
+          "baseVersion": "0.21.2",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@eslint/eslintrc",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@eslint/eslintrc",
+          "version": "3.3.5",
+          "baseVersion": "3.3.5",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "js-yaml"
+        },
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@next/eslint-plugin-next",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@next/eslint-plugin-next",
+          "version": "16.2.6",
+          "baseVersion": "16.2.6",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "fast-glob"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@typescript-eslint/eslint-plugin",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@typescript-eslint/eslint-plugin",
+          "version": "8.60.0",
+          "baseVersion": "8.60.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@typescript-eslint/parser"
+        },
+        {
+          "package": "@typescript-eslint/type-utils"
+        },
+        {
+          "package": "@typescript-eslint/utils"
+        },
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@typescript-eslint/parser",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@typescript-eslint/parser",
+          "version": "8.60.0",
+          "baseVersion": "8.60.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@typescript-eslint/type-utils",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@typescript-eslint/type-utils",
+          "version": "8.60.0",
+          "baseVersion": "8.60.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@typescript-eslint/utils"
+        },
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "@typescript-eslint/utils",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@typescript-eslint/utils",
+          "version": "8.60.0",
+          "baseVersion": "8.60.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@eslint-community/eslint-utils"
+        },
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "autoprefixer",
+      "severity": "high",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/autoprefixer",
+          "version": "10.5.0",
+          "baseVersion": "10.5.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "browserslist"
+        },
+        {
+          "package": "postcss"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "axios",
+      "severity": "high",
+      "historical17": true,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/axios",
+          "version": "1.16.1",
+          "baseVersion": "1.16.1",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "axios",
+          "title": "Axios: Prototype pollution auth subfields can inject Basic auth",
+          "severity": "moderate",
+          "range": ">=1.15.2 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-xj6q-8x83-jv6g"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Prototype pollution gadgets can alter axios request construction",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-mmx7-hfxf-jppx"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Deep formToJSON Key Recursion Can Cause Denial of Service",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-pmv8-rq9r-6j72"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: HTTP/2 streamed uploads bypass `maxBodyLength`",
+          "severity": "moderate",
+          "range": ">=1.13.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-mwf2-3pr3-8698"
+        },
+        {
+          "package": "axios",
+          "title": "Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning",
+          "severity": "high",
+          "range": ">=1.15.2 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-gcfj-64vw-6mp9"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Nested axios option objects can consume polluted prototype values",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-7q8q-rj6j-mhjq"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Fetch adapter `ReadableStream` uploads bypass `maxBodyLength`",
+          "severity": "moderate",
+          "range": ">=1.7.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-jqh4-m9w3-8hp9"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: NO_PROXY bypass for 0.0.0.0 local addresses in axios",
+          "severity": "moderate",
+          "range": ">=1.15.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-f4gw-2p7v-4548"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Excessive recursion in formDataToJSON can cause denial of service",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-42h9-826w-cgv3"
+        },
+        {
+          "package": "axios",
+          "title": "Axios form serializer maxDepth bypass via {} metatoken",
+          "severity": "moderate",
+          "range": ">=1.15.1 <1.18.0",
+          "url": "https://github.com/advisories/GHSA-hcpx-6fm6-wx23"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Prototype pollution gadget in fetch adapter can alter outbound requests",
+          "severity": "moderate",
+          "range": ">=1.7.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-vh66-26gq-q6x8"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Prototype-Pollution Gadget in the Default Instance Allows Inherited Object.prototype.method to Override HTTP Method",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-9fr6-4gfg-395g"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: ReDoS in fromDataURI data: URL parser freezes the Node event loop (DoS)",
+          "severity": "high",
+          "range": ">=1.16.1 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-c29m-xwm3-cm6r"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: ReDoS (O(N\u00b2)) in shouldBypassProxy host normalization, reachable via untrusted redirect Location",
+          "severity": "high",
+          "range": ">=1.15.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-mghh-pgcx-3jjj"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Prototype Pollution Gadget in axios toFormData Options",
+          "severity": "high",
+          "range": ">=1.15.1 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-x97p-jq2g-jp4f"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: HTTP/2 adapter bypasses configured DNS lookup and proxy controls",
+          "severity": "high",
+          "range": ">=1.13.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-3pq3-5fj3-cg6v"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Denial of Service via Unhandled 'error' Event in HTTP/2 ClientHttp2Session Initialization",
+          "severity": "high",
+          "range": ">=1.13.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-542g-h47m-68v8"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Header Injection via Inherited headers After Minimal Interceptor",
+          "severity": "moderate",
+          "range": ">=1.0.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-j8rh-479h-cp32"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Fetch Adapter Header Injection via Inherited FormData getHeaders",
+          "severity": "moderate",
+          "range": ">=1.12.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-4hqw-qxg8-jxx2"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: Node HTTP adapter prototype-pollution gadget allows request socket hijack via inherited createConnection",
+          "severity": "high",
+          "range": ">=1.15.2 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-m8m8-qj5v-23w3"
+        },
+        {
+          "package": "axios",
+          "title": "Axios: CIDR-form NO_PROXY entries are ignored, causing proxy exclusion bypass for internal IP ranges",
+          "severity": "moderate",
+          "range": ">=1.15.0 <1.20.0",
+          "url": "https://github.com/advisories/GHSA-44g4-m2mj-wpvx"
+        },
+        {
+          "package": "follow-redirects"
+        },
+        {
+          "package": "form-data"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "baseline-browser-mapping",
+      "severity": "moderate",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/baseline-browser-mapping",
+          "version": "2.10.32",
+          "baseVersion": "2.10.32",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "baseline-browser-mapping",
+          "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+          "severity": "moderate",
+          "range": ">=2.0.0 <2.11.0",
+          "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "brace-expansion",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+          "version": "5.0.6",
+          "baseVersion": "5.0.6",
+          "dev": true
+        },
+        {
+          "path": "node_modules/brace-expansion",
+          "version": "1.1.15",
+          "baseVersion": "1.1.15",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+          "severity": "high",
+          "range": "<1.1.16",
+          "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+          "severity": "high",
+          "range": ">=3.0.0 <5.0.7",
+          "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+          "severity": "high",
+          "range": "<1.1.17",
+          "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.8",
+          "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.9",
+          "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+          "severity": "high",
+          "range": "<1.1.18",
+          "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "severity": "moderate",
+          "range": "<1.1.21",
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+          "severity": "moderate",
+          "range": ">=4.0.0 <5.0.12",
+          "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "severity": "high",
+          "range": "<1.1.20",
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.11",
+          "url": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "severity": "high",
+          "range": "<1.1.19",
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+        },
+        {
+          "package": "brace-expansion",
+          "title": "brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion",
+          "severity": "high",
+          "range": ">=4.0.0 <5.0.10",
+          "url": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "braces",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/braces",
+          "version": "3.0.3",
+          "baseVersion": "3.0.3",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "braces",
+          "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+          "severity": "high",
+          "range": "<=3.0.3",
+          "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "browserslist",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/browserslist",
+          "version": "4.28.2",
+          "baseVersion": "4.28.2",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "browserslist",
+          "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+          "severity": "high",
+          "range": "<=4.28.6",
+          "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx"
+        },
+        {
+          "package": "browserslist",
+          "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+          "severity": "high",
+          "range": "<=4.28.6",
+          "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g"
+        },
+        {
+          "package": "baseline-browser-mapping"
+        },
+        {
+          "package": "update-browserslist-db"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "chokidar",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/chokidar",
+          "version": "3.6.0",
+          "baseVersion": "3.6.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "braces"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "esbuild",
+      "severity": "low",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/esbuild",
+          "version": "0.28.0",
+          "baseVersion": "0.28.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "esbuild",
+          "title": "esbuild allows arbitrary file read when running the development server on Windows",
+          "severity": "low",
+          "range": ">=0.27.3 <0.28.1",
+          "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint",
+      "severity": "high",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint",
+          "version": "9.39.4",
+          "baseVersion": "9.39.4",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@eslint-community/eslint-utils"
+        },
+        {
+          "package": "@eslint/config-array"
+        },
+        {
+          "package": "@eslint/eslintrc"
+        },
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-config-next",
+      "severity": "high",
+      "historical17": true,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-config-next",
+          "version": "16.2.6",
+          "baseVersion": "16.2.6",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@next/eslint-plugin-next"
+        },
+        {
+          "package": "eslint"
+        },
+        {
+          "package": "eslint-import-resolver-typescript"
+        },
+        {
+          "package": "eslint-plugin-import"
+        },
+        {
+          "package": "eslint-plugin-jsx-a11y"
+        },
+        {
+          "package": "eslint-plugin-react"
+        },
+        {
+          "package": "eslint-plugin-react-hooks"
+        },
+        {
+          "package": "typescript-eslint"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-import-resolver-typescript",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-import-resolver-typescript",
+          "version": "3.10.1",
+          "baseVersion": "3.10.1",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        },
+        {
+          "package": "eslint-plugin-import"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-plugin-import",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-plugin-import",
+          "version": "2.32.0",
+          "baseVersion": "2.32.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        },
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-plugin-jsx-a11y",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-plugin-jsx-a11y",
+          "version": "6.10.2",
+          "baseVersion": "6.10.2",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        },
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-plugin-react",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-plugin-react",
+          "version": "7.37.5",
+          "baseVersion": "7.37.5",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "eslint"
+        },
+        {
+          "package": "minimatch"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "eslint-plugin-react-hooks",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/eslint-plugin-react-hooks",
+          "version": "7.1.1",
+          "baseVersion": "7.1.1",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@babel/core"
+        },
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "fast-glob",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/fast-glob",
+          "version": "3.3.1",
+          "baseVersion": "3.3.1",
+          "dev": true
+        },
+        {
+          "path": "node_modules/tailwindcss/node_modules/fast-glob",
+          "version": "3.3.3",
+          "baseVersion": "3.3.3",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "micromatch"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "follow-redirects",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/follow-redirects",
+          "version": "1.16.0",
+          "baseVersion": "1.16.0",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "follow-redirects",
+          "title": "follow-redirects array-form headers bypass cross-origin credential stripping",
+          "severity": "high",
+          "range": ">=1.16.0 <1.16.1",
+          "url": "https://github.com/advisories/GHSA-q3jh-wrc6-jgq8"
+        },
+        {
+          "package": "follow-redirects",
+          "title": "follow-redirects sensitiveHeaders regex escaping can expose credential headers",
+          "severity": "high",
+          "range": ">=1.16.0 <1.16.1",
+          "url": "https://github.com/advisories/GHSA-8r9p-f939-6h3c"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "form-data",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/form-data",
+          "version": "4.0.5",
+          "baseVersion": "4.0.5",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "form-data",
+          "title": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames",
+          "severity": "high",
+          "range": ">=4.0.0 <4.0.6",
+          "url": "https://github.com/advisories/GHSA-hmw2-7cc7-3qxx"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "js-yaml",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/js-yaml",
+          "version": "4.1.1",
+          "baseVersion": "4.1.1",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "js-yaml",
+          "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases",
+          "severity": "moderate",
+          "range": ">=4.0.0 <=4.1.1",
+          "url": "https://github.com/advisories/GHSA-h67p-54hq-rp68"
+        },
+        {
+          "package": "js-yaml",
+          "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.0",
+          "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m"
+        },
+        {
+          "package": "js-yaml",
+          "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) \u2014 CVE-2026-59870 fix not backported",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.1",
+          "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj"
+        },
+        {
+          "package": "js-yaml",
+          "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+          "severity": "high",
+          "range": ">=4.0.0 <4.3.2",
+          "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "micromatch",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/micromatch",
+          "version": "4.0.8",
+          "baseVersion": "4.0.8",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "braces"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "minimatch",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/minimatch",
+          "version": "3.1.5",
+          "baseVersion": "3.1.5",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "brace-expansion"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "next",
+      "severity": "high",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/next",
+          "version": "16.3.8",
+          "baseVersion": "16.2.6",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "baseline-browser-mapping"
+        },
+        {
+          "package": "postcss"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "next-auth",
+      "severity": "moderate",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/next-auth",
+          "version": "4.24.15",
+          "baseVersion": "4.24.14",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "next"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss",
+      "severity": "high",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss",
+          "version": "8.5.23",
+          "baseVersion": "8.5.15",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "source-map-js"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss-import",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss-import",
+          "version": "15.1.0",
+          "baseVersion": "15.1.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "postcss"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss-js",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss-js",
+          "version": "4.1.0",
+          "baseVersion": "4.1.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "postcss"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss-load-config",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss-load-config",
+          "version": "6.0.1",
+          "baseVersion": "6.0.1",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "postcss"
+        },
+        {
+          "package": "tsx"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss-nested",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss-nested",
+          "version": "6.2.0",
+          "baseVersion": "6.2.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "postcss"
+        },
+        {
+          "package": "postcss-selector-parser"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "postcss-selector-parser",
+      "severity": "moderate",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/postcss-selector-parser",
+          "version": "6.1.2",
+          "baseVersion": "6.1.2",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "postcss-selector-parser",
+          "title": "postcss-selector-parser allows denial of service through uncontrolled AST recursion",
+          "severity": "low",
+          "range": ">=6.1.0 <6.1.3",
+          "url": "https://github.com/advisories/GHSA-w9m9-85wc-3x92"
+        },
+        {
+          "package": "postcss-selector-parser",
+          "title": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
+          "severity": "moderate",
+          "range": "<7.1.6",
+          "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "source-map-js",
+      "severity": "high",
+      "historical17": true,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/source-map-js",
+          "version": "1.2.1",
+          "baseVersion": "1.2.1",
+          "dev": false
+        }
+      ],
+      "via": [
+        {
+          "package": "source-map-js",
+          "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+          "severity": "high",
+          "range": ">=1.0.0 <1.2.2",
+          "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "tailwindcss",
+      "severity": "high",
+      "historical17": true,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/tailwindcss",
+          "version": "3.4.19",
+          "baseVersion": "3.4.19",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "chokidar"
+        },
+        {
+          "package": "fast-glob"
+        },
+        {
+          "package": "micromatch"
+        },
+        {
+          "package": "postcss"
+        },
+        {
+          "package": "postcss-import"
+        },
+        {
+          "package": "postcss-js"
+        },
+        {
+          "package": "postcss-load-config"
+        },
+        {
+          "package": "postcss-nested"
+        },
+        {
+          "package": "postcss-selector-parser"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "tailwindcss-animate",
+      "severity": "low",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/tailwindcss-animate",
+          "version": "1.0.7",
+          "baseVersion": "1.0.7",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "tailwindcss"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "tsx",
+      "severity": "low",
+      "historical17": false,
+      "direct": true,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/tsx",
+          "version": "4.22.3",
+          "baseVersion": "4.22.3",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "esbuild"
+        }
+      ],
+      "suggestedFix": false,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "typescript-eslint",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/typescript-eslint",
+          "version": "8.60.0",
+          "baseVersion": "8.60.0",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "@typescript-eslint/eslint-plugin"
+        },
+        {
+          "package": "@typescript-eslint/parser"
+        },
+        {
+          "package": "@typescript-eslint/utils"
+        },
+        {
+          "package": "eslint"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    },
+    {
+      "package": "update-browserslist-db",
+      "severity": "high",
+      "historical17": false,
+      "direct": false,
+      "alreadyFlaggedInBase": true,
+      "nodes": [
+        {
+          "path": "node_modules/update-browserslist-db",
+          "version": "1.2.3",
+          "baseVersion": "1.2.3",
+          "dev": true
+        }
+      ],
+      "via": [
+        {
+          "package": "browserslist"
+        }
+      ],
+      "suggestedFix": true,
+      "origin": "preexisting_package_and_advisory; updated direct packages may retain inherited risks"
+    }
+  ]
+}

@@ -4,6 +4,8 @@ const nextConfig = {
     domains: ['localhost'],
   },
   experimental: {
+    // Framework copy budget includes multipart overhead; the handler still enforces 10 MiB files.
+    middlewareClientMaxBodySize: '11mb',
     serverActions: {
       bodySizeLimit: '2mb',
     },

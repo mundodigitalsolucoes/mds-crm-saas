@@ -14,11 +14,14 @@ export function loadServerModule<T>(sourceUrl: URL, imports: Record<string, unkn
     fileName: filename,
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX },
   });
-  const module = { exports: {} };
+  const runtimeModule = { exports: {} };
   const require = createRequire(sourceUrl);
   runInNewContext(compiled.outputText, {
-    module, exports: module.exports, console, URL, URLSearchParams,
-    require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id] : require(id),
+    module: runtimeModule, exports: runtimeModule.exports, console, URL, URLSearchParams,
+    require: (id: string) => Object.prototype.hasOwnProperty.call(imports, id) ? imports[id]
+      : id === '@/lib/attachments/storage' ? require(fileURLToPath(new URL('../../src/lib/attachments/storage.ts', import.meta.url)))
+      : ['@/lib/authorization/guards', '@/lib/authorization/operation-data'].includes(id)
+        ? require(fileURLToPath(new URL('../../src/lib/authorization/' + id.split('/').at(-1) + '.ts', import.meta.url))) : require(id),
   }, { filename });
-  return module.exports as T;
+  return runtimeModule.exports as T;
 }

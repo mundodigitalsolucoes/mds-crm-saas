@@ -1,12 +1,17 @@
 name: C03-C04 Security Regression
 
 on:
+  pull_request:
+    branches:
+      - feature/modular-plans-entitlements
+      - review/block2-sanitized-base
   push:
     branches:
       - feature/modular-plans-entitlements
+      - audit/block2-sanitized
     paths:
-      - 'tests/security-c03-c04.test.cjs'
-      - 'tests/security-c03-c04-postgres.test.cjs'
+      - 'tests/security-c03-c04.test.mjs'
+      - 'tests/security-c03-c04-postgres.test.mjs'
       - 'src/app/api/auth/signup/route.ts'
       - 'src/app/api/auth/forgot-password/route.ts'
       - 'src/app/api/auth/reset-password/route.ts'
@@ -30,6 +35,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -62,6 +69,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-tags: false
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -72,4 +81,4 @@ jobs:
       - name: Generate Prisma client locally
         run: npx prisma generate
       - name: Execute actual advisory lock SQL through Prisma
-        run: node --test tests/security-c03-c04-postgres.test.cjs
+        run: node --test tests/security-c03-c04-postgres.test.mjs

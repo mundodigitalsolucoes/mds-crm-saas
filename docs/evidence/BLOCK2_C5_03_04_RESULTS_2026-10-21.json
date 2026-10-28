@@ -1,0 +1,568 @@
+{
+  "initialHead": "a27316c299bd8b13b6891430eaf46cdccccc9b4b",
+  "testedFunctionalCommit": "061b7fe224b2c7fead8f6beee4e5c988f47f5d01",
+  "testedTree": "working-tree contents committed verbatim; build did not include documentation-only changes",
+  "globalMode": "observe_only",
+  "approvedEnforcements": [],
+  "coverage": {
+    "apiFiles": 116,
+    "operations": 177,
+    "pages": 28,
+    "observedOperations": 57
+  },
+  "commercialDirectBefore": {
+    "failed": 21,
+    "checks": [
+      {
+        "role": "owner",
+        "url": "/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/reports",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": true
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/reports",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": true
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/reports",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/api/projects",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": true
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os",
+        "status": 200,
+        "contracted": false,
+        "contractSatisfied": false,
+        "ownProjectDataReturned": false
+      }
+    ],
+    "mode": "observe_only; missing blocks are expected policy behavior, not operational auth approval"
+  },
+  "commercialDirectIsolatedAfter": {
+    "passed": 21,
+    "checks": [
+      {
+        "role": "owner",
+        "url": "/projects",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/tasks",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/os",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/reports",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/projects",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/os",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/projects",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/tasks",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/os",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/reports",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/projects",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/os",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/projects",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/tasks",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/os",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/reports",
+        "status": 404,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/api/projects",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      },
+      {
+        "role": "user",
+        "url": "/api/os",
+        "status": 403,
+        "contracted": false,
+        "contractSatisfied": true,
+        "ownProjectDataReturned": false
+      }
+    ],
+    "bothOrganizationsOperationalChecksPassed": true,
+    "onlyDirectPilotContractPassed": true
+  },
+  "indirectAcceptance": {
+    "kind": "INDIRECT_COMMERCIAL_ACCEPTANCE",
+    "results": [
+      {
+        "role": "owner",
+        "url": "/api/comments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/attachments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "owner",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/comments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/attachments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "admin",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/comments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/attachments",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      },
+      {
+        "role": "user",
+        "url": "/api/tasks/[id]/subtasks",
+        "status": 200,
+        "dataReturned": true,
+        "passed": false
+      }
+    ],
+    "passed": false
+  },
+  "isolatedPolicyProof": {
+    "results": [
+      {
+        "script": "pilot-contract-http",
+        "exit": 0
+      },
+      {
+        "script": "c5-remaining-surfaces-http",
+        "exit": 1
+      }
+    ],
+    "candidatePolicyUnchanged": true,
+    "manifestEmpty": true,
+    "onlySyntheticUuidSelected": true,
+    "realOrganizationEnforcement": false,
+    "copyRemovedOnExit": true
+  },
+  "legacyInventory": {
+    "database": "disposable-loopback-only",
+    "readOnly": true,
+    "productionAccess": false,
+    "organizations": 0,
+    "byFeatureFormat": {},
+    "byDivergence": {},
+    "requiresReview": 0
+  },
+  "regressions": {
+    "nodePostgres": {
+      "passed": 147,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "typescript": {
+      "passed": 385,
+      "failed": 0
+    },
+    "guardMatrixComparisons": 2688,
+    "commentsHttp": {
+      "delete": 62,
+      "getPost": 53,
+      "allPassed": true
+    },
+    "httpC0C5": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "typecheck": "PASS",
+    "build": "PASS",
+    "lint": {
+      "current": {
+        "errors": 0,
+        "warnings": 1
+      },
+      "baseline": {
+        "errors": 0,
+        "warnings": 1
+      },
+      "introduced": []
+    }
+  },
+  "historyScan": {
+    "candidateHead": "061b7fe224b2c7fead8f6beee4e5c988f47f5d01",
+    "reachableObjectsScanned": 2546,
+    "knownExposedValueMatches": {
+      "DATABASE_URL": 0,
+      "NEXTAUTH_SECRET": 0,
+      "TOKENS_SECRET": 0,
+      "META_APP_SECRET": 0
+    },
+    "strongPatternMatches": {
+      "private-key": 0,
+      "github-token": 0,
+      "aws-access-key": 0,
+      "slack-token": 0
+    },
+    "secretValuesOrFingerprintsStored": false,
+    "scope": "all reachable blobs and commit/tag messages of candidate; heuristic patterns are not universal credential guarantees"
+  },
+  "sourceFileSha256NotCredentialHashes": {
+    "scripts/block2-c5-isolated-http.mjs": "bab509305dc5f5b60f1ef331b7e51d137260c4dcd32ac6bd2f0ca905aac8025b",
+    "src/app/(app)/os/layout.tsx": "1beb38cd137868bdcb80ac27bf706aa4bd3d4c1c39c646d63826e543e68e2784",
+    "src/app/(app)/reports/layout.tsx": "cd52724b3112c7d3a9a6c706ebf854d7b4dec636a07e19f27336aaa4b566d88b",
+    "src/app/(app)/tasks/layout.tsx": "ba77d442d341b0e4108bc98495ee9b1c1616693dfca3d95a3615e7c589cfd207",
+    "src/app/api/os/[id]/route.ts": "bfc7f7aeb25b778834a38c240010d8d2fe4158f842229ac503a17f6b69b564f9",
+    "src/app/api/os/route.ts": "3262597fd3ea8249f754ed6166f545dbed7604c2536450159cd0f6bf63953c4e",
+    "src/app/api/tasks/[id]/route.ts": "c89eab2f239b4db0ec15be57844bc642a83f1a2ad52cb7d476fb7ac0fc237c7f",
+    "src/app/api/tasks/route.ts": "efe3bed87bb9d31ee1536e0f785ffbbf0ad6e21ad480a374beeb65401c4679d2",
+    "src/components/Sidebar.tsx": "7d3eb4c92ad138b1621dee403c6a550430f0aef9fe01f9b7c71741c82dfc0776",
+    "src/lib/authorization/authorize.ts": "1d767af6c4d75e5dafe80a665fc22356d8bc50070ccfb817815f1b9ecae90554",
+    "src/lib/authorization/guards.ts": "661d95090167439102d7229d3a79dfe4dd14eb3300654cd26ab50a03b0b28164",
+    "src/lib/authorization/operation-data.ts": "c15a4d954df9ca776a69ae91913268f1a27a89faf2add36c9570b1fa2fe7723e",
+    "src/lib/permissions.ts": "36dc65f5f827a8e52b58b32b7a6601fc58669b7f1ce697ab62b583f28800bc44",
+    "src/lib/task-os-relations.ts": "63c7a7706eb0aefbb786de5a373218a41c65bf04be3209d5ef2222b382d5b918",
+    "tests/authorization-boundaries.test.ts": "e7bd2fa127ddc6dd3c292cee1c8aa98af946a141c3c334ca097b15d1f4c33f24",
+    "tests/authorization.test.ts": "3a912afea16530ecb0c4f9e4bb33f6f00aa960ae7162eb095f8d9ad5c39aa887",
+    "tests/c5-commercial-guards-postgres.test.mjs": "b9d4daa96deaabbda7f219eba55643a1062f4cf493b940f6551668d6ee5ebc18",
+    "tests/c5-compatibility-postgres.test.mjs": "1f08bf1c0797b8cb86644382d6051404784d887344dce69a21995e32e5d2292b",
+    "tests/c5-remaining-surfaces-http.mjs": "8aeaee2b14c45392d201ed58a93fa4e5349dacff1510c17839e68aa63e063f10",
+    "tests/helpers/load-disposable-handler.mjs": "af961e902e9b43463ef7d92ecc6898973559466748ade13e059f6b4776855aae",
+    "tests/helpers/load-server-module.ts": "e6cdf79cd3ec1c2301910faaa587b1e2abd0bdc94af6d9c3930d9c5b011e4dd2",
+    "tests/pilot-contract-http.mjs": "b22bd60d1f7d2eaa2a26369fe77a6989b9d483b30a1d4194a6c18c1d0602bd65"
+  },
+  "remoteActions": false,
+  "realOrganizationEnforcement": false,
+  "gatesAutomaticallyApproved": false,
+  "c503": "BLOCKED: indirect gaps and incomplete backend coverage",
+  "c504": "PARTIAL: valid partial permissions repaired and tested; integrations/legacy inventory require nominal review",
+  "pilot": "BLOCKED"
+}

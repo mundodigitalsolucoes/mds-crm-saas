@@ -142,6 +142,7 @@ export {
   adminLoginSchema,
   adminOrgCreateSchema,
   adminOrgUpdateSchema,
+  adminUserCreateSchema,
   adminUserUpdateSchema,
   adminPlanCreateSchema,
   adminPlanUpdateSchema,

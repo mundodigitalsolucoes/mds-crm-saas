@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { checkPermission } from '@/lib/checkPermission'
 import { verifyInstagramState } from '@/lib/atendimento/instagram-oauth-state'
+import { consumeInstagramOAuthState } from '@/lib/atendimento/instagram-security-store'
 import { prisma } from '@/lib/prisma'
 import { encryptToken } from '@/lib/integrations/crypto'
 
@@ -166,6 +167,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Consume before any Meta request. Failure never re-enables this nonce;
+    // the user must initiate a fresh OAuth flow after a downstream error.
+    if (!await consumeInstagramOAuthState(state)) {
+      return redirectToInstagramSettings('error', 'Conexão expirada ou já utilizada. Inicie novamente.')
+    }
     const token = await exchangeCodeForToken(code)
 
     const parsedSettings =

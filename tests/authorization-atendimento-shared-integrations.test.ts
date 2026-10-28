@@ -21,8 +21,7 @@ test('shared integration configuration routes retain operational authorization u
   }
 });
 
-test('the commercial authorizer does not silently treat integrations as an Atendimento operational permission', () => {
+test('Lot2 explicitly maps integrations to Atendimento while preserving the existing operational permission', () => {
   const source = readFileSync('src/lib/authorization/authorize.ts', 'utf8');
-  assert.match(source, /atendimento:\s*\['atendimento'\]/);
-  assert.doesNotMatch(source, /atendimento:\s*\[[^\]]*'integrations'/);
+  assert.match(source, /atendimento:\s*\['atendimento', 'integrations'\]/);
 });

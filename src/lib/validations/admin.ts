@@ -2,6 +2,7 @@
 // Schemas Zod para APIs do SuperAdmin — MDS CRM
 import { z } from 'zod';
 import { planFeaturesWriteSchema, serializedPlanFeaturesSchema } from './plan-features';
+import { brandingUpdateSchema } from './branding';
 
 // ============================================
 // HELPERS
@@ -67,6 +68,8 @@ export type AdminOrgCreateInput = z.infer<typeof adminOrgCreateSchema>;
 // ============================================
 
 export const adminOrgUpdateSchema = z.object({
+  whiteLabel: z.boolean().optional(),
+  branding: brandingUpdateSchema.optional(),
   name: z
     .string()
     .min(1, 'Nome não pode ser vazio')
@@ -96,7 +99,17 @@ export type AdminOrgUpdateInput = z.infer<typeof adminOrgUpdateSchema>;
 // USERS — PUT /api/admin/users/[id]
 // ============================================
 
+export const adminUserCreateSchema = z.object({
+  organizationId: z.string().uuid(),
+  name: z.string().trim().min(2).max(255),
+  email: z.string().trim().toLowerCase().email().max(255),
+  password: z.string().min(12).max(128),
+  role: z.enum(['owner', 'admin', 'manager', 'user']),
+}).strict();
+
 export const adminUserUpdateSchema = z.object({
+  name: z.string().trim().min(2).max(255).optional(),
+  email: z.string().trim().toLowerCase().email().max(255).optional(),
   role: z.enum(['owner', 'admin', 'manager', 'user'], {
     errorMap: () => ({ message: 'Cargo inválido. Use: owner, admin, manager ou user' }),
   }),

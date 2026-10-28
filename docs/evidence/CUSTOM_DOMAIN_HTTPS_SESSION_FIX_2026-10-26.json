@@ -1,0 +1,550 @@
+{
+  "date": "2026-10-26",
+  "base": "7bc9abcf5047dece457ecc96c94205d360629e04",
+  "branch": "audit/block2-sanitized",
+  "productionAccess": false,
+  "pushMergeDeployDnsDatabaseOrProviderChanges": false,
+  "functionalChange": "agent:false scoped to pinnedHttpsProbe; fresh certificate-bearing handshake per verification",
+  "lookupChanged": false,
+  "exactNodeReproduction": {
+    "node": "v22.23.4",
+    "openssl": "3.5.9",
+    "ares": "1.34.9",
+    "image": "node:22-alpine",
+    "imageId": "sha256:ae59e9992c6b3e963dd9dac9c476287048177ad8f90ac646669afb738705f56d",
+    "network": "none; synthetic loopback TLS only",
+    "before": [
+      {
+        "mode": "fresh",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 4,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 4,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 1,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "resumed",
+        "attempt": 2,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "resumed",
+        "attempt": 3,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "resumed",
+        "attempt": 4,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 1,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 2,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 3,
+        "error": "INVALID_PROOF"
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 4,
+        "error": "INVALID_PROOF"
+      }
+    ],
+    "beforeTls": [
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      },
+      {
+        "reused": true,
+        "authorized": true,
+        "hasCertificateExpiry": false
+      }
+    ],
+    "after": [
+      {
+        "mode": "fresh",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "fresh",
+        "attempt": 4,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "pooled",
+        "attempt": 4,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "resumed",
+        "attempt": 4,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 0,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 1,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 2,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 3,
+        "ok": true
+      },
+      {
+        "mode": "default-server-close",
+        "attempt": 4,
+        "ok": true
+      }
+    ],
+    "afterTls": [
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      },
+      {
+        "reused": false,
+        "authorized": true,
+        "hasCertificateExpiry": true
+      }
+    ],
+    "invalidIpAddressErrors": 0
+  },
+  "tests": {
+    "realTlsRegressionBeforeFix": "FAIL after first valid connection",
+    "targeted": {
+      "passed": 39,
+      "failed": 0
+    },
+    "fullNodeTypeScriptPostgres": {
+      "runtime": "v22.21.1",
+      "tests": 627,
+      "passed": 627,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "domainHttp": {
+      "passed": 52,
+      "restart": {
+        "before": {
+          "passed": true,
+          "olderThan24Hours": true,
+          "login": 200,
+          "authorizedData": 200
+        },
+        "after": {
+          "passed": true,
+          "olderThan24Hours": true,
+          "login": 200,
+          "authorizedData": 200
+        },
+        "serverProcessRestarted": true
+      }
+    },
+    "c0c5Http": [
+      {
+        "script": "dashboard-c0-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "commercial-dashboard-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "branding-white-label-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-cross-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-direct-access-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "c5-task-os-regression-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-tenant-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "comments-delete-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "attachments-upload-http",
+        "exit": 0,
+        "signal": null
+      },
+      {
+        "script": "custom-domain-disabled-http",
+        "exit": 0,
+        "signal": null
+      }
+    ],
+    "build": "Next production webpack passed",
+    "typecheck": "passed",
+    "lintChangedFiles": "passed no warnings/errors",
+    "diffCheck": "passed",
+    "newSensitiveFileOrSecretPatternFindings": 0
+  },
+  "ci": {
+    "baseV11Remote": "7 successful runs confirmed on 7bc9abc",
+    "newPatchRemote": "not published; CI pending push authorization",
+    "newRealTlsTest": "automatically included by existing Node/PostgreSQL job"
+  },
+  "security": {
+    "pinnedPublicIp": true,
+    "ssrf": true,
+    "sni": true,
+    "rejectUnauthorized": true,
+    "certificateExpiry": true,
+    "hmacRoutingProof": true,
+    "persistentActivationV11Unchanged": true,
+    "commercialConfigUnchanged": true
+  },
+  "limits": [
+    "Exact failed production socket was not inspected; no claim this is the only possible VPS cause",
+    "421 due missing commercial capability/disabled remains an independent correct denial",
+    "No automatic grant, verification bypass, activation, deployment or pilot approval"
+  ],
+  "sourceFingerprints": [
+    {
+      "path": "src/lib/domains/network.ts",
+      "sha256": "09bfda0149839bb9d188288f49a62661e2881fd43a5657c31893cd96acc806a2"
+    },
+    {
+      "path": "tests/custom-domain-https-adapter.test.mjs",
+      "sha256": "62f130f441b1e41ef8432dd4431c26db387f16512b5718c4d953d7af4a4e1c8a"
+    },
+    {
+      "path": "tests/custom-domain-real-tls.test.mjs",
+      "sha256": "a5e760f0c379d6a03a451a64e4403daacf7d0973962d6d81a41677e51aaa2d93"
+    }
+  ]
+}

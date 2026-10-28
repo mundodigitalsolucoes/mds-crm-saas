@@ -2,17 +2,14 @@
 // API de Usage — Retorna limites e uso atual da organização do usuário logado
 // Usado pelo frontend para barras de progresso, banners de upgrade, etc.
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { checkAuth } from '@/lib/checkPermission';
 import { getOrganizationUsage } from '@/lib/checkLimits';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.organizationId) {
-      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
-    }
+    const authentication = await checkAuth();
+    if (!authentication.authenticated || !authentication.session) return authentication.errorResponse!;
+    const session = authentication.session;
 
     const usage = await getOrganizationUsage(session.user.organizationId);
 

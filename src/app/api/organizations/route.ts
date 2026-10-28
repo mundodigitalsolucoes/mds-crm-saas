@@ -1,21 +1,13 @@
 // src/app/api/organizations/route.ts
 // GET: carrega dados da organização atual
-// PATCH: atualiza branding (owner/admin apenas)
+// PATCH: identidade comercial reservada ao Super Admin (endpoint próprio).
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/checkPermission';
 import { parseBody } from '@/lib/validations';
-import { z } from 'zod';
-
-// ── Schema de validação do branding ──────────────────────────────────────────
-const brandingUpdateSchema = z.object({
-  name:           z.string().min(2).max(100).optional(),
-  logo:           z.string().url('URL inválida').optional().nullable(),
-  favicon:        z.string().url('URL inválida').optional().nullable(),
-  primaryColor:   z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida (ex: #6366f1)').optional(),
-  secondaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Cor inválida (ex: #4f46e5)').optional(),
-});
+import { resolveCommercialEntitlements } from '@/lib/entitlements/resolver';
+import { brandingUpdateSchema } from '@/lib/validations/branding';
 
 // ── GET /api/organizations ────────────────────────────────────────────────────
 export async function GET() {
@@ -35,6 +27,7 @@ export async function GET() {
         favicon:        true,
         primaryColor:   true,
         secondaryColor: true,
+        features:       true,
         plan:           true,
         planStatus:     true,
       },
@@ -44,7 +37,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Organização não encontrada' }, { status: 404 });
     }
 
-    return NextResponse.json(org);
+    const { features, ...publicOrg } = org;
+    return NextResponse.json({ ...publicOrg, whiteLabelActive: resolveCommercialEntitlements({ id: org.id, plan: org.plan, features }).capabilities.includes('white_label') });
   } catch (error) {
     console.error('Erro ao buscar organização:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
@@ -66,52 +60,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const organizationId = session!.user.organizationId;
     const body = await request.json();
 
     // ✅ Validação Zod centralizada
     const parsed = parseBody(brandingUpdateSchema, body);
     if (!parsed.success) return parsed.response;
-    const data = parsed.data;
 
-    // Montar apenas os campos enviados (patch parcial)
-    const updateData: Record<string, any> = {};
-    if (data.name           !== undefined) updateData.name           = data.name;
-    if (data.logo           !== undefined) updateData.logo           = data.logo;
-    if (data.favicon        !== undefined) updateData.favicon        = data.favicon;
-    if (data.primaryColor   !== undefined) updateData.primaryColor   = data.primaryColor;
-    if (data.secondaryColor !== undefined) updateData.secondaryColor = data.secondaryColor;
+    // Este endpoint só aceita identidade visual. Configurações operacionais
+    // continuam nos respectivos handlers; a governança comercial pertence à MDS.
+    return NextResponse.json({ error: 'A identidade visual é administrada pela MDS' }, { status: 403 });
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ error: 'Nenhum campo para atualizar' }, { status: 400 });
-    }
-
-    const org = await prisma.organization.update({
-      where: { id: organizationId },
-      data: updateData,
-      select: {
-        id:             true,
-        name:           true,
-        slug:           true,
-        logo:           true,
-        favicon:        true,
-        primaryColor:   true,
-        secondaryColor: true,
-      },
-    });
-
-    // Registrar atividade
-    await prisma.activity.create({
-      data: {
-        entityType:  'organization',
-        entityId:    organizationId,
-        action:      'updated',
-        description: 'Configurações de branding atualizadas',
-        userId:      session!.user.id,
-      },
-    });
-
-    return NextResponse.json(org);
   } catch (error) {
     console.error('Erro ao atualizar organização:', error);
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });

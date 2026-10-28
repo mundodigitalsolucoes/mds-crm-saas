@@ -1,6 +1,6 @@
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const { readFileSync } = require('node:fs')
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 const source = readFileSync('src/app/api/atendimento/instagram/sync-account/route.ts', 'utf8')
 
 test('Instagram sync uses session tenant and rejects deleted organizations', () => {
@@ -247,9 +247,11 @@ test('Widget provision and agent-link completion/error paths preserve concurrent
     if (route === 'provision') {
       assert.match(source, /let expectedSettings = organization\.settings/)
       assert.match(source, /expectedSettings = pendingSettings/)
-      assert.match(source, /\n      expectedSettings,\n/)
+      assert.match(source, /await persistRuntimeError\(\{[\s\S]*?\n\s+expectedSettings,\n/)
     } else {
-      assert.match(source, /settings: expectedSettings/)
+      // Agent linking has no pre-POST reservation: completion and error use
+      // the original snapshot, unlike provisioning's mutable reservation.
+      assert.match(source, /expectedSettings: organization\.settings/)
     }
     assert.equal((source.match(/deletedAt: null, settings:/g) ?? []).length, route === 'provision' ? 3 : 2)
   }

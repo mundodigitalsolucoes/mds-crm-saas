@@ -1,0 +1,126 @@
+{
+  "baseHead": "be26c813231602e14e33c12866a9e1d9baba6781",
+  "scope": "C0 only",
+  "before": {
+    "sourceHead": "be26c813231602e14e33c12866a9e1d9baba6781",
+    "transport": "Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only",
+    "active": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedUser": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedOrganization": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "restrictedUser": {
+      "leadApiStatus": 403,
+      "dashboardStatus": 200,
+      "fixtureLeadInDashboard": true
+    },
+    "expected": "Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only"
+  },
+  "after": {
+    "referenceHead": "be26c813231602e14e33c12866a9e1d9baba6781",
+    "candidate": "C0 working tree",
+    "transport": "Actual local Next build, NextAuth and PostgreSQL; synthetic fixture only",
+    "active": {
+      "status": 200,
+      "fixtureLeadInBody": true
+    },
+    "deletedUser": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "deletedOrganization": {
+      "status": 307,
+      "fixtureLeadInBody": false
+    },
+    "restrictedUser": {
+      "leadApiStatus": 403,
+      "dashboardStatus": 200,
+      "fixtureLeadInDashboard": false
+    },
+    "regression": {
+      "ownTask": true,
+      "ownFollowUp": true,
+      "foreignDataAbsent": true,
+      "restrictedLeadLinkedTaskAbsent": true,
+      "restrictedLeadIndicatorsAbsent": true
+    },
+    "expected": "Removed membership or organization must be denied before dashboard data access, regardless of commercial observe_only"
+  },
+  "results": {
+    "node": {
+      "pass": 102,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "typescript": {
+      "pass": 180,
+      "fail": 0
+    },
+    "httpRegression": 22,
+    "build": "pass",
+    "typecheck": "pass",
+    "scopedLint": "pass",
+    "globalLint": {
+      "errors": 181,
+      "warnings": 77
+    },
+    "dependencies": {
+      "info": 0,
+      "low": 3,
+      "moderate": 3,
+      "high": 40,
+      "critical": 0,
+      "total": 46
+    }
+  },
+  "artifacts": [
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/http-before.json",
+      "sha256": "c7454655c6418534f0a8814c8f5a0521ecd092989728befced154c6baec73f04"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/http-after.json",
+      "sha256": "7f02c14aaa3d0e428a976557cde54d0a2412c18c27b8a248ae402cc607247941"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/node-tests.tap",
+      "sha256": "3d4a89224242ecbf1c56a4e45dc2865b0cce7d720e438d4ef30eece1622cbe92"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/ts-tests-final.log",
+      "sha256": "f72fad734c4ce76fd7ddc5b4c297930e1ac80d8ef3b82048d8694e41c42e76b9"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/build.log",
+      "sha256": "d48842374b41614096fe3e91545bb0c3f22cec2e6bc85777daae92746eb624a7"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/typecheck-restored.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/scoped-lint-final.log",
+      "sha256": "76162e465989f3f070a9de8db711fbf358e53b74d09ce1bbdb57c727e4c4a16d"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/lint-full.json",
+      "sha256": "83d79b772e4c7a24d0f065c160d4df4c98d385dd47deb3826884ca2f898d2a68"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/npm-audit.json",
+      "sha256": "14cf975113b87666fc47d8e86f8b1b9049bc34ec78e0c9c77781a4de6f6d2ff6"
+    },
+    {
+      "path": "/workspace/mds-crm-onboarding-evidence/c0/http-smoke.log",
+      "sha256": "7cbe51a76a3186c434890b4c1d30fc04f36675a354da3f260e44d2519d11c8c0"
+    }
+  ]
+}

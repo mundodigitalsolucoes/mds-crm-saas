@@ -105,6 +105,8 @@ async function validateSessionUser(session: SessionUserShape) {
     return { ok: false as const, errorResponse: buildInactiveResponse('org_deleted') };
   }
 
+  // Downstream role checks must use current membership, never a stale JWT role.
+  session.user.role = dbUser.role;
   return { ok: true as const, dbUser };
 }
 

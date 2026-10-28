@@ -2,18 +2,15 @@
 // LGPD — Eliminação: anonimiza dados pessoais do usuário
 
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { checkAuth } from '@/lib/checkPermission';
 import { prisma } from '@/lib/prisma'
 import crypto from 'crypto'
 
 export async function DELETE() {
   try {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-    }
+    const authentication = await checkAuth();
+    if (!authentication.authenticated || !authentication.session) return authentication.errorResponse!;
+    const session = authentication.session;
 
     const userId = session.user.id
 

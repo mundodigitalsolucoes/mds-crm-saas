@@ -66,3 +66,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tenant tokens are scoped to the authenticated shell; operational status colors,
+   Kanban stages and provider iframe documents are deliberately untouched. */
+.crm-brand { color: var(--brand-text); background: var(--brand-surface); }
+.crm-brand .crm-brand-header { background: var(--brand-card); border-color: var(--brand-border); color: var(--brand-text); }
+.crm-brand :is(button, a).bg-blue-600,
+.crm-brand :is(button, a).bg-indigo-600,
+.crm-brand :is(button, a).bg-primary {
+  background-color: var(--brand-primary); color: var(--brand-primary-text);
+}
+.crm-brand :is(button, a).bg-blue-600:hover,
+.crm-brand :is(button, a).bg-indigo-600:hover,
+.crm-brand :is(button, a).bg-primary:hover { filter: brightness(0.92); }
+.crm-brand :is(button, a).bg-secondary { background: var(--brand-secondary); color: var(--brand-secondary-text); }
+.crm-brand a.text-blue-600,
+.crm-brand a.text-indigo-600 { color: var(--brand-link); }
+.crm-brand :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--brand-focus); outline-offset: 3px; }
+.crm-brand .brand-badge { background: var(--brand-secondary); color: var(--brand-secondary-text); }

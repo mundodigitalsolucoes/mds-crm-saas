@@ -1,0 +1,1330 @@
+{
+  "referenceHead": "594606df027709152ab22ae48843b43da0db8499",
+  "testedWorkingTreeSha256": {
+    "src/app/api/comments/[id]/route.ts": "44bb67db8587e2550be9ac52dd9e3a097e4232911325a8d6f9e1dee506b9e4ff",
+    "tests/comments-delete-http.mjs": "b4756d58dbfd37c3b165362c436c58dc74f2bab4f9fb75a98deef4411fd68f60",
+    "tests/comments-delete-postgres.test.mjs": "a28f7ad322986269528a8fb6a24a0170371705409afb3eb7157f556ef9bf06e7"
+  },
+  "runtime": "Node v22.21.1",
+  "database": "Loopback disposable PostgreSQL, synthetic fixtures; no migrations",
+  "before": {
+    "kind": "COMMENTS_DELETE_HTTP_ACCEPTANCE",
+    "results": [
+      {
+        "case": "foreign-root",
+        "role": "owner",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-reply",
+        "role": "owner",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "owner",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-author",
+        "role": "owner",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "foreign-root",
+        "role": "admin",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-reply",
+        "role": "admin",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "admin",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-author",
+        "role": "admin",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "foreign-root",
+        "role": "user",
+        "status": 403,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": false
+      },
+      {
+        "case": "foreign-reply",
+        "role": "user",
+        "status": 403,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": false
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "user",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-author",
+        "role": "user",
+        "status": 403,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": false
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "status": 200,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 200,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 1,
+        "unchanged": false,
+        "passed": false
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "user",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "anonymous-existing",
+        "status": 401,
+        "expected": 401,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "anonymous-missing",
+        "status": 404,
+        "expected": 401,
+        "rowsBefore": 0,
+        "rowsAfter": 0,
+        "unchanged": true,
+        "passed": false
+      },
+      {
+        "case": "delete-permission-denied",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "removed-user",
+        "status": 401,
+        "expected": 401,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "removed-organization",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      }
+    ],
+    "sideEffects": [
+      0,
+      0
+    ],
+    "passed": false
+  },
+  "after": {
+    "kind": "COMMENTS_DELETE_HTTP_ACCEPTANCE",
+    "results": [
+      {
+        "case": "foreign-root",
+        "role": "owner",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-reply",
+        "role": "owner",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "owner",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 3,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-author",
+        "role": "owner",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "owner",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "owner",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "owner",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "owner",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "foreign-root",
+        "role": "admin",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-reply",
+        "role": "admin",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "admin",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 3,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-author",
+        "role": "admin",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "admin",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "admin",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "admin",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "admin",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "foreign-root",
+        "role": "user",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-reply",
+        "role": "user",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-child-must-not-cascade",
+        "role": "user",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 3,
+        "rowsAfter": 3,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-author",
+        "role": "user",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-entity",
+        "role": "user",
+        "status": 404,
+        "expected": 404,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "foreign-parent",
+        "role": "user",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "invalid-child-scope",
+        "role": "user",
+        "status": 409,
+        "expected": 409,
+        "rowsBefore": 2,
+        "rowsAfter": 2,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "legitimate-nested-tree",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 3,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "same-tenant-other-author",
+        "role": "user",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-task",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-task",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-lead",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-lead",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-goal",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-goal",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-reply-kanban_card",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 1,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "legitimate-root-kanban_card",
+        "role": "user",
+        "status": 200,
+        "expected": 200,
+        "rowsBefore": 2,
+        "rowsAfter": 0,
+        "unchanged": false,
+        "passed": true
+      },
+      {
+        "case": "anonymous-existing",
+        "status": 401,
+        "expected": 401,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "anonymous-missing",
+        "status": 401,
+        "expected": 401,
+        "rowsBefore": 0,
+        "rowsAfter": 0,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "delete-permission-denied",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "removed-user",
+        "status": 401,
+        "expected": 401,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      },
+      {
+        "case": "removed-organization",
+        "status": 403,
+        "expected": 403,
+        "rowsBefore": 1,
+        "rowsAfter": 1,
+        "unchanged": true,
+        "passed": true
+      }
+    ],
+    "sideEffects": [
+      0,
+      0
+    ],
+    "passed": true
+  },
+  "beforeFailedCases": 31,
+  "afterPassedCases": 62,
+  "getPostRegression": {
+    "cases": 53,
+    "passed": true,
+    "sideEffects": 0
+  },
+  "nodePostgres": {
+    "passed": 137,
+    "failed": 0,
+    "commentsDeleteTests": 8,
+    "skipped": 0,
+    "todo": 0
+  },
+  "typescriptTests": {
+    "passed": 383,
+    "failed": 0
+  },
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "scopedLint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "httpRegressions": [
+    {
+      "script": "dashboard-c0-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "commercial-dashboard-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "branding-white-label-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-cross-tenant-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-direct-access-http",
+      "exit": 0,
+      "signal": null
+    },
+    {
+      "script": "c5-task-os-regression-http",
+      "exit": 0,
+      "signal": null
+    }
+  ],
+  "knownResidual": {
+    "concurrentPostVersusDelete": {
+      "postStatus": 500,
+      "prismaCode": "P2010",
+      "sqlState": "40001",
+      "orphanRows": 0,
+      "postModified": false,
+      "resolved": false
+    }
+  },
+  "commercialPolicyChanged": false,
+  "remoteActions": false,
+  "gatesApproved": false,
+  "note": "Runners recorded reference HEAD while testing the modified working tree. Exact final source fingerprints identify the tested files. Eight new PostgreSQL tests include the documented 500 limitation and assert its exact database cause and zero persistence; this is not an availability approval."
+}

@@ -315,32 +315,50 @@ export default function AtendimentoWidgetConfigPage() {
   const [lastAgentResult, setLastAgentResult] =
     useState<LinkPrincipalAgentResponse | null>(null)
 
+  const applyConfig = useCallback((data: WidgetConfigResponse) => {
+    setConfig(data.config)
+    setDefaults(data.defaults)
+    setOrgScope(data.orgScope)
+    setSavedAt(data.savedAt)
+    setDomainText((data.config.allowedDomains || []).join('\n'))
+  }, [])
+
+  const reportLoadError = useCallback((err: unknown) => {
+    console.error(err)
+    setMessage({
+      type: 'error',
+      text: 'Não foi possível carregar as configurações do widget.',
+    })
+  }, [])
+
   const loadConfig = useCallback(async () => {
     setLoading(true)
-
     try {
       const { data } = await axios.get<WidgetConfigResponse>(
         '/api/atendimento/widget'
       )
-      setConfig(data.config)
-      setDefaults(data.defaults)
-      setOrgScope(data.orgScope)
-      setSavedAt(data.savedAt)
-      setDomainText((data.config.allowedDomains || []).join('\n'))
+      applyConfig(data)
     } catch (err) {
-      console.error(err)
-      setMessage({
-        type: 'error',
-        text: 'Não foi possível carregar as configurações do widget.',
-      })
+      reportLoadError(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [applyConfig, reportLoadError])
 
   useEffect(() => {
-    void loadConfig()
-  }, [loadConfig])
+    const controller = new AbortController()
+    // Subscribe to the request result; ignore completion after unmount.
+    axios.get<WidgetConfigResponse>('/api/atendimento/widget', {
+      signal: controller.signal,
+    }).then(({ data }) => {
+      if (!controller.signal.aborted) applyConfig(data)
+    }).catch((err: unknown) => {
+      if (!controller.signal.aborted) reportLoadError(err)
+    }).finally(() => {
+      if (!controller.signal.aborted) setLoading(false)
+    })
+    return () => controller.abort()
+  }, [applyConfig, reportLoadError])
 
   const parsedDomains = useMemo(() => parseDomains(domainText), [domainText])
 

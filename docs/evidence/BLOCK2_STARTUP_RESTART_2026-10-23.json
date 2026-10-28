@@ -1,0 +1,104 @@
+{
+  "kind": "ISOLATED_STARTUP_RESTART_HTTP",
+  "results": [
+    {
+      "name": "migration-detector-negative-control",
+      "passed": true
+    },
+    {
+      "name": "disposable-baseline-has-no-migration-history-table",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-ready",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-session",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-prisma-http",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-asset",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-no-migration-log",
+      "passed": true
+    },
+    {
+      "name": "graceful-shutdown",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-schema-unchanged",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-ready",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-session",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-prisma-http",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-asset",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-no-migration-log",
+      "passed": true
+    },
+    {
+      "name": "graceful-shutdown",
+      "passed": true
+    },
+    {
+      "name": "image-cmd-restart-schema-unchanged",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-ready",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-session",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-prisma-http",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-asset",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-no-migration-log",
+      "passed": true
+    },
+    {
+      "name": "graceful-shutdown",
+      "passed": true
+    },
+    {
+      "name": "npm-start-alternative-schema-unchanged",
+      "passed": true
+    },
+    {
+      "name": "zero-migration-cli-attempts",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "productionAccess": false,
+  "fullAlpineImageValidated": false
+}

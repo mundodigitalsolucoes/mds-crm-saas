@@ -1,0 +1,135 @@
+{
+  "originalAuditHead": "59da966edfcc627c074b8c47a8bb50c314ad90a3",
+  "testedCodeHead": "cf45f38edbef8c475c90d801b0d75423b1e1499d",
+  "candidateBranch": "audit/block2-sanitized",
+  "localSanitizedBase": "8aa1db0b893b042967c3905a3582916b713cf9ab",
+  "tests": {
+    "nodePostgres": {
+      "pass": 102,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "typeScript": {
+      "pass": 171,
+      "fail": 0,
+      "skip": 0,
+      "todo": 0
+    },
+    "widgetFunctional": {
+      "pass": 17
+    },
+    "httpSmoke": {
+      "pass": 22
+    }
+  },
+  "checks": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "prismaValidate": "PASS",
+    "localSchemaDiff": "PASS: empty",
+    "scopedLint": "PASS",
+    "globalLint": {
+      "errors": 182,
+      "warnings": 77,
+      "newDiagnosticOrigins": 0
+    },
+    "npmAudit": {
+      "critical": 0,
+      "high": 40,
+      "moderate": 3,
+      "low": 3,
+      "total": 46
+    },
+    "remoteCI": "NOT RUN: no push authorized"
+  },
+  "credentialEvidence": {
+    "ownerStatement": "Backup intentionally test-only; current Coolify values different or absent. No blanket production rotation required.",
+    "localComparisons": [
+      {
+        "source": "shell",
+        "variable": "DATABASE_URL",
+        "configured": false,
+        "matchesExposed": null,
+        "matchingVariableNames": []
+      },
+      {
+        "source": "shell",
+        "variable": "NEXTAUTH_SECRET",
+        "configured": false,
+        "matchesExposed": null,
+        "matchingVariableNames": []
+      },
+      {
+        "source": "shell",
+        "variable": "TOKENS_SECRET",
+        "configured": false,
+        "matchesExposed": null,
+        "matchingVariableNames": []
+      },
+      {
+        "source": "shell",
+        "variable": "META_APP_SECRET",
+        "configured": false,
+        "matchesExposed": null,
+        "matchingVariableNames": []
+      },
+      {
+        "source": ".env.local",
+        "variable": "DATABASE_URL",
+        "configured": true,
+        "matchesExposed": false,
+        "matchingVariableNames": []
+      },
+      {
+        "source": ".env.local",
+        "variable": "NEXTAUTH_SECRET",
+        "configured": true,
+        "matchesExposed": false,
+        "matchingVariableNames": []
+      },
+      {
+        "source": ".env.local",
+        "variable": "TOKENS_SECRET",
+        "configured": true,
+        "matchesExposed": false,
+        "matchingVariableNames": [],
+        "effectiveAESKeyMatches": false
+      },
+      {
+        "source": ".env.local",
+        "variable": "META_APP_SECRET",
+        "configured": false,
+        "matchesExposed": null,
+        "matchingVariableNames": []
+      }
+    ],
+    "otherServiceValidity": "INDETERMINATE: unavailable bindings, no old-credential probes",
+    "secretValuesOrFingerprintsStored": false
+  },
+  "sanitation": {
+    "originalHistoryPreservedLocally": true,
+    "removedPaths": [
+      ".env.backup",
+      "build.log",
+      "src/app/(app)/leads/page.tsx.backup"
+    ],
+    "allMappedCommitTreesChecked": 783,
+    "initialStandaloneBundleCheck": "PASS: no old audit object, no exposed values, mapped test baselines reachable",
+    "publicHistoryUnchanged": true,
+    "finalBundleAndExecutionRecord": "/workspace/mds-crm-onboarding-evidence/resumption/"
+  },
+  "failuresPreserved": [
+    "Initial full suite100 PASS/1 FAIL due Widget loser invalidating creator CAS; deterministic regression failed before production fix.",
+    "Next run101 PASS/1 FAIL due source assertion assuming six-space indentation; changed to verify expectedSettings argument inside persistRuntimeError call."
+  ],
+  "restrictions": {
+    "push": false,
+    "merge": false,
+    "deploy": false,
+    "productionMigrations": false,
+    "coolifyChanges": false,
+    "commercialEnforcement": "observe_only; APPROVED_ENFORCEMENTS empty"
+  },
+  "formalGateApprovals": []
+}
